@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moonshine — Interactive Technical Explanations</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.article {
+  max-width: var(--article-width);
+  margin: 0 auto;
+  padding: 2rem 1.25rem 6rem;
+}
+
+h1, h2, h3 {
+  font-family: var(--heading-font);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
+h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+h3 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
+
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+a:hover { color: #1d4ed8; }
+
+code {
+  font-family: var(--mono-font);
+  font-size: 0.9em;
+  background: #f1f1f5;
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+}
+
+pre {
+  font-family: var(--mono-font);
+  font-size: 0.85rem;
+  background: #1e1e2e;
+  color: #cdd6f4;
+  padding: 1.25rem 1.5rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  line-height: 1.5;
+}
+pre .c { color: #6c7086; }
+
+/* Header */
+.header {
+  padding: 4rem 0 2rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2.5rem;
+}
+.header .subtitle {
+  font-family: var(--heading-font);
+  font-size: 1.15rem;
+  color: var(--text-2);
+  margin-bottom: 0;
+  max-width: 580px;
+}
+
+/* Figures */
+.figure {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.figure-wide {
+  margin-left: -2rem;
+  margin-right: -2rem;
+}
+.figure-caption {
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  color: var(--text-2);
+  margin-top: 0.75rem;
+  line-height: 1.4;
+}
+.figure-label { font-weight: 600; color: var(--text); }
+
+.margin-note {
+  font-size: 0.8125rem;
+  color: var(--text-2);
+  line-height: 1.4;
+  border-left: 2px solid var(--border);
+  padding-left: 0.75rem;
+  margin: 1rem 0;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.controls label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+.controls input[type="range"] {
+  width: 160px;
+  accent-color: var(--accent);
+}
+.controls .value {
+  min-width: 2.5em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Insight box */
+.insight {
+  background: var(--accent-light);
+  border-left: 3px solid var(--accent);
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+  border-radius: 0 4px 4px 0;
+}
+.insight p { margin: 0; }
+
+/* Freq bars */
+.freq-bar { cursor: pointer; transition: opacity 0.1s; }
+.freq-bar:hover { opacity: 1 !important; }
+
+/* Fourier layout */
+.fourier-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+.fourier-freq { flex: 0 0 220px; }
+.fourier-time { flex: 1; min-width: 0; }
+
+@media (max-width: 640px) {
+  .fourier-layout { flex-direction: column; }
+  .fourier-freq { flex: none; width: 100%; }
+  .figure-wide { margin-left: 0; margin-right: 0; }
+  h1 { font-size: 1.75rem; }
+}
+
+/* Workflow */
+.workflow-step {
+  display: flex;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.workflow-step.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.step-num {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  font-family: var(--heading-font);
+  font-weight: 700;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-content h3 { margin: 0 0 0.25rem; font-size: 1rem; }
+.step-content p { margin: 0; font-size: 0.95rem; color: var(--text-2); }
+
+/* Install */
+.install-block {
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  margin: 1rem 0;
+}
+.install-block h4 {
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  margin: 0 0 0.5rem;
+  color: var(--text-2);
+}
+
+/* Footer */
+.footer {
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.footer a { color: var(--text-2); }
+
+/* SVG */
+svg text { font-family: var(--heading-font); }
+svg .axis text { font-size: 11px; fill: var(--text-2); }
+svg .axis line, svg .axis path { stroke: var(--border); }
+svg .grid line { stroke: var(--border); stroke-dasharray: 2,3; }
+svg .grid path { stroke: none; }
+
+/* Tooltip */
+.tip {
+  position: fixed;
+  pointer-events: none;
+  background: var(--text);
+  color: white;
+  font-family: var(--heading-font);
+  font-size: 0.75rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.12s;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="article">
+
+  <header class="header">
+    <h1>Moonshine</h1>
+    <p class="subtitle">A skill for distilling interactive technical explanations from AI generated complexity.</p>
+  </header>
+
+  <!-- 1. The problem -->
+  <p>AI tools help us write code, design systems, and generate documentation faster than ever. They've also created a new problem: the volume of technical output now exceeds our ability to understand it.</p>
+
+  <p>This is cognitive debt. AI-generated modules, auto-documented APIs, and synthesized design docs pile up faster than teammates can parse, review, and reason about them.</p>
+
+  <p>Inspired by <a href="https://distill.pub">Distill.pub</a> we aim to make it easier to apply distillation to the flood of technical output. We aren't just summarizing, we assist the creative work of finding the right decomposition, the right visualization, the right sequence of ideas that turns complexity into understanding.</p>
+
+  <!-- 2. The demo -->
+  <h2>Seeing the Parts</h2>
+
+  <p>Consider a signal, a complex waveform that's hard to interpret as a whole. Fourier analysis decomposes it into simple sine waves, each with a frequency and amplitude. Toggle individual components on and off to see how they combine.</p>
+
+  <div class="figure figure-wide" id="fourier-figure">
+    <div class="fourier-layout">
+      <div class="fourier-freq">
+        <div style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.5rem; font-weight: 600;">Frequency Components</div>
+        <div id="freq-chart"></div>
+        <div style="font-family: var(--heading-font); font-size: 0.75rem; color: var(--text-2); margin-top: 0.35rem;">Click bars to toggle. Hover for detail.</div>
+      </div>
+      <div class="fourier-time">
+        <div style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.5rem; font-weight: 600;">Combined Signal</div>
+        <div id="time-chart"></div>
+      </div>
+    </div>
+    <div class="controls" style="margin-top: 1rem; margin-bottom: 0;">
+      <label>Complexity:
+        <input type="range" id="complexity-slider" min="1" max="12" value="5" step="1">
+        <span class="value" id="complexity-val">5</span>
+        <span>components</span>
+      </label>
+    </div>
+    <p class="figure-caption"><span class="figure-label">Figure 1.</span> A complex waveform decomposed into its frequency components. Click any bar in the frequency chart to toggle that component. The combined signal updates in real time.</p>
+  </div>
+
+  <!-- 3. Why interactive -->
+  <h2>Why Interactive?</h2>
+
+  <p>You could read a paragraph explaining that low frequencies carry the signal's overall shape while high frequencies add detail. Or you could <a href="#" id="toggle-high-freq" style="color: var(--accent); cursor: pointer;">turn off the high frequencies</a> yourself and watch the waveform smooth out. The second builds intuition that the first cannot.</p>
+
+  <p>Interactive media lets readers explore parameter spaces, test hypotheses, and discover relationships at their own pace. The reader becomes a participant rather than a receiver.</p>
+
+  <p>That said, interaction needs to earn its place. A slider that doesn't build intuition is worse than a well-written sentence. Moonshine tries to follow one principle: every interaction should serve understanding.</p>
+
+  <!-- 4. How moonshine works -->
+  <h2>How It Works</h2>
+
+  <p>Moonshine is a skill for AI coding assistants. When invoked, it guides you through a structured process, starting with questions before writing any code.</p>
+
+  <div id="workflow">
+    <div class="workflow-step" data-step="1">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Story Discovery</h3>
+        <p>What concept are you explaining? Who is the audience? What is the key insight? What does the reader need to learn first, second, third to arrive there?</p>
+      </div>
+    </div>
+    <div class="workflow-step" data-step="2">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Interaction Design</h3>
+        <p>For each concept, choose the right medium: static prose, explorable sliders, linked visualizations, scroll-driven narrative, or animated transitions. Only add interaction where it genuinely helps.</p>
+      </div>
+    </div>
+    <div class="workflow-step" data-step="3">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>Project Scaffolding</h3>
+        <p>Generate a complete React + Vite + D3 + TypeScript project with article layout, shared state for linked views, and scroll management built in.</p>
+      </div>
+    </div>
+    <div class="workflow-step" data-step="4">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3>Iterative Building</h3>
+        <p>Start with prose and static figures. Add interaction one layer at a time. Test every element: does this help the reader build a mental model they couldn't get from text alone?</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Install -->
+  <h2>Get Started</h2>
+
+  <div class="install-block">
+    <h4>Claude Code</h4>
+    <pre style="margin: 0;"><span class="c"># Add the marketplace and install both skills</span>
+/plugin marketplace add enjalot/moonshine
+/plugin install moonshine@moonshine-marketplace
+/plugin install d3-power-tools@moonshine-marketplace</pre>
+  </div>
+
+  <div class="install-block">
+    <h4>Manual install</h4>
+    <pre style="margin: 0;">git clone --depth 1 https://github.com/enjalot/moonshine.git /tmp/moonshine
+cp -r /tmp/moonshine/plugins/moonshine ~/.claude/skills/moonshine
+rm -rf /tmp/moonshine</pre>
+  </div>
+
+  <p style="margin-top: 1.5rem;">Moonshine uses <a href="https://github.com/syntagmatic/d3-power-tools">d3-power-tools</a> for visualization, a collection of specialized D3 skills covering linked views, brushing, force layouts, cartography, and more. Both are available from the same marketplace.</p>
+
+  <!-- Inspirations -->
+  <h2>Standing On</h2>
+
+  <p><a href="https://distill.pub">Distill.pub</a> articulated why distillation matters in their essay <a href="https://distill.pub/2017/research-debt/">Research Debt</a>, and published some of the best examples of what interactive explanations can be. <a href="https://bost.ocks.org/mike/">Mike Bostock</a> created <a href="https://d3js.org">D3.js</a> and wrote a series of interactive articles that showed how visualization and narrative can work together. <a href="http://worrydream.com/ExplorableExplanations/">Bret Victor</a> imagined explorable explanations. <a href="https://ncase.me/">Nicky Case</a>, <a href="https://ciechanow.ski/">Bartosz Ciechanowski</a>, and <a href="https://pudding.cool/">The Pudding</a> proved the format works across a range of subjects. Moonshine tries to make it practical to build them with AI assistance.</p>
+
+  <footer class="footer">
+    <p><a href="https://github.com/enjalot/moonshine">GitHub</a> &middot; MIT License</p>
+  </footer>
+
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script>
+// ─── Fourier Decomposition Demo ───
+// Uses d3-power-tools patterns: coordination (d3.dispatch), linked-views
+// (bidirectional selection), motion (keyed transitions), responsive (ResizeObserver)
+
+(function() {
+  const dispatch = d3.dispatch('toggle', 'hover');
+  const tip = document.getElementById('tip');
+
+  // ── State ──
+  let numComponents = 5;
+  let components = generateComponents(numComponents);
+  let active = new Set(d3.range(numComponents)); // which components are on
+
+  function generateComponents(n) {
+    // Interesting Fourier-like series: decreasing amplitude, varying phase
+    return d3.range(n).map(i => ({
+      id: i,
+      frequency: i + 1,
+      amplitude: 1 / (i + 1),      // harmonic series falloff
+      phase: i * 0.7,               // spread phases for visual interest
+      label: `${i + 1}`,
+    }));
+  }
+
+  // Synthesize time-domain signal from active components
+  function synthesize(comps, activeSet, nSamples) {
+    const samples = d3.range(nSamples).map(i => {
+      const t = (i / nSamples) * Math.PI * 4; // 2 full cycles
+      let value = 0;
+      comps.forEach(c => {
+        if (activeSet.has(c.id)) {
+          value += c.amplitude * Math.sin(c.frequency * t + c.phase);
+        }
+      });
+      return { t: i / nSamples, value, index: i };
+    });
+    return samples;
+  }
+
+  // Color scale for frequency components
+  const colorScale = i => d3.interpolateSinebow(i / 14 + 0.05);
+
+  // ── Frequency Chart (horizontal bars) ──
+  const freqContainer = d3.select('#freq-chart');
+  let hoveredComponent = null;
+
+  function renderFreqChart() {
+    freqContainer.selectAll('*').remove();
+    const W = Math.min(freqContainer.node().getBoundingClientRect().width, 220);
+    const barH = 22;
+    const gap = 4;
+    const H = components.length * (barH + gap);
+    const margin = { left: 28, right: 12 };
+    const w = W - margin.left - margin.right;
+
+    const svg = freqContainer.append('svg')
+      .attr('width', W).attr('height', H);
+
+    const maxAmp = d3.max(components, c => c.amplitude);
+    const x = d3.scaleLinear().domain([0, maxAmp]).range([0, w]);
+    const y = (i) => i * (barH + gap);
+
+    // Bars
+    const bars = svg.selectAll('.freq-bar')
+      .data(components, d => d.id)
+      .enter().append('g')
+        .attr('class', 'freq-bar')
+        .attr('transform', (d, i) => `translate(${margin.left}, ${y(i)})`);
+
+    // Frequency label
+    bars.append('text')
+      .attr('x', -6)
+      .attr('y', barH / 2)
+      .attr('dy', '0.35em')
+      .attr('text-anchor', 'end')
+      .style('font-size', '11px')
+      .style('fill', 'var(--text-2)')
+      .text(d => d.label);
+
+    // Background bar (ghost layer — linked-views pattern)
+    bars.append('rect')
+      .attr('width', d => x(d.amplitude))
+      .attr('height', barH)
+      .attr('rx', 3)
+      .attr('fill', '#e8e8ee')
+      .attr('opacity', 0.5);
+
+    // Active bar
+    bars.append('rect')
+      .attr('class', 'bar-active')
+      .attr('width', d => active.has(d.id) ? x(d.amplitude) : 0)
+      .attr('height', barH)
+      .attr('rx', 3)
+      .attr('fill', (d, i) => colorScale(i))
+      .attr('opacity', d => active.has(d.id) ? 0.85 : 0.15);
+
+    // Hit area for interaction
+    bars.append('rect')
+      .attr('width', w)
+      .attr('height', barH)
+      .attr('fill', 'transparent')
+      .style('cursor', 'pointer')
+      .on('click', (event, d) => {
+        if (active.has(d.id)) active.delete(d.id);
+        else active.add(d.id);
+        dispatch.call('toggle', null, active);
+      })
+      .on('mouseenter', (event, d) => {
+        hoveredComponent = d.id;
+        dispatch.call('hover', null, d.id);
+        const r = event.target.getBoundingClientRect();
+        tip.style.opacity = 1;
+        tip.innerHTML = `Frequency ${d.frequency} &middot; Amplitude ${d.amplitude.toFixed(3)} &middot; ${active.has(d.id) ? 'ON' : 'OFF'}`;
+        tip.style.left = (r.right + 8) + 'px';
+        tip.style.top = (r.top + r.height / 2 - 12) + 'px';
+      })
+      .on('mouseleave', () => {
+        hoveredComponent = null;
+        dispatch.call('hover', null, null);
+        tip.style.opacity = 0;
+      });
+  }
+
+  function updateFreqBars() {
+    freqContainer.selectAll('.bar-active')
+      .data(components, d => d.id)
+      .transition().duration(300).ease(d3.easeCubicOut)
+      .attr('width', d => {
+        const W = Math.min(freqContainer.node().getBoundingClientRect().width, 220);
+        const margin = { left: 28, right: 12 };
+        const w = W - margin.left - margin.right;
+        const maxAmp = d3.max(components, c => c.amplitude);
+        const x = d3.scaleLinear().domain([0, maxAmp]).range([0, w]);
+        return active.has(d.id) ? x(d.amplitude) : 0;
+      })
+      .attr('opacity', d => active.has(d.id) ? 0.85 : 0.15);
+  }
+
+  // ── Time Chart (line + individual component lines) ──
+  const timeContainer = d3.select('#time-chart');
+  let timeW, timeH;
+
+  function renderTimeChart() {
+    timeContainer.selectAll('*').remove();
+
+    const rect = timeContainer.node().getBoundingClientRect();
+    timeW = rect.width;
+    timeH = 240;
+    const margin = { top: 10, right: 12, bottom: 24, left: 36 };
+    const w = timeW - margin.left - margin.right;
+    const h = timeH - margin.top - margin.bottom;
+    const nSamples = Math.max(200, Math.min(500, w * 2));
+
+    const signal = synthesize(components, active, nSamples);
+
+    // Compute y domain from full signal (all components on) for stable axis
+    const fullSignal = synthesize(components, new Set(d3.range(components.length)), nSamples);
+    const yMax = d3.max(fullSignal, d => Math.abs(d.value)) * 1.1 || 1;
+
+    const x = d3.scaleLinear().domain([0, 1]).range([0, w]);
+    const y = d3.scaleLinear().domain([-yMax, yMax]).range([h, 0]);
+
+    const svg = timeContainer.append('svg')
+      .attr('width', timeW).attr('height', timeH);
+    const g = svg.append('g')
+      .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Grid
+    g.append('g').attr('class', 'grid')
+      .attr('transform', `translate(0,${h})`)
+      .call(d3.axisBottom(x).ticks(Math.floor(w / 80)).tickSize(-h).tickFormat(''));
+    g.append('g').attr('class', 'grid')
+      .call(d3.axisLeft(y).ticks(5).tickSize(-w).tickFormat(''));
+
+    // Zero line
+    g.append('line')
+      .attr('x1', 0).attr('x2', w)
+      .attr('y1', y(0)).attr('y2', y(0))
+      .attr('stroke', 'var(--border)').attr('stroke-width', 1);
+
+    // Axes
+    const tickCount = Math.max(2, Math.floor(w / 80));
+    g.append('g').attr('class', 'axis')
+      .attr('transform', `translate(0,${h})`)
+      .call(d3.axisBottom(x).ticks(tickCount).tickFormat(d => d === 0 ? '0' : d === 1 ? '4\u03c0' : ''));
+    g.append('g').attr('class', 'axis')
+      .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format('.1f')));
+
+    const line = d3.line()
+      .x(d => x(d.t))
+      .y(d => y(d.value))
+      .curve(d3.curveBasis);
+
+    // Individual component lines (ghost layer)
+    components.forEach((comp, i) => {
+      if (!active.has(comp.id)) return;
+      const compSignal = d3.range(nSamples).map(j => {
+        const t = (j / nSamples) * Math.PI * 4;
+        return {
+          t: j / nSamples,
+          value: comp.amplitude * Math.sin(comp.frequency * t + comp.phase)
+        };
+      });
+
+      g.append('path')
+        .datum(compSignal)
+        .attr('d', line)
+        .attr('fill', 'none')
+        .attr('stroke', colorScale(i))
+        .attr('stroke-width', hoveredComponent === comp.id ? 2.5 : 1.2)
+        .attr('opacity', hoveredComponent === comp.id ? 0.9 : 0.25);
+    });
+
+    // Combined signal (active layer)
+    g.append('path')
+      .datum(signal)
+      .attr('d', line)
+      .attr('fill', 'none')
+      .attr('stroke', 'var(--text)')
+      .attr('stroke-width', 2.5);
+  }
+
+  // ── Coordination ──
+  // Use RAF coalescing to prevent update storms
+  let renderPending = false;
+  function scheduleTimeRender() {
+    if (renderPending) return;
+    renderPending = true;
+    requestAnimationFrame(() => {
+      renderPending = false;
+      renderTimeChart();
+    });
+  }
+
+  dispatch.on('toggle.freq', () => updateFreqBars());
+  dispatch.on('toggle.time', () => scheduleTimeRender());
+  dispatch.on('hover.time', () => scheduleTimeRender());
+
+  // Complexity slider
+  const slider = document.getElementById('complexity-slider');
+  const sliderVal = document.getElementById('complexity-val');
+  slider.addEventListener('input', () => {
+    numComponents = +slider.value;
+    sliderVal.textContent = numComponents;
+    components = generateComponents(numComponents);
+    // Keep active set valid
+    active = new Set(d3.range(numComponents));
+    renderFreqChart();
+    scheduleTimeRender();
+  });
+
+  // "Turn off the high frequencies" inline link
+  let highFreqOff = false;
+  const toggleLink = document.getElementById('toggle-high-freq');
+  toggleLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    highFreqOff = !highFreqOff;
+    components.forEach(c => {
+      if (c.frequency >= 3) {
+        if (highFreqOff) active.delete(c.id);
+        else active.add(c.id);
+      }
+    });
+    toggleLink.textContent = highFreqOff ? 'turn on the high frequencies' : 'turn off the high frequencies';
+    dispatch.call('toggle', null, active);
+  });
+
+  // Responsive: ResizeObserver on wrapper (not content)
+  const timeWrapper = document.querySelector('.fourier-time');
+  const ro = new ResizeObserver(([entry]) => {
+    if (entry.contentRect.width > 0) {
+      scheduleTimeRender();
+    }
+  });
+  ro.observe(timeWrapper);
+
+  // Initial render
+  renderFreqChart();
+  renderTimeChart();
+})();
+
+
+// ─── Scroll-driven workflow reveal ───
+(function() {
+  const steps = document.querySelectorAll('.workflow-step');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        // Stagger: delay based on step index
+        const step = entry.target;
+        const idx = +step.dataset.step - 1;
+        setTimeout(() => step.classList.add('visible'), idx * 120);
+        observer.unobserve(step); // only animate once
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+
+  steps.forEach(step => observer.observe(step));
+})();
+</script>
+
+</body>
+</html>
