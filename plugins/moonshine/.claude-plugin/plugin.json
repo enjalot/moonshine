@@ -1,0 +1,10 @@
+{
+  "name": "moonshine",
+  "description": "Create interactive technical explanations inspired by Distill.pub",
+  "version": "0.1.0",
+  "author": {
+    "name": "enjalot"
+  },
+  "repository": "https://github.com/enjalot/moonshine",
+  "license": "MIT"
+}

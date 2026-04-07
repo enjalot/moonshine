@@ -45,10 +45,10 @@ Every interaction should serve understanding. If a slider doesn't help the reade
 
 ### 3. Scaffold the Project
 
-Create a new project with this structure:
+Create projects in `~/.agent/moonshine/project-name/`. This keeps generated explanations separate from the user's working directory. Create the directory if it doesn't exist.
 
 ```
-project-name/
+~/.agent/moonshine/project-name/
   package.json          # React 18 + Vite + D3 deps
   vite.config.ts
   tsconfig.json
@@ -73,6 +73,8 @@ project-name/
     data/
       (datasets for visualizations)
 ```
+
+After scaffolding, run `npm install` and `npm run dev`, then open the result in the browser.
 
 ### 4. Build Iteratively
 
