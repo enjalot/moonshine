@@ -177,6 +177,14 @@ The template uses CSS custom properties throughout. Reference them in D3 code vi
 
 **Hover cross-references:** When a term or variable appears in prose, hovering it can highlight the corresponding element in a nearby figure. Implement with data attributes (`data-ref="variable-name"`) and a shared hover event that both the text and the figure listen to.
 
+**Equations and code:** When pairing an equation with pseudocode, always stack vertically (equation above, code below). Never side by side. Equations are typically wider than they are tall, so horizontal space is the constraint. Color-code variables in the equation and use matching colors in the pseudocode so the reader can trace the connection.
+
+**Light-mode code blocks:** Use a light background for code so that color-coded variables (matching equation colors) remain readable. Dark code themes clash with colored inline variables.
+
+**Dynamic value displays:** When showing live values that update on hover or interaction (like equation variables resolving to numbers), always reserve fixed height for the display area. Values appearing and disappearing causes layout jitter. Use `min-height` or a placeholder value.
+
+**Viewport-aware simulations:** Simulations and animations should only run when scrolled into view. Use IntersectionObserver to start/stop. This saves battery on mobile and prevents background simulations from competing for CPU/GPU with the figure the reader is actually looking at.
+
 ## Article Series
 
 When a concept is too large for one article, break it into a series. Each piece should stand alone but benefit from the others.

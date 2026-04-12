@@ -152,6 +152,8 @@ handle.call(drag);
 
 **Pitfall:** Forgetting to set `cursor: grab` on the draggable and `cursor: grabbing` during drag. Without visual cues, users don't discover the interaction.
 
+**Pitfall:** Hover information stopping during drag. If a figure supports both hover (showing values) and drag (moving elements), both should work simultaneously. Don't let drag suppress hover updates.
+
 ## Motion
 
 ### Transitions
@@ -176,6 +178,8 @@ Interrupt previous transitions before starting new ones: `selection.interrupt()`
 Easing: `easeCubicOut` for responsive UI (fast start, gentle stop). `easeLinear` for continuous data playback. `easeCubicInOut` for smooth position changes.
 
 **Pitfall:** Animating from undefined. If an element has no initial position, the transition starts from 0,0. Always set initial attributes in the enter callback before transitioning.
+
+**Pitfall:** Demonstrations that move too fast. When a probe particle moves through a field or an animation shows cause-and-effect, the reader needs time to see the response. Err on the side of too slow. A demonstration that takes 3 seconds to play teaches more than one that finishes in 0.5 seconds.
 
 ### Choreography
 
