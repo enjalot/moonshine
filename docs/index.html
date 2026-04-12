@@ -356,13 +356,12 @@ svg .grid path { stroke: none; }
 
   <div class="install-block">
     <h4>Claude Code</h4>
-    <pre style="margin: 0;"><span class="c"># Add the marketplace and install both skills</span>
+    <pre style="margin: 0;"><span class="c"># Add the marketplace and install</span>
 /plugin marketplace add enjalot/moonshine
 /plugin install moonshine@moonshine-marketplace
-/plugin install d3-power-tools@moonshine-marketplace
 
 <span class="c"># Then start a new explanation</span>
-/shine how gradient descent finds minima</pre>
+/moonshine:shine how gradient descent finds minima</pre>
   </div>
 
   <div class="install-block">
@@ -372,7 +371,7 @@ cp -r /tmp/moonshine/plugins/moonshine ~/.claude/skills/moonshine
 rm -rf /tmp/moonshine</pre>
   </div>
 
-  <p style="margin-top: 1.5rem;">The <code>/shine</code> command kicks off the moonshine workflow. It will ask you questions about what you're explaining and who the audience is before writing any code. Moonshine uses <a href="https://github.com/syntagmatic/d3-power-tools">d3-power-tools</a> for visualization, a collection of specialized D3 skills covering linked views, brushing, force layouts, cartography, and more. Both are available from the same marketplace.</p>
+  <p style="margin-top: 1.5rem;">The <code>/moonshine:shine</code> command kicks off the moonshine workflow. It will ask you questions about what you're explaining and who the audience is before writing any code. Each explanation is a self-contained HTML file with D3 v7. No build tools, no npm install. Open the file in a browser and it works.</p>
 
   <!-- Inspirations -->
   <h2>Standing On</h2>

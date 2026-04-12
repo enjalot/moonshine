@@ -4,7 +4,7 @@
     "name": "enjalot"
   },
   "metadata": {
-    "description": "Plugin distribution for moonshine and d3-power-tools",
+    "description": "Plugin distribution for moonshine",
     "version": "1.0.0",
     "pluginRoot": "./plugins"
   },
@@ -13,7 +13,7 @@
       "name": "moonshine",
       "source": "./plugins/moonshine",
       "description": "Create interactive technical explanations inspired by Distill.pub",
-      "version": "0.1.1",
+      "version": "0.3.0",
       "author": {
         "name": "enjalot"
       },
@@ -21,24 +21,7 @@
       "license": "MIT",
       "keywords": ["interactive", "explanations", "distill", "d3", "visualization"],
       "category": "visualization",
-      "tags": ["interactive-explanations", "distill", "d3", "react", "technical-writing"]
-    },
-    {
-      "name": "d3-power-tools",
-      "source": {
-        "source": "github",
-        "repo": "syntagmatic/d3-power-tools"
-      },
-      "description": "Reusable D3.js visualization patterns and components",
-      "version": "0.1.0",
-      "author": {
-        "name": "syntagmatic"
-      },
-      "repository": "https://github.com/syntagmatic/d3-power-tools",
-      "license": "MIT",
-      "keywords": ["d3", "visualization", "charts", "interactive"],
-      "category": "visualization",
-      "tags": ["d3", "data-visualization", "svg", "canvas", "charts"]
+      "tags": ["interactive-explanations", "distill", "d3", "technical-writing"]
     }
   ]
 }

@@ -6,8 +6,10 @@
 
 AI tools generate complexity faster than people can consume it. Inspired by [Distill.pub](https://distill.pub), moonshine helps apply distillation to the flood of technical output, turning complex ideas into explorable, visual, interactive articles.
 
+Each explanation is a self-contained HTML file with vanilla JS and D3 v7. No build tools, no frameworks. Open the file in a browser and it works.
+
 ```
-> /shine how gradient descent finds minima
+> /moonshine:shine how gradient descent finds minima
 What is the key insight you want the reader to walk away with?
 ```
 
@@ -15,10 +17,8 @@ What is the key insight you want the reader to walk away with?
 
 **Claude Code (marketplace):**
 ```shell
-# Add the marketplace and install both skills
 /plugin marketplace add enjalot/moonshine
 /plugin install moonshine@moonshine-marketplace
-/plugin install d3-power-tools@moonshine-marketplace
 ```
 
 **Manual install:**
@@ -30,33 +30,44 @@ rm -rf /tmp/moonshine
 
 ## Usage
 
-Run `/shine` to start a new explanation. Moonshine will ask you questions about the concept, audience, and key insight before writing any code.
+Run `/moonshine:shine` to start a new explanation. Moonshine will ask you questions about the concept, audience, and key insight before writing any code.
 
 ```
-/shine                              # start from scratch
-/shine fourier transforms           # start with a topic
+/moonshine:shine                              # start from scratch
+/moonshine:shine fourier transforms           # start with a topic
 ```
 
 ## What It Does
 
-The `/shine` command guides you through:
+The `/moonshine:shine` command guides you through:
 
 1. **Story discovery** Clarify the concept, audience, key insight, and progression of understanding
 2. **Interaction design** Decide where static prose, interactive explorations, linked views, and scroll-driven narrative serve the explanation best
-3. **Project scaffolding** Generate a complete React 18 + Vite + D3 + TypeScript project
+3. **Project scaffolding** Generate a self-contained HTML file with D3 visualizations and moonshine typography
 4. **Iterative building** Start with prose and static figures, add interaction only where it genuinely helps
 
-Moonshine uses [d3-power-tools](https://github.com/syntagmatic/d3-power-tools) for visualization, a collection of specialized D3 skills covering linked views, brushing, force layouts, cartography, and more. Both are available from the same marketplace.
+Moonshine includes a built-in D3 visualization reference (`VISUALS.md`) covering chart types, interaction patterns, and the editorial style foundation.
+
+## Output
+
+Each explanation lives in `~/.agent/moonshine/project-name/`:
+
+```
+~/.agent/moonshine/project-name/
+  index.html          # Self-contained explanation
+  data/               # Optional external datasets
+```
 
 ## Project Structure
 
 ```
 plugins/
 └── moonshine/
-    ├── SKILL.md          skill workflow and design principles
-    ├── RESEARCH.md       background research and inspiration catalog
+    ├── SKILL.md          editorial process, story discovery, anti-slop rules
+    ├── ARTICLE.md        HTML scaffold, CSS foundation, layout patterns, series structure
+    ├── VISUALS.md        D3 visualization patterns, interaction, rendering, iteration
     └── commands/
-        └── shine.md      /shine command definition
+        └── shine.md      /moonshine:shine command definition
 ```
 
 ## Inspirations
@@ -67,6 +78,7 @@ plugins/
 - [Nicky Case](https://ncase.me/) — Playful interactive explanations
 - [Bartosz Ciechanowski](https://ciechanow.ski/) — Long-form interactive explanations
 - [The Pudding](https://pudding.cool/) — Data-driven visual essays
+- [visual-explainer](https://github.com/nicobailon/visual-explainer) — Anti-slop patterns for AI-generated visual output
 
 ## License
 
