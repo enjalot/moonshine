@@ -1,0 +1,1967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moving to the GPU — SPH</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+  --c-kernel: #059669;
+  --c-density: #7c3aed;
+  --c-pressure: #dc2626;
+  --c-viscosity: #2563eb;
+  --c-mass: #d97706;
+  --c-position: #0891b2;
+  --c-velocity: #be185d;
+}
+
+body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
+h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
+h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+h3 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+.figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.figure-wide { margin-left: -2rem; margin-right: -2rem; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
+.figure-label { font-weight: 600; color: var(--text); }
+
+.insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
+.insight p { margin: 0; }
+
+.controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.controls input[type="range"] { width: 140px; accent-color: var(--accent); }
+.controls label { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
+.controls button { font-family: var(--heading-font); font-size: 0.85rem; padding: 0.25rem 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); cursor: pointer; }
+.controls button:hover { background: var(--bg); }
+
+svg text { font-family: var(--heading-font); }
+
+.eq-code-stack { margin: 1.5rem 0; border-radius: 6px; overflow: hidden; border: 1px solid #e8e6f0; }
+.eq-block { padding: 1rem 1.25rem; background: #f8f7ff; text-align: center; }
+.eq-block .eq-label { font-family: var(--heading-font); font-size: 0.75rem; color: var(--text-2); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.eq-rows { position: relative; }
+.eq-values-row { height: 2.2em; display: flex; align-items: center; justify-content: center; margin-top: 0.4rem; transition: opacity 0.15s; }
+.eq-values-row.visible { opacity: 1; }
+.eq-hint { font-family: var(--heading-font); font-size: 0.7rem; color: var(--text-2); opacity: 0.5; font-style: italic; }
+
+.code-block { padding: 1rem 1.25rem; background: #f6f8fa; color: #1a1a2e; font-family: var(--mono-font); font-size: 0.8rem; line-height: 1.6; overflow-x: auto; border-top: 1px solid #e8e6f0; }
+.code-block .comment { color: #6b7280; }
+.code-block .c-kernel { color: var(--c-kernel); }
+.code-block .c-density { color: var(--c-density); }
+.code-block .c-pressure { color: var(--c-pressure); }
+.code-block .c-viscosity { color: var(--c-viscosity); }
+.code-block .c-mass { color: var(--c-mass); }
+.code-block .c-position { color: var(--c-position); }
+.code-block .c-velocity { color: var(--c-velocity); }
+
+.t-kernel { color: var(--c-kernel); font-weight: 600; }
+.t-density { color: var(--c-density); font-weight: 600; }
+.t-pressure { color: var(--c-pressure); font-weight: 600; }
+.t-viscosity { color: var(--c-viscosity); font-weight: 600; }
+.t-mass { color: var(--c-mass); font-weight: 600; }
+.t-position { color: var(--c-position); font-weight: 600; }
+.t-velocity { color: var(--c-velocity); font-weight: 600; }
+
+/* Pipeline diagram */
+.pipeline { display: flex; gap: 0; align-items: stretch; margin: 1rem 0; flex-wrap: wrap; justify-content: center; }
+.pipeline-pass { flex: 1 1 120px; max-width: 180px; padding: 0.75rem; border: 2px solid var(--border); border-radius: 6px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; font-family: var(--heading-font); font-size: 0.8rem; }
+.pipeline-pass:hover { background: #f0f4f8; }
+.pipeline-pass.active { border-color: var(--accent); background: var(--accent-light); }
+.pipeline-pass .pass-num { font-size: 0.65rem; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+.pipeline-pass .pass-name { font-weight: 700; font-size: 0.95rem; }
+.pipeline-pass .pass-desc { font-size: 0.7rem; color: var(--text-2); margin-top: 0.25rem; }
+.pipeline-arrow { display: flex; align-items: center; font-size: 1.2rem; color: var(--text-2); padding: 0 0.25rem; }
+
+/* Sequential vs Parallel viz */
+.seq-par-container { display: flex; gap: 2rem; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
+.seq-par-side { flex: 1; min-width: 240px; max-width: 320px; text-align: center; }
+.seq-par-side .side-label { font-family: var(--heading-font); font-weight: 700; font-size: 0.9rem; margin-bottom: 0.5rem; }
+
+@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } .seq-par-container { flex-direction: column; align-items: center; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+</style>
+</head>
+<body>
+<div class="article">
+  <header>
+    <h1>Moving to the GPU</h1>
+    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
+      Spatial hashing, parallel passes, and scaling from dozens to thousands of particles.
+    </p>
+    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">
+      Part 2 of <a href="index.html">Smooth Particle Hydrodynamics</a>
+    </p>
+  </header>
+
+  <h2>The Neighbor Problem</h2>
+  <p>
+    In <a href="01-particles-and-forces.html">Part 1</a> we built a fluid simulation
+    that computes <span class="t-density">density</span>, <span class="t-pressure">pressure</span>,
+    and <span class="t-viscosity">viscosity</span> for each particle by looking at its neighbors.
+    The physics was the interesting part. But the expensive part is something much simpler:
+    finding who those neighbors are.
+  </p>
+  <p>
+    For each particle, we scan every other particle and check whether it falls within
+    the <span class="t-kernel">smoothing radius</span>. With <em>n</em> particles, that
+    means <em>n</em> &times; (<em>n</em> &minus; 1) distance checks per frame. Double the
+    particle count, quadruple the work.
+  </p>
+
+  <div class="figure figure-wide" id="fig-brute">
+    <div class="eq-code-stack">
+      <div class="eq-block">
+        <div class="eq-label">Brute force neighbor search</div>
+        <div class="eq-rows">
+          <div id="eq-brute"></div>
+          <div class="eq-values-row visible" id="eq-brute-values"><span class="eq-hint">adjust particle count</span></div>
+        </div>
+      </div>
+      <div class="code-block">
+        <span class="comment">// For each particle i:</span><br>
+        for each particle j &ne; i:<br>
+        &nbsp;&nbsp;if distance(<span class="c-position">pos</span>[i], <span class="c-position">pos</span>[j]) &lt; <span class="c-kernel">H</span>:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// j is a neighbor of i</span>
+      </div>
+    </div>
+    <div class="controls">
+      <label>Particles: <input type="range" id="brute-n-slider" min="3" max="20" value="6" step="1"> <span id="brute-n-val">6</span></label>
+    </div>
+    <div id="brute-viz"></div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 1.</span>
+      Each line is a distance check. With <span id="brute-n-display">6</span> particles,
+      we need <span id="brute-checks-display">30</span> checks. The count grows as
+      n &times; (n &minus; 1).
+    </div>
+  </div>
+
+  <p>
+    At 100 particles, that's 9,900 checks. At 1,000, it's 999,000. The physics
+    formulas from Part 1 are cheap per pair. It's the sheer number of pairs that
+    bogs things down. We need a way to skip the particles that are obviously too
+    far away.
+  </p>
+
+  <h2>Spatial Hashing</h2>
+  <p>
+    The idea is straightforward: divide the simulation space into a grid of cells,
+    each sized to match the <span class="t-kernel">smoothing radius H</span>.
+    Each particle drops into the cell that contains its position. When we need
+    a particle's neighbors, we only check the 9 cells surrounding it (a 3&times;3
+    block in 2D) instead of every particle in the simulation.
+  </p>
+
+  <div class="figure figure-wide" id="fig-hash">
+    <div class="eq-code-stack">
+      <div class="eq-block">
+        <div class="eq-label">Spatial hash cell lookup</div>
+        <div class="eq-rows">
+          <div id="eq-hash"></div>
+          <div class="eq-values-row visible" id="eq-hash-values"><span class="eq-hint">click a particle</span></div>
+        </div>
+      </div>
+      <div class="code-block">
+        <span class="comment">// Insert: O(n)</span><br>
+        cell_x = floor(<span class="c-position">pos.x</span> / <span class="c-kernel">H</span>)<br>
+        cell_y = floor(<span class="c-position">pos.y</span> / <span class="c-kernel">H</span>)<br>
+        grid[cell_x, cell_y].push(particle)<br>
+        <br>
+        <span class="comment">// Query neighbors: check 3&times;3 block</span><br>
+        for dx in [-1, 0, 1]:<br>
+        &nbsp;&nbsp;for dy in [-1, 0, 1]:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;for p in grid[cell_x+dx, cell_y+dy]:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if distance &lt; <span class="c-kernel">H</span>: <span class="comment">// true neighbor</span>
+      </div>
+    </div>
+    <div class="controls">
+      <label>Particles: <input type="range" id="hash-n-slider" min="10" max="80" value="40" step="1"> <span id="hash-n-val">40</span></label>
+    </div>
+    <div id="hash-viz"></div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 2.</span>
+      Click a particle to select it. Its cell is highlighted in
+      <span style="color:var(--c-position);font-weight:600">teal</span> and the
+      9-cell search region in light blue. Particles within
+      <span class="t-kernel">H</span> are true neighbors (green circles).
+      Drag particles to see cells update.
+      <strong>Brute force: <span id="hash-brute-count">0</span> checks.
+      Spatial hash: <span id="hash-smart-count">0</span> checks.</strong>
+    </div>
+  </div>
+
+  <p>
+    With uniformly distributed particles, the spatial hash reduces neighbor search from
+    O(n&sup2;) to roughly O(n). Each particle only checks a handful of candidates
+    instead of the entire population.
+  </p>
+
+  <h2>From Sequential to Parallel</h2>
+  <p>
+    On the CPU, we loop through particles one at a time. On the GPU, every particle
+    runs the same computation simultaneously. The inner loop (checking neighbors) is
+    the same. The outer loop disappears.
+  </p>
+
+  <div class="figure figure-wide" id="fig-seq-par">
+    <div class="controls">
+      <button id="seq-par-play">Play</button>
+      <button id="seq-par-reset">Reset</button>
+      <label>Particles: <input type="range" id="seq-par-n" min="4" max="20" value="8" step="1"> <span id="seq-par-n-val">8</span></label>
+      <span id="seq-par-timestep" style="font-family:var(--mono-font);"></span>
+    </div>
+    <div class="seq-par-container">
+      <div class="seq-par-side">
+        <div class="side-label">CPU: Sequential</div>
+        <canvas id="seq-canvas" style="width:100%;border-radius:4px;background:#f0f4f8;"></canvas>
+        <div id="seq-status" style="font-family:var(--mono-font);font-size:0.75rem;color:var(--text-2);margin-top:0.25rem;text-align:center;">Waiting</div>
+      </div>
+      <div class="seq-par-side">
+        <div class="side-label">GPU: Parallel</div>
+        <canvas id="par-canvas" style="width:100%;border-radius:4px;background:#f0f4f8;"></canvas>
+        <div id="par-status" style="font-family:var(--mono-font);font-size:0.75rem;color:var(--text-2);margin-top:0.25rem;text-align:center;">Waiting</div>
+      </div>
+    </div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 3.</span>
+      Both sides simulate <span id="caption-n">8</span> particles over 20 timesteps. The CPU
+      updates one particle at a time (200ms each, <span id="caption-cpu-time">1.6</span>s per timestep).
+      The GPU updates all <span id="caption-n2">8</span> simultaneously (200ms per timestep).
+      Try <a href="#" id="caption-more-link" style="cursor:pointer;">increasing to 20 particles</a>
+      to see the CPU fall hopelessly behind.
+    </div>
+  </div>
+
+  <h2>GPU Parallelism</h2>
+  <p>
+    Once we have an efficient neighbor search, the next observation is that each
+    particle's computation within a single pass is independent. Particle 42's density
+    doesn't depend on what particle 17 computed for its density in the same step.
+    This makes SPH a natural fit for GPU parallelism: launch one thread per particle,
+    all running the same code simultaneously.
+  </p>
+  <p>
+    The simulation loop from Part 1 becomes a sequence of GPU dispatches. Each pass
+    reads from buffers written by the previous pass and writes its own results.
+    The diagram below shows how data flows through the four passes.
+  </p>
+
+  <div class="figure figure-wide" id="fig-pipeline">
+    <div class="controls">
+      <button id="pipe-prev">Prev</button>
+      <button id="pipe-next">Next</button>
+      <span id="pipe-phase-label" style="font-family:var(--mono-font);">Pass 1 of 4: Density</span>
+    </div>
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-start;">
+      <div id="pipeline-viz" style="flex:0 0 auto;"></div>
+      <div id="pipeline-example" style="flex:1 1 260px;font-family:var(--mono-font);font-size:0.82rem;line-height:1.8;padding:1rem 1.25rem;background:#f6f8fa;border-radius:6px;border:1px solid #e8e6f0;"></div>
+    </div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 4.</span>
+      Each column is one particle. All columns compute simultaneously within a pass.
+      Passes run sequentially top to bottom: density feeds pressure, forces feed integration.
+      Outputs from each pass become inputs to the next. Step through to see the example
+      equation for one particle on the right.
+    </div>
+  </div>
+
+  <h2>Scaling Up</h2>
+  <p>
+    This simulation runs on your GPU using WebGPU compute shaders. The same four passes
+    from the pipeline diagram above, each dispatching one thread per particle.
+  </p>
+
+  <div class="figure figure-wide" id="fig-sim">
+    <div class="controls">
+      <label>Gravity: <input type="range" id="sim-gravity-slider" min="0" max="500" value="200" step="10"> <span id="sim-gravity-val">200</span></label>
+      <label>Viscosity: <input type="range" id="sim-viscosity-slider" min="0" max="200" value="100" step="5"> <span id="sim-viscosity-val">100</span></label>
+      <button id="sim-reset">Reset</button>
+      <button id="sim-advanced-toggle">Advanced</button>
+    </div>
+    <div class="controls" id="sim-advanced" style="display:none;">
+      <label>Stiffness: <input type="range" id="sim-stiffness-slider" min="500" max="15000" value="10000" step="500"> <span id="sim-stiffness-val">10000</span></label>
+      <label>Rest density: <input type="range" id="sim-restd-slider" min="0.5" max="6" value="1.5" step="0.1"> <span id="sim-restd-val">1.5</span></label>
+      <label>Substeps: <input type="range" id="sim-substeps-slider" min="1" max="24" value="16" step="1"> <span id="sim-substeps-val">16</span></label>
+      <label>dt: <input type="range" id="sim-dt-slider" min="0.0005" max="0.004" value="0.001" step="0.0001"> <span id="sim-dt-val">0.001</span></label>
+    </div>
+    <canvas id="sim-canvas" style="width:100%;border-radius:4px;cursor:crosshair;"></canvas>
+    <div style="display:flex;gap:1.5rem;font-family:var(--heading-font);font-size:0.8rem;color:var(--text-2);margin-top:0.5rem;">
+      <span id="sim-backend-label" style="font-weight:600;color:var(--accent);">Initializing...</span>
+      <span>Particles: <strong id="sim-particle-count">0</strong></span>
+      <span>FPS: <strong id="sim-fps">0</strong></span>
+    </div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 5.</span>
+      SPH with spatial hashing. Same physics as Part 1's final figure, running
+      the four compute passes on GPU (or CPU fallback).
+      Click and drag to push particles.
+      Particles are colored by speed: dark blue is settled, lighter blue is moving fast.
+    </div>
+  </div>
+
+  <p>
+    The GPU runs thousands of particles in parallel, each thread executing the same
+    density/force/integration code. The spatial hash keeps the neighbor search cheap,
+    and the parallelism handles the rest. In Part 3 we explore what we can do with that
+    headroom: springs, friction, temperature, and collisions with solid objects.
+  </p>
+
+  <footer style="margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border);font-family:var(--heading-font);font-size:0.85rem;color:var(--text-2);">
+    <p>Part of <a href="index.html" style="color:var(--text-2);">Smooth Particle Hydrodynamics</a>. Previous: <a href="01-particles-and-forces.html" style="color:var(--accent);">Particles, Neighborhoods, and Forces</a>. Next: <a href="03-beyond-water.html" style="color:var(--accent);">Beyond Water</a>.</p>
+    <p>Built with <a href="https://github.com/enjalot/moonshine" style="color:var(--text-2);">moonshine</a>.</p>
+  </footer>
+</div>
+
+<script>
+// ============================================================
+// Shared
+// ============================================================
+const SPH = {
+  kernel(r, h) { const q=r/h; if(q>=1) return 0; const t=1-q; return t*t*t; },
+  gradKernel(r, h) { const q=r/h; if(q>=1||r<1e-6) return 0; const t=1-q; return -3*t*t/h; },
+  lapKernel(r, h) { const q=r/h; if(q>=1) return 0; return 6*(1-q)/(h*h); },
+  distance(a, b) { const dx=a.x-b.x, dy=a.y-b.y; return Math.sqrt(dx*dx+dy*dy); }
+};
+
+function fmt(v, d=2) { return typeof v==='number' ? v.toFixed(d) : v; }
+function renderEq(el, tex) { katex.render(tex, el, { displayMode: false, throwOnError: false }); }
+
+// Symbolic equations
+(function() {
+  const eqs = {
+    'eq-brute': String.raw`\text{checks} = n \times (n-1) = O(n^2)`,
+    'eq-hash': String.raw`\text{cell}({\color{#0891b2}x},{\color{#0891b2}y}) = \left(\left\lfloor\frac{{\color{#0891b2}x}}{{\color{#059669}H}}\right\rfloor,\;\left\lfloor\frac{{\color{#0891b2}y}}{{\color{#059669}H}}\right\rfloor\right)`,
+  };
+  for (const [id, tex] of Object.entries(eqs)) {
+    const el = document.getElementById(id);
+    if (el) katex.render(tex, el, { displayMode: true, throwOnError: false });
+  }
+})();
+
+// Visibility-based animation: only run rAF loops when figure is in view
+function visibleLoop(elementId, loopFn) {
+  let running = false, animId;
+  function tick() { if (!running) return; loopFn(); animId = requestAnimationFrame(tick); }
+  const el = document.getElementById(elementId);
+  const obs = new IntersectionObserver(([e]) => {
+    if (e.isIntersecting && !running) { running = true; tick(); }
+    else if (!e.isIntersecting && running) { running = false; cancelAnimationFrame(animId); }
+  }, { threshold: 0.1 });
+  obs.observe(el);
+  return { start() { if (!running) { running = true; tick(); } }, stop() { running = false; cancelAnimationFrame(animId); } };
+}
+
+
+// ============================================================
+// Figure 1: Brute force pairwise checks
+// ============================================================
+(function() {
+  const container = d3.select("#brute-viz");
+  const width = 680, height = 320;
+  const svg = container.append("svg").attr("viewBox", `0 0 ${width} ${height}`).style("width", "100%");
+  const BH = 60; // smoothing radius for this figure
+
+  let n = 6;
+  const rng = d3.randomLcg(77);
+  let selectedIdx = 2; // start with a particle that will have neighbors
+  let orbitAngle = 0;
+
+  // Pre-generate all 20 particle positions once (stable across slider changes)
+  const maxN = 20;
+  const allPositions = [];
+  for (let i = 0; i < maxN; i++) {
+    allPositions.push({
+      baseX: 60 + rng() * (width - 120),
+      baseY: 40 + rng() * (height - 80),
+    });
+  }
+
+  let particles = [];
+  function generateParticles(count) {
+    particles = allPositions.slice(0, count).map((p, i) => ({
+      baseX: p.baseX, baseY: p.baseY,
+      x: p.baseX, y: p.baseY,
+      id: i
+    }));
+    if (selectedIdx >= count) selectedIdx = Math.floor(count / 2);
+  }
+
+  const allLinesG = svg.append("g");
+  const neighborLinesG = svg.append("g");
+  const radiusCircle = svg.append("circle")
+    .attr("fill", "none").attr("stroke", "var(--c-kernel)")
+    .attr("stroke-width", 1.5).attr("stroke-dasharray", "6,3").attr("opacity", 0.4);
+  const circlesG = svg.append("g");
+  const selRing = svg.append("circle").attr("r", 12).attr("fill", "none")
+    .attr("stroke", "var(--c-position)").attr("stroke-width", 2.5);
+
+  function update() {
+    const checks = n * (n - 1);
+    const sel = particles[selectedIdx];
+
+    // Find true neighbors of selected particle (within H)
+    const trueNeighbors = new Set();
+    particles.forEach((p, i) => {
+      if (i === selectedIdx) return;
+      const dist = SPH.distance(sel, p);
+      if (dist < BH) trueNeighbors.add(p.id);
+    });
+
+    // Lines for all pairs (light pink)
+    const pairs = [];
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        pairs.push({ a: particles[i], b: particles[j], id: i + ',' + j });
+      }
+    }
+
+    allLinesG.selectAll("line").data(pairs, d => d.id).join("line")
+      .attr("x1", d => d.a.x).attr("y1", d => d.a.y)
+      .attr("x2", d => d.b.x).attr("y2", d => d.b.y)
+      .attr("stroke", "var(--c-pressure)")
+      .attr("stroke-width", 0.8)
+      .attr("opacity", Math.max(0.08, 0.5 - n * 0.02));
+
+    // Highlight neighbor lines (thick green)
+    const neighborData = particles.filter(p => trueNeighbors.has(p.id));
+    neighborLinesG.selectAll("line").data(neighborData, d => d.id).join("line")
+      .attr("x1", sel.x).attr("y1", sel.y)
+      .attr("x2", d => d.x).attr("y2", d => d.y)
+      .attr("stroke", "var(--c-kernel)").attr("stroke-width", 2.5).attr("opacity", 0.5);
+
+    // Smoothing radius circle
+    radiusCircle.attr("cx", sel.x).attr("cy", sel.y).attr("r", BH);
+
+    // Particles
+    circlesG.selectAll("circle").data(particles, d => d.id).join("circle")
+      .attr("cx", d => d.x).attr("cy", d => d.y)
+      .attr("r", d => trueNeighbors.has(d.id) ? 8 : 7)
+      .attr("fill", d => trueNeighbors.has(d.id) ? "var(--c-kernel)" : "var(--c-position)")
+      .attr("opacity", d => trueNeighbors.has(d.id) || d.id === selectedIdx ? 0.85 : 0.5)
+      .attr("stroke", "#fff").attr("stroke-width", 2)
+      .attr("cursor", "pointer");
+
+    selRing.attr("cx", sel.x).attr("cy", sel.y);
+
+    // Update displays
+    d3.select("#brute-n-display").text(n);
+    d3.select("#brute-checks-display").text(checks);
+
+    const tex = `n=${n},\\quad \\text{checks}=${n} \\times ${n-1} = {\\color{#dc2626}${checks}}`;
+    const el = document.getElementById("eq-brute-values");
+    renderEq(el, tex); el.classList.add('visible');
+  }
+
+  // Click to select
+  circlesG.on("click", function(e) {
+    const [mx, my] = d3.pointer(e);
+    let best = Infinity, bestIdx = 0;
+    particles.forEach((p, i) => {
+      const d = (p.x - mx) ** 2 + (p.y - my) ** 2;
+      if (d < best) { best = d; bestIdx = i; }
+    });
+    selectedIdx = bestIdx;
+    update();
+  });
+
+  // Drag any particle
+  const drag = d3.drag()
+    .on("start", function(e) {
+      const [mx, my] = d3.pointer(e, svg.node());
+      let best = Infinity, bestIdx = -1;
+      particles.forEach((p, i) => {
+        const d = (p.x - mx) ** 2 + (p.y - my) ** 2;
+        if (d < best) { best = d; bestIdx = i; }
+      });
+      if (best < 400) {
+        e.subject.dragIdx = bestIdx;
+        selectedIdx = bestIdx;
+      } else {
+        e.subject.dragIdx = -1;
+      }
+    })
+    .on("drag", function(e) {
+      if (e.subject.dragIdx < 0) return;
+      const p = particles[e.subject.dragIdx];
+      p.baseX = Math.max(5, Math.min(width - 5, e.x));
+      p.baseY = Math.max(5, Math.min(height - 5, e.y));
+      p.x = p.baseX;
+      p.y = p.baseY;
+      update();
+    });
+  svg.call(drag);
+
+  d3.select("#brute-n-slider").on("input", function() {
+    n = +this.value;
+    d3.select("#brute-n-val").text(n);
+    generateParticles(n);
+    update();
+  });
+
+  generateParticles(n);
+  update();
+
+  // Orbit animation for selected particle
+  visibleLoop("fig-brute", function() {
+    orbitAngle += 0.02;
+    const sel = particles[selectedIdx];
+    sel.x = sel.baseX + Math.cos(orbitAngle) * 15;
+    sel.y = sel.baseY + Math.sin(orbitAngle) * 15;
+    update();
+  });
+})();
+
+
+// ============================================================
+// Figure 2: Spatial hashing interactive
+// ============================================================
+(function() {
+  const container = d3.select("#hash-viz");
+  const width = 680, height = 400;
+  const svg = container.append("svg").attr("viewBox", `0 0 ${width} ${height}`).style("width", "100%");
+  const H = 60; // cell size = smoothing radius
+
+  let numParticles = 40;
+  let selectedIdx = 5; // one that will have neighbors
+  let hashOrbitAngle = 0;
+  const rng2 = d3.randomLcg(42);
+
+  // Pre-generate all 80 particle positions once
+  const maxHash = 80;
+  const allHashPositions = [];
+  for (let i = 0; i < maxHash; i++) {
+    allHashPositions.push({
+      baseX: 30 + rng2() * (width - 60),
+      baseY: 30 + rng2() * (height - 60),
+    });
+  }
+
+  let particles = [];
+  function generateParticles(count) {
+    particles = allHashPositions.slice(0, count).map((p, i) => ({
+      baseX: p.baseX, baseY: p.baseY,
+      x: p.baseX, y: p.baseY,
+      id: i
+    }));
+    if (selectedIdx >= count) selectedIdx = Math.floor(count / 3);
+  }
+
+  const cols = Math.ceil(width / H);
+  const rows = Math.ceil(height / H);
+
+  // Grid lines
+  const gridG = svg.append("g");
+  for (let c = 0; c <= cols; c++) {
+    gridG.append("line").attr("x1", c * H).attr("y1", 0).attr("x2", c * H).attr("y2", height)
+      .attr("stroke", "var(--border)").attr("stroke-width", 0.5);
+  }
+  for (let r = 0; r <= rows; r++) {
+    gridG.append("line").attr("x1", 0).attr("y1", r * H).attr("x2", width).attr("y2", r * H)
+      .attr("stroke", "var(--border)").attr("stroke-width", 0.5);
+  }
+
+  const cellHighlightG = svg.append("g");
+  const searchHighlightG = svg.append("g");
+  const radiusCircle = svg.append("circle")
+    .attr("fill", "none").attr("stroke", "var(--c-kernel)")
+    .attr("stroke-width", 1.5).attr("stroke-dasharray", "6,3").attr("opacity", 0.4);
+  const neighborLinesG = svg.append("g");
+  const circlesG = svg.append("g");
+  const selRing = svg.append("circle").attr("r", 12).attr("fill", "none")
+    .attr("stroke", "var(--c-position)").attr("stroke-width", 2.5);
+
+  function buildHash() {
+    const grid = new Map();
+    particles.forEach(p => {
+      const cx = Math.floor(p.x / H);
+      const cy = Math.floor(p.y / H);
+      p.cx = cx; p.cy = cy;
+      const key = `${cx},${cy}`;
+      if (!grid.has(key)) grid.set(key, []);
+      grid.get(key).push(p);
+    });
+    return grid;
+  }
+
+  function update() {
+    const grid = buildHash();
+    const sel = particles[selectedIdx];
+    const scx = sel.cx, scy = sel.cy;
+
+    // Highlight search region (3x3)
+    const searchCells = [];
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        searchCells.push({ cx: scx + dx, cy: scy + dy, isCenter: dx === 0 && dy === 0 });
+      }
+    }
+
+    searchHighlightG.selectAll("rect").data(searchCells).join("rect")
+      .attr("x", d => d.cx * H).attr("y", d => d.cy * H)
+      .attr("width", H).attr("height", H)
+      .attr("fill", d => d.isCenter ? "var(--c-position)" : "var(--accent-light)")
+      .attr("opacity", d => d.isCenter ? 0.15 : 0.2);
+
+    // Smoothing radius
+    radiusCircle.attr("cx", sel.x).attr("cy", sel.y).attr("r", H);
+
+    // Find neighbors via spatial hash and count checks
+    let hashChecks = 0;
+    const trueNeighbors = new Set();
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        const key = `${scx + dx},${scy + dy}`;
+        const cell = grid.get(key);
+        if (!cell) continue;
+        cell.forEach(p => {
+          if (p === sel) return;
+          hashChecks++;
+          const dist = SPH.distance(sel, p);
+          if (dist < H) trueNeighbors.add(p.id);
+        });
+      }
+    }
+
+    const bruteChecks = particles.length * (particles.length - 1);
+
+    // Lines to true neighbors
+    const neighborData = particles.filter(p => trueNeighbors.has(p.id));
+    neighborLinesG.selectAll("line").data(neighborData, d => d.id).join("line")
+      .attr("x1", sel.x).attr("y1", sel.y)
+      .attr("x2", d => d.x).attr("y2", d => d.y)
+      .attr("stroke", "var(--c-kernel)").attr("stroke-width", 1.5).attr("opacity", 0.35);
+
+    // Particles
+    circlesG.selectAll("circle").data(particles, d => d.id).join("circle")
+      .attr("cx", d => d.x).attr("cy", d => d.y)
+      .attr("r", d => trueNeighbors.has(d.id) ? 8 : 6)
+      .attr("fill", d => trueNeighbors.has(d.id) ? "var(--c-kernel)" : "var(--c-position)")
+      .attr("opacity", d => trueNeighbors.has(d.id) || d.id === selectedIdx ? 0.85 : 0.4)
+      .attr("stroke", "#fff").attr("stroke-width", 1.5)
+      .attr("cursor", "pointer");
+
+    selRing.attr("cx", sel.x).attr("cy", sel.y);
+
+    // Update counts
+    d3.select("#hash-brute-count").text(bruteChecks);
+    d3.select("#hash-smart-count").text(hashChecks);
+
+    // Equation values
+    const tex = `\\text{cell}(${fmt(sel.x, 0)},${fmt(sel.y, 0)}) = (${scx},${scy}),\\;` +
+      `{\\color{#059669}${trueNeighbors.size}}\\text{ neighbors},\\;` +
+      `{\\color{#dc2626}${hashChecks}}\\text{ vs }${bruteChecks}\\text{ checks}`;
+    const el = document.getElementById("eq-hash-values");
+    renderEq(el, tex); el.classList.add('visible');
+  }
+
+  // Interactions
+  circlesG.on("click", function(e) {
+    const [mx, my] = d3.pointer(e);
+    let best = Infinity, bestIdx = 0;
+    particles.forEach((p, i) => {
+      const d = (p.x - mx) ** 2 + (p.y - my) ** 2;
+      if (d < best) { best = d; bestIdx = i; }
+    });
+    selectedIdx = bestIdx;
+    update();
+  });
+
+  // Drag
+  const drag = d3.drag()
+    .on("start", function(e) {
+      const [mx, my] = d3.pointer(e, svg.node());
+      let best = Infinity, bestIdx = 0;
+      particles.forEach((p, i) => {
+        const d = (p.x - mx) ** 2 + (p.y - my) ** 2;
+        if (d < best) { best = d; bestIdx = i; }
+      });
+      if (best < 400) { // within 20px
+        e.subject.dragIdx = bestIdx;
+        selectedIdx = bestIdx;
+      } else {
+        e.subject.dragIdx = -1;
+      }
+    })
+    .on("drag", function(e) {
+      if (e.subject.dragIdx < 0) return;
+      const p = particles[e.subject.dragIdx];
+      p.baseX = Math.max(5, Math.min(width - 5, e.x));
+      p.baseY = Math.max(5, Math.min(height - 5, e.y));
+      p.x = p.baseX;
+      p.y = p.baseY;
+      update();
+    });
+  svg.call(drag);
+
+  d3.select("#hash-n-slider").on("input", function() {
+    numParticles = +this.value;
+    d3.select("#hash-n-val").text(numParticles);
+    generateParticles(numParticles);
+    update();
+  });
+
+  generateParticles(numParticles);
+  update();
+
+  // Orbit animation for selected particle
+  visibleLoop("fig-hash", function() {
+    hashOrbitAngle += 0.02;
+    const sel = particles[selectedIdx];
+    sel.x = sel.baseX + Math.cos(hashOrbitAngle) * 12;
+    sel.y = sel.baseY + Math.sin(hashOrbitAngle) * 12;
+    update();
+  });
+})();
+
+
+// ============================================================
+// Figure 3: Sequential vs Parallel - timed particle simulation
+// ============================================================
+(function() {
+  let N = 8;             // particles (adjustable)
+  const TOTAL_STEPS = 20;
+  const TICK_MS = 200;   // ms per particle update (CPU) / per full step (GPU)
+  const W = 300, H_C = 240; // canvas size
+  const PR = 6;          // particle radius
+  const dpr = window.devicePixelRatio || 1;
+
+  // Setup canvases
+  function setupCanvas(id) {
+    const c = document.getElementById(id);
+    c.width = W * dpr; c.height = H_C * dpr;
+    c.style.width = W + 'px'; c.style.height = H_C + 'px';
+    const ctx = c.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return ctx;
+  }
+  const ctxCpu = setupCanvas('seq-canvas');
+  const ctxGpu = setupCanvas('par-canvas');
+
+  // Physics: simple gravity + floor bounce, identical for both
+  const gravity = 0.4;
+  const rng = d3.randomLcg(42);
+
+  function initParticles() {
+    const ps = [];
+    const cols = Math.ceil(Math.sqrt(N * W / (H_C * 0.5)));
+    for (let i = 0; i < N; i++) {
+      const c = i % cols, r = Math.floor(i / cols);
+      const spacing = Math.min(50, (W - 40) / cols);
+      ps.push({
+        x: 20 + c * spacing + (rng() - 0.5) * 10,
+        y: 20 + r * spacing * 0.7 + (rng() - 0.5) * 8,
+        vx: (rng() - 0.5) * 3,
+        vy: rng() * 2,
+        trail: []
+      });
+    }
+    return ps;
+  }
+
+  function stepParticle(p) {
+    p.trail.push({ x: p.x, y: p.y });
+    if (p.trail.length > TOTAL_STEPS) p.trail.shift();
+    p.vy += gravity;
+    p.x += p.vx;
+    p.y += p.vy;
+    // Bounce off walls and floor
+    if (p.x < PR) { p.x = PR; p.vx *= -0.7; }
+    if (p.x > W - PR) { p.x = W - PR; p.vx *= -0.7; }
+    const floorY = H_C - 22; // above progress boxes
+    if (p.y > floorY - PR) { p.y = floorY - PR; p.vy *= -0.65; p.vx *= 0.95; }
+    if (p.y < PR) { p.y = PR; p.vy *= -0.5; }
+  }
+
+  let cpuParticles = initParticles();
+  let gpuParticles = initParticles();
+  // Make GPU start with same positions
+  gpuParticles = cpuParticles.map(p => ({ ...p, trail: [...p.trail] }));
+
+  let playing = false;
+  let cpuStep = 0;        // which timestep the CPU is on
+  let cpuSubIdx = 0;      // which particle within the current timestep (0..N-1)
+  let gpuStep = 0;        // which timestep the GPU is on
+  let cpuActiveParticle = -1; // currently being computed (-1 = none)
+
+  let cpuTimer = null, gpuTimer = null;
+
+  // activeSet: Set of active particle indices (or null for none)
+  // completedSteps: how many timesteps are done
+  function drawSide(ctx, particles, activeSet, completedSteps) {
+    ctx.clearRect(0, 0, W, H_C);
+    ctx.fillStyle = '#f0f4f8';
+    ctx.fillRect(0, 0, W, H_C);
+
+    // Progress boxes at bottom: 20 small boxes showing completed steps
+    const boxH = 8, boxGap = 2;
+    const totalBoxW = TOTAL_STEPS * (boxH + boxGap) - boxGap;
+    const boxStartX = (W - totalBoxW) / 2;
+    const boxY = H_C - boxH - 4;
+    for (let s = 0; s < TOTAL_STEPS; s++) {
+      ctx.fillStyle = s < completedSteps ? '#3b82f6' : '#d1d5db';
+      ctx.fillRect(boxStartX + s * (boxH + boxGap), boxY, boxH, boxH);
+    }
+
+    // Floor line (above progress boxes)
+    const floorY = boxY - 8;
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, floorY); ctx.lineTo(W, floorY); ctx.stroke();
+
+    // Draw trails
+    particles.forEach((p, i) => {
+      if (p.trail.length < 2) return;
+      ctx.beginPath();
+      ctx.moveTo(p.trail[0].x, p.trail[0].y);
+      for (let t = 1; t < p.trail.length; t++) {
+        ctx.lineTo(p.trail[t].x, p.trail[t].y);
+      }
+      ctx.lineTo(p.x, p.y);
+      ctx.strokeStyle = 'rgba(59,130,246,0.15)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      p.trail.forEach((pt, t) => {
+        const alpha = 0.05 + (t / p.trail.length) * 0.15;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, PR * 0.6, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(59,130,246,${alpha})`;
+        ctx.fill();
+      });
+    });
+
+    // Draw particles
+    const hasActive = activeSet && activeSet.size > 0;
+    particles.forEach((p, i) => {
+      const isActive = hasActive && activeSet.has(i);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, PR, 0, Math.PI * 2);
+      ctx.fillStyle = isActive ? '#dc2626' : '#3b82f6';
+      ctx.globalAlpha = isActive ? 1 : 0.8;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // Velocity arrow
+      const vs = 3;
+      const vLen = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      if (vLen > 0.3) {
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + p.vx * vs, p.y + p.vy * vs);
+        ctx.strokeStyle = isActive ? '#dc2626' : 'rgba(190,24,93,0.6)';
+        ctx.lineWidth = isActive ? 2.5 : 1.5;
+        ctx.stroke();
+      }
+
+      // Highlight ring on active
+      if (isActive) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, PR + 4, 0, Math.PI * 2);
+        ctx.strokeStyle = '#dc2626';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([3, 3]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    });
+  }
+
+  // Track GPU "flash" state: all particles red briefly on each step
+  let gpuFlash = false;
+
+  function renderBoth() {
+    // CPU: highlight the single active particle
+    const cpuActive = cpuActiveParticle >= 0 ? new Set([cpuActiveParticle]) : null;
+    drawSide(ctxCpu, cpuParticles, cpuActive, cpuStep);
+
+    // GPU: highlight ALL particles during the flash
+    const gpuActive = gpuFlash ? new Set(d3.range(N)) : null;
+    drawSide(ctxGpu, gpuParticles, gpuActive, gpuStep);
+
+    d3.select('#seq-par-timestep').text(`CPU: step ${cpuStep}/${TOTAL_STEPS}  |  GPU: step ${gpuStep}/${TOTAL_STEPS}`);
+    d3.select('#seq-status').text(cpuStep >= TOTAL_STEPS ? `Done (${(cpuStep * N * TICK_MS / 1000).toFixed(1)}s)` : `Updating particle ${cpuSubIdx + 1}/${N}`);
+    d3.select('#par-status').text(gpuStep >= TOTAL_STEPS ? `Done (${(gpuStep * TICK_MS / 1000).toFixed(1)}s)` : `All ${N} at once`);
+  }
+
+  // CPU: one particle every TICK_MS, N particles = 1 timestep
+  function cpuTick() {
+    if (cpuStep >= TOTAL_STEPS) { cpuActiveParticle = -1; renderBoth(); return; }
+    cpuActiveParticle = cpuSubIdx;
+    stepParticle(cpuParticles[cpuSubIdx]);
+    renderBoth();
+
+    cpuSubIdx++;
+    if (cpuSubIdx >= N) {
+      cpuSubIdx = 0;
+      cpuStep++;
+    }
+    if (cpuStep < TOTAL_STEPS) {
+      cpuTimer = setTimeout(cpuTick, TICK_MS);
+    } else {
+      cpuActiveParticle = -1;
+      renderBoth();
+    }
+  }
+
+  // GPU: all particles every TICK_MS = 1 timestep
+  function gpuTick() {
+    if (gpuStep >= TOTAL_STEPS) { gpuFlash = false; renderBoth(); return; }
+    // Flash all particles red
+    gpuFlash = true;
+    gpuParticles.forEach(p => stepParticle(p));
+    gpuStep++;
+    renderBoth();
+
+    // Turn off flash after a short delay (half the tick)
+    setTimeout(() => { gpuFlash = false; renderBoth(); }, TICK_MS * 0.4);
+
+    if (gpuStep < TOTAL_STEPS) {
+      gpuTimer = setTimeout(gpuTick, TICK_MS);
+    }
+  }
+
+  function start() {
+    playing = true;
+    d3.select('#seq-par-play').text('Pause');
+    cpuTick();
+    gpuTick();
+  }
+
+  function pause() {
+    playing = false;
+    d3.select('#seq-par-play').text('Play');
+    clearTimeout(cpuTimer);
+    clearTimeout(gpuTimer);
+  }
+
+  function reset() {
+    pause();
+    cpuStep = 0; cpuSubIdx = 0; gpuStep = 0; cpuActiveParticle = -1; gpuFlash = false;
+    cpuParticles = initParticles();
+    gpuParticles = cpuParticles.map(p => ({ ...p, trail: [] }));
+    renderBoth();
+  }
+
+  d3.select('#seq-par-play').on('click', function() {
+    if (playing) pause();
+    else if (cpuStep >= TOTAL_STEPS && gpuStep >= TOTAL_STEPS) { reset(); start(); }
+    else start();
+  });
+  d3.select('#seq-par-reset').on('click', reset);
+  d3.select('#seq-par-n').on('input', function() {
+    N = +this.value;
+    d3.select('#seq-par-n-val').text(N);
+    updateCaption();
+    reset();
+  });
+  d3.select('#caption-more-link').on('click', function(e) {
+    e.preventDefault();
+    N = 20;
+    d3.select('#seq-par-n').property('value', 20);
+    d3.select('#seq-par-n-val').text(20);
+    updateCaption();
+    reset();
+    start();
+  });
+
+  function updateCaption() {
+    d3.select('#caption-n').text(N);
+    d3.select('#caption-n2').text(N);
+    d3.select('#caption-cpu-time').text((N * TICK_MS / 1000).toFixed(1));
+  }
+
+  updateCaption();
+  renderBoth();
+
+  // Auto-start when figure scrolls into view
+  let autoStarted = false;
+  const seqParEl = document.getElementById("fig-seq-par");
+  const seqParObs = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting && !autoStarted && !playing) {
+      autoStarted = true;
+      start();
+    }
+  }, { threshold: 0.3 });
+  seqParObs.observe(seqParEl);
+})();
+
+
+// ============================================================
+// Figure 4: Pipeline diagram (vertical array-operation, stepped)
+// ============================================================
+(function() {
+  const N_COLS = 20;
+  const boxSize = 8, boxGap = 2;
+  const rowW = N_COLS * (boxSize + boxGap) - boxGap;
+  const labelW = 95;
+  const leftPad = labelW + 12;
+  const arrowH = 16;
+  const rowH = boxSize;
+  const passSpacing = 28;
+  const passPadTop = 18; // space for pass label above arrays
+
+  const colors = {
+    position: '#0891b2', density: '#7c3aed', pressure: '#dc2626',
+    velocity: '#be185d', force: '#dc2626', kernel: '#059669'
+  };
+
+  const passes = [
+    {
+      label: 'Pass 1: Density',
+      inputs: [{ name: 'pos[i]', color: 'position' }],
+      op: 'density[i] = sum( W(dist, h) )',
+      outputs: [{ name: 'density[i]', color: 'density' }],
+      example: `<span style="color:#7c3aed">density</span>[3] = <span style="color:#059669">W</span>(dist(3,0)) + <span style="color:#059669">W</span>(dist(3,1)) + <span style="color:#059669">W</span>(dist(3,2)) + ...<br><br>All 20 particles compute this <em>simultaneously</em>.<br>Each reads from <span style="color:#0891b2">pos[]</span> (previous timestep) and writes to <span style="color:#7c3aed">density[]</span> (new buffer).`,
+      note: 'Reads pos[] from previous timestep'
+    },
+    {
+      label: 'Pass 2: Pressure',
+      inputs: [{ name: 'density[i]', color: 'density' }],
+      op: 'pressure[i] = k * (density[i] - rest)',
+      outputs: [{ name: 'pressure[i]', color: 'pressure' }],
+      example: `<span style="color:#dc2626">pressure</span>[3] = 10000 * (<span style="color:#7c3aed">density</span>[3] - 1.5)<br><br>A simple per-particle calculation. No neighbor lookup needed.<br>Reads from <span style="color:#7c3aed">density[]</span> computed in Pass 1.`,
+      note: 'Reads density[] from Pass 1'
+    },
+    {
+      label: 'Pass 3: Forces',
+      inputs: [
+        { name: 'pos[i]', color: 'position' },
+        { name: 'density[i]', color: 'density' },
+        { name: 'pressure[i]', color: 'pressure' },
+        { name: 'vel[i]', color: 'velocity' }
+      ],
+      op: 'force[i] = pressure + viscosity',
+      outputs: [{ name: 'force[i]', color: 'force' }],
+      example: `<span style="color:#dc2626">force</span>[3] = <br>&nbsp;&nbsp;-sum( (<span style="color:#dc2626">P</span>[3]+<span style="color:#dc2626">P</span>[j]) / <span style="color:#7c3aed">density</span>[j] * <span style="color:#059669">gradW</span> )<br>&nbsp;&nbsp;+ mu * sum( (<span style="color:#be185d">vel</span>[j]-<span style="color:#be185d">vel</span>[3]) * <span style="color:#059669">lapW</span> )<br><br>Reads 4 arrays from the current timestep.<br>Writes to a new <span style="color:#dc2626">force[]</span> buffer.`,
+      note: 'Reads pos[], vel[] from previous timestep + density[], pressure[] from this timestep'
+    },
+    {
+      label: 'Pass 4: Integrate',
+      inputs: [
+        { name: 'force[i]', color: 'force' },
+        { name: 'density[i]', color: 'density' }
+      ],
+      op: 'vel_new[i] = vel[i] + force/density * dt',
+      outputs: [
+        { name: 'vel_new[i]', color: 'velocity' },
+        { name: 'pos_new[i]', color: 'position' }
+      ],
+      example: `<span style="color:#be185d">vel_new</span>[3] = <span style="color:#be185d">vel</span>[3] + <span style="color:#dc2626">force</span>[3] / <span style="color:#7c3aed">density</span>[3] * dt<br><span style="color:#0891b2">pos_new</span>[3] = <span style="color:#0891b2">pos</span>[3] + <span style="color:#be185d">vel_new</span>[3] * dt<br><br>Writes to <em>new</em> buffers. After this pass,<br>swap: pos_new becomes pos for the next timestep.`,
+      note: 'Writes to NEW buffers, then swap old/new'
+    }
+  ];
+
+  function passHeight(p) {
+    const ir = p.inputs.length, or = p.outputs.length;
+    return passPadTop + ir * (rowH + boxGap) - boxGap + arrowH + 18 + arrowH + or * (rowH + boxGap) - boxGap + 6;
+  }
+  let totalH = 0;
+  const passYs = [];
+  passes.forEach((p, i) => { passYs.push(totalH); totalH += passHeight(p); if (i < passes.length - 1) totalH += passSpacing; });
+  totalH += 10;
+
+  const svgPad = 8; // padding inside SVG for borders
+  const svgW = leftPad + rowW + 20 + svgPad * 2;
+  const container = d3.select("#pipeline-viz");
+  const svg = container.append("svg")
+    .attr("viewBox", `0 0 ${svgW} ${totalH + svgPad * 2}`)
+    .style("width", "100%").style("max-width", svgW + "px");
+
+  const allBoxes = [];
+  const passGroups = [];
+
+  passes.forEach((pass, pi) => {
+    const y0 = passYs[pi];
+    const g = svg.append("g").attr("transform", `translate(${svgPad},${y0 + svgPad})`);
+    passGroups.push(g);
+
+    // Background rect for active border
+    const ph = passHeight(pass);
+    g.append("rect").attr("class", "pass-bg")
+      .attr("x", -6).attr("y", -8)
+      .attr("width", svgW - svgPad * 2 + 8).attr("height", ph + 12)
+      .attr("rx", 4).attr("fill", "none")
+      .attr("stroke", "transparent").attr("stroke-width", 2);
+
+    // Pass label
+    g.append("text").attr("x", 0).attr("y", 10)
+      .attr("font-size", "11px").attr("font-weight", 700)
+      .attr("fill", "var(--text)").attr("font-family", "var(--heading-font)")
+      .text(pass.label);
+
+    let cy = passPadTop;
+
+    // Input rows
+    pass.inputs.forEach((inp, ri) => {
+      const rowY = cy + ri * (rowH + boxGap);
+      g.append("text").attr("x", leftPad - 6).attr("y", rowY + boxSize - 1)
+        .attr("text-anchor", "end").attr("font-size", "10px")
+        .attr("fill", colors[inp.color]).attr("font-family", "var(--mono-font)")
+        .text(inp.name);
+      for (let c = 0; c < N_COLS; c++) {
+        const rect = g.append("rect")
+          .attr("x", leftPad + c * (boxSize + boxGap)).attr("y", rowY)
+          .attr("width", boxSize).attr("height", boxSize)
+          .attr("fill", colors[inp.color]).attr("opacity", 0.5).attr("rx", 1);
+        allBoxes.push({ el: rect, pass: pi, section: 'input' });
+      }
+    });
+
+    const inputEndY = cy + pass.inputs.length * (rowH + boxGap) - boxGap;
+    const a1Y = inputEndY + 3;
+    for (let c = 0; c < N_COLS; c++) {
+      const ax = leftPad + c * (boxSize + boxGap) + boxSize / 2;
+      g.append("line").attr("x1", ax).attr("y1", a1Y).attr("x2", ax).attr("y2", a1Y + arrowH - 4)
+        .attr("stroke", "#b0b8c4").attr("stroke-width", 0.6);
+      g.append("path").attr("d", `M${ax-2},${a1Y+arrowH-6}L${ax},${a1Y+arrowH-2}L${ax+2},${a1Y+arrowH-6}`)
+        .attr("fill", "#b0b8c4");
+    }
+
+    const opY = a1Y + arrowH + 2;
+    g.append("text").attr("x", leftPad + rowW / 2).attr("y", opY + 10)
+      .attr("text-anchor", "middle").attr("font-size", "11px").attr("font-weight", 600)
+      .attr("fill", colors.kernel).attr("font-family", "var(--mono-font)")
+      .text(pass.op);
+
+    const a2Y = opY + 16;
+    for (let c = 0; c < N_COLS; c++) {
+      const ax = leftPad + c * (boxSize + boxGap) + boxSize / 2;
+      g.append("line").attr("x1", ax).attr("y1", a2Y).attr("x2", ax).attr("y2", a2Y + arrowH - 4)
+        .attr("stroke", "#b0b8c4").attr("stroke-width", 0.6);
+      g.append("path").attr("d", `M${ax-2},${a2Y+arrowH-6}L${ax},${a2Y+arrowH-2}L${ax+2},${a2Y+arrowH-6}`)
+        .attr("fill", "#b0b8c4");
+    }
+
+    const outY = a2Y + arrowH;
+    pass.outputs.forEach((outp, ri) => {
+      const rowY = outY + ri * (rowH + boxGap);
+      g.append("text").attr("x", leftPad - 6).attr("y", rowY + boxSize - 1)
+        .attr("text-anchor", "end").attr("font-size", "10px")
+        .attr("fill", colors[outp.color]).attr("font-family", "var(--mono-font)")
+        .text(outp.name);
+      for (let c = 0; c < N_COLS; c++) {
+        const rect = g.append("rect")
+          .attr("x", leftPad + c * (boxSize + boxGap)).attr("y", rowY)
+          .attr("width", boxSize).attr("height", boxSize)
+          .attr("fill", colors[outp.color]).attr("opacity", 0.5).attr("rx", 1);
+        allBoxes.push({ el: rect, pass: pi, section: 'output' });
+      }
+    });
+
+    // Separator
+    if (pi < passes.length - 1) {
+      const sepY = y0 + svgPad + passHeight(pass) + passSpacing / 2;
+      svg.append("line").attr("x1", svgPad).attr("y1", sepY)
+        .attr("x2", svgW - svgPad).attr("y2", sepY)
+        .attr("stroke", "var(--border)").attr("stroke-width", 0.5).attr("stroke-dasharray", "4,3");
+    }
+  });
+
+  // Step control: highlight active pass, show example
+  let activePass = 0;
+
+  function highlightPass(pi) {
+    allBoxes.forEach(b => {
+      const active = b.pass === pi;
+      b.el.attr("opacity", active ? 0.9 : b.pass < pi ? 0.65 : 0.25);
+    });
+    passGroups.forEach((g, i) => {
+      g.selectAll("text").attr("opacity", i === pi ? 1 : i < pi ? 0.55 : 0.3);
+      g.selectAll("line:not(.pass-bg)").attr("opacity", i === pi ? 1 : 0.25);
+      g.selectAll("path").attr("opacity", i === pi ? 1 : 0.25);
+      // Active border
+      g.select(".pass-bg").attr("stroke", i === pi ? "var(--accent)" : "transparent")
+        .attr("fill", i === pi ? "rgba(37,99,235,0.03)" : "none");
+    });
+
+    const p = passes[pi];
+    d3.select("#pipe-phase-label").text(`${p.label}`);
+    d3.select("#pipeline-example").html(
+      `<div style="font-family:var(--heading-font);font-weight:700;font-size:0.85rem;color:var(--text);margin-bottom:0.5rem;">Example: particle 3</div>` +
+      `<div style="line-height:1.8;">${p.example}</div>` +
+      `<div style="margin-top:0.75rem;font-size:0.75rem;color:var(--text-2);font-family:var(--heading-font);font-style:italic;">${p.note}</div>`
+    );
+  }
+
+  d3.select("#pipe-prev").on("click", () => { activePass = Math.max(0, activePass - 1); highlightPass(activePass); });
+  d3.select("#pipe-next").on("click", () => { activePass = Math.min(passes.length - 1, activePass + 1); highlightPass(activePass); });
+
+  highlightPass(0);
+})();
+
+
+// ============================================================
+// Figure 5: Scaled-up simulation (WebGPU with CPU fallback)
+// ============================================================
+(function() {
+  const canvas = document.getElementById("sim-canvas");
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  let simW = 680, simH = 360;
+
+  function resizeCanvas() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    simW = Math.floor(rect.width - 48);
+    simH = 360;
+    canvas.width = simW * dpr;
+    canvas.height = simH * dpr;
+    canvas.style.height = simH + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resizeCanvas();
+
+  let maxP = 4000, gravity = 200, viscMu = 100;
+  const H = 12, pR = 3;
+  let substeps = 16, dt = 0.001, stiffness = 10000, restD = 1.5;
+  let particles = [], mouseDown = false, mouseX = 0, mouseY = 0, emitTimer = 0;
+  const emitInt = 2, emitN = 3;
+
+  // Container
+  const containerW = 340, wallH = 120, wallT = 5;
+  let containerX, containerY;
+  function updateContainerPos() {
+    containerX = simW / 2 - containerW / 2;
+    containerY = simH - wallH - 10;
+  }
+  updateContainerPos();
+
+  // FPS tracking
+  let lastFrameTime = performance.now(), fpsSmooth = 60;
+
+  // ---- Backend abstraction ----
+  let backend = null; // { type: 'cpu' | 'webgpu', step(), getPositions(), getVelocities(), setParams(), reset(), addParticles() }
+
+  // ============ CPU FALLBACK ============
+  function createCPUBackend() {
+    let cpuParticles = [];
+
+    function buildSpatialHash() {
+      const grid = new Map();
+      for (let i = 0; i < cpuParticles.length; i++) {
+        const p = cpuParticles[i];
+        const cx = Math.floor(p.x / H);
+        const cy = Math.floor(p.y / H);
+        const key = (cx << 16) ^ cy;
+        if (!grid.has(key)) grid.set(key, []);
+        grid.get(key).push(i);
+      }
+      return grid;
+    }
+
+    function getNeighborIndices(grid, px, py) {
+      const cx = Math.floor(px / H);
+      const cy = Math.floor(py / H);
+      const result = [];
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          const key = ((cx + dx) << 16) ^ (cy + dy);
+          const cell = grid.get(key);
+          if (cell) {
+            for (let k = 0; k < cell.length; k++) result.push(cell[k]);
+          }
+        }
+      }
+      return result;
+    }
+
+    function step() {
+      updateContainerPos();
+      const cLeft = containerX, cRight = containerX + containerW;
+      const cBottom = simH - 10;
+      const grid = buildSpatialHash();
+
+      // Density pass
+      for (let i = 0; i < cpuParticles.length; i++) {
+        const pi = cpuParticles[i];
+        pi.density = 0;
+        const nbrs = getNeighborIndices(grid, pi.x, pi.y);
+        for (let k = 0; k < nbrs.length; k++) {
+          const j = nbrs[k];
+          const pj = cpuParticles[j];
+          const dx = pi.x - pj.x, dy = pi.y - pj.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          pi.density += SPH.kernel(dist, H);
+        }
+        pi.pressure = stiffness * Math.max(0, pi.density - restD);
+      }
+
+      // Force pass
+      for (let i = 0; i < cpuParticles.length; i++) {
+        const pi = cpuParticles[i];
+        pi.fx = 0; pi.fy = gravity;
+        const nbrs = getNeighborIndices(grid, pi.x, pi.y);
+        for (let k = 0; k < nbrs.length; k++) {
+          const j = nbrs[k];
+          if (i === j) continue;
+          const pj = cpuParticles[j];
+          const dx = pi.x - pj.x, dy = pi.y - pj.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < H && dist > 0.1) {
+            const nx = dx / dist, ny = dy / dist;
+            const g = SPH.gradKernel(dist, H);
+            const pA = (pi.pressure + pj.pressure) / (2 * Math.max(pj.density, 0.01));
+            pi.fx -= pA * g * nx;
+            pi.fy -= pA * g * ny;
+            const l = SPH.lapKernel(dist, H);
+            const rJ = Math.max(pj.density, 0.01);
+            pi.fx += viscMu / rJ * (pj.vx - pi.vx) * l;
+            pi.fy += viscMu / rJ * (pj.vy - pi.vy) * l;
+          }
+        }
+        if (mouseDown) {
+          const dx = pi.x - mouseX, dy = pi.y - mouseY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const r = H * 4;
+          if (dist < r && dist > 0.1) {
+            const s = 4000 * (1 - dist / r);
+            pi.fx += s * dx / dist;
+            pi.fy += s * dy / dist;
+          }
+        }
+      }
+
+      // Integration
+      for (let i = 0; i < cpuParticles.length; i++) {
+        const p = cpuParticles[i], rho = Math.max(p.density, 0.01);
+        p.vx += (p.fx / rho) * dt;
+        p.vy += (p.fy / rho) * dt;
+        const sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+        if (sp > 500) { const s = 500 / sp; p.vx *= s; p.vy *= s; }
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        const m = pR + 1;
+        if (p.y > cBottom - m && p.x > cLeft && p.x < cRight) { p.y = cBottom - m; p.vy = -Math.abs(p.vy) * 0.3; }
+        if (p.x > cLeft - m && p.x < cLeft + wallT + m && p.y > containerY) {
+          if (p.vx < 0) { p.x = cLeft + wallT + m; p.vx = Math.abs(p.vx) * 0.3; }
+        }
+        if (p.x < cRight + m && p.x > cRight - wallT - m && p.y > containerY) {
+          if (p.vx > 0) { p.x = cRight - wallT - m; p.vx = -Math.abs(p.vx) * 0.3; }
+        }
+        if (p.x < m) { p.x = m; p.vx = Math.abs(p.vx) * 0.3; }
+        if (p.x > simW - m) { p.x = simW - m; p.vx = -Math.abs(p.vx) * 0.3; }
+        if (p.y < m) { p.y = m; p.vy = Math.abs(p.vy) * 0.3; }
+        if (p.y > simH - m) { p.y = simH - m; p.vy = -Math.abs(p.vy) * 0.3; }
+      }
+    }
+
+    return {
+      type: 'cpu',
+      step,
+      getCount() { return cpuParticles.length; },
+      getPositions() { return cpuParticles.map(p => [p.x, p.y]); },
+      getVelocities() { return cpuParticles.map(p => [p.vx, p.vy]); },
+      reset() { cpuParticles = []; },
+      addParticles(arr) { cpuParticles.push(...arr); }
+    };
+  }
+
+  // ============ WebGPU BACKEND ============
+  async function createWebGPUBackend() {
+    if (!navigator.gpu) return null;
+    let adapter, device;
+    try {
+      adapter = await navigator.gpu.requestAdapter();
+      if (!adapter) return null;
+      device = await adapter.requestDevice({ requiredLimits: { maxStorageBufferBindingSize: 256 * 1024 * 1024 } });
+    } catch(e) { return null; }
+
+    // Constants matching CPU side
+    const MAX_PARTICLES = 8192;
+    const GRID_W = Math.ceil(800 / H); // generous grid width
+    const GRID_H = Math.ceil(500 / H);
+    const MAX_PER_CELL = 32;
+    const WORKGROUP_SIZE = 64;
+
+    // Params buffer: [n, H, dt, stiffness, restD, gravity, viscMu, simW, simH,
+    //   containerX, containerY, containerW, wallH, wallT, pR,
+    //   mouseDown, mouseX, mouseY, mouseR, mouseStr,
+    //   gridW, gridH, maxPerCell]
+    const PARAMS_COUNT = 23;
+    const paramsData = new Float32Array(PARAMS_COUNT);
+
+    // Buffers
+    const posBuffer = device.createBuffer({ size: MAX_PARTICLES * 2 * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
+    const velBuffer = device.createBuffer({ size: MAX_PARTICLES * 2 * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
+    const densityBuffer = device.createBuffer({ size: MAX_PARTICLES * 4, usage: GPUBufferUsage.STORAGE });
+    const pressureBuffer = device.createBuffer({ size: MAX_PARTICLES * 4, usage: GPUBufferUsage.STORAGE });
+    const forceBuffer = device.createBuffer({ size: MAX_PARTICLES * 2 * 4, usage: GPUBufferUsage.STORAGE });
+    // Grid: each cell stores [count, idx0, idx1, ..., idx(MAX_PER_CELL-1)] = (1 + MAX_PER_CELL) u32 per cell
+    const cellStride = 1 + MAX_PER_CELL; // in u32 units
+    const gridSize = GRID_W * GRID_H * cellStride * 4;
+    const gridBuffer = device.createBuffer({ size: gridSize, usage: GPUBufferUsage.STORAGE });
+    const paramsBuffer = device.createBuffer({ size: PARAMS_COUNT * 4, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    const readbackBuffer = device.createBuffer({ size: MAX_PARTICLES * 2 * 4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    const velReadbackBuffer = device.createBuffer({ size: MAX_PARTICLES * 2 * 4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+
+    const shaderCode = `
+struct Params {
+  n: f32,
+  H: f32,
+  dt: f32,
+  stiffness: f32,
+  restD: f32,
+  gravity: f32,
+  viscMu: f32,
+  simW: f32,
+  simH: f32,
+  containerX: f32,
+  containerY: f32,
+  containerW: f32,
+  wallH: f32,
+  wallT: f32,
+  pR: f32,
+  mouseDown: f32,
+  mouseX: f32,
+  mouseY: f32,
+  mouseR: f32,
+  mouseStr: f32,
+  gridW: f32,
+  gridH: f32,
+  maxPerCell: f32,
+};
+@group(0) @binding(0) var<uniform> params: Params;
+@group(0) @binding(1) var<storage, read_write> pos: array<f32>;
+@group(0) @binding(2) var<storage, read_write> vel: array<f32>;
+@group(0) @binding(3) var<storage, read_write> density: array<f32>;
+@group(0) @binding(4) var<storage, read_write> pressure: array<f32>;
+@group(0) @binding(5) var<storage, read_write> force: array<f32>;
+@group(0) @binding(6) var<storage, read_write> grid: array<atomic<u32>>;
+
+fn kernel_w(r: f32, h: f32) -> f32 {
+  let q = r / h;
+  if (q >= 1.0) { return 0.0; }
+  let t = 1.0 - q;
+  return t * t * t;
+}
+
+fn grad_kernel(r: f32, h: f32) -> f32 {
+  let q = r / h;
+  if (q >= 1.0 || r < 1e-6) { return 0.0; }
+  let t = 1.0 - q;
+  return -3.0 * t * t / h;
+}
+
+fn lap_kernel(r: f32, h: f32) -> f32 {
+  let q = r / h;
+  if (q >= 1.0) { return 0.0; }
+  return 6.0 * (1.0 - q) / (h * h);
+}
+
+fn cellIdx(cx: i32, cy: i32) -> i32 {
+  let gw = i32(params.gridW);
+  let gh = i32(params.gridH);
+  let mpc = i32(params.maxPerCell);
+  return (cy * gw + cx) * (1 + mpc);
+}
+
+// Pass 0: Clear grid
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn clearGrid(@builtin(global_invocation_id) id: vec3u) {
+  let totalCells = u32(params.gridW) * u32(params.gridH);
+  let mpc = u32(params.maxPerCell);
+  let stride = 1u + mpc;
+  let cellStart = id.x * stride;
+  if (id.x >= totalCells) { return; }
+  // Zero the count
+  atomicStore(&grid[cellStart], 0u);
+}
+
+// Pass 1: Insert particles into grid
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn insertParticles(@builtin(global_invocation_id) id: vec3u) {
+  let i = id.x;
+  let n = u32(params.n);
+  if (i >= n) { return; }
+  let px = pos[i * 2u];
+  let py = pos[i * 2u + 1u];
+  let cx = i32(floor(px / params.H));
+  let cy = i32(floor(py / params.H));
+  let gw = i32(params.gridW);
+  let gh = i32(params.gridH);
+  if (cx < 0 || cx >= gw || cy < 0 || cy >= gh) { return; }
+  let mpc = u32(params.maxPerCell);
+  let base = u32(cellIdx(cx, cy));
+  let slot = atomicAdd(&grid[base], 1u);
+  if (slot < mpc) {
+    atomicStore(&grid[base + 1u + slot], i);
+  }
+}
+
+// Pass 2: Density
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn densityPass(@builtin(global_invocation_id) id: vec3u) {
+  let i = id.x;
+  let n = u32(params.n);
+  if (i >= n) { return; }
+  let px = pos[i * 2u];
+  let py = pos[i * 2u + 1u];
+  let cx = i32(floor(px / params.H));
+  let cy = i32(floor(py / params.H));
+  let gw = i32(params.gridW);
+  let gh = i32(params.gridH);
+  let mpc = u32(params.maxPerCell);
+  var rho = 0.0;
+  for (var dx = -1; dx <= 1; dx++) {
+    for (var dy = -1; dy <= 1; dy++) {
+      let ncx = cx + dx;
+      let ncy = cy + dy;
+      if (ncx < 0 || ncx >= gw || ncy < 0 || ncy >= gh) { continue; }
+      let base = u32(cellIdx(ncx, ncy));
+      let count = min(atomicLoad(&grid[base]), mpc);
+      for (var k = 0u; k < count; k++) {
+        let j = atomicLoad(&grid[base + 1u + k]);
+        let djx = px - pos[j * 2u];
+        let djy = py - pos[j * 2u + 1u];
+        let dist = sqrt(djx * djx + djy * djy);
+        rho += kernel_w(dist, params.H);
+      }
+    }
+  }
+  density[i] = rho;
+  pressure[i] = params.stiffness * max(0.0, rho - params.restD);
+}
+
+// Pass 3: Forces (pressure + viscosity) + Integration
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
+  let i = id.x;
+  let n = u32(params.n);
+  if (i >= n) { return; }
+  let px = pos[i * 2u];
+  let py = pos[i * 2u + 1u];
+  let vx = vel[i * 2u];
+  let vy = vel[i * 2u + 1u];
+  let cx = i32(floor(px / params.H));
+  let cy = i32(floor(py / params.H));
+  let gw = i32(params.gridW);
+  let gh = i32(params.gridH);
+  let mpc = u32(params.maxPerCell);
+
+  var fx = 0.0;
+  var fy = params.gravity;
+
+  let pi_pressure = pressure[i];
+  let pi_density = density[i];
+
+  for (var dx = -1; dx <= 1; dx++) {
+    for (var dy = -1; dy <= 1; dy++) {
+      let ncx = cx + dx;
+      let ncy = cy + dy;
+      if (ncx < 0 || ncx >= gw || ncy < 0 || ncy >= gh) { continue; }
+      let base = u32(cellIdx(ncx, ncy));
+      let count = min(atomicLoad(&grid[base]), mpc);
+      for (var k = 0u; k < count; k++) {
+        let j = atomicLoad(&grid[base + 1u + k]);
+        if (j == i) { continue; }
+        let djx = px - pos[j * 2u];
+        let djy = py - pos[j * 2u + 1u];
+        let dist = sqrt(djx * djx + djy * djy);
+        if (dist < params.H && dist > 0.1) {
+          let nx = djx / dist;
+          let ny = djy / dist;
+          let g = grad_kernel(dist, params.H);
+          let pj_density = max(density[j], 0.01);
+          let pA = (pi_pressure + pressure[j]) / (2.0 * pj_density);
+          fx -= pA * g * nx;
+          fy -= pA * g * ny;
+          let l = lap_kernel(dist, params.H);
+          let rJ = pj_density;
+          fx += params.viscMu / rJ * (vel[j * 2u] - vx) * l;
+          fy += params.viscMu / rJ * (vel[j * 2u + 1u] - vy) * l;
+        }
+      }
+    }
+  }
+
+  // Mouse interaction
+  if (params.mouseDown > 0.5) {
+    let mdx = px - params.mouseX;
+    let mdy = py - params.mouseY;
+    let mdist = sqrt(mdx * mdx + mdy * mdy);
+    if (mdist < params.mouseR && mdist > 0.1) {
+      let s = params.mouseStr * (1.0 - mdist / params.mouseR);
+      fx += s * mdx / mdist;
+      fy += s * mdy / mdist;
+    }
+  }
+
+  // Integration
+  let rho = max(pi_density, 0.01);
+  var nvx = vx + (fx / rho) * params.dt;
+  var nvy = vy + (fy / rho) * params.dt;
+  let sp = sqrt(nvx * nvx + nvy * nvy);
+  if (sp > 500.0) { let s = 500.0 / sp; nvx *= s; nvy *= s; }
+  var npx = px + nvx * params.dt;
+  var npy = py + nvy * params.dt;
+
+  // Boundaries
+  let m = params.pR + 1.0;
+  let cLeft = params.containerX;
+  let cRight = params.containerX + params.containerW;
+  let cBottom = params.simH - 10.0;
+  let contY = params.containerY;
+
+  if (npy > cBottom - m && npx > cLeft && npx < cRight) { npy = cBottom - m; nvy = -abs(nvy) * 0.3; }
+  if (npx > cLeft - m && npx < cLeft + params.wallT + m && npy > contY) {
+    if (nvx < 0.0) { npx = cLeft + params.wallT + m; nvx = abs(nvx) * 0.3; }
+  }
+  if (npx < cRight + m && npx > cRight - params.wallT - m && npy > contY) {
+    if (nvx > 0.0) { npx = cRight - params.wallT - m; nvx = -abs(nvx) * 0.3; }
+  }
+  if (npx < m) { npx = m; nvx = abs(nvx) * 0.3; }
+  if (npx > params.simW - m) { npx = params.simW - m; nvx = -abs(nvx) * 0.3; }
+  if (npy < m) { npy = m; nvy = abs(nvy) * 0.3; }
+  if (npy > params.simH - m) { npy = params.simH - m; nvy = -abs(nvy) * 0.3; }
+
+  pos[i * 2u] = npx;
+  pos[i * 2u + 1u] = npy;
+  vel[i * 2u] = nvx;
+  vel[i * 2u + 1u] = nvy;
+}
+`;
+
+    const shaderModule = device.createShaderModule({ code: shaderCode });
+
+    const bindGroupLayout = device.createBindGroupLayout({
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
+        { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+        { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+        { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+        { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+        { binding: 5, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+        { binding: 6, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+      ]
+    });
+
+    const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] });
+
+    const clearPipeline = device.createComputePipeline({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'clearGrid' } });
+    const insertPipeline = device.createComputePipeline({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'insertParticles' } });
+    const densityPipeline = device.createComputePipeline({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'densityPass' } });
+    const forcePipeline = device.createComputePipeline({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'forceAndIntegrate' } });
+
+    const bindGroup = device.createBindGroup({
+      layout: bindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: paramsBuffer } },
+        { binding: 1, resource: { buffer: posBuffer } },
+        { binding: 2, resource: { buffer: velBuffer } },
+        { binding: 3, resource: { buffer: densityBuffer } },
+        { binding: 4, resource: { buffer: pressureBuffer } },
+        { binding: 5, resource: { buffer: forceBuffer } },
+        { binding: 6, resource: { buffer: gridBuffer } },
+      ]
+    });
+
+    let gpuParticleCount = 0;
+    let posReadback = new Float32Array(MAX_PARTICLES * 2);
+    let velReadback = new Float32Array(MAX_PARTICLES * 2);
+    // Readback state: only copy to readback buffers when they're not mapped
+    let readbackReady = true;
+
+    function updateParams() {
+      updateContainerPos();
+      paramsData[0] = gpuParticleCount;
+      paramsData[1] = H;
+      paramsData[2] = dt;
+      paramsData[3] = stiffness;
+      paramsData[4] = restD;
+      paramsData[5] = gravity;
+      paramsData[6] = viscMu;
+      paramsData[7] = simW;
+      paramsData[8] = simH;
+      paramsData[9] = containerX;
+      paramsData[10] = containerY;
+      paramsData[11] = containerW;
+      paramsData[12] = wallH;
+      paramsData[13] = wallT;
+      paramsData[14] = pR;
+      paramsData[15] = mouseDown ? 1 : 0;
+      paramsData[16] = mouseX;
+      paramsData[17] = mouseY;
+      paramsData[18] = H * 4;
+      paramsData[19] = 4000;
+      paramsData[20] = GRID_W;
+      paramsData[21] = GRID_H;
+      paramsData[22] = MAX_PER_CELL;
+      device.queue.writeBuffer(paramsBuffer, 0, paramsData);
+    }
+
+    function dispatch() {
+      if (gpuParticleCount === 0) return;
+      updateParams();
+      const totalCells = GRID_W * GRID_H;
+      const cellGroups = Math.ceil(totalCells / WORKGROUP_SIZE);
+      const particleGroups = Math.ceil(gpuParticleCount / WORKGROUP_SIZE);
+
+      const encoder = device.createCommandEncoder();
+      // Clear grid
+      const p0 = encoder.beginComputePass(); p0.setPipeline(clearPipeline); p0.setBindGroup(0, bindGroup); p0.dispatchWorkgroups(cellGroups); p0.end();
+      // Insert particles
+      const p1 = encoder.beginComputePass(); p1.setPipeline(insertPipeline); p1.setBindGroup(0, bindGroup); p1.dispatchWorkgroups(particleGroups); p1.end();
+      // Density + Pressure
+      const p2 = encoder.beginComputePass(); p2.setPipeline(densityPipeline); p2.setBindGroup(0, bindGroup); p2.dispatchWorkgroups(particleGroups); p2.end();
+      // Forces + Integrate
+      const p3 = encoder.beginComputePass(); p3.setPipeline(forcePipeline); p3.setBindGroup(0, bindGroup); p3.dispatchWorkgroups(particleGroups); p3.end();
+
+      // Only copy to readback buffers if they're not being mapped
+      if (readbackReady) {
+        const byteCount = gpuParticleCount * 2 * 4;
+        encoder.copyBufferToBuffer(posBuffer, 0, readbackBuffer, 0, byteCount);
+        encoder.copyBufferToBuffer(velBuffer, 0, velReadbackBuffer, 0, byteCount);
+        readbackReady = false;
+        device.queue.submit([encoder.finish()]);
+        // Fire-and-forget async map
+        (async () => {
+          try {
+            await readbackBuffer.mapAsync(GPUMapMode.READ, 0, gpuParticleCount * 2 * 4);
+            posReadback.set(new Float32Array(readbackBuffer.getMappedRange(0, gpuParticleCount * 2 * 4)));
+            readbackBuffer.unmap();
+            await velReadbackBuffer.mapAsync(GPUMapMode.READ, 0, gpuParticleCount * 2 * 4);
+            velReadback.set(new Float32Array(velReadbackBuffer.getMappedRange(0, gpuParticleCount * 2 * 4)));
+            velReadbackBuffer.unmap();
+          } catch(e) { /* buffer busy, skip */ }
+          readbackReady = true;
+        })();
+      } else {
+        device.queue.submit([encoder.finish()]);
+      }
+    }
+
+    return {
+      type: 'webgpu',
+      step() {
+        for (let s = 0; s < substeps; s++) dispatch();
+      },
+      readback() { /* handled in dispatch */ },
+      getCount() { return gpuParticleCount; },
+      getPositions() {
+        const result = [];
+        for (let i = 0; i < gpuParticleCount; i++) {
+          result.push([posReadback[i*2], posReadback[i*2+1]]);
+        }
+        return result;
+      },
+      getVelocities() {
+        const result = [];
+        for (let i = 0; i < gpuParticleCount; i++) {
+          result.push([velReadback[i*2], velReadback[i*2+1]]);
+        }
+        return result;
+      },
+      reset() {
+        gpuParticleCount = 0;
+        posReadback = new Float32Array(MAX_PARTICLES * 2);
+        velReadback = new Float32Array(MAX_PARTICLES * 2);
+        readbackReady = true;
+      },
+      addParticles(arr) {
+        // arr is [{x, y, vx, vy}, ...]
+        const startIdx = gpuParticleCount;
+        const count = Math.min(arr.length, MAX_PARTICLES - gpuParticleCount);
+        if (count <= 0) return;
+        const posArr = new Float32Array(count * 2);
+        const velArr = new Float32Array(count * 2);
+        for (let i = 0; i < count; i++) {
+          posArr[i*2] = arr[i].x;
+          posArr[i*2+1] = arr[i].y;
+          velArr[i*2] = arr[i].vx;
+          velArr[i*2+1] = arr[i].vy;
+          // Also update local readback arrays for immediate rendering
+          posReadback[(startIdx+i)*2] = arr[i].x;
+          posReadback[(startIdx+i)*2+1] = arr[i].y;
+          velReadback[(startIdx+i)*2] = arr[i].vx;
+          velReadback[(startIdx+i)*2+1] = arr[i].vy;
+        }
+        device.queue.writeBuffer(posBuffer, startIdx * 2 * 4, posArr);
+        device.queue.writeBuffer(velBuffer, startIdx * 2 * 4, velArr);
+        gpuParticleCount += count;
+      }
+    };
+  }
+
+  // ---- Emit particles ----
+  function emit() {
+    if (backend.getCount() >= maxP) return;
+    const n = Math.min(emitN, maxP - backend.getCount());
+    updateContainerPos();
+    const hx = containerX - 10;
+    const hy = containerY - 55;
+    const arr = [];
+    for (let i = 0; i < n; i++) {
+      arr.push({
+        x: hx + (Math.random() - 0.5) * 4,
+        y: hy + i * (H * 0.5) + (Math.random() - 0.5) * 2,
+        vx: 100 + Math.random() * 20,
+        vy: 10 + Math.random() * 5,
+      });
+    }
+    backend.addParticles(arr);
+  }
+
+  // ---- Rendering ----
+  function render() {
+    ctx.clearRect(0, 0, simW, simH);
+    ctx.fillStyle = '#f0f4f8'; ctx.fillRect(0, 0, simW, simH);
+
+    updateContainerPos();
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(containerX, containerY, wallT, wallH + 10);
+    ctx.fillRect(containerX + containerW - wallT, containerY, wallT, wallH + 10);
+    ctx.fillRect(containerX, simH - 10 - wallT, containerW, wallT);
+
+    // Hose nozzle
+    const hx = containerX - 15, hy = containerY - 58;
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(hx, hy, 14, 20);
+    ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(hx + 14, hy + 10); ctx.lineTo(hx + 24, hy + 12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(hx + 21, hy + 9); ctx.lineTo(hx + 24, hy + 12); ctx.lineTo(hx + 21, hy + 15); ctx.stroke();
+
+    // Color by speed: slow = dark blue, fast = lighter blue
+    const cs = d3.scaleSequential(t => d3.interpolateBlues(0.85 - t * 0.45)).domain([0, 200]);
+    const positions = backend.getPositions();
+    const velocities = backend.getVelocities();
+    ctx.globalAlpha = 0.8;
+    for (let i = 0; i < positions.length; i++) {
+      const [px, py] = positions[i];
+      const [vx, vy] = velocities[i];
+      const sp = Math.sqrt(vx * vx + vy * vy);
+      ctx.beginPath(); ctx.arc(px, py, pR, 0, Math.PI * 2);
+      ctx.fillStyle = cs(Math.min(sp, 200)); ctx.fill();
+    }
+    ctx.globalAlpha = 1.0;
+
+    if (mouseDown) {
+      ctx.beginPath(); ctx.arc(mouseX, mouseY, H * 4, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(220,38,38,0.25)'; ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    // FPS
+    const now = performance.now();
+    const frameDt = now - lastFrameTime;
+    lastFrameTime = now;
+    if (frameDt > 0) fpsSmooth = fpsSmooth * 0.95 + (1000 / frameDt) * 0.05;
+
+    d3.select("#sim-particle-count").text(backend.getCount());
+    d3.select("#sim-fps").text(Math.round(fpsSmooth));
+  }
+
+  // ---- Main loop ----
+  let initialized = false;
+
+  async function initBackend() {
+    const gpuBackend = await createWebGPUBackend();
+    if (gpuBackend) {
+      backend = gpuBackend;
+      d3.select("#sim-backend-label").text("WebGPU").style("color", "var(--c-kernel)");
+    } else {
+      backend = createCPUBackend();
+      d3.select("#sim-backend-label").text("CPU fallback").style("color", "var(--c-pressure)");
+      maxP = 1200; // limit CPU
+    }
+    initialized = true;
+
+    // Seed 1024 particles tightly packed from the bottom of the container
+    updateContainerPos();
+    const seedArr = [];
+    const spacing = H * 0.38; // tight packing near equilibrium
+    const innerW = containerW - wallT * 2 - 2;
+    const cols = Math.floor(innerW / spacing);
+    const startX = containerX + wallT + 1 + (innerW - cols * spacing) / 2;
+    const bottom = simH - 10 - wallT - 1;
+    for (let i = 0; i < 1024; i++) {
+      const c = i % cols;
+      const r = Math.floor(i / cols);
+      const px = startX + c * spacing + spacing / 2;
+      const py = bottom - r * spacing;
+      if (py < containerY - 10) continue;
+      seedArr.push({ x: px, y: py, vx: 0, vy: 0 });
+    }
+    backend.addParticles(seedArr);
+  }
+
+  function loopStep() {
+    if (!initialized) return;
+    emitTimer++;
+    if (emitTimer >= emitInt) { emitTimer = 0; emit(); }
+
+    if (backend.type === 'webgpu') {
+      backend.step(); // dispatch includes readback when buffer is available
+    } else {
+      for (let s = 0; s < substeps; s++) backend.step();
+    }
+    render();
+  }
+
+  canvas.addEventListener("pointerdown", e => {
+    mouseDown = true;
+    const r = canvas.getBoundingClientRect();
+    mouseX = (e.clientX - r.left) * (simW / r.width);
+    mouseY = (e.clientY - r.top) * (simH / r.height);
+  });
+  canvas.addEventListener("pointermove", e => {
+    if (mouseDown) {
+      const r = canvas.getBoundingClientRect();
+      mouseX = (e.clientX - r.left) * (simW / r.width);
+      mouseY = (e.clientY - r.top) * (simH / r.height);
+    }
+  });
+  canvas.addEventListener("pointerup", () => { mouseDown = false; });
+  canvas.addEventListener("pointerleave", () => { mouseDown = false; });
+
+  d3.select("#sim-advanced-toggle").on("click", function() {
+    const el = document.getElementById("sim-advanced");
+    const showing = el.style.display !== 'none';
+    el.style.display = showing ? 'none' : 'flex';
+    d3.select(this).text(showing ? 'Advanced' : 'Hide');
+  });
+  d3.select("#sim-gravity-slider").on("input", function() { gravity = +this.value; d3.select("#sim-gravity-val").text(gravity); });
+  d3.select("#sim-viscosity-slider").on("input", function() { viscMu = +this.value; d3.select("#sim-viscosity-val").text(viscMu); });
+  d3.select("#sim-stiffness-slider").on("input", function() { stiffness = +this.value; d3.select("#sim-stiffness-val").text(stiffness); });
+  d3.select("#sim-restd-slider").on("input", function() { restD = +this.value; d3.select("#sim-restd-val").text(restD); });
+  d3.select("#sim-substeps-slider").on("input", function() { substeps = +this.value; d3.select("#sim-substeps-val").text(substeps); });
+  d3.select("#sim-dt-slider").on("input", function() { dt = +this.value; d3.select("#sim-dt-val").text(dt); });
+  d3.select("#sim-reset").on("click", () => { if (backend) backend.reset(); });
+
+  new ResizeObserver(() => { resizeCanvas(); }).observe(canvas.parentElement);
+
+  // Initialize and start
+  (async function() {
+    await initBackend();
+    visibleLoop('fig-sim', loopStep);
+  })();
+})();
+</script>
+</body>
+</html>

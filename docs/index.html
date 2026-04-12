@@ -221,6 +221,57 @@ pre .c { color: #6c7086; }
   color: var(--text-2);
 }
 
+/* Example cards */
+.examples-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+.example-card {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.25rem 1.5rem;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.example-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+  text-decoration: none;
+}
+.example-thumb {
+  flex-shrink: 0;
+  width: 100px;
+  height: 100px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.example-card-title {
+  font-family: var(--heading-font);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text);
+  margin-bottom: 0.3rem;
+}
+.example-card-desc {
+  font-size: 0.95rem;
+  color: var(--text-2);
+  margin: 0;
+  line-height: 1.5;
+}
+.example-card-tags {
+  font-family: var(--heading-font);
+  font-size: 0.75rem;
+  color: var(--accent);
+  margin-top: 0.5rem;
+}
+
 /* Footer */
 .footer {
   margin-top: 4rem;
@@ -339,7 +390,7 @@ svg .grid path { stroke: none; }
       <div class="step-num">3</div>
       <div class="step-content">
         <h3>Project Scaffolding</h3>
-        <p>Generate a complete React + Vite + D3 + TypeScript project with article layout, shared state for linked views, and scroll management built in.</p>
+        <p>Generate a self-contained HTML file with D3 visualizations, article typography, and shared state for linked views. No build tools needed.</p>
       </div>
     </div>
     <div class="workflow-step" data-step="4">
@@ -351,7 +402,23 @@ svg .grid path { stroke: none; }
     </div>
   </div>
 
-  <!-- 5. Install -->
+  <!-- Examples -->
+  <h2>Examples</h2>
+
+  <p>Articles built with moonshine. Each is a self-contained HTML file with interactive D3 visualizations.</p>
+
+  <div class="examples-list">
+    <a class="example-card" href="sph/index.html">
+      <div class="example-thumb" id="sph-thumb"></div>
+      <div>
+        <div class="example-card-title">Smooth Particle Hydrodynamics</div>
+        <p class="example-card-desc">A four-part series on fluid simulation. Build intuition for how particles estimate density, exert forces, and move to the GPU, then play with the result in a sandbox.</p>
+        <div class="example-card-tags">particle simulation &middot; WebGPU &middot; linked equations &middot; 4 articles</div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Install -->
   <h2>Get Started</h2>
 
   <div class="install-block">
@@ -685,6 +752,116 @@ rm -rf /tmp/moonshine</pre>
   }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
 
   steps.forEach(step => observer.observe(step));
+})();
+
+// ─── SPH thumbnail: animated particles with kernel radius ───
+(function() {
+  const el = document.getElementById('sph-thumb');
+  if (!el) return;
+  const canvas = document.createElement('canvas');
+  const s = 100, dpr = window.devicePixelRatio || 1;
+  canvas.width = s * dpr; canvas.height = s * dpr;
+  canvas.style.width = s + 'px'; canvas.style.height = s + 'px';
+  el.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // Particles in a loose cluster
+  const N = 24;
+  const particles = [];
+  for (let i = 0; i < N; i++) {
+    particles.push({
+      x: 20 + Math.random() * 60,
+      y: 20 + Math.random() * 60,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: 2.5 + Math.random() * 1.5
+    });
+  }
+
+  const H = 22; // kernel radius
+  let t = 0;
+
+  function draw() {
+    t += 1;
+    ctx.clearRect(0, 0, s, s);
+
+    // Simple physics: gravity + repulsion + walls
+    for (let i = 0; i < N; i++) {
+      const p = particles[i];
+      p.vy += 0.01; // gravity
+      for (let j = i + 1; j < N; j++) {
+        const q = particles[j];
+        const dx = q.x - p.x, dy = q.y - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 8 && dist > 0.1) {
+          const f = (8 - dist) * 0.008;
+          const nx = dx / dist, ny = dy / dist;
+          p.vx -= nx * f; p.vy -= ny * f;
+          q.vx += nx * f; q.vy += ny * f;
+        }
+      }
+      p.vx *= 0.98; p.vy *= 0.98;
+      p.x += p.vx; p.y += p.vy;
+      // Walls
+      if (p.x < 6) { p.x = 6; p.vx *= -0.5; }
+      if (p.x > 94) { p.x = 94; p.vx *= -0.5; }
+      if (p.y < 6) { p.y = 6; p.vy *= -0.5; }
+      if (p.y > 94) { p.y = 94; p.vy *= -0.5; }
+    }
+
+    // Pick a "focus" particle near center
+    const focus = particles[0];
+
+    // Draw kernel radius
+    ctx.beginPath();
+    ctx.arc(focus.x, focus.y, H, 0, Math.PI * 2);
+    ctx.strokeStyle = '#2563eb';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.globalAlpha = 0.3;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    // Draw connection lines to neighbors
+    particles.forEach((p, i) => {
+      if (i === 0) return;
+      const dx = p.x - focus.x, dy = p.y - focus.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < H) {
+        ctx.beginPath();
+        ctx.moveTo(focus.x, focus.y);
+        ctx.lineTo(p.x, p.y);
+        ctx.strokeStyle = '#2563eb';
+        ctx.lineWidth = 0.7;
+        ctx.globalAlpha = 0.2 * (1 - dist / H);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    });
+
+    // Draw particles
+    particles.forEach((p, i) => {
+      const dx = p.x - focus.x, dy = p.y - focus.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const inRange = dist < H;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      if (i === 0) {
+        ctx.fillStyle = '#2563eb';
+        ctx.globalAlpha = 0.9;
+      } else {
+        ctx.fillStyle = inRange ? '#0891b2' : '#94a3b8';
+        ctx.globalAlpha = inRange ? 0.7 : 0.25;
+      }
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+
+    requestAnimationFrame(draw);
+  }
+  draw();
 })();
 </script>
 

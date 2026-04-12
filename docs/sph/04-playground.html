@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Playground — SPH</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+  --c-kernel: #059669;
+  --c-density: #7c3aed;
+  --c-pressure: #dc2626;
+  --c-viscosity: #2563eb;
+  --c-mass: #d97706;
+  --c-position: #0891b2;
+  --c-velocity: #be185d;
+}
+
+body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
+h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
+h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+h3 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+.figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.figure-wide { margin-left: -2rem; margin-right: -2rem; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
+.figure-label { font-weight: 600; color: var(--text); }
+
+.insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
+.insight p { margin: 0; }
+
+.controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.controls input[type="range"] { width: 140px; accent-color: var(--accent); }
+.controls label { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
+.controls button { font-family: var(--heading-font); font-size: 0.85rem; padding: 0.25rem 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); cursor: pointer; }
+.controls button:hover { background: var(--bg); }
+
+svg text { font-family: var(--heading-font); }
+
+/* Toolbar-specific styles */
+.toolbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-2); }
+.toolbar-group { display: flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.4rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); }
+.toolbar-group label { font-size: 0.75rem; color: var(--text-2); margin-right: 0.25rem; white-space: nowrap; }
+.tool-btn { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.2rem 0.6rem; border: 1px solid var(--border); border-radius: 3px; background: var(--fig-bg); cursor: pointer; color: var(--text-2); transition: background 0.1s, border-color 0.1s; }
+.tool-btn:hover { background: var(--bg); }
+.tool-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.toolbar select { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.2rem 0.4rem; border: 1px solid var(--border); border-radius: 3px; background: var(--fig-bg); color: var(--text); cursor: pointer; }
+.status-text { font-family: var(--mono-font); font-size: 0.7rem; color: var(--text-2); margin-left: auto; white-space: nowrap; }
+
+@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+</style>
+</head>
+<body>
+<div class="article">
+  <header>
+    <h1>Playground</h1>
+    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
+      A sandbox for building your own particle scenes.
+    </p>
+    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">
+      Part 4 of <a href="index.html">Smooth Particle Hydrodynamics</a>
+    </p>
+  </header>
+
+  <p>
+    Everything from the previous articles comes together here. You have particles
+    governed by density, pressure, and viscosity. You have spatial hashing for fast
+    neighbor lookups. And you have material models that change how particles behave.
+  </p>
+  <p>
+    Pick a material, place emitters and obstacles, paint force fields, and watch
+    particles interact. The toolbar gives you everything you need to build small
+    scenes. Try dropping water onto an obstacle, or filling a space with jelly
+    and poking it.
+  </p>
+
+  <div class="figure figure-wide" id="fig-sandbox">
+    <div class="toolbar" id="sandbox-toolbar">
+      <div class="toolbar-group">
+        <label>Material:</label>
+        <select id="material-select">
+          <option value="water">Water</option>
+          <option value="sand">Sand</option>
+          <option value="jelly">Jelly</option>
+          <option value="ice">Ice</option>
+        </select>
+      </div>
+      <div class="toolbar-group">
+        <label>Tool:</label>
+        <button class="tool-btn active" data-tool="emitter">Emitter</button>
+        <button class="tool-btn" data-tool="obstacle">Obstacle</button>
+        <button class="tool-btn" data-tool="force">Force</button>
+        <button class="tool-btn" data-tool="erase">Erase</button>
+      </div>
+      <div class="toolbar-group">
+        <button class="tool-btn" id="play-btn">Play</button>
+        <button class="tool-btn" id="reset-btn">Reset</button>
+      </div>
+      <span class="status-text" id="status-text">0 particles | -- fps</span>
+    </div>
+    <canvas id="sandbox-canvas" style="width:100%;border-radius:4px;cursor:crosshair;"></canvas>
+    <div class="figure-caption">
+      <span class="figure-label">Playground.</span>
+      Click the canvas to place emitters (drag to set direction), obstacles, or force fields.
+      Particles are colored by speed: dark blue is slow, lighter blue is fast.
+      Switch materials to change the physics.
+    </div>
+  </div>
+
+  <p>
+    The sandbox measures frame time and displays the current FPS alongside
+    the particle count. If the simulation struggles to keep up, you can
+    reduce the load by erasing emitters or pressing Reset. The simulation
+    targets 60 fps and caps particles at 500 to stay smooth on most devices.
+  </p>
+
+  <p>
+    Everything here runs on a single thread using Canvas 2D. Spatial hashing
+    keeps the neighbor search fast, and substeps keep the integration stable.
+    The same ideas scale to GPU compute shaders as shown in
+    <a href="02-gpu.html">Part 2</a> if you need thousands of particles.
+  </p>
+
+  <footer style="margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border);font-family:var(--heading-font);font-size:0.85rem;color:var(--text-2);">
+    <p>Part of <a href="index.html" style="color:var(--text-2);">Smooth Particle Hydrodynamics</a>. Prev: <a href="03-beyond-water.html" style="color:var(--accent);">Beyond Water</a>.</p>
+    <p>Built with <a href="https://github.com/enjalot/moonshine" style="color:var(--text-2);">moonshine</a>.</p>
+  </footer>
+</div>
+
+<script>
+// ============================================================
+// Shared SPH utilities
+// ============================================================
+const SPH = {
+  kernel(r, h) { const q=r/h; if(q>=1) return 0; const t=1-q; return t*t*t; },
+  gradKernel(r, h) { const q=r/h; if(q>=1||r<1e-6) return 0; const t=1-q; return -3*t*t/h; },
+  lapKernel(r, h) { const q=r/h; if(q>=1) return 0; return 6*(1-q)/(h*h); },
+  distance(a, b) { const dx=a.x-b.x, dy=a.y-b.y; return Math.sqrt(dx*dx+dy*dy); }
+};
+
+// Visibility-based animation: only run rAF loops when figure is in view
+function visibleLoop(elementId, loopFn) {
+  let running = false, animId;
+  function tick() { if (!running) return; loopFn(); animId = requestAnimationFrame(tick); }
+  const el = document.getElementById(elementId);
+  const obs = new IntersectionObserver(([e]) => {
+    if (e.isIntersecting && !running) { running = true; tick(); }
+    else if (!e.isIntersecting && running) { running = false; cancelAnimationFrame(animId); }
+  }, { threshold: 0.05 });
+  obs.observe(el);
+}
+
+// ============================================================
+// Playground sandbox
+// ============================================================
+(function() {
+  const canvas = document.getElementById("sandbox-canvas");
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  let simW = 680, simH = 500;
+
+  function resizeCanvas() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    simW = Math.floor(rect.width - 48);
+    simH = 500;
+    canvas.width = simW * dpr; canvas.height = simH * dpr;
+    canvas.style.height = simH + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resizeCanvas();
+
+  // --- Material presets ---
+  const materials = {
+    water:  { viscosity: 100, stiffness: 1500, restD: 3.5, friction: 0.3, springs: false, springK: 0,    label: 'Water' },
+    sand:   { viscosity: 200, stiffness: 2000, restD: 4.0, friction: 0.05, springs: false, springK: 0,   label: 'Sand'  },
+    jelly:  { viscosity: 50,  stiffness: 800,  restD: 3.0, friction: 0.3, springs: true,  springK: 800,  label: 'Jelly' },
+    ice:    { viscosity: 300, stiffness: 3000, restD: 3.5, friction: 0.3, springs: true,  springK: 3000, label: 'Ice'   },
+  };
+  let currentMaterial = 'water';
+
+  // --- Simulation state ---
+  const H = 14, substeps = 5, dt = 0.001, pR = 5, maxP = 500;
+  const gravity = 300;
+  let particles = [];
+  let springs = []; // {a, b, restLen}
+  let emitters = []; // {x, y, dx, dy}
+  let obstacles = []; // {x, y, r}
+  let forceFields = []; // {x, y, dx, dy, r}
+  let paused = true;
+  let activeTool = 'emitter';
+
+  // Pointer state
+  let pointerDown = false, pointerX = 0, pointerY = 0;
+  let dragStartX = 0, dragStartY = 0;
+  let isDragging = false;
+
+  // FPS tracking
+  let lastFrameTime = performance.now(), frameCount = 0, fps = 0, fpsTimer = 0;
+
+  // --- Spatial hash ---
+  const hashMap = new Map();
+  function hashKey(cx, cy) { return cx * 73856093 ^ cy * 19349663; }
+  function buildHash() {
+    hashMap.clear();
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      const cx = Math.floor(p.x / H), cy = Math.floor(p.y / H);
+      const key = hashKey(cx, cy);
+      if (!hashMap.has(key)) hashMap.set(key, []);
+      hashMap.get(key).push(i);
+    }
+  }
+  function getNeighbors(pi) {
+    const p = particles[pi];
+    const cx = Math.floor(p.x / H), cy = Math.floor(p.y / H);
+    const result = [];
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        const key = hashKey(cx + dx, cy + dy);
+        const cell = hashMap.get(key);
+        if (cell) for (const j of cell) if (j !== pi) result.push(j);
+      }
+    }
+    return result;
+  }
+
+  // --- Spring management ---
+  function addSpringsForParticle(idx) {
+    const mat = materials[currentMaterial];
+    if (!mat.springs) return;
+    const p = particles[idx];
+    for (let j = 0; j < particles.length; j++) {
+      if (j === idx) continue;
+      const q = particles[j];
+      const dx = p.x - q.x, dy = p.y - q.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < H && dist > 0.1) {
+        springs.push({ a: idx, b: j, restLen: dist });
+      }
+    }
+  }
+
+  // --- Emitter logic ---
+  function emitParticles() {
+    const mat = materials[currentMaterial];
+    for (const em of emitters) {
+      if (particles.length >= maxP) break;
+      const count = Math.min(2 + Math.floor(Math.random() * 2), maxP - particles.length);
+      for (let i = 0; i < count; i++) {
+        const spread = (Math.random() - 0.5) * 6;
+        const idx = particles.length;
+        particles.push({
+          x: em.x + spread,
+          y: em.y + (Math.random() - 0.5) * 4,
+          vx: em.dx * 80 + (Math.random() - 0.5) * 10,
+          vy: em.dy * 80 + (Math.random() - 0.5) * 10,
+          density: 0, pressure: 0, fx: 0, fy: 0,
+          material: currentMaterial
+        });
+        addSpringsForParticle(idx);
+      }
+    }
+  }
+
+  // --- Physics step ---
+  function step() {
+    const mat = materials[currentMaterial];
+    buildHash();
+
+    // Compute density
+    for (let i = 0; i < particles.length; i++) {
+      const pi = particles[i];
+      pi.density = SPH.kernel(0, H); // self
+      const nbrs = getNeighbors(i);
+      for (const j of nbrs) {
+        const pj = particles[j];
+        const dx = pi.x - pj.x, dy = pi.y - pj.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        pi.density += SPH.kernel(dist, H);
+      }
+      pi.pressure = mat.stiffness * Math.max(0, pi.density - mat.restD);
+    }
+
+    // Compute forces
+    for (let i = 0; i < particles.length; i++) {
+      const pi = particles[i];
+      pi.fx = 0; pi.fy = gravity;
+      const nbrs = getNeighbors(i);
+      for (const j of nbrs) {
+        const pj = particles[j];
+        const dx = pi.x - pj.x, dy = pi.y - pj.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < H && dist > 0.1) {
+          const nx = dx / dist, ny = dy / dist;
+          const g = SPH.gradKernel(dist, H);
+          const pA = (pi.pressure + pj.pressure) / (2 * Math.max(pj.density, 0.01));
+          pi.fx -= pA * g * nx;
+          pi.fy -= pA * g * ny;
+          const l = SPH.lapKernel(dist, H);
+          const rJ = Math.max(pj.density, 0.01);
+          pi.fx += mat.viscosity / rJ * (pj.vx - pi.vx) * l;
+          pi.fy += mat.viscosity / rJ * (pj.vy - pi.vy) * l;
+        }
+      }
+
+      // Force fields
+      for (const ff of forceFields) {
+        const dx = pi.x - ff.x, dy = pi.y - ff.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < ff.r) {
+          const strength = 200 * (1 - dist / ff.r);
+          pi.fx += ff.dx * strength;
+          pi.fy += ff.dy * strength;
+        }
+      }
+    }
+
+    // Spring forces (jelly/ice)
+    for (const sp of springs) {
+      if (sp.a >= particles.length || sp.b >= particles.length) continue;
+      const pa = particles[sp.a], pb = particles[sp.b];
+      const dx = pa.x - pb.x, dy = pa.y - pb.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 0.01) continue;
+      const pMat = materials[pa.material] || mat;
+      const force = pMat.springK * (dist - sp.restLen);
+      const nx = dx / dist, ny = dy / dist;
+      pa.fx -= force * nx; pa.fy -= force * ny;
+      pb.fx += force * nx; pb.fy += force * ny;
+    }
+
+    // Integrate
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      const pMat = materials[p.material] || mat;
+      const rho = Math.max(p.density, 0.01);
+      p.vx += (p.fx / rho) * dt;
+      p.vy += (p.fy / rho) * dt;
+      const sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      if (sp > 500) { const s = 500 / sp; p.vx *= s; p.vy *= s; }
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+
+      // Obstacle collision
+      for (const obs of obstacles) {
+        const dx = p.x - obs.x, dy = p.y - obs.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const minDist = obs.r + pR;
+        if (dist < minDist && dist > 0.01) {
+          const nx = dx / dist, ny = dy / dist;
+          p.x = obs.x + nx * minDist;
+          p.y = obs.y + ny * minDist;
+          const vDotN = p.vx * nx + p.vy * ny;
+          if (vDotN < 0) {
+            p.vx -= 1.5 * vDotN * nx;
+            p.vy -= 1.5 * vDotN * ny;
+          }
+        }
+      }
+
+      // Wall collision (all 4 sides)
+      const m = pR + 1;
+      if (p.x < m) { p.x = m; p.vx = Math.abs(p.vx) * pMat.friction; }
+      if (p.x > simW - m) { p.x = simW - m; p.vx = -Math.abs(p.vx) * pMat.friction; }
+      if (p.y < m) { p.y = m; p.vy = Math.abs(p.vy) * pMat.friction; }
+      if (p.y > simH - m) { p.y = simH - m; p.vy = -Math.abs(p.vy) * pMat.friction; }
+
+      // Sand: extra velocity damping on floor contact
+      if (p.material === 'sand' && p.y >= simH - m - 1) {
+        p.vx *= 0.9;
+        p.vy *= 0.9;
+      }
+    }
+  }
+
+  // --- Color scale (blue gradient, never going to white) ---
+  const speedColor = d3.scaleSequential(t => d3.interpolateBlues(0.35 + t * 0.55)).domain([0, 200]);
+
+  // --- Rendering ---
+  function render() {
+    ctx.clearRect(0, 0, simW, simH);
+    ctx.fillStyle = '#f0f4f8';
+    ctx.fillRect(0, 0, simW, simH);
+
+    // Force field regions
+    for (const ff of forceFields) {
+      ctx.save();
+      ctx.globalAlpha = 0.08;
+      ctx.fillStyle = '#2563eb';
+      ctx.beginPath();
+      ctx.arc(ff.x, ff.y, ff.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.25;
+      // Arrow showing direction
+      const aLen = ff.r * 0.5;
+      ctx.strokeStyle = '#2563eb';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(ff.x, ff.y);
+      ctx.lineTo(ff.x + ff.dx * aLen, ff.y + ff.dy * aLen);
+      ctx.stroke();
+      // Arrowhead
+      const ax = ff.x + ff.dx * aLen, ay = ff.y + ff.dy * aLen;
+      const angle = Math.atan2(ff.dy, ff.dx);
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax - 6 * Math.cos(angle - 0.4), ay - 6 * Math.sin(angle - 0.4));
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax - 6 * Math.cos(angle + 0.4), ay - 6 * Math.sin(angle + 0.4));
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Obstacles
+    for (const obs of obstacles) {
+      ctx.beginPath();
+      ctx.arc(obs.x, obs.y, obs.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(148,163,184,0.25)';
+      ctx.fill();
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // Emitters
+    for (const em of emitters) {
+      ctx.save();
+      ctx.fillStyle = '#64748b';
+      ctx.fillRect(em.x - 6, em.y - 10, 12, 20);
+      // Direction arrow
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1.5;
+      const aLen = 18;
+      const ax = em.x + em.dx * aLen, ay = em.y + em.dy * aLen;
+      ctx.beginPath();
+      ctx.moveTo(em.x, em.y);
+      ctx.lineTo(ax, ay);
+      ctx.stroke();
+      const angle = Math.atan2(em.dy, em.dx);
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax - 7 * Math.cos(angle - 0.4), ay - 7 * Math.sin(angle - 0.4));
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax - 7 * Math.cos(angle + 0.4), ay - 7 * Math.sin(angle + 0.4));
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Particles
+    for (const p of particles) {
+      const sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, pR, 0, Math.PI * 2);
+      ctx.fillStyle = speedColor(Math.min(sp, 180));
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(30,64,175,0.15)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+
+    // Drag preview
+    if (pointerDown && isDragging) {
+      if (activeTool === 'emitter') {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(100,116,139,0.5)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(dragStartX, dragStartY);
+        ctx.lineTo(pointerX, pointerY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(100,116,139,0.3)';
+        ctx.fillRect(dragStartX - 6, dragStartY - 10, 12, 20);
+        ctx.restore();
+      } else if (activeTool === 'obstacle') {
+        const r = Math.sqrt((pointerX - dragStartX) ** 2 + (pointerY - dragStartY) ** 2);
+        ctx.beginPath();
+        ctx.arc(dragStartX, dragStartY, Math.max(r, 10), 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(148,163,184,0.5)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else if (activeTool === 'force') {
+        const r = Math.sqrt((pointerX - dragStartX) ** 2 + (pointerY - dragStartY) ** 2);
+        ctx.beginPath();
+        ctx.arc(dragStartX, dragStartY, Math.max(r, 10), 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(37,99,235,0.3)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    // Wall indicators (subtle lines at edges)
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, simW - 2, simH - 2);
+  }
+
+  // --- Main loop ---
+  let emitTimer = 0;
+  const emitInterval = 3;
+
+  function loopStep() {
+    // FPS
+    const now = performance.now();
+    frameCount++;
+    fpsTimer += now - lastFrameTime;
+    lastFrameTime = now;
+    if (fpsTimer >= 500) {
+      fps = Math.round(frameCount / (fpsTimer / 1000));
+      frameCount = 0;
+      fpsTimer = 0;
+    }
+
+    if (!paused) {
+      // Emit
+      emitTimer++;
+      if (emitTimer >= emitInterval) {
+        emitTimer = 0;
+        emitParticles();
+      }
+
+      // Substeps
+      for (let s = 0; s < substeps; s++) step();
+
+      // Prune broken springs
+      if (springs.length > 0) {
+        springs = springs.filter(sp =>
+          sp.a < particles.length && sp.b < particles.length
+        );
+      }
+    }
+
+    render();
+    document.getElementById("status-text").textContent =
+      `${particles.length} particles | ${fps} fps`;
+  }
+
+  // --- Tool handling ---
+  function getCanvasPos(e) {
+    const r = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - r.left) * (simW / r.width),
+      y: (e.clientY - r.top) * (simH / r.height)
+    };
+  }
+
+  canvas.addEventListener("pointerdown", e => {
+    const pos = getCanvasPos(e);
+    pointerDown = true;
+    pointerX = pos.x;
+    pointerY = pos.y;
+    dragStartX = pos.x;
+    dragStartY = pos.y;
+    isDragging = false;
+
+    if (activeTool === 'erase') {
+      // Check if clicking near an emitter, obstacle, or force field
+      let erased = false;
+      for (let i = emitters.length - 1; i >= 0; i--) {
+        const em = emitters[i];
+        if (Math.sqrt((pos.x - em.x) ** 2 + (pos.y - em.y) ** 2) < 20) {
+          emitters.splice(i, 1); erased = true; break;
+        }
+      }
+      if (!erased) {
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const obs = obstacles[i];
+          if (Math.sqrt((pos.x - obs.x) ** 2 + (pos.y - obs.y) ** 2) < obs.r + 5) {
+            obstacles.splice(i, 1); erased = true; break;
+          }
+        }
+      }
+      if (!erased) {
+        for (let i = forceFields.length - 1; i >= 0; i--) {
+          const ff = forceFields[i];
+          if (Math.sqrt((pos.x - ff.x) ** 2 + (pos.y - ff.y) ** 2) < ff.r + 5) {
+            forceFields.splice(i, 1); erased = true; break;
+          }
+        }
+      }
+    }
+  });
+
+  canvas.addEventListener("pointermove", e => {
+    if (!pointerDown) return;
+    const pos = getCanvasPos(e);
+    pointerX = pos.x;
+    pointerY = pos.y;
+    const dist = Math.sqrt((pointerX - dragStartX) ** 2 + (pointerY - dragStartY) ** 2);
+    if (dist > 5) isDragging = true;
+  });
+
+  canvas.addEventListener("pointerup", e => {
+    if (!pointerDown) return;
+    const pos = getCanvasPos(e);
+    pointerDown = false;
+
+    if (activeTool === 'emitter') {
+      let dx = 0, dy = 1; // default: downward
+      if (isDragging) {
+        const len = Math.sqrt((pos.x - dragStartX) ** 2 + (pos.y - dragStartY) ** 2);
+        if (len > 3) {
+          dx = (pos.x - dragStartX) / len;
+          dy = (pos.y - dragStartY) / len;
+        }
+      }
+      emitters.push({ x: dragStartX, y: dragStartY, dx, dy });
+      if (paused) {
+        paused = false;
+        document.getElementById("play-btn").textContent = 'Pause';
+        document.getElementById("play-btn").classList.add('active');
+      }
+    } else if (activeTool === 'obstacle') {
+      let r = 20;
+      if (isDragging) {
+        r = Math.max(10, Math.sqrt((pos.x - dragStartX) ** 2 + (pos.y - dragStartY) ** 2));
+      }
+      obstacles.push({ x: dragStartX, y: dragStartY, r });
+    } else if (activeTool === 'force') {
+      if (isDragging) {
+        const r = Math.max(15, Math.sqrt((pos.x - dragStartX) ** 2 + (pos.y - dragStartY) ** 2));
+        const len = Math.sqrt((pos.x - dragStartX) ** 2 + (pos.y - dragStartY) ** 2);
+        const dx = len > 3 ? (pos.x - dragStartX) / len : 0;
+        const dy = len > 3 ? (pos.y - dragStartY) / len : 1;
+        forceFields.push({ x: dragStartX, y: dragStartY, dx, dy, r });
+      } else {
+        // Click without drag: small upward force
+        forceFields.push({ x: dragStartX, y: dragStartY, dx: 0, dy: -1, r: 30 });
+      }
+    }
+
+    isDragging = false;
+  });
+
+  canvas.addEventListener("pointerleave", () => {
+    pointerDown = false;
+    isDragging = false;
+  });
+
+  // --- Toolbar buttons ---
+  document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeTool = btn.dataset.tool;
+      // Update cursor
+      if (activeTool === 'erase') {
+        canvas.style.cursor = 'not-allowed';
+      } else {
+        canvas.style.cursor = 'crosshair';
+      }
+    });
+  });
+
+  document.getElementById("play-btn").addEventListener("click", function() {
+    paused = !paused;
+    this.textContent = paused ? 'Play' : 'Pause';
+    this.classList.toggle('active', !paused);
+  });
+
+  document.getElementById("reset-btn").addEventListener("click", () => {
+    particles = [];
+    springs = [];
+    emitters = [];
+    obstacles = [];
+    forceFields = [];
+    paused = true;
+    document.getElementById("play-btn").textContent = 'Play';
+    document.getElementById("play-btn").classList.remove('active');
+  });
+
+  document.getElementById("material-select").addEventListener("change", function() {
+    currentMaterial = this.value;
+  });
+
+  // --- Place a default emitter so the scene isn't empty ---
+  emitters.push({ x: simW * 0.3, y: 40, dx: 0.15, dy: 0.98 });
+
+  new ResizeObserver(() => { resizeCanvas(); }).observe(canvas.parentElement);
+  visibleLoop('fig-sandbox', loopStep);
+})();
+</script>
+</body>
+</html>

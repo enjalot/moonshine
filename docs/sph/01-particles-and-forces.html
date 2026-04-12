@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particles, Neighborhoods, and Forces — SPH</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+  --c-kernel: #059669;
+  --c-density: #7c3aed;
+  --c-pressure: #dc2626;
+  --c-viscosity: #2563eb;
+  --c-mass: #d97706;
+  --c-position: #0891b2;
+  --c-velocity: #be185d;
+}
+
+body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
+h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
+h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+h3 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+.figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.figure-wide { margin-left: -2rem; margin-right: -2rem; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
+.figure-label { font-weight: 600; color: var(--text); }
+
+.insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
+.insight p { margin: 0; }
+
+.controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.controls input[type="range"] { width: 140px; accent-color: var(--accent); }
+.controls label { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
+.controls button { font-family: var(--heading-font); font-size: 0.85rem; padding: 0.25rem 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); cursor: pointer; }
+.controls button:hover { background: var(--bg); }
+
+svg text { font-family: var(--heading-font); }
+
+.eq-code-stack { margin: 1.5rem 0; border-radius: 6px; overflow: hidden; border: 1px solid #e8e6f0; }
+.eq-block { padding: 1rem 1.25rem; background: #f8f7ff; text-align: center; border-bottom: 1px solid #e8e6f0; }
+.eq-block .eq-label { font-family: var(--heading-font); font-size: 0.75rem; color: var(--text-2); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.eq-rows { position: relative; }
+.eq-values-row { height: 2.2em; display: flex; align-items: center; justify-content: center; margin-top: 0.4rem; transition: opacity 0.15s; }
+.eq-values-row.visible { opacity: 1; }
+.eq-hint { font-family: var(--heading-font); font-size: 0.7rem; color: var(--text-2); opacity: 0.5; font-style: italic; }
+
+.code-block { padding: 1rem 1.25rem; background: #f6f8fa; color: #1a1a2e; font-family: var(--mono-font); font-size: 0.8rem; line-height: 1.6; overflow-x: auto; }
+.code-block .comment { color: #6b7280; }
+.code-block .c-kernel { color: var(--c-kernel); }
+.code-block .c-density { color: var(--c-density); }
+.code-block .c-pressure { color: var(--c-pressure); }
+.code-block .c-viscosity { color: var(--c-viscosity); }
+.code-block .c-mass { color: var(--c-mass); }
+.code-block .c-position { color: var(--c-position); }
+.code-block .c-velocity { color: var(--c-velocity); }
+
+.t-kernel { color: var(--c-kernel); font-weight: 600; }
+.t-density { color: var(--c-density); font-weight: 600; }
+.t-pressure { color: var(--c-pressure); font-weight: 600; }
+.t-viscosity { color: var(--c-viscosity); font-weight: 600; }
+.t-mass { color: var(--c-mass); font-weight: 600; }
+.t-position { color: var(--c-position); font-weight: 600; }
+.t-velocity { color: var(--c-velocity); font-weight: 600; }
+
+/* Sparkline container */
+.sparkline-container { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; font-family: var(--heading-font); font-size: 0.75rem; color: var(--text-2); }
+.sparkline-container svg { display: block; }
+
+@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+</style>
+</head>
+<body>
+<div class="article">
+  <header>
+    <h1>Particles, Neighborhoods, and Forces</h1>
+    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
+      How a fluid can emerge from particles that only know about their neighbors.
+    </p>
+    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">
+      Part 1 of <a href="index.html">Smooth Particle Hydrodynamics</a>
+    </p>
+  </header>
+
+  <h2>Particles Instead of Grid Cells</h2>
+  <p>
+    One way to simulate a fluid is to divide space into a grid and track
+    how much fluid is in each cell. Click and drag below to inject dye into a
+    grid-based fluid. The simulation advects density and velocity through fixed cells.
+  </p>
+
+  <div class="figure figure-wide" id="fig-grid">
+    <canvas id="grid-canvas" style="width:100%;border-radius:4px;cursor:crosshair;"></canvas>
+    <div class="figure-caption">
+      <span class="figure-label">Grid-based fluid.</span>
+      Click and drag to inject dye and force. The grid approach works well for enclosed flows
+      but struggles with splashing, free surfaces, and mixing.
+    </div>
+  </div>
+
+  <p>
+    Grid simulations are powerful, but every cell exists whether there's fluid in it or not.
+    Another way is to forget the grid and model the fluid as a collection of particles,
+    each carrying <span class="t-mass">mass</span>, <span class="t-position">position</span>,
+    and <span class="t-velocity">velocity</span>. Particles only exist where the fluid is.
+  </p>
+  <p>
+    If you've played with a flocking simulation before, the particle approach feels similar.
+    In flocking, each bird looks at nearby birds and follows three rules: separate, align, cohere.
+  </p>
+
+  <div class="figure figure-wide" id="fig-boids">
+    <div class="controls">
+      <label>Separation: <input type="range" id="boids-sep-slider" min="0" max="3" value="1.5" step="0.1"> <span id="boids-sep-val">1.5</span></label>
+      <label>Alignment: <input type="range" id="boids-ali-slider" min="0" max="3" value="1.0" step="0.1"> <span id="boids-ali-val">1.0</span></label>
+      <label>Cohesion: <input type="range" id="boids-coh-slider" min="0" max="3" value="1.0" step="0.1"> <span id="boids-coh-val">1.0</span></label>
+    </div>
+    <canvas id="boids-canvas" style="width:100%;border-radius:4px;"></canvas>
+    <div class="figure-caption">
+      <span class="figure-label">Flocking (boids).</span>
+      Click a boid to select it and see its
+      <span class="t-kernel">neighbor radius</span> and force breakdown:
+      <span style="color:var(--c-pressure)">separation</span>,
+      <span style="color:var(--c-viscosity)">alignment</span>,
+      <span style="color:var(--c-kernel)">cohesion</span>.
+      Each boid only knows about its neighbors, yet flocking emerges.
+    </div>
+  </div>
+
+  <p>
+    In SPH, each particle follows the same pattern: look at nearby particles, compute
+    local forces, update. Instead of steering rules, SPH uses forces derived from
+    fluid physics: how crowded is it here? Which way is the pressure pushing me?
+    How fast are my neighbors moving compared to me?
+    Fluid-like behavior emerges from these local interactions.
+  </p>
+
+  <h2>The Smoothing Kernel</h2>
+  <p>
+    The "smooth" in SPH comes from the <span class="t-kernel">kernel function</span>.
+    It answers a simple question: how much should a particle care about a neighbor
+    at a given distance?
+  </p>
+  <p>
+    A particle at the center of its <span class="t-kernel">smoothing radius</span>
+    cares most about particles right next to it, and cares less about particles
+    further away. Beyond the smoothing radius, influence drops to zero.
+  </p>
+
+  <div class="figure figure-wide" id="fig-kernel">
+    <div class="eq-code-stack">
+      <div class="eq-block">
+        <div class="eq-label">Kernel function</div>
+        <div class="eq-rows">
+          <div id="eq-kernel"></div>
+          <div class="eq-values-row" id="eq-kernel-values"><span class="eq-hint">drag a neighbor particle</span></div>
+        </div>
+      </div>
+      <div class="code-block">
+        <span class="c-position">r</span> = distance(i, j) &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// distance between particles</span><br>
+        <span class="c-kernel">q</span> = <span class="c-position">r</span> / <span class="c-kernel">h</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// normalized distance</span><br>
+        <span class="c-kernel">W</span> = (<span class="c-kernel">q</span> &lt; 1) ? (1 - <span class="c-kernel">q</span>)³ : 0 &nbsp;<span class="comment">// cubic falloff, zero beyond h</span>
+      </div>
+    </div>
+    <div class="controls">
+      <label>Smoothing radius (h): <input type="range" id="kernel-h-slider" min="40" max="140" value="80" step="1"> <span id="kernel-h-val">80</span>px</label>
+    </div>
+    <div id="kernel-viz" style="display: flex; gap: 1rem; flex-wrap: wrap;"></div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 1.</span>
+      Drag <span class="t-position">neighbor particles</span> to see how the
+      <span class="t-kernel">kernel weight</span> changes. The equation updates with actual values.
+    </div>
+  </div>
+
+  <p>
+    The specific shape of the kernel matters less than its properties: it's smooth,
+    it falls off to zero at the smoothing radius, and it's normalized so that the
+    total influence integrates to 1.
+  </p>
+
+  <h2>Estimating Density</h2>
+  <p>
+    The first thing each particle needs to figure out is: how crowded is it here?
+    This is the <span class="t-density">density</span> at the particle's location.
+    A particle estimates its density by summing up kernel-weighted contributions
+    from all neighbors within the smoothing radius.
+  </p>
+
+  <div class="figure figure-wide" id="fig-density">
+    <div class="eq-code-stack">
+      <div class="eq-block">
+        <div class="eq-label">Density estimation</div>
+        <div class="eq-rows">
+          <div id="eq-density"></div>
+          <div class="eq-values-row visible" id="eq-density-values"><span class="eq-hint">loading...</span></div>
+        </div>
+      </div>
+      <div class="code-block">
+        <span class="c-density">density</span>[i] = 0<br>
+        for each neighbor j within <span class="c-kernel">h</span>:<br>
+        &nbsp;&nbsp;<span class="c-density">density</span>[i] += <span class="c-mass">mass</span>[j] * <span class="c-kernel">W</span>(<span class="c-position">r</span>, <span class="c-kernel">h</span>)
+      </div>
+    </div>
+    <div class="controls">
+      <label>Smoothing radius (h): <input type="range" id="density-h-slider" min="40" max="140" value="80" step="1"> <span id="density-h-val">80</span>px</label>
+    </div>
+    <div id="density-viz"></div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 2.</span>
+      Click to select a particle, drag any particle to rearrange.
+      The selected particle (ringed) shows its density sum in the equation.
+    </div>
+  </div>
+
+  <h2>Pressure: Pushing Apart</h2>
+  <p>
+    Fluids resist compression. When particles are packed too tightly, they push apart.
+    The <span class="t-pressure">pressure force</span> on a particle points away from
+    regions of high density.
+  </p>
+
+
+  <div class="figure figure-wide" id="fig-pressure">
+    <div class="eq-code-stack">
+      <div class="eq-block">
+        <div class="eq-label">Pressure force (probe particle)</div>
+        <div class="eq-rows">
+          <div id="eq-pressure"></div>
+          <div class="eq-values-row visible" id="eq-pressure-values"><span class="eq-hint">loading...</span></div>
+        </div>
+      </div>
+      <div class="code-block">
+        <span class="c-pressure">P</span>[i] = k * (<span class="c-density">ρ</span>[i] - <span class="c-density">ρ₀</span>) &nbsp;<span class="comment">// equation of state</span><br>
+        <span class="c-pressure">force</span>[i] -= <span class="c-mass">m</span>[j] * (<span class="c-pressure">P</span>[i]+<span class="c-pressure">P</span>[j]) / (2*<span class="c-density">ρ</span>[j]) * <span class="c-kernel">∇W</span>
+      </div>
+    </div>
+    <div class="controls">
+      <label>Stiffness (k): <input type="range" id="pressure-k-slider" min="0.5" max="12" value="6" step="0.1"> <span id="pressure-k-val">6.0</span></label>
+      <label>Rest density: <input type="range" id="pressure-rest-slider" min="0.2" max="3" value="0.8" step="0.1"> <span id="pressure-rest-val">0.8</span></label>
+      <label><input type="checkbox" id="pressure-animate" checked> Animate probe</label>
+    </div>
+    <div id="pressure-viz"></div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 3.</span>
+      The <span class="t-pressure">probe particle</span> orbits through an uneven ring of neighbors.
+      <span class="t-pressure">Red arrows</span> show pressure forces. The dashed circle shows the
+      <span class="t-kernel">smoothing radius</span>. Uncheck "Animate" to drag particles.
+    </div>
+  </div>
+
+  <h2>Viscosity: Smoothing Velocities</h2>
+  <p>
+    Pressure alone gives you something like an ideal gas. Real fluids have
+    <span class="t-viscosity">viscosity</span>, which makes neighboring particles
+    tend to move at similar speeds. The viscosity force is proportional to the
+    velocity difference between a particle and its neighbors.
+  </p>
+
+  <div class="figure figure-wide" id="fig-viscosity">
+    <div class="eq-code-stack">
+      <div class="eq-block">
+        <div class="eq-label">Viscosity force</div>
+        <div class="eq-rows">
+          <div id="eq-viscosity"></div>
+          <div class="eq-values-row visible" id="eq-viscosity-values"><span class="eq-hint">loading...</span></div>
+        </div>
+      </div>
+      <div class="code-block">
+        <span class="c-viscosity">force</span>[i] += <span class="c-viscosity">μ</span> * <span class="c-mass">m</span>[j]/<span class="c-density">ρ</span>[j] * (<span class="c-velocity">v</span>[j] - <span class="c-velocity">v</span>[i]) * <span class="c-kernel">∇²W</span>(<span class="c-position">r</span>, <span class="c-kernel">h</span>)
+      </div>
+    </div>
+    <div class="controls">
+      <label>Viscosity (μ): <input type="range" id="viscosity-mu-slider" min="0" max="20" value="10" step="0.5"> <span id="viscosity-mu-val">10.0</span></label>
+      <label>Radius (h): <input type="range" id="viscosity-h-slider" min="30" max="120" value="70" step="1"> <span id="viscosity-h-val">70</span></label>
+      <button id="viscosity-reset">Reset</button>
+    </div>
+    <div id="viscosity-viz"></div>
+    <div class="sparkline-container" id="viscosity-spark-container">
+      Speed: <svg id="viscosity-sparkline" width="200" height="30"></svg>
+      <span id="viscosity-speed-readout"></span>
+    </div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 4.</span>
+      The <span class="t-velocity">pink particle</span> moves through a field of resting particles.
+      <span class="t-viscosity">Blue arrows</span> show viscosity forces pulling neighbors along.
+      The sparkline tracks how the mover slows down. It loops when it reaches the edge.
+    </div>
+  </div>
+
+  <h2>Updating Positions</h2>
+  <p>
+    We now have all the forces. At each time step, we update velocity and position.
+    The order of operations and the number of intermediate evaluations determine how
+    accurately the integration tracks the true path. Here are four methods, from
+    simplest to most accurate.
+  </p>
+
+  <div class="figure figure-wide" id="fig-integration">
+    <div class="eq-code-stack">
+      <div class="eq-block">
+        <div class="eq-label">Integration methods</div>
+        <div class="eq-rows">
+          <div id="eq-integration"></div>
+          <div class="eq-values-row visible" id="eq-integration-values"><span class="eq-hint">scrub the step slider</span></div>
+        </div>
+      </div>
+      <div class="code-block">
+        <span class="comment">// Symplectic Euler: velocity first, then position</span><br>
+        <span class="c-velocity">vel</span> += <span class="c-pressure">F</span>/<span class="c-density">ρ</span> * dt; &nbsp;<span class="c-position">pos</span> += <span class="c-velocity">vel</span> * dt<br>
+        <span class="comment">// RK4: four force evaluations per step, much more accurate</span>
+      </div>
+    </div>
+    <div class="controls">
+      <label>dt: <input type="range" id="int-dt-slider" min="0.005" max="0.08" value="0.035" step="0.005"> <span id="int-dt-val">0.035</span></label>
+      <label>Steps: <input type="range" id="int-steps-slider" min="5" max="40" value="25" step="1"> <span id="int-steps-val">25</span></label>
+      <label>Step: <input type="range" id="int-step-slider" min="0" max="25" value="0" step="1"> <span id="int-step-val">0</span></label>
+    </div>
+    <div id="integration-viz"></div>
+    <div id="integration-legend" style="display:flex;gap:1.2rem;flex-wrap:wrap;font-family:var(--heading-font);font-size:0.8rem;margin-top:0.5rem;"></div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 5.</span>
+      Four integration methods on the same orbit. Scrub to walk through steps.
+      At larger dt, cheaper methods spiral outward while RK4 stays on track.
+    </div>
+  </div>
+
+  <h2>Putting It Together</h2>
+  <p>
+    A spout on the left wall emits particles into a shallow container where they
+    feel pressure, viscosity, and gravity. Watch the fluid fill up and splash.
+  </p>
+
+  <div class="figure figure-wide" id="fig-sim">
+    <div class="controls">
+      <label>Max: <input type="range" id="sim-count-slider" min="50" max="500" value="300" step="10"> <span id="sim-count-val">300</span></label>
+      <label>Gravity: <input type="range" id="sim-gravity-slider" min="0" max="500" value="250" step="10"> <span id="sim-gravity-val">250</span></label>
+      <label>Viscosity: <input type="range" id="sim-viscosity-slider" min="0" max="200" value="100" step="5"> <span id="sim-viscosity-val">100</span></label>
+      <button id="sim-reset">Reset</button>
+    </div>
+    <canvas id="sim-canvas" style="width:100%;border-radius:4px;cursor:crosshair;"></canvas>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 6.</span>
+      2D SPH fluid filling a container from a spout. Particles are colored by speed:
+      dark blue is slow, lighter blue is fast. Click and drag to push particles around.
+    </div>
+  </div>
+
+  <p>
+    The simulation loop is straightforward: compute densities, compute forces, update
+    velocities, update positions. The expensive part is finding neighbors, which we'll
+    solve with spatial hashing on the GPU in <a href="02-gpu.html">Part 2</a>.
+  </p>
+
+  <footer style="margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border);font-family:var(--heading-font);font-size:0.85rem;color:var(--text-2);">
+    <p>Part of <a href="index.html" style="color:var(--text-2);">Smooth Particle Hydrodynamics</a>. Next: <a href="02-gpu.html" style="color:var(--accent);">Moving to the GPU</a>.</p>
+    <p>Built with <a href="https://github.com/enjalot/moonshine" style="color:var(--text-2);">moonshine</a>.</p>
+  </footer>
+</div>
+
+<script>
+// ============================================================
+// Shared
+// ============================================================
+const SPH = {
+  kernel(r, h) { const q=r/h; if(q>=1) return 0; const t=1-q; return t*t*t; },
+  gradKernel(r, h) { const q=r/h; if(q>=1||r<1e-6) return 0; const t=1-q; return -3*t*t/h; },
+  lapKernel(r, h) { const q=r/h; if(q>=1) return 0; return 6*(1-q)/(h*h); },
+  distance(a, b) { const dx=a.x-b.x, dy=a.y-b.y; return Math.sqrt(dx*dx+dy*dy); }
+};
+function fmt(v, d=2) { return typeof v==='number' ? v.toFixed(d) : v; }
+function renderEq(el, tex) { katex.render(tex, el, { displayMode: false, throwOnError: false }); }
+
+// Symbolic equations
+(function() {
+  const eqs = {
+    'eq-kernel': String.raw`{\color{#059669}W}({\color{#0891b2}r}, {\color{#059669}h}) = \left(1 - \frac{{\color{#0891b2}r}}{{\color{#059669}h}}\right)^{\!3}`,
+    'eq-density': String.raw`{\color{#7c3aed}\rho_i} = \sum_j {\color{#d97706}m_j} \cdot {\color{#059669}W}\!\left({\color{#0891b2}r_{ij}},\; {\color{#059669}h}\right)`,
+    'eq-pressure': String.raw`{\color{#dc2626}\mathbf{F}_i^{press}} = -\sum_j {\color{#d97706}m_j}\frac{{\color{#dc2626}P_i}+{\color{#dc2626}P_j}}{2{\color{#7c3aed}\rho_j}} {\color{#059669}\nabla W}`,
+    'eq-viscosity': String.raw`{\color{#2563eb}\mathbf{F}_i^{visc}} = {\color{#2563eb}\mu} \sum_j \frac{{\color{#be185d}\mathbf{v}_j}-{\color{#be185d}\mathbf{v}_i}}{{\color{#7c3aed}\rho_j}} {\color{#059669}\nabla^2 W}`,
+    'eq-integration': String.raw`{\color{#be185d}\mathbf{v}} \mathrel{+}= \frac{{\color{#dc2626}\mathbf{F}}}{{\color{#7c3aed}\rho}} \Delta t \qquad {\color{#0891b2}\mathbf{r}} \mathrel{+}= {\color{#be185d}\mathbf{v}} \cdot \Delta t`
+  };
+  for (const [id, tex] of Object.entries(eqs)) {
+    const el = document.getElementById(id);
+    if (el) katex.render(tex, el, { displayMode: true, throwOnError: false });
+  }
+})();
+
+// Visibility-based animation: only run rAF loops when figure is in view
+function visibleLoop(elementId, loopFn) {
+  let running = false, animId;
+  function tick() { if (!running) return; loopFn(); animId = requestAnimationFrame(tick); }
+  const el = document.getElementById(elementId);
+  const obs = new IntersectionObserver(([e]) => {
+    if (e.isIntersecting && !running) { running = true; tick(); }
+    else if (!e.isIntersecting && running) { running = false; cancelAnimationFrame(animId); }
+  }, { threshold: 0.1 });
+  obs.observe(el);
+  return { start() { if (!running) { running = true; tick(); } }, stop() { running = false; cancelAnimationFrame(animId); } };
+}
+
+
+// ============================================================
+// Grid-based fluid (Jos Stam stable fluids, simplified)
+// ============================================================
+(function() {
+  const canvas = document.getElementById("grid-canvas");
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio||1;
+  const N = 64; // grid resolution
+  let cW=680, cH=200;
+
+  function resize() {
+    const rect=canvas.parentElement.getBoundingClientRect();
+    cW=Math.floor(rect.width-48); cH=200;
+    canvas.width=cW*dpr; canvas.height=cH*dpr;
+    canvas.style.height=cH+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  resize();
+
+  const NY = Math.round(N*cH/cW);
+  const size = (N+2)*(NY+2);
+  let u = new Float32Array(size), v = new Float32Array(size);
+  let u0 = new Float32Array(size), v0 = new Float32Array(size);
+  let dens = new Float32Array(size), dens0 = new Float32Array(size);
+  const visc = 0.0001, diff = 0.0001, dt2 = 0.15;
+
+  function IX(i,j){return i+(N+2)*j;}
+
+  function addSource(x,s,dt3){for(let i=0;i<size;i++)x[i]+=dt3*s[i];}
+
+  function diffuse(b,x,x0,diffC,dt3){
+    const a=dt3*diffC*N*NY;
+    for(let k=0;k<4;k++){
+      for(let i=1;i<=N;i++) for(let j=1;j<=NY;j++)
+        x[IX(i,j)]=(x0[IX(i,j)]+a*(x[IX(i-1,j)]+x[IX(i+1,j)]+x[IX(i,j-1)]+x[IX(i,j+1)]))/(1+4*a);
+      setBnd(b,x);
+    }
+  }
+
+  function advect(b,d,d0,u2,v2,dt3){
+    const dt0x=dt3*N, dt0y=dt3*NY;
+    for(let i=1;i<=N;i++) for(let j=1;j<=NY;j++){
+      let x=i-dt0x*u2[IX(i,j)], y=j-dt0y*v2[IX(i,j)];
+      x=Math.max(0.5,Math.min(N+0.5,x)); y=Math.max(0.5,Math.min(NY+0.5,y));
+      const i0=Math.floor(x),i1=i0+1,j0=Math.floor(y),j1=j0+1;
+      const s1=x-i0,s0=1-s1,t1=y-j0,t0=1-t1;
+      d[IX(i,j)]=s0*(t0*d0[IX(i0,j0)]+t1*d0[IX(i0,j1)])+s1*(t0*d0[IX(i1,j0)]+t1*d0[IX(i1,j1)]);
+    }
+    setBnd(b,d);
+  }
+
+  function project(u2,v2,p,div2){
+    for(let i=1;i<=N;i++) for(let j=1;j<=NY;j++){
+      div2[IX(i,j)]=-0.5*(u2[IX(i+1,j)]-u2[IX(i-1,j)]/N+v2[IX(i,j+1)]-v2[IX(i,j-1)])/NY;
+      p[IX(i,j)]=0;
+    }
+    setBnd(0,div2);setBnd(0,p);
+    for(let k=0;k<4;k++){
+      for(let i=1;i<=N;i++) for(let j=1;j<=NY;j++)
+        p[IX(i,j)]=(div2[IX(i,j)]+p[IX(i-1,j)]+p[IX(i+1,j)]+p[IX(i,j-1)]+p[IX(i,j+1)])/4;
+      setBnd(0,p);
+    }
+    for(let i=1;i<=N;i++) for(let j=1;j<=NY;j++){
+      u2[IX(i,j)]-=0.5*N*(p[IX(i+1,j)]-p[IX(i-1,j)]);
+      v2[IX(i,j)]-=0.5*NY*(p[IX(i,j+1)]-p[IX(i,j-1)]);
+    }
+    setBnd(1,u2);setBnd(2,v2);
+  }
+
+  function setBnd(b,x){
+    for(let i=1;i<=N;i++){x[IX(i,0)]=b===2?-x[IX(i,1)]:x[IX(i,1)];x[IX(i,NY+1)]=b===2?-x[IX(i,NY)]:x[IX(i,NY)];}
+    for(let j=1;j<=NY;j++){x[IX(0,j)]=b===1?-x[IX(1,j)]:x[IX(1,j)];x[IX(N+1,j)]=b===1?-x[IX(N,j)]:x[IX(N,j)];}
+    x[IX(0,0)]=0.5*(x[IX(1,0)]+x[IX(0,1)]);
+    x[IX(0,NY+1)]=0.5*(x[IX(1,NY+1)]+x[IX(0,NY)]);
+    x[IX(N+1,0)]=0.5*(x[IX(N,0)]+x[IX(N+1,1)]);
+    x[IX(N+1,NY+1)]=0.5*(x[IX(N,NY+1)]+x[IX(N+1,NY)]);
+  }
+
+  function velStep(){
+    addSource(u,u0,dt2);addSource(v,v0,dt2);
+    [u0,u]=[u,u0];diffuse(1,u,u0,visc,dt2);
+    [v0,v]=[v,v0];diffuse(2,v,v0,visc,dt2);
+    project(u,v,u0,v0);
+    [u0,u]=[u,u0];[v0,v]=[v,v0];
+    advect(1,u,u0,u0,v0,dt2);advect(2,v,v0,u0,v0,dt2);
+    project(u,v,u0,v0);
+  }
+
+  function densStep(){
+    addSource(dens,dens0,dt2);
+    [dens0,dens]=[dens,dens0];diffuse(0,dens,dens0,diff,dt2);
+    [dens0,dens]=[dens,dens0];advect(0,dens,dens0,u,v,dt2);
+  }
+
+  let mouseD=false, prevMX=0, prevMY=0;
+  canvas.addEventListener("pointerdown",e=>{mouseD=true;const r=canvas.getBoundingClientRect();prevMX=(e.clientX-r.left)/r.width;prevMY=(e.clientY-r.top)/r.height;});
+  canvas.addEventListener("pointermove",e=>{
+    if(!mouseD)return;
+    const r=canvas.getBoundingClientRect();
+    const mx=(e.clientX-r.left)/r.width, my=(e.clientY-r.top)/r.height;
+    const i=Math.floor(mx*N)+1, j=Math.floor(my*NY)+1;
+    if(i<1||i>N||j<1||j>NY)return;
+    u0[IX(i,j)]+=(mx-prevMX)*N*8;
+    v0[IX(i,j)]+=(my-prevMY)*NY*8;
+    // Add dye in a small radius
+    for(let di=-1;di<=1;di++) for(let dj=-1;dj<=1;dj++){
+      const ii=i+di,jj=j+dj;
+      if(ii>=1&&ii<=N&&jj>=1&&jj<=NY) dens0[IX(ii,jj)]+=15;
+    }
+    prevMX=mx;prevMY=my;
+  });
+  canvas.addEventListener("pointerup",()=>{mouseD=false;});
+  canvas.addEventListener("pointerleave",()=>{mouseD=false;});
+
+  // Seed some initial dye and velocity
+  for(let i=N/4;i<N*3/4;i++) for(let j=NY/3;j<NY*2/3;j++){
+    dens[IX(i,j)]=0.5;
+    u[IX(i,j)]=(Math.random()-0.5)*2;
+  }
+
+  function render(){
+    const cellW=cW/N, cellH=cH/NY;
+    ctx.fillStyle='#1a1a2e';ctx.fillRect(0,0,cW,cH);
+    for(let i=1;i<=N;i++) for(let j=1;j<=NY;j++){
+      const d=Math.min(dens[IX(i,j)],5)/5;
+      if(d<0.01)continue;
+      ctx.fillStyle=d3.interpolateBlues(0.3+d*0.6);
+      ctx.fillRect((i-1)*cellW,(j-1)*cellH,cellW+0.5,cellH+0.5);
+    }
+  }
+
+  function step(){
+    velStep();densStep();
+    // Decay density slowly
+    for(let i=0;i<size;i++){dens[i]*=0.995;dens0[i]=0;u0[i]*=0.8;v0[i]*=0.8;}
+    render();
+  }
+
+  new ResizeObserver(()=>{resize();}).observe(canvas.parentElement);
+  visibleLoop('fig-grid', step);
+})();
+
+
+// ============================================================
+// Boids flocking simulation
+// ============================================================
+(function() {
+  const canvas = document.getElementById("boids-canvas");
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio||1;
+  let cW=680, cH=280;
+
+  function resize(){
+    const rect=canvas.parentElement.getBoundingClientRect();
+    cW=Math.floor(rect.width-48); cH=280;
+    canvas.width=cW*dpr; canvas.height=cH*dpr;
+    canvas.style.height=cH+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  resize();
+
+  const nBoids = 120;
+  const radius = 60; // neighbor radius
+  const maxSpeed = 3, maxForce = 0.08;
+  let sepW=1.5, aliW=1.0, cohW=1.0;
+  let selectedId = 0;
+
+  const boids = [];
+  for(let i=0;i<nBoids;i++){
+    const a=Math.random()*Math.PI*2;
+    boids.push({
+      x:Math.random()*cW, y:Math.random()*cH,
+      vx:Math.cos(a)*1.5, vy:Math.sin(a)*1.5,
+      fx:0,fy:0, sepFx:0,sepFy:0, aliFx:0,aliFy:0, cohFx:0,cohFy:0,
+      id:i
+    });
+  }
+
+  function limit(vx,vy,max){
+    const m=Math.sqrt(vx*vx+vy*vy);
+    if(m>max){const s=max/m;return[vx*s,vy*s];}return[vx,vy];
+  }
+
+  function step(){
+    boids.forEach(b=>{
+      let sepX=0,sepY=0,sepN=0;
+      let aliX=0,aliY=0,aliN=0;
+      let cohX=0,cohY=0,cohN=0;
+
+      boids.forEach(o=>{
+        if(b===o)return;
+        let dx=o.x-b.x, dy=o.y-b.y;
+        // Wrap distance
+        if(dx>cW/2)dx-=cW; if(dx<-cW/2)dx+=cW;
+        if(dy>cH/2)dy-=cH; if(dy<-cH/2)dy+=cH;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist>radius||dist<1e-4)return;
+
+        // Separation (stronger when closer)
+        const sepR=radius*0.4;
+        if(dist<sepR){sepX-=dx/dist*(1-dist/sepR);sepY-=dy/dist*(1-dist/sepR);sepN++;}
+        // Alignment
+        aliX+=o.vx;aliY+=o.vy;aliN++;
+        // Cohesion
+        cohX+=dx;cohY+=dy;cohN++;
+      });
+
+      // Normalize and weight
+      b.sepFx=0;b.sepFy=0;b.aliFx=0;b.aliFy=0;b.cohFx=0;b.cohFy=0;
+
+      if(sepN>0){
+        [b.sepFx,b.sepFy]=limit(sepX/sepN,sepY/sepN,maxForce);
+        b.sepFx*=sepW;b.sepFy*=sepW;
+      }
+      if(aliN>0){
+        let ax=aliX/aliN-b.vx, ay=aliY/aliN-b.vy;
+        [b.aliFx,b.aliFy]=limit(ax,ay,maxForce);
+        b.aliFx*=aliW;b.aliFy*=aliW;
+      }
+      if(cohN>0){
+        let cx2=cohX/cohN, cy2=cohY/cohN;
+        [b.cohFx,b.cohFy]=limit(cx2*0.01,cy2*0.01,maxForce);
+        b.cohFx*=cohW;b.cohFy*=cohW;
+      }
+
+      b.fx=b.sepFx+b.aliFx+b.cohFx;
+      b.fy=b.sepFy+b.aliFy+b.cohFy;
+    });
+
+    boids.forEach(b=>{
+      b.vx+=b.fx;b.vy+=b.fy;
+      [b.vx,b.vy]=limit(b.vx,b.vy,maxSpeed);
+      b.x+=b.vx;b.y+=b.vy;
+      // Wrap
+      if(b.x<0)b.x+=cW;if(b.x>cW)b.x-=cW;
+      if(b.y<0)b.y+=cH;if(b.y>cH)b.y-=cH;
+    });
+  }
+
+  function render(){
+    ctx.fillStyle='#f0f4f8';ctx.fillRect(0,0,cW,cH);
+
+    const sel=boids[selectedId];
+
+    // Selected boid radius
+    ctx.beginPath();ctx.arc(sel.x,sel.y,radius,0,Math.PI*2);
+    ctx.strokeStyle='var(--c-kernel)';ctx.lineWidth=1.5;ctx.setLineDash([6,3]);ctx.globalAlpha=0.3;ctx.stroke();
+    ctx.setLineDash([]);ctx.globalAlpha=1;
+
+    // Force arrows on selected boid
+    const aS=120;
+    // Separation
+    if(Math.abs(sel.sepFx)+Math.abs(sel.sepFy)>0.001){
+      ctx.beginPath();ctx.moveTo(sel.x,sel.y);ctx.lineTo(sel.x+sel.sepFx*aS,sel.y+sel.sepFy*aS);
+      ctx.strokeStyle='var(--c-pressure)';ctx.lineWidth=2.5;ctx.stroke();
+    }
+    // Alignment
+    if(Math.abs(sel.aliFx)+Math.abs(sel.aliFy)>0.001){
+      ctx.beginPath();ctx.moveTo(sel.x,sel.y);ctx.lineTo(sel.x+sel.aliFx*aS,sel.y+sel.aliFy*aS);
+      ctx.strokeStyle='var(--c-viscosity)';ctx.lineWidth=2.5;ctx.stroke();
+    }
+    // Cohesion
+    if(Math.abs(sel.cohFx)+Math.abs(sel.cohFy)>0.001){
+      ctx.beginPath();ctx.moveTo(sel.x,sel.y);ctx.lineTo(sel.x+sel.cohFx*aS,sel.y+sel.cohFy*aS);
+      ctx.strokeStyle='var(--c-kernel)';ctx.lineWidth=2.5;ctx.stroke();
+    }
+
+    // All boids as triangles
+    boids.forEach(b=>{
+      const angle=Math.atan2(b.vy,b.vx);
+      const sz=b.id===selectedId?7:5;
+      ctx.save();
+      ctx.translate(b.x,b.y);ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(sz,0);ctx.lineTo(-sz*0.6,-sz*0.5);ctx.lineTo(-sz*0.6,sz*0.5);ctx.closePath();
+      ctx.fillStyle=b.id===selectedId?'var(--c-velocity)':'#4a6fa5';
+      ctx.globalAlpha=b.id===selectedId?1:0.7;
+      ctx.fill();
+      ctx.restore();
+      ctx.globalAlpha=1;
+    });
+
+    // Selection ring
+    ctx.beginPath();ctx.arc(sel.x,sel.y,10,0,Math.PI*2);
+    ctx.strokeStyle='var(--c-velocity)';ctx.lineWidth=2;ctx.stroke();
+  }
+
+  // Click to select
+  canvas.addEventListener("pointerdown",e=>{
+    const r=canvas.getBoundingClientRect();
+    const mx=(e.clientX-r.left)*(cW/r.width), my=(e.clientY-r.top)*(cH/r.height);
+    let best=Infinity, bestId=0;
+    boids.forEach(b=>{const d=(b.x-mx)*(b.x-mx)+(b.y-my)*(b.y-my);if(d<best){best=d;bestId=b.id;}});
+    selectedId=bestId;
+  });
+
+  d3.select("#boids-sep-slider").on("input",function(){sepW=+this.value;d3.select("#boids-sep-val").text(sepW.toFixed(1));});
+  d3.select("#boids-ali-slider").on("input",function(){aliW=+this.value;d3.select("#boids-ali-val").text(aliW.toFixed(1));});
+  d3.select("#boids-coh-slider").on("input",function(){cohW=+this.value;d3.select("#boids-coh-val").text(cohW.toFixed(1));});
+
+  function loopStep(){ step(); render(); }
+  new ResizeObserver(()=>{resize();}).observe(canvas.parentElement);
+  visibleLoop('fig-boids', loopStep);
+})();
+
+
+// ============================================================
+// Figure 1: Kernel
+// ============================================================
+(function() {
+  const container = d3.select("#kernel-viz");
+  const w1=380, w2=300, h=320;
+  const svg1 = container.append("svg").attr("viewBox",`0 0 ${w1} ${h}`).attr("width",w1).style("max-width","100%").style("flex","1 1 380px");
+  const svg2 = container.append("svg").attr("viewBox",`0 0 ${w2} ${h}`).attr("width",w2).style("max-width","100%").style("flex","1 1 280px");
+
+  let H = 80;
+  const center = {x:w1/2, y:h/2};
+  const neighbors = [
+    {x:135,y:130,id:'a'},{x:240,y:110,id:'b'},{x:290,y:200,id:'c'},
+    {x:160,y:240,id:'d'},{x:90,y:190,id:'e'},{x:320,y:130,id:'f'}
+  ];
+
+  const radiusCircle = svg1.append("circle").attr("cx",center.x).attr("cy",center.y)
+    .attr("fill","none").attr("stroke","var(--c-kernel)").attr("stroke-width",1.5).attr("stroke-dasharray","6,3").attr("opacity",0.5);
+  const linesG = svg1.append("g");
+  svg1.append("circle").attr("cx",center.x).attr("cy",center.y).attr("r",8).attr("fill","var(--c-kernel)").attr("opacity",0.8);
+  svg1.append("text").attr("x",center.x).attr("y",center.y-14).attr("text-anchor","middle").attr("font-size",11).attr("fill","var(--text-2)").text("particle i");
+
+  const nCircles = svg1.selectAll(".nb").data(neighbors).join("circle").attr("class","nb")
+    .attr("r",7).attr("fill","var(--c-position)").attr("opacity",0.7).attr("cursor","grab");
+  const wLabels = svg1.selectAll(".wl").data(neighbors).join("text").attr("class","wl")
+    .attr("font-size",10).attr("text-anchor","middle").attr("fill","var(--c-kernel)");
+
+  const cm={top:30,right:20,bottom:40,left:45}, cw=w2-cm.left-cm.right, ch=h-cm.top-cm.bottom;
+  const cG = svg2.append("g").attr("transform",`translate(${cm.left},${cm.top})`);
+  const xS = d3.scaleLinear().domain([0,1.3]).range([0,cw]);
+  const yS = d3.scaleLinear().domain([0,1.1]).range([ch,0]);
+  cG.append("g").attr("transform",`translate(0,${ch})`).call(d3.axisBottom(xS).ticks(5).tickFormat(d=>d===0?'0':d===1?'h':'')).selectAll("text").attr("fill","var(--text-2)");
+  cG.append("g").call(d3.axisLeft(yS).ticks(4)).selectAll("text").attr("fill","var(--text-2)");
+  cG.append("text").attr("x",cw/2).attr("y",ch+32).attr("text-anchor","middle").attr("font-size",11).attr("fill","var(--text-2)").text("distance / h");
+  const hLineC = cG.append("line").attr("y1",0).attr("y2",ch).attr("stroke","var(--c-kernel)").attr("stroke-width",1).attr("stroke-dasharray","4,3").attr("opacity",0.5);
+  const cArea = cG.append("path").attr("fill","var(--c-kernel)").attr("opacity",0.08);
+  const cPath = cG.append("path").attr("fill","none").attr("stroke","var(--c-kernel)").attr("stroke-width",2.5).attr("opacity",0.8);
+  const hlLine = cG.append("line").attr("stroke","var(--c-position)").attr("stroke-width",1).attr("stroke-dasharray","3,2").attr("opacity",0);
+  const cDots = cG.selectAll(".cd").data(neighbors).join("circle").attr("class","cd").attr("r",5).attr("fill","var(--c-position)").attr("stroke","#fff").attr("stroke-width",1.5);
+
+  function showVal(d) {
+    const dist=SPH.distance(center,d), q=dist/H, w=SPH.kernel(dist,H);
+    const tex = String.raw`{\color{#059669}W}({\color{#0891b2}${fmt(dist,0)}},{\color{#059669}${H}}) = (1-\tfrac{{\color{#0891b2}${fmt(dist,0)}}}{{\color{#059669}${H}}})^3 = {\color{#059669}${q<1?fmt(w,3):'0'}}`;
+    const el = document.getElementById("eq-kernel-values");
+    renderEq(el, tex); el.classList.add('visible');
+    hlLine.attr("x1",xS(Math.min(q,1.3))).attr("x2",xS(Math.min(q,1.3)))
+      .attr("y1",yS(q<1?w:0)).attr("y2",ch).attr("opacity",0.6);
+  }
+  function clearVal() {
+    const el=document.getElementById("eq-kernel-values");
+    el.innerHTML='<span class="eq-hint">drag a neighbor particle</span>'; el.classList.remove('visible');
+    hlLine.attr("opacity",0);
+  }
+
+  nCircles.call(d3.drag()
+    .on("start",function(){d3.select(this).attr("cursor","grabbing");})
+    .on("drag",function(e,d){d.x=Math.max(10,Math.min(w1-10,e.x));d.y=Math.max(10,Math.min(h-10,e.y));update();showVal(d);})
+    .on("end",function(e,d){d3.select(this).attr("cursor","grab");showVal(d);}))
+    .on("pointerenter",function(e,d){showVal(d);}).on("pointerleave",clearVal);
+
+  d3.select("#kernel-h-slider").on("input",function(){H=+this.value;d3.select("#kernel-h-val").text(H);update();});
+
+  function update() {
+    radiusCircle.attr("r",H);
+    nCircles.attr("cx",d=>d.x).attr("cy",d=>d.y);
+    linesG.selectAll("line").data(neighbors,d=>d.id).join("line")
+      .attr("x1",center.x).attr("y1",center.y).attr("x2",d=>d.x).attr("y2",d=>d.y)
+      .attr("stroke",d=>SPH.distance(center,d)<H?"var(--c-kernel)":"var(--border)")
+      .attr("stroke-width",d=>SPH.distance(center,d)<H?1.5:0.8)
+      .attr("stroke-dasharray",d=>SPH.distance(center,d)<H?"none":"3,3")
+      .attr("opacity",d=>SPH.distance(center,d)<H?0.4:0.3);
+    wLabels.attr("x",d=>d.x).attr("y",d=>d.y-12)
+      .text(d=>{const w=SPH.kernel(SPH.distance(center,d),H);return w>0?fmt(w,3):'';});
+    nCircles.attr("opacity",d=>SPH.distance(center,d)<H?0.8:0.25);
+    const maxW=SPH.kernel(0,H)||1;
+    const nd=d3.range(101).map(i=>{const q=i/100*1.3;return{q,w:SPH.kernel(q*H,H)/maxW};});
+    cPath.attr("d",d3.line().x(d=>xS(d.q)).y(d=>yS(d.w)).curve(d3.curveBasis)(nd));
+    cArea.attr("d",d3.area().x(d=>xS(d.q)).y0(ch).y1(d=>yS(d.w)).curve(d3.curveBasis)(nd));
+    hLineC.attr("x1",xS(1)).attr("x2",xS(1));
+    cDots.each(function(d){const dist=SPH.distance(center,d),q=dist/H,w=q<1?SPH.kernel(dist,H)/maxW:0;
+      d3.select(this).attr("cx",xS(Math.min(q,1.3))).attr("cy",yS(w)).attr("opacity",q<1?0.8:0.25);});
+  }
+  update();
+})();
+
+
+// ============================================================
+// Figure 2: Density (persistent selection, unchanged)
+// ============================================================
+(function() {
+  const container = d3.select("#density-viz");
+  const width=680, height=340;
+  const svg = container.append("svg").attr("viewBox",`0 0 ${width} ${height}`).style("width","100%");
+  let H = 80;
+  const particles = [];
+  const cols=8, rows=4;
+  for (let r=0;r<rows;r++) for (let c=0;c<cols;c++)
+    particles.push({x:80+c*65+(Math.random()-0.5)*20, y:60+r*65+(Math.random()-0.5)*20, id:r*cols+c});
+
+  const densityColor = d3.scaleSequential(d3.interpolatePurples).domain([0,1]);
+  const radiusG = svg.append("g");
+  const connG = svg.append("g");
+  const circles = svg.selectAll(".p").data(particles).join("circle").attr("class","p")
+    .attr("r",10).attr("stroke","#fff").attr("stroke-width",2).attr("cursor","pointer");
+  const labels = svg.selectAll(".dl").data(particles).join("text").attr("class","dl")
+    .attr("text-anchor","middle").attr("font-size",9).attr("fill","var(--text-2)").attr("pointer-events","none");
+  const selRing = svg.append("circle").attr("r",14).attr("fill","none").attr("stroke","var(--c-density)")
+    .attr("stroke-width",2.5);
+  let selectedIdx = Math.floor(cols*rows/2) + Math.floor(cols/2);
+
+  function showDensityEq(d) {
+    const contribs = [];
+    particles.forEach(q=>{if(q===d)return;const dist=SPH.distance(d,q);if(dist<H)contribs.push(SPH.kernel(dist,H));});
+    const selfW = SPH.kernel(0,H);
+    const terms = [`{\\color{#059669}${fmt(selfW,3)}}`];
+    contribs.slice(0,3).forEach(w=>terms.push(`{\\color{#059669}${fmt(w,3)}}`));
+    if(contribs.length>3) terms.push(`\\cdots`);
+    const tex = `{\\color{#7c3aed}\\rho} = ${terms.join('+')} = {\\color{#7c3aed}\\mathbf{${fmt(d.density,3)}}}\\;(${contribs.length}\\text{ nbrs})`;
+    const el = document.getElementById("eq-density-values");
+    renderEq(el, tex); el.classList.add('visible');
+  }
+
+  function showSelection() {
+    const d = particles[selectedIdx];
+    selRing.attr("cx",d.x).attr("cy",d.y);
+    radiusG.selectAll("*").remove(); connG.selectAll("*").remove();
+    radiusG.append("circle").attr("cx",d.x).attr("cy",d.y).attr("r",H)
+      .attr("fill","none").attr("stroke","var(--c-kernel)")
+      .attr("stroke-width",1.5).attr("stroke-dasharray","6,3").attr("opacity",0.35);
+    particles.forEach(q=>{if(q===d)return;if(SPH.distance(d,q)<H)
+      connG.append("line").attr("x1",d.x).attr("y1",d.y).attr("x2",q.x).attr("y2",q.y)
+        .attr("stroke","var(--c-kernel)").attr("stroke-width",1).attr("opacity",0.25);});
+    showDensityEq(d);
+  }
+
+  circles.on("click",function(e,d){selectedIdx=d.id;update();})
+    .call(d3.drag().on("drag",function(e,d){d.x=Math.max(15,Math.min(width-15,e.x));d.y=Math.max(15,Math.min(height-15,e.y));update();}));
+  d3.select("#density-h-slider").on("input",function(){H=+this.value;d3.select("#density-h-val").text(H);update();});
+
+  function update() {
+    particles.forEach(p=>{p.density=0;particles.forEach(q=>{p.density+=SPH.kernel(SPH.distance(p,q),H);});});
+    const maxD=d3.max(particles,d=>d.density)||1;
+    particles.forEach(p=>p.normDensity=p.density/maxD);
+    circles.attr("cx",d=>d.x).attr("cy",d=>d.y).attr("fill",d=>densityColor(d.normDensity));
+    labels.attr("x",d=>d.x).attr("y",d=>d.y+22).text(d=>fmt(d.density,3));
+    showSelection();
+  }
+  update();
+})();
+
+
+// ============================================================
+// Figure 3: Pressure (uneven ring around orbiting probe)
+// ============================================================
+(function() {
+  const container = d3.select("#pressure-viz");
+  const width=680, height=360;
+  const H = 75;
+  const svg = container.append("svg").attr("viewBox",`0 0 ${width} ${height}`).style("width","100%");
+
+  let stiffness=6, restDensity=0.8, animating=true;
+  const particles = [];
+  const cx = width/2, cy = height/2;
+
+  // Three uneven rings around center
+  const rng = d3.randomLcg(42);
+  // Inner ring - clustered on one side for asymmetry
+  for (let i=0; i<6; i++) {
+    const a = (i/6)*Math.PI*1.4 - 0.3 + (rng()-0.5)*0.3;
+    const r = 45 + (rng()-0.5)*10;
+    particles.push({x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r, id:particles.length, isProbe:false});
+  }
+  // Middle ring
+  for (let i=0; i<14; i++) {
+    const a = (i/14)*Math.PI*2 + (rng()-0.5)*0.35;
+    const r = 75 + (rng()-0.5)*15;
+    particles.push({x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r, id:particles.length, isProbe:false});
+  }
+  // Outer ring
+  for (let i=0; i<18; i++) {
+    const a = (i/18)*Math.PI*2 + (rng()-0.5)*0.25;
+    const r = 110 + (rng()-0.5)*18;
+    particles.push({x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r, id:particles.length, isProbe:false});
+  }
+  // Probe - small orbit inside the inner ring
+  const probeIdx = particles.length;
+  const probeR = 18;
+  particles.push({x:cx+probeR, y:cy, id:probeIdx, isProbe:true});
+
+  let probeAngle = 0;
+
+  svg.append("defs").append("marker").attr("id","ap")
+    .attr("viewBox","0 0 10 6").attr("refX",10).attr("refY",3)
+    .attr("markerWidth",8).attr("markerHeight",5).attr("orient","auto")
+    .append("path").attr("d","M0,0 L10,3 L0,6 Z").attr("fill","var(--c-pressure)");
+
+  // H radius for probe
+  const probeH = svg.append("circle").attr("fill","none").attr("stroke","var(--c-kernel)")
+    .attr("stroke-width",1.5).attr("stroke-dasharray","6,3").attr("opacity",0.3);
+  const arrowG = svg.append("g");
+  const selRing = svg.append("circle").attr("r",13).attr("fill","none")
+    .attr("stroke","var(--c-pressure)").attr("stroke-width",2.5);
+
+  const circles = svg.selectAll(".p").data(particles).join("circle").attr("class","p")
+    .attr("r",d=>d.isProbe?10:7).attr("fill",d=>d.isProbe?"var(--c-pressure)":"var(--c-density)")
+    .attr("opacity",d=>d.isProbe?0.9:0.6).attr("stroke","#fff").attr("stroke-width",2).attr("cursor","grab");
+
+  circles.call(d3.drag().on("drag",function(e,d){
+    if(animating&&d.isProbe) return;
+    d.x=Math.max(15,Math.min(width-15,e.x));d.y=Math.max(15,Math.min(height-15,e.y));
+    compute(); render();
+  }));
+
+  d3.select("#pressure-k-slider").on("input",function(){stiffness=+this.value;d3.select("#pressure-k-val").text(stiffness.toFixed(1));});
+  d3.select("#pressure-rest-slider").on("input",function(){restDensity=+this.value;d3.select("#pressure-rest-val").text(restDensity.toFixed(1));});
+  d3.select("#pressure-animate").on("change",function(){animating=this.checked;});
+
+  function compute() {
+    particles.forEach(p=>{p.density=0;particles.forEach(q=>{p.density+=SPH.kernel(SPH.distance(p,q),H);});});
+    particles.forEach(p=>{p.pressure=stiffness*(p.density-restDensity);});
+    particles.forEach(p=>{
+      p.fx=0;p.fy=0;
+      particles.forEach(q=>{if(p===q)return;
+        const dx=p.x-q.x,dy=p.y-q.y,dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<H&&dist>1e-4){
+          const grad=SPH.gradKernel(dist,H),nx=dx/dist,ny=dy/dist;
+          const pA=(p.pressure+q.pressure)/(2*Math.max(q.density,0.01));
+          p.fx-=pA*grad*nx; p.fy-=pA*grad*ny;
+        }
+      });
+    });
+  }
+
+  function render() {
+    const probe = particles[probeIdx];
+    circles.attr("cx",d=>d.x).attr("cy",d=>d.y);
+    selRing.attr("cx",probe.x).attr("cy",probe.y);
+    probeH.attr("cx",probe.x).attr("cy",probe.y).attr("r",H);
+
+    // Fixed arrow scale so stiffness changes are visible
+    const aS=300;
+    arrowG.selectAll("line").data(particles,d=>d.id).join("line")
+      .attr("x1",d=>d.x).attr("y1",d=>d.y)
+      .attr("x2",d=>d.x+d.fx*aS).attr("y2",d=>d.y+d.fy*aS)
+      .attr("stroke","var(--c-pressure)").attr("stroke-width",2)
+      .attr("marker-end",d=>Math.sqrt(d.fx*d.fx+d.fy*d.fy)*aS>3?"url(#ap)":"")
+      .attr("opacity",d=>Math.sqrt(d.fx*d.fx+d.fy*d.fy)*aS>1?0.8:0);
+
+    const tex = `{\\color{#dc2626}P}=${fmt(stiffness,1)}(${fmt(probe.density,2)}-${fmt(restDensity,1)})={\\color{#dc2626}${fmt(probe.pressure,2)}},\\;{\\color{#dc2626}\\mathbf{F}}=(${fmt(probe.fx,1)},${fmt(probe.fy,1)})`;
+    const el = document.getElementById("eq-pressure-values");
+    renderEq(el, tex); el.classList.add('visible');
+  }
+
+  function animateStep() {
+    if (animating) {
+      probeAngle += 0.012;
+      const probe = particles[probeIdx];
+      probe.x = cx + Math.cos(probeAngle)*probeR;
+      probe.y = cy + Math.sin(probeAngle)*probeR;
+    }
+    compute(); render();
+  }
+  visibleLoop('fig-pressure', animateStep);
+})();
+
+
+// ============================================================
+// Figure 4: Viscosity (slow looping mover, random field, sparkline)
+// ============================================================
+(function() {
+  const container = d3.select("#viscosity-viz");
+  const width=680, height=320;
+  let H = 70;
+  const svg = container.append("svg").attr("viewBox",`0 0 ${width} ${height}`).style("width","100%");
+
+  let mu = 10;
+  const initSpeed = 12; // very slow, easy to follow
+
+  // Random field of ~80 particles (seeded for reproducibility)
+  const rng = d3.randomLcg(123);
+  const bgParticles = [];
+  for (let i=0; i<80; i++) {
+    bgParticles.push({
+      x: 60 + rng()*(width-120),
+      y: 30 + rng()*(height-60),
+      vx:0, vy:0, fx:0, fy:0, density:0, id:i
+    });
+  }
+
+  // Moving particle - starts on left, moves right
+  let mover = {x:30, y:height/2, vx:initSpeed, vy:0, fx:0, fy:0, density:0, id:'mover'};
+  let trail = [];
+  let speedHistory = [];
+  let frameCount = 0;
+
+  svg.append("defs").append("marker").attr("id","av4")
+    .attr("viewBox","0 0 10 6").attr("refX",10).attr("refY",3)
+    .attr("markerWidth",7).attr("markerHeight",4).attr("orient","auto")
+    .append("path").attr("d","M0,0 L10,3 L0,6 Z").attr("fill","var(--c-viscosity)");
+  svg.append("defs").append("marker").attr("id","avl4")
+    .attr("viewBox","0 0 10 6").attr("refX",10).attr("refY",3)
+    .attr("markerWidth",7).attr("markerHeight",4).attr("orient","auto")
+    .append("path").attr("d","M0,0 L10,3 L0,6 Z").attr("fill","var(--c-velocity)");
+
+  const trailPath = svg.append("path").attr("fill","none").attr("stroke","var(--c-velocity)")
+    .attr("stroke-width",1.5).attr("opacity",0.25);
+  const hCircle = svg.append("circle").attr("fill","none").attr("stroke","var(--c-kernel)")
+    .attr("stroke-width",1).attr("stroke-dasharray","4,3").attr("opacity",0.25);
+  const viscG = svg.append("g");
+  const bgCircles = svg.selectAll(".bg").data(bgParticles).join("circle").attr("class","bg")
+    .attr("cx",d=>d.x).attr("cy",d=>d.y)
+    .attr("r",5).attr("fill","var(--c-position)").attr("opacity",0.45).attr("stroke","#fff").attr("stroke-width",1);
+  const moverCircle = svg.append("circle").attr("r",7).attr("fill","var(--c-velocity)")
+    .attr("stroke","#fff").attr("stroke-width",2);
+  const velArrow = svg.append("line").attr("stroke","var(--c-velocity)").attr("stroke-width",2.5);
+
+  // Sparkline
+  const sparkSvg = d3.select("#viscosity-sparkline");
+  const sparkW=200, sparkH=30;
+  const sparkLine = sparkSvg.append("path").attr("fill","none").attr("stroke","var(--c-velocity)").attr("stroke-width",1.5);
+  const sparkX = d3.scaleLinear().range([2,sparkW-2]);
+  const sparkY = d3.scaleLinear().range([sparkH-2, 2]);
+
+  function resetMover() {
+    mover.x=30; mover.y=height/2; mover.vx=initSpeed; mover.vy=0;
+    bgParticles.forEach(p=>{p.vx=0;p.vy=0;});
+    trail=[]; speedHistory=[]; frameCount=0;
+  }
+
+  let frameSkip = 0; // only step every N frames for slower pace
+  function simStep() {
+    const allP = [...bgParticles, mover];
+    const dt = 0.25; // slow dt for very followable movement
+
+    // Densities
+    allP.forEach(p=>{p.density=0; allP.forEach(q=>{p.density+=SPH.kernel(SPH.distance(p,q),H);});});
+
+    // Viscosity forces
+    allP.forEach(p=>{
+      p.fx=0;p.fy=0;
+      allP.forEach(q=>{if(p===q)return;
+        const dist=SPH.distance(p,q);
+        if(dist<H){
+          const lap=SPH.lapKernel(dist,H);
+          const rhoJ=Math.max(q.density,0.01);
+          p.fx+=mu/rhoJ*(q.vx-p.vx)*lap;
+          p.fy+=mu/rhoJ*(q.vy-p.vy)*lap;
+        }
+      });
+    });
+
+    // Update mover
+    const rho=Math.max(mover.density,0.01);
+    mover.vx+=(mover.fx/rho)*dt;
+    mover.vy+=(mover.fy/rho)*dt;
+    mover.x+=mover.vx*dt;
+    mover.y+=mover.vy*dt;
+
+    // Bg particles respond to viscosity (visible drag effect)
+    bgParticles.forEach(p=>{
+      const r2=Math.max(p.density,0.01);
+      p.vx+=(p.fx/r2)*dt*0.5; p.vy+=(p.fy/r2)*dt*0.5;
+      p.vx*=0.88; p.vy*=0.88; // decay back to rest
+    });
+
+    trail.push({x:mover.x,y:mover.y});
+    if(trail.length>400) trail.shift();
+    const speed=Math.sqrt(mover.vx*mover.vx+mover.vy*mover.vy);
+    speedHistory.push(speed);
+    if(speedHistory.length>300) speedHistory.shift();
+
+    // Loop: reset cleanly when off screen (fresh start, preserves sparkline history)
+    if(mover.x>width+10 || mover.x<-20 || speed<0.3) {
+      mover.x=30; mover.y=height/2; mover.vx=initSpeed; mover.vy=0;
+      bgParticles.forEach(p=>{p.vx=0;p.vy=0;});
+      trail=[];
+    }
+  }
+
+  function render() {
+    moverCircle.attr("cx",mover.x).attr("cy",mover.y);
+    hCircle.attr("cx",mover.x).attr("cy",mover.y).attr("r",H);
+
+    if(trail.length>1) trailPath.attr("d",d3.line().x(d=>d.x).y(d=>d.y).curve(d3.curveBasis)(trail));
+
+    const vs=2;
+    velArrow.attr("x1",mover.x).attr("y1",mover.y)
+      .attr("x2",mover.x+mover.vx*vs).attr("y2",mover.y+mover.vy*vs)
+      .attr("marker-end","url(#avl4)").attr("opacity",0.8);
+
+    // Force arrows on bg particles (large scale for dramatic effect)
+    const fScale=300;
+    viscG.selectAll("line").data(bgParticles,d=>d.id).join("line")
+      .attr("x1",d=>d.x).attr("y1",d=>d.y)
+      .attr("x2",d=>d.x+d.fx*fScale).attr("y2",d=>d.y+d.fy*fScale)
+      .attr("stroke","var(--c-viscosity)").attr("stroke-width",1.5)
+      .attr("marker-end",d=>Math.sqrt(d.fx*d.fx+d.fy*d.fy)*fScale>2?"url(#av4)":"")
+      .attr("opacity",d=>Math.sqrt(d.fx*d.fx+d.fy*d.fy)*fScale>1?0.6:0);
+
+    // Eq values
+    const speed=Math.sqrt(mover.vx*mover.vx+mover.vy*mover.vy);
+    const tex=`{\\color{#be185d}|v|}={\\color{#be185d}${fmt(speed,1)}},\\;{\\color{#2563eb}F_{visc}}=(${fmt(mover.fx,3)},${fmt(mover.fy,3)})`;
+    const el=document.getElementById("eq-viscosity-values");
+    renderEq(el,tex); el.classList.add('visible');
+
+    // Sparkline
+    if(speedHistory.length>1){
+      sparkX.domain([0,speedHistory.length-1]);
+      sparkY.domain([0,Math.max(d3.max(speedHistory),1)]);
+      sparkLine.attr("d",d3.line().x((_,i)=>sparkX(i)).y(d=>sparkY(d))(speedHistory));
+    }
+    d3.select("#viscosity-speed-readout").text(fmt(speed,1));
+  }
+
+  function loopStep() {
+    frameSkip++;
+    if (frameSkip >= 3) { // step every 3rd frame = ~20fps effective
+      frameSkip = 0;
+      simStep();
+    }
+    render();
+  }
+
+  d3.select("#viscosity-mu-slider").on("input",function(){mu=+this.value;d3.select("#viscosity-mu-val").text(mu.toFixed(1));});
+  d3.select("#viscosity-h-slider").on("input",function(){H=+this.value;d3.select("#viscosity-h-val").text(H);});
+  d3.select("#viscosity-reset").on("click",resetMover);
+
+  resetMover();
+  visibleLoop('fig-viscosity', loopStep);
+})();
+
+
+// ============================================================
+// Figure 5: Integration (3 methods shown simultaneously)
+// ============================================================
+(function() {
+  const container = d3.select("#integration-viz");
+  const w=680, h=380;
+  const svg = container.append("svg").attr("viewBox",`0 0 ${w} ${h}`).style("width","100%")
+    .style("border","1px solid var(--border)").style("border-radius","4px");
+
+  const cx=w/2, cy=h/2, k=40;
+  let dt=0.035, numSteps=25, currentStep=0;
+
+  const methods = [
+    { name: 'Euler', color: '#dc2626', key: 'euler' },
+    { name: 'Verlet', color: '#2563eb', key: 'verlet' },
+    { name: 'RK4', color: '#7c3aed', key: 'rk4' },
+  ];
+
+  // Ideal orbit
+  svg.append("circle").attr("cx",cx).attr("cy",cy).attr("r",100)
+    .attr("fill","none").attr("stroke","var(--border)").attr("stroke-width",1).attr("stroke-dasharray","4,4");
+  svg.append("circle").attr("cx",cx).attr("cy",cy).attr("r",4).attr("fill","var(--text-2)").attr("opacity",0.5);
+
+  // Create arrow markers per method
+  const defs = svg.append("defs");
+  methods.forEach(m=>{
+    defs.append("marker").attr("id",`ar-${m.key}`).attr("viewBox","0 0 10 6").attr("refX",10).attr("refY",3)
+      .attr("markerWidth",7).attr("markerHeight",4).attr("orient","auto")
+      .append("path").attr("d","M0,0 L10,3 L0,6 Z").attr("fill",m.color);
+  });
+
+  // Per-method rendering groups
+  const methodGroups = {};
+  methods.forEach(m=>{
+    const g = svg.append("g");
+    methodGroups[m.key] = {
+      path: g.append("path").attr("fill","none").attr("stroke",m.color).attr("stroke-width",1.5).attr("opacity",0.4),
+      dots: g.append("g"),
+      dot: g.append("circle").attr("r",6).attr("fill",m.color).attr("stroke","#fff").attr("stroke-width",2),
+      velArr: g.append("line").attr("stroke",m.color).attr("stroke-width",1.5),
+      steps: []
+    };
+  });
+
+  const stepLabel = svg.append("text").attr("x",15).attr("y",20).attr("font-size",11).attr("fill","var(--text-2)");
+
+  // Legend
+  const legend = d3.select("#integration-legend");
+  methods.forEach(m=>{
+    legend.append("span").html(`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${m.color};margin-right:3px;"></span>${m.name}`);
+  });
+
+  function accel(px, py) { return [-k*(px-cx), -k*(py-cy)]; }
+
+  function computeSteps() {
+    methods.forEach(m=>{
+      const steps = [];
+      let px=cx+100, py=cy, vx=0, vy=-Math.sqrt(k)*100;
+      // For Verlet we need prev position
+      let prevX=px-vx*dt, prevY=py-vy*dt;
+      steps.push({x:px,y:py,vx,vy});
+
+      for (let i=0;i<numSteps;i++) {
+        const [ax,ay] = accel(px,py);
+        let newVx,newVy,newPx,newPy;
+
+        if (m.key==='euler') {
+          newPx=px+vx*dt; newPy=py+vy*dt;
+          newVx=vx+ax*dt; newVy=vy+ay*dt;
+        } else if (m.key==='verlet') {
+          // Stormer-Verlet: x(n+1) = 2x(n) - x(n-1) + a*dt^2
+          newPx = 2*px - prevX + ax*dt*dt;
+          newPy = 2*py - prevY + ay*dt*dt;
+          newVx = (newPx - prevX)/(2*dt);
+          newVy = (newPy - prevY)/(2*dt);
+          prevX=px; prevY=py;
+        } else { // rk4
+          const [k1ax,k1ay] = accel(px,py);
+          const k1vx=vx, k1vy=vy;
+
+          const [k2ax,k2ay] = accel(px+k1vx*dt/2, py+k1vy*dt/2);
+          const k2vx=vx+k1ax*dt/2, k2vy=vy+k1ay*dt/2;
+
+          const [k3ax,k3ay] = accel(px+k2vx*dt/2, py+k2vy*dt/2);
+          const k3vx=vx+k2ax*dt/2, k3vy=vy+k2ay*dt/2;
+
+          const [k4ax,k4ay] = accel(px+k3vx*dt, py+k3vy*dt);
+          const k4vx=vx+k3ax*dt, k4vy=vy+k3ay*dt;
+
+          newVx = vx + (k1ax+2*k2ax+2*k3ax+k4ax)/6*dt;
+          newVy = vy + (k1ay+2*k2ay+2*k3ay+k4ay)/6*dt;
+          newPx = px + (k1vx+2*k2vx+2*k3vx+k4vx)/6*dt;
+          newPy = py + (k1vy+2*k2vy+2*k3vy+k4vy)/6*dt;
+        }
+
+        px=newPx; py=newPy; vx=newVx; vy=newVy;
+        steps.push({x:px,y:py,vx,vy});
+      }
+      methodGroups[m.key].steps = steps;
+    });
+
+    d3.select("#int-step-slider").attr("max",numSteps);
+    if(currentStep>numSteps) currentStep=numSteps;
+    d3.select("#int-step-slider").property("value",currentStep);
+    d3.select("#int-step-val").text(currentStep);
+  }
+
+  function render() {
+    methods.forEach(m=>{
+      const mg = methodGroups[m.key];
+      const steps = mg.steps;
+
+      mg.path.attr("d",d3.line().x(d=>d.x).y(d=>d.y)(steps));
+      mg.dots.selectAll("circle").data(steps).join("circle")
+        .attr("cx",d=>d.x).attr("cy",d=>d.y)
+        .attr("r",(d,i)=>i===currentStep?0:2.5)
+        .attr("fill",m.color).attr("opacity",(d,i)=>i<=currentStep?0.6:0.15);
+
+      const s = steps[currentStep];
+      mg.dot.attr("cx",s.x).attr("cy",s.y);
+
+      const vs=0.12;
+      mg.velArr.attr("x1",s.x).attr("y1",s.y)
+        .attr("x2",s.x+s.vx*vs).attr("y2",s.y+s.vy*vs)
+        .attr("marker-end",`url(#ar-${m.key})`).attr("opacity",0.7);
+    });
+
+    stepLabel.text(`step ${currentStep} / ${numSteps}, dt = ${dt.toFixed(3)}`);
+
+    // Energy comparison in equation row
+    const E0 = 0.5*k*100*100;
+    const parts = methods.map(m=>{
+      const s = methodGroups[m.key].steps[currentStep];
+      const E = 0.5*(s.vx*s.vx+s.vy*s.vy) + 0.5*k*((s.x-cx)*(s.x-cx)+(s.y-cy)*(s.y-cy));
+      const drift = ((E-E0)/E0*100);
+      return `{\\color{${m.color}}\\text{${m.name}}: ${drift>0?'+':''}${fmt(drift,1)}\\%}`;
+    });
+    const tex = `E_0=${fmt(E0,0)}\\quad ${parts.join('\\quad ')}`;
+    const el=document.getElementById("eq-integration-values");
+    renderEq(el,tex); el.classList.add('visible');
+  }
+
+  d3.select("#int-dt-slider").on("input",function(){dt=+this.value;d3.select("#int-dt-val").text(dt.toFixed(3));computeSteps();render();});
+  d3.select("#int-steps-slider").on("input",function(){numSteps=+this.value;d3.select("#int-steps-val").text(numSteps);computeSteps();render();});
+  d3.select("#int-step-slider").on("input",function(){currentStep=+this.value;d3.select("#int-step-val").text(currentStep);render();});
+
+  computeSteps(); render();
+})();
+
+
+// ============================================================
+// Figure 6: Simulation (center hose, open-top container below)
+// ============================================================
+(function() {
+  const canvas = document.getElementById("sim-canvas");
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio||1;
+  let simW=680, simH=320;
+
+  function resizeCanvas() {
+    const rect=canvas.parentElement.getBoundingClientRect();
+    simW=Math.floor(rect.width-48);
+    simH=320;
+    canvas.width=simW*dpr; canvas.height=simH*dpr;
+    canvas.style.height=simH+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  resizeCanvas();
+
+  let maxP=300, gravity=300, viscMu=100;
+  const H=12, substeps=5, dt=0.0012, stiffness=3000, restD=3.5, pR=6;
+  let particles=[], mouseDown=false, mouseX=0, mouseY=0, emitTimer=0;
+  const emitInt=2, emitN=3;
+
+  // Container: open-top box, centered
+  const containerW=300, wallH=100, wallT=5;
+  let containerX, containerY;
+  function updateContainerPos() {
+    containerX = simW/2 - containerW/2;
+    containerY = simH - wallH - 10;
+  }
+  updateContainerPos();
+
+  // Hose: above and to the left of container, angled right
+  const hoseW=10, hoseH=20;
+
+  function init(){particles=[];emitTimer=0;}
+
+  function emit(){
+    if(particles.length>=maxP) return;
+    const n=Math.min(emitN,maxP-particles.length);
+    const hx=containerX - 10; // left of container
+    const hy=containerY - 42; // well above top of walls
+    for(let i=0;i<n;i++) particles.push({
+      x:hx+(Math.random()-0.5)*3,
+      y:hy + (i/(n-1||1))*hoseH + (Math.random()-0.5)*2, // spread across hose height
+      vx:70+(Math.random())*10, // fast rightward into container
+      vy:15+(Math.random())*3, // slight downward
+      density:0,pressure:0,fx:0,fy:0
+    });
+  }
+
+  function step(){
+    updateContainerPos();
+    const cLeft=containerX, cRight=containerX+containerW;
+    const cBottom=simH-10;
+
+    for(let i=0;i<particles.length;i++){
+      const pi=particles[i]; pi.density=0;
+      for(let j=0;j<particles.length;j++){const dx=pi.x-particles[j].x,dy=pi.y-particles[j].y;pi.density+=SPH.kernel(Math.sqrt(dx*dx+dy*dy),H);}
+      pi.pressure=stiffness*Math.max(0,pi.density-restD);
+    }
+    for(let i=0;i<particles.length;i++){
+      const pi=particles[i]; pi.fx=0; pi.fy=gravity;
+      for(let j=0;j<particles.length;j++){if(i===j)continue;const pj=particles[j];
+        const dx=pi.x-pj.x,dy=pi.y-pj.y,dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<H&&dist>0.1){const nx=dx/dist,ny=dy/dist;
+          const g=SPH.gradKernel(dist,H),pA=(pi.pressure+pj.pressure)/(2*Math.max(pj.density,0.01));
+          pi.fx-=pA*g*nx;pi.fy-=pA*g*ny;
+          const l=SPH.lapKernel(dist,H),rJ=Math.max(pj.density,0.01);
+          pi.fx+=viscMu/rJ*(pj.vx-pi.vx)*l;pi.fy+=viscMu/rJ*(pj.vy-pi.vy)*l;
+        }
+      }
+      if(mouseDown){const dx=pi.x-mouseX,dy=pi.y-mouseY,dist=Math.sqrt(dx*dx+dy*dy),r=H*4;
+        if(dist<r&&dist>0.1){const s=4000*(1-dist/r);pi.fx+=s*dx/dist;pi.fy+=s*dy/dist;}}
+    }
+    for(let i=0;i<particles.length;i++){
+      const p=particles[i],rho=Math.max(p.density,0.01);
+      p.vx+=(p.fx/rho)*dt;p.vy+=(p.fy/rho)*dt;
+      const sp=Math.sqrt(p.vx*p.vx+p.vy*p.vy);if(sp>500){const s=500/sp;p.vx*=s;p.vy*=s;}
+      p.x+=p.vx*dt;p.y+=p.vy*dt;
+
+      // Container collision: left wall, right wall, bottom
+      const m=pR+1;
+      // Bottom of container
+      if(p.y>cBottom-m && p.x>cLeft && p.x<cRight){p.y=cBottom-m;p.vy=-Math.abs(p.vy)*0.3;}
+      // Left wall (only within wall height)
+      if(p.x>cLeft-m && p.x<cLeft+wallT+m && p.y>containerY){
+        if(p.vx<0){p.x=cLeft+wallT+m;p.vx=Math.abs(p.vx)*0.3;}
+      }
+      // Right wall
+      if(p.x<cRight+m && p.x>cRight-wallT-m && p.y>containerY){
+        if(p.vx>0){p.x=cRight-wallT-m;p.vx=-Math.abs(p.vx)*0.3;}
+      }
+
+      // Outer bounds (floor, ceiling, screen edges)
+      if(p.x<m){p.x=m;p.vx=Math.abs(p.vx)*0.3;}
+      if(p.x>simW-m){p.x=simW-m;p.vx=-Math.abs(p.vx)*0.3;}
+      if(p.y<m){p.y=m;p.vy=Math.abs(p.vy)*0.3;}
+      if(p.y>simH-m){p.y=simH-m;p.vy=-Math.abs(p.vy)*0.3;}
+    }
+  }
+
+  function render(){
+    ctx.clearRect(0,0,simW,simH);
+    ctx.fillStyle='#f0f4f8';ctx.fillRect(0,0,simW,simH);
+
+    // Container walls (U-shape, no lid)
+    updateContainerPos();
+    ctx.fillStyle='#94a3b8';
+    // Left wall
+    ctx.fillRect(containerX, containerY, wallT, wallH+10);
+    // Right wall
+    ctx.fillRect(containerX+containerW-wallT, containerY, wallT, wallH+10);
+    // Bottom
+    ctx.fillRect(containerX, simH-10-wallT, containerW, wallT);
+
+    // Hose nozzle (left of container, angled right)
+    const hx=containerX-15, hy=containerY-45;
+    ctx.fillStyle='#64748b';
+    ctx.fillRect(hx, hy, hoseW+4, hoseH);
+    // Small arrow showing flow direction
+    ctx.strokeStyle='#64748b';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(hx+hoseW+4,hy+hoseH/2);ctx.lineTo(hx+hoseW+14,hy+hoseH/2+2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(hx+hoseW+11,hy+hoseH/2-1);ctx.lineTo(hx+hoseW+14,hy+hoseH/2+2);ctx.lineTo(hx+hoseW+11,hy+hoseH/2+5);ctx.stroke();
+
+    // Particles
+    // Color by speed: slow=dark blue, fast=medium blue (never white)
+    const cs=d3.scaleSequential(t=>d3.interpolateBlues(0.35 + t*0.55)).domain([0,200]);
+    for(const p of particles){const sp=Math.sqrt(p.vx*p.vx+p.vy*p.vy);
+      ctx.beginPath();ctx.arc(p.x,p.y,pR,0,Math.PI*2);ctx.fillStyle=cs(Math.min(sp,180));ctx.fill();
+      ctx.strokeStyle='rgba(30,64,175,0.15)';ctx.lineWidth=0.5;ctx.stroke();}
+
+    ctx.fillStyle='#94a3b8';ctx.font='11px Source Sans 3,system-ui,sans-serif';
+    ctx.fillText(`${particles.length}/${maxP}`,simW-60,14);
+
+    if(mouseDown){ctx.beginPath();ctx.arc(mouseX,mouseY,H*4,0,Math.PI*2);
+      ctx.strokeStyle='rgba(220,38,38,0.25)';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);}
+  }
+
+  function loopStep2(){emitTimer++;if(emitTimer>=emitInt){emitTimer=0;emit();}
+    for(let s=0;s<substeps;s++)step();render();}
+
+  canvas.addEventListener("pointerdown",e=>{mouseDown=true;const r=canvas.getBoundingClientRect();mouseX=(e.clientX-r.left)*(simW/r.width);mouseY=(e.clientY-r.top)*(simH/r.height);});
+  canvas.addEventListener("pointermove",e=>{if(mouseDown){const r=canvas.getBoundingClientRect();mouseX=(e.clientX-r.left)*(simW/r.width);mouseY=(e.clientY-r.top)*(simH/r.height);}});
+  canvas.addEventListener("pointerup",()=>{mouseDown=false;});
+  canvas.addEventListener("pointerleave",()=>{mouseDown=false;});
+
+  d3.select("#sim-count-slider").on("input",function(){maxP=+this.value;d3.select("#sim-count-val").text(maxP);});
+  d3.select("#sim-gravity-slider").on("input",function(){gravity=+this.value;d3.select("#sim-gravity-val").text(gravity);});
+  d3.select("#sim-viscosity-slider").on("input",function(){viscMu=+this.value;d3.select("#sim-viscosity-val").text(viscMu);});
+  d3.select("#sim-reset").on("click",init);
+
+  new ResizeObserver(()=>{resizeCanvas();}).observe(canvas.parentElement);
+  init(); visibleLoop('fig-sim', loopStep2);
+})();
+</script>
+</body>
+</html>
