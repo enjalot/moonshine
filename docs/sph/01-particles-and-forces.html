@@ -449,7 +449,8 @@ function visibleLoop(elementId, loopFn) {
   let u = new Float32Array(size), v = new Float32Array(size);
   let u0 = new Float32Array(size), v0 = new Float32Array(size);
   let dens = new Float32Array(size), dens0 = new Float32Array(size);
-  const visc = 0.0001, diff = 0.0001, dt2 = 0.15;
+  const visc = 0.0002, diff = 0.0002, dt2 = 0.1;
+  const ITERS = 12; // Gauss-Seidel iterations (more = more stable)
 
   function IX(i,j){return i+(N+2)*j;}
 
@@ -457,7 +458,7 @@ function visibleLoop(elementId, loopFn) {
 
   function diffuse(b,x,x0,diffC,dt3){
     const a=dt3*diffC*N*NY;
-    for(let k=0;k<4;k++){
+    for(let k=0;k<ITERS;k++){
       for(let i=1;i<=N;i++) for(let j=1;j<=NY;j++)
         x[IX(i,j)]=(x0[IX(i,j)]+a*(x[IX(i-1,j)]+x[IX(i+1,j)]+x[IX(i,j-1)]+x[IX(i,j+1)]))/(1+4*a);
       setBnd(b,x);
@@ -477,12 +478,13 @@ function visibleLoop(elementId, loopFn) {
   }
 
   function project(u2,v2,p,div2){
+    const hx=1.0/N, hy=1.0/NY;
     for(let i=1;i<=N;i++) for(let j=1;j<=NY;j++){
-      div2[IX(i,j)]=-0.5*(u2[IX(i+1,j)]-u2[IX(i-1,j)]/N+v2[IX(i,j+1)]-v2[IX(i,j-1)])/NY;
+      div2[IX(i,j)]=-0.5*(hx*(u2[IX(i+1,j)]-u2[IX(i-1,j)])+hy*(v2[IX(i,j+1)]-v2[IX(i,j-1)]));
       p[IX(i,j)]=0;
     }
     setBnd(0,div2);setBnd(0,p);
-    for(let k=0;k<4;k++){
+    for(let k=0;k<ITERS;k++){
       for(let i=1;i<=N;i++) for(let j=1;j<=NY;j++)
         p[IX(i,j)]=(div2[IX(i,j)]+p[IX(i-1,j)]+p[IX(i+1,j)]+p[IX(i,j-1)]+p[IX(i,j+1)])/4;
       setBnd(0,p);
@@ -539,27 +541,58 @@ function visibleLoop(elementId, loopFn) {
   canvas.addEventListener("pointerup",()=>{mouseD=false;});
   canvas.addEventListener("pointerleave",()=>{mouseD=false;});
 
-  // Seed some initial dye and velocity
-  for(let i=N/4;i<N*3/4;i++) for(let j=NY/3;j<NY*2/3;j++){
-    dens[IX(i,j)]=0.5;
-    u[IX(i,j)]=(Math.random()-0.5)*2;
+  // Persistent source: simulates a mouse drawing a circle
+  const srcCx = N * 0.5, srcCy = NY * 0.5, srcR = Math.min(N, NY) * 0.25;
+  let srcAngle = 0, srcPrevX = 0, srcPrevY = 0;
+
+  function addPersistentSource() {
+    srcAngle += 0.04;
+    const sx = srcCx + Math.cos(srcAngle) * srcR;
+    const sy = srcCy + Math.sin(srcAngle) * srcR;
+    const si = Math.floor(sx), sj = Math.floor(sy);
+    if (si < 1 || si > N || sj < 1 || sj > NY) { srcPrevX = sx; srcPrevY = sy; return; }
+
+    // Velocity from movement direction (like mouse drag)
+    const dx = sx - srcPrevX, dy = sy - srcPrevY;
+    for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) {
+      const ii = si + di, jj = sj + dj;
+      if (ii >= 1 && ii <= N && jj >= 1 && jj <= NY) {
+        dens0[IX(ii, jj)] += 5;
+        u0[IX(ii, jj)] += dx * 8;
+        v0[IX(ii, jj)] += dy * 8;
+      }
+    }
+    srcPrevX = sx; srcPrevY = sy;
   }
 
   function render(){
     const cellW=cW/N, cellH=cH/NY;
+    // Dark background
     ctx.fillStyle='#1a1a2e';ctx.fillRect(0,0,cW,cH);
+
+    // Density field
     for(let i=1;i<=N;i++) for(let j=1;j<=NY;j++){
       const d=Math.min(dens[IX(i,j)],5)/5;
-      if(d<0.01)continue;
-      ctx.fillStyle=d3.interpolateBlues(0.3+d*0.6);
+      if(d<0.005)continue;
+      ctx.fillStyle=d3.interpolateBlues(0.25+d*0.65);
       ctx.fillRect((i-1)*cellW,(j-1)*cellH,cellW+0.5,cellH+0.5);
     }
+
+    // Grid lines ON TOP of dye, in gray so visible against both dark bg and blue dye
+    ctx.strokeStyle='rgba(120,120,140,0.2)';ctx.lineWidth=0.5;
+    for(let i=0;i<=N;i++){ctx.beginPath();ctx.moveTo(i*cellW,0);ctx.lineTo(i*cellW,cH);ctx.stroke();}
+    for(let j=0;j<=NY;j++){ctx.beginPath();ctx.moveTo(0,j*cellH);ctx.lineTo(cW,j*cellH);ctx.stroke();}
+
+    // Source path indicator
+    ctx.beginPath();ctx.arc(srcCx*cellW,srcCy*cellH,srcR*cellW,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=0.5;ctx.stroke();
   }
 
   function step(){
+    addPersistentSource();
     velStep();densStep();
-    // Decay density slowly
-    for(let i=0;i<size;i++){dens[i]*=0.995;dens0[i]=0;u0[i]*=0.8;v0[i]*=0.8;}
+    // Decay density and clear source buffers
+    for(let i=0;i<size;i++){dens[i]*=0.985;dens0[i]=0;u0[i]*=0.85;v0[i]*=0.85;}
     render();
   }
 
