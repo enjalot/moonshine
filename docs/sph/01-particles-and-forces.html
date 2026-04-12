@@ -359,7 +359,7 @@ svg text { font-family: var(--heading-font); }
   <div class="figure figure-wide" id="fig-sim">
     <div class="controls">
       <label>Max: <input type="range" id="sim-count-slider" min="50" max="500" value="300" step="10"> <span id="sim-count-val">300</span></label>
-      <label>Gravity: <input type="range" id="sim-gravity-slider" min="0" max="500" value="250" step="10"> <span id="sim-gravity-val">250</span></label>
+      <label>Gravity: <input type="range" id="sim-gravity-slider" min="0" max="500" value="200" step="10"> <span id="sim-gravity-val">200</span></label>
       <label>Viscosity: <input type="range" id="sim-viscosity-slider" min="0" max="200" value="100" step="5"> <span id="sim-viscosity-val">100</span></label>
       <button id="sim-reset">Reset</button>
     </div>
@@ -1365,10 +1365,10 @@ function visibleLoop(elementId, loopFn) {
   }
   resizeCanvas();
 
-  let maxP=300, gravity=300, viscMu=100;
-  const H=12, substeps=5, dt=0.0012, stiffness=3000, restD=3.5, pR=6;
+  let maxP=300, gravity=200, viscMu=100;
+  const H=12, substeps=16, dt=0.001, stiffness=10000, restD=1.5, pR=6;
   let particles=[], mouseDown=false, mouseX=0, mouseY=0, emitTimer=0;
-  const emitInt=2, emitN=3;
+  const emitInt=3, emitN=2;
 
   // Container: open-top box, centered
   const containerW=300, wallH=100, wallT=5;
@@ -1388,12 +1388,12 @@ function visibleLoop(elementId, loopFn) {
     if(particles.length>=maxP) return;
     const n=Math.min(emitN,maxP-particles.length);
     const hx=containerX - 10; // left of container
-    const hy=containerY - 42; // well above top of walls
+    const hy=containerY - 60; // well above top of walls
     for(let i=0;i<n;i++) particles.push({
-      x:hx+(Math.random()-0.5)*3,
-      y:hy + (i/(n-1||1))*hoseH + (Math.random()-0.5)*2, // spread across hose height
-      vx:70+(Math.random())*10, // fast rightward into container
-      vy:15+(Math.random())*3, // slight downward
+      x:hx+(Math.random()-0.5)*4,
+      y:hy + i * H * 0.8 + (Math.random()-0.5)*2, // spaced by ~H apart
+      vx:100+(Math.random())*15, // fast rightward
+      vy:10+(Math.random())*3, // slight downward
       density:0,pressure:0,fx:0,fy:0
     });
   }
@@ -1464,7 +1464,7 @@ function visibleLoop(elementId, loopFn) {
     ctx.fillRect(containerX, simH-10-wallT, containerW, wallT);
 
     // Hose nozzle (left of container, angled right)
-    const hx=containerX-15, hy=containerY-45;
+    const hx=containerX-15, hy=containerY-63;
     ctx.fillStyle='#64748b';
     ctx.fillRect(hx, hy, hoseW+4, hoseH);
     // Small arrow showing flow direction
