@@ -1,0 +1,449 @@
+{
+  "total_features": 25000,
+  "synthetic": true,
+  "note": "Synthetic features for illustration. Real SAE features are trained to match a specific embedding model.",
+  "feature_labels": {
+    "100": "wordplay and puns",
+    "204": "question-answer joke structure",
+    "312": "science and physics",
+    "415": "food and cooking",
+    "523": "animals and pets",
+    "601": "household objects",
+    "710": "human body and appearance",
+    "819": "double meaning / ambiguity",
+    "920": "name-based puns",
+    "1033": "family relationships",
+    "1142": "books and reading",
+    "1250": "sports and outdoors",
+    "1367": "work and career",
+    "1480": "restaurants and dining",
+    "1592": "space and astronomy",
+    "1700": "chemistry and elements",
+    "1815": "vehicles and transportation",
+    "1923": "negative statements / negation",
+    "2040": "surprise or unexpected outcome",
+    "2155": "informal / conversational tone",
+    "2267": "rhetorical questions",
+    "2380": "farming and agriculture",
+    "2492": "competition and awards",
+    "2600": "personal anecdotes",
+    "2715": "anatomy and facial features",
+    "2830": "supernatural and mythical",
+    "2940": "trust and deception",
+    "3050": "material and texture"
+  },
+  "joke_features": [
+    {
+      "joke_idx": 0,
+      "text": "Why don't scientists trust atoms? Because they make up everything!",
+      "features": [
+        {
+          "idx": 204,
+          "activation": 0.92
+        },
+        {
+          "idx": 312,
+          "activation": 0.88
+        },
+        {
+          "idx": 819,
+          "activation": 0.85
+        },
+        {
+          "idx": 100,
+          "activation": 0.82
+        },
+        {
+          "idx": 2940,
+          "activation": 0.65
+        },
+        {
+          "idx": 2267,
+          "activation": 0.58
+        },
+        {
+          "idx": 1923,
+          "activation": 0.45
+        },
+        {
+          "idx": 2155,
+          "activation": 0.38
+        }
+      ]
+    },
+    {
+      "joke_idx": 1,
+      "text": "I'm reading a book about anti-gravity. It's impossible to put down.",
+      "features": [
+        {
+          "idx": 312,
+          "activation": 0.9
+        },
+        {
+          "idx": 1142,
+          "activation": 0.87
+        },
+        {
+          "idx": 100,
+          "activation": 0.84
+        },
+        {
+          "idx": 819,
+          "activation": 0.78
+        },
+        {
+          "idx": 2155,
+          "activation": 0.52
+        },
+        {
+          "idx": 601,
+          "activation": 0.4
+        },
+        {
+          "idx": 1592,
+          "activation": 0.35
+        }
+      ]
+    },
+    {
+      "joke_idx": 2,
+      "text": "What do you call a fake noodle? An impasta.",
+      "features": [
+        {
+          "idx": 415,
+          "activation": 0.93
+        },
+        {
+          "idx": 100,
+          "activation": 0.91
+        },
+        {
+          "idx": 920,
+          "activation": 0.86
+        },
+        {
+          "idx": 204,
+          "activation": 0.75
+        },
+        {
+          "idx": 819,
+          "activation": 0.72
+        },
+        {
+          "idx": 2267,
+          "activation": 0.48
+        },
+        {
+          "idx": 2940,
+          "activation": 0.35
+        }
+      ]
+    },
+    {
+      "joke_idx": 3,
+      "text": "Why did the scarecrow win an award? He was outstanding in his field.",
+      "features": [
+        {
+          "idx": 2380,
+          "activation": 0.89
+        },
+        {
+          "idx": 2492,
+          "activation": 0.85
+        },
+        {
+          "idx": 100,
+          "activation": 0.83
+        },
+        {
+          "idx": 819,
+          "activation": 0.8
+        },
+        {
+          "idx": 1367,
+          "activation": 0.62
+        },
+        {
+          "idx": 204,
+          "activation": 0.55
+        },
+        {
+          "idx": 2040,
+          "activation": 0.4
+        }
+      ]
+    },
+    {
+      "joke_idx": 4,
+      "text": "I told my wife she was drawing her eyebrows too high. She looked surprised.",
+      "features": [
+        {
+          "idx": 2715,
+          "activation": 0.91
+        },
+        {
+          "idx": 710,
+          "activation": 0.88
+        },
+        {
+          "idx": 2040,
+          "activation": 0.84
+        },
+        {
+          "idx": 1033,
+          "activation": 0.72
+        },
+        {
+          "idx": 100,
+          "activation": 0.65
+        },
+        {
+          "idx": 2600,
+          "activation": 0.58
+        },
+        {
+          "idx": 819,
+          "activation": 0.45
+        }
+      ]
+    },
+    {
+      "joke_idx": 5,
+      "text": "What do you call a bear with no teeth? A gummy bear.",
+      "features": [
+        {
+          "idx": 523,
+          "activation": 0.94
+        },
+        {
+          "idx": 100,
+          "activation": 0.88
+        },
+        {
+          "idx": 204,
+          "activation": 0.82
+        },
+        {
+          "idx": 819,
+          "activation": 0.7
+        },
+        {
+          "idx": 710,
+          "activation": 0.55
+        },
+        {
+          "idx": 2267,
+          "activation": 0.42
+        },
+        {
+          "idx": 3050,
+          "activation": 0.35
+        }
+      ]
+    },
+    {
+      "joke_idx": 6,
+      "text": "Why don't eggs tell jokes? They'd crack each other up.",
+      "features": [
+        {
+          "idx": 415,
+          "activation": 0.86
+        },
+        {
+          "idx": 100,
+          "activation": 0.84
+        },
+        {
+          "idx": 819,
+          "activation": 0.82
+        },
+        {
+          "idx": 1923,
+          "activation": 0.65
+        },
+        {
+          "idx": 2267,
+          "activation": 0.55
+        },
+        {
+          "idx": 204,
+          "activation": 0.48
+        },
+        {
+          "idx": 2155,
+          "activation": 0.38
+        }
+      ]
+    },
+    {
+      "joke_idx": 7,
+      "text": "I used to hate facial hair, but then it grew on me.",
+      "features": [
+        {
+          "idx": 710,
+          "activation": 0.9
+        },
+        {
+          "idx": 100,
+          "activation": 0.87
+        },
+        {
+          "idx": 819,
+          "activation": 0.85
+        },
+        {
+          "idx": 2600,
+          "activation": 0.68
+        },
+        {
+          "idx": 2715,
+          "activation": 0.55
+        },
+        {
+          "idx": 2040,
+          "activation": 0.42
+        },
+        {
+          "idx": 2155,
+          "activation": 0.38
+        }
+      ]
+    },
+    {
+      "joke_idx": 8,
+      "text": "What do you call a dog that does magic tricks? A labracadabrador.",
+      "features": [
+        {
+          "idx": 523,
+          "activation": 0.92
+        },
+        {
+          "idx": 920,
+          "activation": 0.9
+        },
+        {
+          "idx": 100,
+          "activation": 0.88
+        },
+        {
+          "idx": 2830,
+          "activation": 0.72
+        },
+        {
+          "idx": 204,
+          "activation": 0.58
+        },
+        {
+          "idx": 819,
+          "activation": 0.55
+        },
+        {
+          "idx": 2267,
+          "activation": 0.4
+        }
+      ]
+    },
+    {
+      "joke_idx": 9,
+      "text": "Why can't a bicycle stand on its own? It's two tired.",
+      "features": [
+        {
+          "idx": 1815,
+          "activation": 0.91
+        },
+        {
+          "idx": 100,
+          "activation": 0.89
+        },
+        {
+          "idx": 819,
+          "activation": 0.86
+        },
+        {
+          "idx": 204,
+          "activation": 0.68
+        },
+        {
+          "idx": 2267,
+          "activation": 0.52
+        },
+        {
+          "idx": 1923,
+          "activation": 0.45
+        },
+        {
+          "idx": 2155,
+          "activation": 0.38
+        }
+      ]
+    },
+    {
+      "joke_idx": 10,
+      "text": "Did you hear about the restaurant on the moon? Great food, no atmosphere.",
+      "features": [
+        {
+          "idx": 1480,
+          "activation": 0.9
+        },
+        {
+          "idx": 1592,
+          "activation": 0.88
+        },
+        {
+          "idx": 819,
+          "activation": 0.82
+        },
+        {
+          "idx": 100,
+          "activation": 0.7
+        },
+        {
+          "idx": 415,
+          "activation": 0.55
+        },
+        {
+          "idx": 204,
+          "activation": 0.48
+        },
+        {
+          "idx": 2155,
+          "activation": 0.4
+        }
+      ]
+    },
+    {
+      "joke_idx": 11,
+      "text": "I told a chemistry joke. There was no reaction.",
+      "features": [
+        {
+          "idx": 1700,
+          "activation": 0.93
+        },
+        {
+          "idx": 312,
+          "activation": 0.88
+        },
+        {
+          "idx": 100,
+          "activation": 0.85
+        },
+        {
+          "idx": 819,
+          "activation": 0.82
+        },
+        {
+          "idx": 2600,
+          "activation": 0.58
+        },
+        {
+          "idx": 1923,
+          "activation": 0.5
+        },
+        {
+          "idx": 2155,
+          "activation": 0.42
+        }
+      ]
+    }
+  ]
+}

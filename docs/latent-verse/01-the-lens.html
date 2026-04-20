@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Lens — Latent Verse</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
+h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
+h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+h3 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+code {
+  font-family: var(--mono-font);
+  font-size: 0.9em;
+  background: #f0f0f5;
+  padding: 0.15em 0.35em;
+  border-radius: 3px;
+}
+
+.figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.figure-wide { margin-left: -2rem; margin-right: -2rem; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
+.figure-label { font-weight: 600; color: var(--text); }
+
+.insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
+.insight p { margin: 0; }
+
+.margin-note { font-size: 0.8125rem; color: var(--text-2); line-height: 1.4; border-left: 2px solid var(--border); padding-left: 0.75rem; margin: 1rem 0; }
+
+svg text { font-family: var(--heading-font); }
+
+.embedding-canvas { width: 100%; height: 60px; display: block; border-radius: 3px; }
+
+.text-input {
+  font-family: var(--body-font); font-size: 1rem; width: 100%;
+  padding: 0.6rem 0.8rem; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--fig-bg); color: var(--text); outline: none; transition: border-color 0.15s;
+}
+.text-input:focus { border-color: var(--accent); }
+.text-input::placeholder { color: #b0b0c0; }
+
+.search-button {
+  font-family: var(--heading-font); font-size: 0.9rem; font-weight: 600;
+  padding: 0.6rem 1.2rem; border: none; border-radius: 4px;
+  background: var(--accent); color: white; cursor: pointer; transition: background 0.15s; white-space: nowrap;
+}
+.search-button:hover { background: #1d4ed8; }
+.search-button:disabled { background: #b0b0c0; cursor: not-allowed; }
+
+.result-item {
+  padding: 0.75rem 0; border-bottom: 1px solid var(--border);
+  display: flex; gap: 0.75rem; align-items: baseline;
+}
+.result-item:last-child { border-bottom: none; }
+.result-distance { font-family: var(--mono-font); font-size: 0.8rem; color: var(--text-2); white-space: nowrap; min-width: 3.5rem; }
+.result-text { font-size: 0.95rem; }
+
+.similarity-score { font-family: var(--mono-font); font-size: 1.5rem; font-weight: 500; text-align: center; padding: 0.5rem; }
+
+.joke-picker {
+  font-family: var(--body-font); font-size: 0.95rem; padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg);
+  color: var(--text); cursor: pointer; width: 100%; min-width: 0; box-sizing: border-box;
+}
+
+.example-link {
+  font-family: var(--heading-font); font-size: 0.85rem; color: var(--accent);
+  cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+}
+.example-link:hover { color: #1d4ed8; }
+
+.embedding-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+.embedding-pair > div { min-width: 0; overflow: hidden; }
+
+.loading-msg {
+  font-family: var(--heading-font); font-size: 0.9rem; color: var(--text-2);
+  text-align: center; padding: 2rem;
+}
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .figure-wide { margin-left: 0; margin-right: 0; }
+  .embedding-pair { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }
+}
+</style>
+</head>
+<body>
+<div class="article">
+  <header>
+    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.25rem;">
+      <a href="index.html" style="color: var(--text-2); text-decoration: none;">Latent Verse</a> / Part 1
+    </p>
+    <h1>The Lens</h1>
+    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
+      An embedding model turns text into numbers that encode meaning. Similar texts get similar numbers.
+    </p>
+    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">
+      By Ian Johnson
+    </p>
+  </header>
+
+  <!-- Section 1: What is an embedding? -->
+  <h2>A list of numbers</h2>
+
+  <p>
+    Take a sentence and feed it to a language model. Instead of asking the model to generate more text,
+    ask it a different question: <em>what did you notice about that sentence?</em> The model's answer
+    comes back not as words, but as a list of numbers. Hundreds of them.
+  </p>
+
+  <p>
+    This list is called an <strong>embedding</strong>. Each number is a dimension. Together they place
+    the sentence at a specific point in a high-dimensional space. The model has compressed everything it
+    understands about the meaning of that text into this single point.
+  </p>
+
+  <p>Here is a dad joke, and its embedding:</p>
+
+  <div class="figure" id="fig-single-embedding">
+    <div id="single-joke-text" style="font-size: 1rem; margin-bottom: 0.75rem; min-height: 1.5em;"></div>
+    <canvas id="single-embedding-canvas" class="embedding-canvas"></canvas>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 1.</span>
+      Each vertical bar is one of 384 dimensions. The color encodes the value: warm tones for positive, cool for negative. It looks like noise, but it isn't.
+    </div>
+  </div>
+
+  <p>
+    Squinting at that bar chart, there is no obvious pattern a person could read.
+    But the model that produced it was trained on enormous amounts of text, and the positions of these
+    numbers relative to each other encode something about what the sentence means.
+  </p>
+
+  <p>
+    To see the structure, we need to compare.
+  </p>
+
+  <!-- Section 2: Similarity -->
+  <h2>Similar texts, similar numbers</h2>
+
+  <p>
+    When two pieces of text are about the same thing, their embeddings land near each other in that
+    high-dimensional space. We can measure how close they are with <strong>cosine similarity</strong>:
+    a score from 0 (completely different directions) to 1 (pointing the same way).
+  </p>
+
+  <div class="margin-note" id="cosine-formula"></div>
+
+  <p>
+    Pick two jokes below and watch their embeddings. When the jokes are similar in meaning,
+    you'll see the similarity score climb. When they're unrelated, it drops.
+  </p>
+
+  <div class="figure figure-wide" id="fig-similarity">
+    <div class="embedding-pair">
+      <div>
+        <div style="font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-2); margin-bottom: 0.4rem;">Joke A</div>
+        <select id="joke-a-select" class="joke-picker"></select>
+        <div id="joke-a-text" style="font-size: 0.95rem; margin: 0.5rem 0; min-height: 2.5em; color: var(--text);"></div>
+        <canvas id="embedding-a-canvas" class="embedding-canvas"></canvas>
+      </div>
+      <div>
+        <div style="font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-2); margin-bottom: 0.4rem;">Joke B</div>
+        <select id="joke-b-select" class="joke-picker"></select>
+        <div id="joke-b-text" style="font-size: 0.95rem; margin: 0.5rem 0; min-height: 2.5em; color: var(--text);"></div>
+        <canvas id="embedding-b-canvas" class="embedding-canvas"></canvas>
+      </div>
+    </div>
+    <div id="similarity-score" class="similarity-score" style="margin-top: 1rem;"></div>
+    <canvas id="diff-canvas" class="embedding-canvas" style="height: 40px; margin-top: 0.5rem;"></canvas>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 2.</span>
+      Two jokes and their embeddings side by side. Below: the difference between them, dimension by dimension. The cosine similarity score reflects how close the model considers their meanings.
+    </div>
+  </div>
+
+  <p>
+    Notice that similarity here is about meaning, not surface-level word overlap. Two jokes about
+    animals might use completely different words but still land near each other. The model learned
+    associations from millions of examples. It recognizes topical similarity, structural patterns,
+    and semantic relationships that go beyond keyword matching.
+  </p>
+
+  <!-- Section 3: Search -->
+  <h2>Searching by meaning</h2>
+
+  <p>
+    We have a collection of dad jokes, each one already embedded. To search them, we embed
+    a query and find the jokes whose embeddings are closest. This is <strong>nearest neighbor
+    search</strong>: finding the points in the space that are most similar to your point.
+  </p>
+
+  <p>
+    Pick an example below or type your own query. The results often surface connections that
+    a keyword search would miss entirely.
+  </p>
+
+  <div class="figure figure-wide" id="fig-search">
+    <div style="display: flex; gap: 0.75rem; margin-bottom: 0.75rem;">
+      <select id="search-select" class="joke-picker" style="flex: 1;">
+        <option value="">Pick a joke to find similar ones...</option>
+      </select>
+    </div>
+    <div id="search-results" style="min-height: 200px;">
+      <div class="loading-msg">Loading joke data...</div>
+    </div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 3.</span>
+      Nearest neighbor search across 1,000 dad jokes. The percentage is cosine similarity. The model finds thematically related jokes even when they share no words with the query.
+    </div>
+  </div>
+
+  <p>
+    This is the core idea: the embedding model has already learned something about language.
+    It has read enough text to develop a sense of what words mean, what topics relate to each other,
+    what structures look similar. When we embed our data through this model, we get to look at our
+    data through the lens of everything the model has learned.
+  </p>
+
+  <div class="insight">
+    <p>
+      You can learn about data by looking at what models have learned. The model is the lens.
+      Your data is what you see through it.
+    </p>
+  </div>
+
+  <!-- Section 4: Choosing a lens -->
+  <h2>Choosing a lens</h2>
+
+  <p>
+    There are many embedding models, each trained on different data with different objectives.
+    One model might be trained for search relevance, another for semantic similarity, another
+    for code understanding. The same text, embedded through different models, produces different
+    numbers and different similarity rankings.
+  </p>
+
+  <p>
+    This matters because the choice of model shapes what you see. A model trained heavily on
+    scientific papers might place two chemistry jokes closer together than a general-purpose model would.
+    A model trained for retrieval might care more about topical overlap than tone or structure.
+  </p>
+
+  <p>
+    For this series, we use <a href="https://huggingface.co/BAAI/bge-small-en-v1.5">bge-small-en-v1.5</a>,
+    a model that produces 384-dimensional embeddings. It is a general-purpose lens: competent across
+    a wide range of text, not specialized for any one domain. In the next article, we will take these
+    embeddings and project them into two dimensions so we can see the whole landscape at once.
+  </p>
+
+  <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
+    <p>Part of <a href="index.html" style="color: var(--text-2);">Latent Verse</a>. Next: <a href="02-the-projector.html" style="color: var(--accent);">The Projector</a>.</p>
+    <p style="margin-top: 0.5rem;">Dad jokes from <a href="https://www.reddit.com/r/dadjokes/" style="color: var(--text-2);">r/dadjokes</a>. Embeddings by <a href="https://huggingface.co/BAAI/bge-small-en-v1.5" style="color: var(--text-2);">bge-small-en-v1.5</a>.</p>
+  </footer>
+</div>
+
+<script>
+// ============================================================
+// Decode base64-packed float32 embeddings
+// ============================================================
+function decodeEmbeddings(b64, count, dims) {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const floats = new Float32Array(bytes.buffer);
+  const result = [];
+  for (let i = 0; i < count; i++) {
+    result.push(floats.subarray(i * dims, (i + 1) * dims));
+  }
+  return result;
+}
+
+// ============================================================
+// Cosine similarity
+// ============================================================
+function cosineSim(a, b) {
+  let dot = 0, ma = 0, mb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    ma += a[i] * a[i];
+    mb += b[i] * b[i];
+  }
+  return dot / (Math.sqrt(ma) * Math.sqrt(mb));
+}
+
+// ============================================================
+// Draw embedding bar chart on canvas
+// ============================================================
+function drawEmbedding(canvas, embedding) {
+  if (!embedding || !embedding.length) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+
+  const n = embedding.length;
+  const barW = w / n;
+  const maxAbs = Math.max(...Array.from(embedding).map(Math.abs)) || 1;
+  const pos = d3.interpolateOranges;
+  const neg = d3.interpolateBlues;
+
+  for (let i = 0; i < n; i++) {
+    const v = embedding[i];
+    const norm = Math.abs(v) / maxAbs;
+    const barH = norm * h * 0.45;
+    const x = i * barW;
+    if (v >= 0) {
+      ctx.fillStyle = pos(0.2 + norm * 0.7);
+      ctx.fillRect(x, h / 2 - barH, Math.max(barW, 0.5), barH);
+    } else {
+      ctx.fillStyle = neg(0.2 + norm * 0.7);
+      ctx.fillRect(x, h / 2, Math.max(barW, 0.5), barH);
+    }
+  }
+  // zero line
+  ctx.strokeStyle = '#ccc';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(0, h / 2);
+  ctx.lineTo(w, h / 2);
+  ctx.stroke();
+}
+
+// Draw the difference between two embeddings
+function drawDiff(canvas, a, b) {
+  if (!a || !b) return;
+  const diff = new Float32Array(a.length);
+  for (let i = 0; i < a.length; i++) diff[i] = a[i] - b[i];
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+
+  const n = diff.length;
+  const barW = w / n;
+  const maxAbs = Math.max(...Array.from(diff).map(Math.abs)) || 1;
+
+  for (let i = 0; i < n; i++) {
+    const v = diff[i];
+    const norm = Math.abs(v) / maxAbs;
+    const barH = norm * h * 0.45;
+    const x = i * barW;
+    if (v >= 0) {
+      ctx.fillStyle = d3.interpolateReds(0.15 + norm * 0.6);
+      ctx.fillRect(x, h / 2 - barH, Math.max(barW, 0.5), barH);
+    } else {
+      ctx.fillStyle = d3.interpolatePurples(0.15 + norm * 0.6);
+      ctx.fillRect(x, h / 2, Math.max(barW, 0.5), barH);
+    }
+  }
+  ctx.strokeStyle = '#ccc';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(0, h / 2);
+  ctx.lineTo(w, h / 2);
+  ctx.stroke();
+}
+
+function formatSim(score) {
+  const pct = (score * 100).toFixed(1);
+  const color = d3.interpolateRgb('#94a3b8', '#2563eb')(Math.max(0, Math.min(1, score)));
+  return `<span style="color: ${color}">cosine similarity: ${pct}%</span>`;
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ============================================================
+// Load data and initialize
+// ============================================================
+async function init() {
+  // Render cosine formula
+  try {
+    katex.render(
+      String.raw`\text{similarity}(A, B) = \frac{A \cdot B}{\|A\| \, \|B\|}`,
+      document.getElementById('cosine-formula')
+    );
+  } catch (e) {}
+
+  // Load fixture data in parallel
+  const [fixtures, jokesData] = await Promise.all([
+    fetch('data/fixtures.json').then(r => r.json()),
+    fetch('data/jokes-1k.json').then(r => r.json()),
+  ]);
+
+  // Decode sample joke embeddings
+  const jokeTexts = fixtures.joke_texts;
+  const jokeEmbs = decodeEmbeddings(fixtures.joke_embeddings_b64, jokeTexts.length, fixtures.dimensions);
+
+  // Decode 1k joke corpus for search
+  const corpusTexts = jokesData.texts;
+  const corpusEmbs = decodeEmbeddings(jokesData.embeddings_b64, jokesData.count, jokesData.dimensions);
+
+  // ---- Figure 1: Single embedding ----
+  const joke0 = jokeTexts[0];
+  const emb0 = jokeEmbs[0];
+  document.getElementById('single-joke-text').innerHTML =
+    `<span style="font-style: italic;">"${escapeHtml(joke0)}"</span>`;
+  drawEmbedding(document.getElementById('single-embedding-canvas'), emb0);
+
+  // ---- Figure 2: Similarity comparison ----
+  const selA = document.getElementById('joke-a-select');
+  const selB = document.getElementById('joke-b-select');
+  jokeTexts.forEach((text, i) => {
+    const label = text.length > 55 ? text.slice(0, 55) + '...' : text;
+    selA.add(new Option(label, i));
+    selB.add(new Option(label, i));
+  });
+  selA.value = 0;
+  selB.value = 2;
+
+  function updateFig2() {
+    const iA = +selA.value, iB = +selB.value;
+    const eA = jokeEmbs[iA], eB = jokeEmbs[iB];
+    document.getElementById('joke-a-text').innerHTML = `<em>"${escapeHtml(jokeTexts[iA])}"</em>`;
+    document.getElementById('joke-b-text').innerHTML = `<em>"${escapeHtml(jokeTexts[iB])}"</em>`;
+    drawEmbedding(document.getElementById('embedding-a-canvas'), eA);
+    drawEmbedding(document.getElementById('embedding-b-canvas'), eB);
+    drawDiff(document.getElementById('diff-canvas'), eA, eB);
+    const sim = cosineSim(eA, eB);
+    document.getElementById('similarity-score').innerHTML = formatSim(sim);
+  }
+  selA.addEventListener('change', updateFig2);
+  selB.addEventListener('change', updateFig2);
+  updateFig2();
+
+  // ---- Figure 3: Nearest neighbor search ----
+  const searchSel = document.getElementById('search-select');
+  const resultsDiv = document.getElementById('search-results');
+
+  // Populate search dropdown with sample jokes
+  jokeTexts.forEach((text, i) => {
+    const label = text.length > 65 ? text.slice(0, 65) + '...' : text;
+    searchSel.add(new Option(label, i));
+  });
+
+  function doSearch(queryEmb, queryText) {
+    // Brute force cosine similarity against 1k corpus
+    const scored = corpusTexts.map((text, i) => ({
+      text,
+      sim: cosineSim(queryEmb, corpusEmbs[i])
+    }));
+    scored.sort((a, b) => b.sim - a.sim);
+
+    // Skip exact match (sim > 0.99) and take top 10
+    const top = scored.filter(d => d.sim < 0.99).slice(0, 10);
+
+    resultsDiv.innerHTML = top.map(d => `
+      <div class="result-item">
+        <span class="result-distance">${(d.sim * 100).toFixed(1)}%</span>
+        <span class="result-text">${escapeHtml(d.text)}</span>
+      </div>
+    `).join('');
+  }
+
+  searchSel.addEventListener('change', () => {
+    const idx = +searchSel.value;
+    if (isNaN(idx)) return;
+    doSearch(jokeEmbs[idx], jokeTexts[idx]);
+  });
+
+  resultsDiv.innerHTML = '<div class="loading-msg">Pick a joke above to find similar ones in the collection.</div>';
+
+  // ---- Resize handler ----
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      drawEmbedding(document.getElementById('single-embedding-canvas'), emb0);
+      updateFig2();
+    }, 150);
+  });
+}
+
+init();
+</script>
+</body>
+</html>

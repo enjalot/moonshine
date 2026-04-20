@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Linear Family</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e; --text-2: #4a4a6a; --text-3: #8a8a9e;
+  --accent: #2563eb; --accent-light: #dbeafe;
+  --warm: #ea580c; --warm-light: #ffedd5;
+  --green: #059669; --purple: #7c3aed;
+  --bg: #fafafa; --fig-bg: #ffffff;
+  --border: #e2e2e8; --border-2: #c5c5d1; --muted: #e8e8ee;
+  --c0: #2563eb; --c1: #ea580c; --c2: #059669; --c3: #7c3aed;
+}
+body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
+h1 { font-size: 2.4rem; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.4rem; margin: 3rem 0 1rem; }
+h3 { font-size: 1.1rem; margin: 2rem 0 0.75rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+em { font-style: italic; } strong { font-weight: 600; }
+.subtitle { font-family: var(--heading-font); font-size: 1.1rem; color: var(--text-2); line-height: 1.45; margin-bottom: 1rem; font-weight: 400; }
+.series-tag { font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+.figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.5; }
+.figure-label { font-weight: 600; color: var(--text); }
+.controls { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.controls input[type="range"] { width: 160px; accent-color: var(--accent); vertical-align: middle; }
+.controls label { display: inline-flex; align-items: center; gap: 0.5rem; }
+.controls .value { font-family: var(--mono-font); color: var(--text); min-width: 2ch; display: inline-block; }
+.toggle-group { display: inline-flex; border: 1px solid var(--border-2); border-radius: 4px; overflow: hidden; }
+.toggle-group button { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.35rem 0.7rem; background: var(--fig-bg); color: var(--text-2); border: none; border-right: 1px solid var(--border-2); cursor: pointer; }
+.toggle-group button:last-child { border-right: none; }
+.toggle-group button:hover { background: var(--muted); }
+.toggle-group button.active { background: var(--accent); color: white; }
+svg text { font-family: var(--heading-font); }
+svg .axis text { font-size: 11px; fill: var(--text-2); }
+svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crispEdges; }
+svg .axis-label { font-size: 12px; fill: var(--text-2); font-weight: 600; }
+.margin-note { font-size: 0.875rem; color: var(--text-2); line-height: 1.5; border-left: 2px solid var(--border-2); padding-left: 0.9rem; margin: 1.25rem 0; }
+.stat-bar { display: flex; gap: 0.5rem; align-items: center; font-family: var(--heading-font); font-size: 0.82rem; color: var(--text-2); margin-top: 0.75rem; }
+.stat-bar .bar-bg { flex: 1; height: 8px; background: var(--muted); border-radius: 4px; overflow: hidden; }
+.stat-bar .bar-fill { height: 100%; background: var(--accent); transition: width 0.2s; }
+@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure { padding: 1rem; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+</style>
+</head>
+<body>
+<div class="article">
+
+<header>
+  <div class="series-tag">Part 2 of 10 · Preserves variance, independence, and parts</div>
+  <h1>The Linear Family</h1>
+  <p class="subtitle">
+    The oldest ideas in dimensionality reduction are still, often, the right ones. PCA, ICA, NMF, and kernel PCA are all linear projections, differing only in what they consider a good projection to be.
+  </p>
+</header>
+
+<p>
+  Linear dimensionality reduction is a matrix multiplication. Given data <span style="font-family: var(--mono-font); font-size: 0.92em;">X</span> with <span style="font-family: var(--mono-font); font-size: 0.92em;">n</span> rows and <span style="font-family: var(--mono-font); font-size: 0.92em;">d</span> columns, pick a skinnier matrix <span style="font-family: var(--mono-font); font-size: 0.92em;">W</span> with <span style="font-family: var(--mono-font); font-size: 0.92em;">d</span> rows and <span style="font-family: var(--mono-font); font-size: 0.92em;">k</span> columns, and the embedding is <span style="font-family: var(--mono-font); font-size: 0.92em;">XW</span>. That is it. The whole family of methods we cover here differs only in how they pick <span style="font-family: var(--mono-font); font-size: 0.92em;">W</span>.
+</p>
+
+<p>
+  That sounds like a narrow design space, and it is, but the narrowness is exactly why linear methods are still useful. They are fast, deterministic, composable, and interpretable. When a nonlinear method distorts your data in some hard-to-describe way, it is often linear methods that serve as the baseline you compare against. And when a nonlinear method needs a sensible starting configuration, it is often PCA that provides it.
+</p>
+
+<h2>PCA: preserve variance</h2>
+
+<p>
+  Principal Component Analysis, introduced by Pearson in 1901 and independently by Hotelling in 1933, asks a simple question: among all possible directions through the data, which one has the most spread? That direction becomes the first principal component. The second is the direction of most spread <em>orthogonal</em> to the first. The third is the direction of most spread orthogonal to both. Keep going, order by spread, keep the top few.
+</p>
+
+<p>
+  Geometrically, the first few components define a subspace that lies as close as possible to the data in a least-squares sense. If you were asked to summarize the cloud with a line, you would pick the first component. With a plane, the first two.
+</p>
+
+<div class="figure" id="fig-pca">
+  <div class="controls">
+    <label>
+      <span style="cursor: help;" title="Spread of the cloud along one axis">correlation</span>
+      <span class="value" id="pca-rho-val">0.75</span>
+      <input type="range" id="pca-rho" min="-0.95" max="0.95" value="0.75" step="0.01">
+    </label>
+    <label>
+      anisotropy <span class="value" id="pca-aniso-val">3.0</span>
+      <input type="range" id="pca-aniso" min="1" max="6" value="3" step="0.1">
+    </label>
+    <button id="pca-regen" style="font-family: var(--heading-font); font-size: 0.8rem; padding: 0.35rem 0.7rem; background: var(--fig-bg); color: var(--text-2); border: 1px solid var(--border-2); border-radius: 4px; cursor: pointer;">regenerate</button>
+  </div>
+  <svg id="pca-svg" width="100%" height="360" viewBox="0 0 680 360" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="stat-bar">
+    <div style="min-width: 110px;">explained variance</div>
+    <div class="bar-bg"><div class="bar-fill" id="pca-bar1" style="width: 0%"></div></div>
+    <div style="min-width: 52px; text-align: right;" class="value" id="pca-pc1-label">PC1 50%</div>
+  </div>
+  <div class="stat-bar">
+    <div style="min-width: 110px;"></div>
+    <div class="bar-bg"><div class="bar-fill" id="pca-bar2" style="width: 0%; background: var(--warm);"></div></div>
+    <div style="min-width: 52px; text-align: right;" class="value" id="pca-pc2-label">PC2 50%</div>
+  </div>
+  <div class="figure-caption">
+    <span class="figure-label">Figure 1.</span>
+    Drag the sliders to reshape the point cloud. The blue arrow tracks the first principal component, always aligning with the direction of maximum spread; the orange arrow is the second, orthogonal to the first. The bars show what fraction of the total variance each direction captures.
+  </div>
+</div>
+
+<p>
+  As the cloud grows more anisotropic, the first component captures a larger share of the variance. In the extreme case where the cloud is a perfect line, PC1 captures 100% and a one-dimensional embedding loses nothing. Most real data is somewhere in between: the first few components capture most of the variance, and the rest is treated as noise.
+</p>
+
+<p>
+  PCA has a clean mathematical life. The components are eigenvectors of the data's covariance matrix; equivalently, the right singular vectors of the centered data. Modern implementations use SVD because it is numerically more stable. Explained variance is literally the eigenvalue, so picking a number of components reduces to choosing a cutoff on a sorted list.
+</p>
+
+<p>
+  What PCA cannot do is bend. If the meaningful structure of the data lies on a curved manifold, no linear subspace is going to be a good fit. This is the observation that motivates almost every nonlinear method in this series. PCA sees a swiss roll as an elongated blob; it has no way to unroll it. But PCA is often the right baseline, often the right initialization, and, for data that genuinely has linear structure (and a lot of data does, or close to it) often the right answer.
+</p>
+
+<div class="margin-note">
+  A rule of thumb in practice: if you do not know where to start with new high-dimensional data, look at PCA first. If the first two components tell a reasonable story, you might not need anything else. If they do not, you have learned something about the data's nonlinearity before spending time on harder methods.
+</div>
+
+<h2>ICA: preserve independence</h2>
+
+<p>
+  Imagine three microphones in a room with three people talking. Each microphone picks up a mixture of all three voices, with the mixing weights depending on distances and geometry. Can we recover the individual voices from just the mixtures?
+</p>
+
+<p>
+  PCA cannot do this. The principal components of the mixtures are the directions of highest variance, which have no reason to align with the individual speakers. PCA treats correlation, not the identity of the underlying sources.
+</p>
+
+<p>
+  Independent Component Analysis, developed through the 1990s and codified by Hyvärinen and Oja's FastICA in 2000, attacks the same problem from a different angle. Its core assumption: the original sources are statistically <em>independent</em>, and most interesting real-world signals are <em>non-Gaussian</em>. A mixture of independent non-Gaussian signals is closer to Gaussian than any of the sources on their own (this is a consequence of the central limit theorem). So if we search among the directions in the data that are the <em>least</em> Gaussian, we find the directions of the original sources.
+</p>
+
+<div class="figure" id="fig-ica">
+  <div class="controls">
+    <div class="toggle-group" id="ica-toggle">
+      <button class="active" data-view="sources">original sources</button>
+      <button data-view="mixed">observed mixtures</button>
+      <button data-view="pca">PCA recovery</button>
+      <button data-view="ica">ICA recovery</button>
+    </div>
+  </div>
+  <svg id="ica-svg" width="100%" height="300" viewBox="0 0 680 300" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="figure-caption">
+    <span class="figure-label">Figure 2.</span>
+    Two non-Gaussian sources (a sawtooth and a square wave) are mixed linearly to produce the two observed signals. PCA finds orthogonal axes of maximum variance, which are <em>not</em> the sources. ICA finds directions that are the most non-Gaussian, which typically are.
+  </div>
+</div>
+
+<p>
+  The key intuition is that the Gaussian distribution is the enemy. If all your sources were Gaussian, you could not recover them: a rotation of Gaussian noise is still Gaussian noise, so there is no way to pick out the original orientation. Non-Gaussianity is what makes the problem solvable.
+</p>
+
+<p>
+  ICA is a workhorse in neuroimaging: EEG and fMRI produce signals that are linear mixtures of underlying brain sources plus artifacts (eye blinks, heartbeat, muscle activity). Running ICA and manually labeling components is a standard preprocessing step. In machine learning, ICA is less commonly used as a front-line DR method, but it shows up in feature engineering, denoising, and as a tool for analyzing learned representations.
+</p>
+
+<h2>NMF: preserve parts</h2>
+
+<p>
+  Suppose your data are pixel intensities, word counts, gene expression levels, or anything else that cannot physically be negative. PCA is happy to write your face as "average face + 0.7 times (component 1, which has negative regions) minus 0.3 times (component 2)." The math is fine. The interpretation is weird: what does it mean for a face to contain a negative eye?
+</p>
+
+<p>
+  Non-negative Matrix Factorization, formalized by Lee and Seung in 1999, adds a simple constraint: both the basis patterns and the coefficients must be non-negative. Each sample is a sum (never a difference) of non-negative parts. In Lee and Seung's original face paper, the discovered basis looks like localized face features: noses, eyebrows, mouths. Every face is a positive combination of them. The constraint buys interpretability.
+</p>
+
+<div class="figure" id="fig-nmf">
+  <div class="controls">
+    <label>
+      rank <span class="value" id="nmf-k-val">4</span>
+      <input type="range" id="nmf-k" min="1" max="8" value="4" step="1">
+    </label>
+  </div>
+  <svg id="nmf-svg" width="100%" height="340" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="figure-caption">
+    <span class="figure-label">Figure 3.</span>
+    A dataset of 12 synthetic "samples" (top row) is built from non-negative mixtures of the four underlying parts. NMF with rank equal to the true number of parts recovers them; below rank, the parts get merged; above rank, the extra components become noise absorbers.
+  </div>
+</div>
+
+<p>
+  NMF has become essential in single-cell genomics, where cells are linear combinations of gene expression programs; in topic modeling, where documents are combinations of word-distribution topics; and in audio source separation, where spectrograms are sums of non-negative frequency patterns. Wherever data has a natural "parts" reading, NMF tends to find the parts.
+</p>
+
+<p>
+  The tradeoffs: the factorization is not unique (many valid decompositions of the same data exist), the optimization is non-convex, and picking the rank is an art. But when the data is genuinely non-negative and the parts interpretation is meaningful, NMF often produces a decomposition that downstream analysts can actually reason about, which is rare in DR.
+</p>
+
+<h2>Kernel PCA: the bridge to nonlinear</h2>
+
+<p>
+  PCA assumes the structure in the data is linear. What if it is not, but could be made linear by a clever change of coordinates? This is the idea that Schölkopf, Smola, and Müller published in 1998 under the name kernel PCA.
+</p>
+
+<p>
+  Imagine a dataset shaped like two concentric circles. No linear projection separates them, because their separation is not along any direction; it is along the radius. But if you map each point <span style="font-family: var(--mono-font); font-size: 0.92em;">(x, y)</span> to <span style="font-family: var(--mono-font); font-size: 0.92em;">(x, y, x² + y²)</span>, the two circles now lie at different heights, and they are linearly separable in the new coordinate system. Linear methods in the <em>transformed</em> space correspond to nonlinear methods in the <em>original</em> space.
+</p>
+
+<p>
+  The catch is that writing down the transformation explicitly becomes expensive in high dimensions (and, for some useful transformations, infinite). The kernel trick sidesteps this: PCA only needs inner products between points, and an inner product in the transformed space is computable directly from a kernel function <span style="font-family: var(--mono-font); font-size: 0.92em;">k(x, y)</span> applied to points in the original space. So we never build the transformed space; we just compute a Gram matrix of kernel values and do PCA on that.
+</p>
+
+<p>
+  Common kernels are the polynomial kernel (captures pairwise interactions) and the RBF or Gaussian kernel (captures local similarity, softly). The choice of kernel and its hyperparameters are the knobs the user turns. Kernel PCA does recover nonlinear structure in many classical synthetic examples, and it turns out to be a special case of a much broader family: Laplacian eigenmaps, Isomap, diffusion maps, and spectral clustering can all be viewed as kernel methods with particular kernels. We will see them in the next article.
+</p>
+
+<p>
+  What holds kernel PCA back in practice is scale: the Gram matrix is <span style="font-family: var(--mono-font); font-size: 0.92em;">n</span>-by-<span style="font-family: var(--mono-font); font-size: 0.92em;">n</span>, and eigendecomposing it is cubic in <span style="font-family: var(--mono-font); font-size: 0.92em;">n</span>. Beyond a few thousand points, it becomes unworkable without approximation. For large data, the neighbor-based methods we cover in article 4 have won out.
+</p>
+
+<h2>Random projection: almost free, almost faithful</h2>
+
+<p>
+  The last member of the linear family is the most surprising. Instead of carefully choosing <span style="font-family: var(--mono-font); font-size: 0.92em;">W</span> to preserve some property, just draw <span style="font-family: var(--mono-font); font-size: 0.92em;">W</span> at random. Gaussian entries, or even signed sparse entries work fine. Multiply. You are done.
+</p>
+
+<p>
+  This sounds like it should not work, and yet it does. The Johnson-Lindenstrauss lemma proves that for any desired precision, a random projection into <span style="font-family: var(--mono-font); font-size: 0.92em;">O(log(n) / ε²)</span> dimensions approximately preserves all pairwise distances in the dataset, regardless of the original dimension. Not because the random projection is smart, but because high-dimensional geometry itself is concentrated enough that a random direction is almost always a reasonable summary.
+</p>
+
+<div class="figure" id="fig-jl">
+  <div class="controls">
+    <label>
+      projected dim <span class="value" id="jl-k-val">16</span>
+      <input type="range" id="jl-k" min="2" max="100" value="16" step="1">
+    </label>
+    <label>
+      points <span class="value" id="jl-n-val">200</span>
+      <input type="range" id="jl-n" min="50" max="400" value="200" step="50">
+    </label>
+  </div>
+  <svg id="jl-svg" width="100%" height="340" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="figure-caption">
+    <span class="figure-label">Figure 4.</span>
+    Shepard diagram: each point is a pair of samples. Its x-coordinate is their distance in the original 200-dimensional space; its y-coordinate is their distance after random projection. A perfect match would lie on the diagonal. As the projection dimension shrinks, the scatter around the diagonal widens, but the relationship stays roughly linear.
+  </div>
+</div>
+
+<p>
+  Random projection is the go-to when you want to crush dimension for speed, not for visualization. As preprocessing before clustering, before nearest-neighbor search, or before handing data to a more expensive method, a random projection from 10,000 to 100 dimensions is cheap to compute, provably loses little, and has no hyperparameters to tune. The methods in the rest of this series often use it as preprocessing without advertising the fact.
+</p>
+
+<h2>What linear methods cannot do</h2>
+
+<p>
+  Across this family, the organizing principle is clear: a good projection is one where a <em>linear</em> combination of coordinates captures the property we care about, whether that is variance (PCA), independence (ICA), additive parts (NMF), kernelized similarity (kernel PCA), or just distance (random projection). The design space is a matrix multiplication, and the methods differ in their objectives and constraints.
+</p>
+
+<p>
+  Linear methods struggle when the structure is fundamentally curved. A swiss roll, two intertwined crescents, a branching developmental trajectory: these are all cases where the local geometry does not match the global geometry, and no single linear projection can reconcile them. The next article picks up there, with methods that replace the Euclidean distance between points with something curvier: distances along the manifold, distances through a graph, distances from a random walk.
+</p>
+
+<footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
+  <p>Part of <a href="index.html" style="color: var(--text-2);">What Dimensionality Reduction Preserves</a>. Previous: <a href="01-framing.html" style="color: var(--accent);">The Geometry of High-Dimensional Data</a>. Next: <a href="03-global-distances.html" style="color: var(--accent);">Preserving Global Distances</a>.</p>
+  <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+</footer>
+
+</div>
+
+<script>
+function mulberry32(seed) {
+  return function() {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function gaussian(rng) {
+  const u = 1 - rng(), v = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// 2x2 covariance eigendecomposition (closed form)
+function eig2x2(a, b, c, d) {
+  // matrix [[a,b],[c,d]] symmetric assumed (b==c)
+  const tr = a + d;
+  const det = a * d - b * c;
+  const disc = Math.sqrt(Math.max(0, tr * tr / 4 - det));
+  const l1 = tr / 2 + disc;
+  const l2 = tr / 2 - disc;
+  let v1, v2;
+  if (Math.abs(b) > 1e-10) {
+    v1 = [l1 - d, b];
+    v2 = [l2 - d, b];
+  } else {
+    v1 = a >= d ? [1, 0] : [0, 1];
+    v2 = a >= d ? [0, 1] : [1, 0];
+  }
+  const n1 = Math.hypot(v1[0], v1[1]), n2 = Math.hypot(v2[0], v2[1]);
+  v1 = [v1[0] / n1, v1[1] / n1];
+  v2 = [v2[0] / n2, v2[1] / n2];
+  return { l1, l2, v1, v2 };
+}
+
+// ---------- Figure 1: PCA interactive ----------
+(function() {
+  const svg = d3.select("#pca-svg");
+  const W = 680, H = 360;
+  const margin = { top: 20, right: 24, bottom: 36, left: 40 };
+  const innerW = W - margin.left - margin.right;
+  const innerH = H - margin.top - margin.bottom;
+  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const x = d3.scaleLinear().domain([-5, 5]).range([0, innerW]);
+  const y = d3.scaleLinear().domain([-3, 3]).range([innerH, 0]);
+
+  // Match scales so the axes are orthonormal visually
+  // Use same pixel-per-unit by scaling y domain based on ratio
+  const pxPerUnit = Math.min(innerW / 10, innerH / 6);
+  x.domain([-innerW / (2 * pxPerUnit), innerW / (2 * pxPerUnit)]);
+  y.domain([-innerH / (2 * pxPerUnit), innerH / (2 * pxPerUnit)]);
+
+  g.append("g").attr("class", "axis").attr("transform", `translate(0,${innerH / 2})`).call(d3.axisBottom(x).ticks(6));
+  g.append("g").attr("class", "axis").attr("transform", `translate(${innerW / 2},0)`).call(d3.axisLeft(y).ticks(5));
+
+  const axisG = g.append("g");
+  const ptG = g.append("g");
+
+  let points = [];
+  const rhoInput = document.getElementById("pca-rho");
+  const anisoInput = document.getElementById("pca-aniso");
+  const rhoVal = document.getElementById("pca-rho-val");
+  const anisoVal = document.getElementById("pca-aniso-val");
+  let seedCounter = 1;
+
+  function generate() {
+    const n = 80;
+    const rho = +rhoInput.value;
+    const aniso = +anisoInput.value;
+    const sx = aniso, sy = 1;
+    const rng = mulberry32(seedCounter);
+    points = [];
+    for (let i = 0; i < n; i++) {
+      const z1 = gaussian(rng), z2 = gaussian(rng);
+      // Cholesky for [[sx^2, rho*sx*sy],[rho*sx*sy, sy^2]]
+      const px = sx * z1;
+      const py = rho * sy * z1 + Math.sqrt(Math.max(0, 1 - rho * rho)) * sy * z2;
+      points.push({ x: px, y: py });
+    }
+  }
+
+  function render() {
+    rhoVal.textContent = (+rhoInput.value).toFixed(2);
+    anisoVal.textContent = (+anisoInput.value).toFixed(1);
+
+    // Compute covariance
+    const mx = d3.mean(points, d => d.x);
+    const my = d3.mean(points, d => d.y);
+    let cxx = 0, cyy = 0, cxy = 0;
+    for (const p of points) {
+      cxx += (p.x - mx) ** 2;
+      cyy += (p.y - my) ** 2;
+      cxy += (p.x - mx) * (p.y - my);
+    }
+    const n = points.length;
+    cxx /= n - 1; cyy /= n - 1; cxy /= n - 1;
+    const { l1, l2, v1, v2 } = eig2x2(cxx, cxy, cxy, cyy);
+
+    // Points
+    ptG.selectAll("circle").data(points).join("circle")
+      .attr("cx", d => x(d.x)).attr("cy", d => y(d.y))
+      .attr("r", 3.5).attr("fill", "var(--text-2)").attr("opacity", 0.6);
+
+    // Axes — from centroid along v1 and v2, length scaled by sqrt(eigenvalue)
+    axisG.selectAll("*").remove();
+    const cx = x(mx), cy = y(my);
+    const s1 = Math.sqrt(l1) * pxPerUnit;
+    const s2 = Math.sqrt(l2) * pxPerUnit;
+    // PC1 (blue) — flip y because screen y is inverted
+    axisG.append("line")
+      .attr("x1", cx - v1[0] * s1 * 1.8).attr("y1", cy + v1[1] * s1 * 1.8)
+      .attr("x2", cx + v1[0] * s1 * 1.8).attr("y2", cy - v1[1] * s1 * 1.8)
+      .attr("stroke", "var(--accent)").attr("stroke-width", 3).attr("stroke-linecap", "round");
+    axisG.append("text")
+      .attr("x", cx + v1[0] * s1 * 1.8 + v1[0] * 14).attr("y", cy - v1[1] * s1 * 1.8 - v1[1] * 14)
+      .attr("text-anchor", "middle").attr("dy", "0.35em")
+      .attr("fill", "var(--accent)").style("font-weight", 700).style("font-size", "13px")
+      .text("PC1");
+    // PC2 (warm)
+    axisG.append("line")
+      .attr("x1", cx - v2[0] * s2 * 1.8).attr("y1", cy + v2[1] * s2 * 1.8)
+      .attr("x2", cx + v2[0] * s2 * 1.8).attr("y2", cy - v2[1] * s2 * 1.8)
+      .attr("stroke", "var(--warm)").attr("stroke-width", 2.5).attr("stroke-linecap", "round");
+    axisG.append("text")
+      .attr("x", cx + v2[0] * s2 * 1.8 + v2[0] * 14).attr("y", cy - v2[1] * s2 * 1.8 - v2[1] * 14)
+      .attr("text-anchor", "middle").attr("dy", "0.35em")
+      .attr("fill", "var(--warm)").style("font-weight", 700).style("font-size", "13px")
+      .text("PC2");
+
+    // Variance bars
+    const tot = l1 + l2;
+    const f1 = l1 / tot, f2 = l2 / tot;
+    document.getElementById("pca-bar1").style.width = `${f1 * 100}%`;
+    document.getElementById("pca-bar2").style.width = `${f2 * 100}%`;
+    document.getElementById("pca-pc1-label").textContent = `PC1 ${(f1 * 100).toFixed(0)}%`;
+    document.getElementById("pca-pc2-label").textContent = `PC2 ${(f2 * 100).toFixed(0)}%`;
+  }
+
+  rhoInput.addEventListener("input", () => { generate(); render(); });
+  anisoInput.addEventListener("input", () => { generate(); render(); });
+  document.getElementById("pca-regen").addEventListener("click", () => { seedCounter++; generate(); render(); });
+
+  generate();
+  render();
+})();
+
+// ---------- Figure 2: ICA vs PCA ----------
+(function() {
+  const svg = d3.select("#ica-svg");
+  const W = 680, H = 300;
+  const margin = { top: 16, right: 24, bottom: 28, left: 40 };
+  const innerW = W - margin.left - margin.right;
+  const innerH = H - margin.top - margin.bottom;
+  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const T = 300;
+  const t = d3.range(T);
+  // Sources: sawtooth and square wave
+  const s1 = t.map(i => {
+    const phase = (i / 50) % 1;
+    return 2 * phase - 1;
+  });
+  const s2 = t.map(i => {
+    const phase = Math.sin(i / 24);
+    return phase > 0 ? 0.8 : -0.8;
+  });
+  // Mixing matrix
+  const A = [[1, 1], [0.5, 2]];
+  const x1 = t.map(i => A[0][0] * s1[i] + A[0][1] * s2[i]);
+  const x2 = t.map(i => A[1][0] * s1[i] + A[1][1] * s2[i]);
+
+  // PCA recovery: compute covariance of [x1, x2], find eigenvectors
+  const mx1 = d3.mean(x1), mx2 = d3.mean(x2);
+  let cxx = 0, cyy = 0, cxy = 0;
+  for (let i = 0; i < T; i++) {
+    cxx += (x1[i] - mx1) ** 2;
+    cyy += (x2[i] - mx2) ** 2;
+    cxy += (x1[i] - mx1) * (x2[i] - mx2);
+  }
+  cxx /= T - 1; cyy /= T - 1; cxy /= T - 1;
+  const { v1, v2 } = eig2x2(cxx, cxy, cxy, cyy);
+  // PCA "recovered" signals are projections onto eigenvectors
+  const pca1 = t.map(i => v1[0] * (x1[i] - mx1) + v1[1] * (x2[i] - mx2));
+  const pca2 = t.map(i => v2[0] * (x1[i] - mx1) + v2[1] * (x2[i] - mx2));
+
+  // Quick-and-dirty FastICA-style on 2D whitened data
+  // 1) whiten
+  const Lambda = [cxx, cyy]; // will be replaced
+  // use eigen decomposition
+  const { l1, l2 } = eig2x2(cxx, cxy, cxy, cyy);
+  const wh1 = t.map(i => (v1[0] * (x1[i] - mx1) + v1[1] * (x2[i] - mx2)) / Math.sqrt(l1));
+  const wh2 = t.map(i => (v2[0] * (x1[i] - mx1) + v2[1] * (x2[i] - mx2)) / Math.sqrt(l2));
+  // 2) find rotation theta that maximizes non-Gaussianity (kurtosis) of projected signal
+  function kurt(arr) {
+    const m = d3.mean(arr);
+    let m2 = 0, m4 = 0;
+    for (const a of arr) { m2 += (a - m) ** 2; m4 += (a - m) ** 4; }
+    m2 /= arr.length; m4 /= arr.length;
+    return m4 / (m2 * m2) - 3;
+  }
+  let bestTheta = 0, bestScore = -Infinity;
+  for (let th = 0; th < Math.PI; th += Math.PI / 180) {
+    const p = wh1.map((_, i) => Math.cos(th) * wh1[i] + Math.sin(th) * wh2[i]);
+    const s = Math.abs(kurt(p));
+    if (s > bestScore) { bestScore = s; bestTheta = th; }
+  }
+  const ica1 = wh1.map((_, i) => Math.cos(bestTheta) * wh1[i] + Math.sin(bestTheta) * wh2[i]);
+  const ica2 = wh1.map((_, i) => -Math.sin(bestTheta) * wh1[i] + Math.cos(bestTheta) * wh2[i]);
+
+  const views = {
+    sources:  { a: s1,  b: s2,  labA: "source A (sawtooth)", labB: "source B (square)" },
+    mixed:    { a: x1,  b: x2,  labA: "observation 1",       labB: "observation 2" },
+    pca:      { a: pca1, b: pca2, labA: "PC1 (still mixed)",  labB: "PC2 (still mixed)" },
+    ica:      { a: ica1, b: ica2, labA: "recovered source A",  labB: "recovered source B" },
+  };
+
+  const xScale = d3.scaleLinear().domain([0, T - 1]).range([0, innerW]);
+  const yScale = d3.scaleLinear().domain([-4, 4]).range([innerH / 2 - 8, 0]);
+  const yScale2 = d3.scaleLinear().domain([-4, 4]).range([innerH, innerH / 2 + 8]);
+
+  const lineA = d3.line().x((_, i) => xScale(i)).y(d => yScale(d));
+  const lineB = d3.line().x((_, i) => xScale(i)).y(d => yScale2(d));
+
+  const labA = g.append("text").attr("x", 4).attr("y", 10).style("font-size", "11px").attr("fill", "var(--accent)");
+  const labB = g.append("text").attr("x", 4).attr("y", innerH / 2 + 18).style("font-size", "11px").attr("fill", "var(--warm)");
+  const pathA = g.append("path").attr("fill", "none").attr("stroke", "var(--accent)").attr("stroke-width", 1.6);
+  const pathB = g.append("path").attr("fill", "none").attr("stroke", "var(--warm)").attr("stroke-width", 1.6);
+
+  // mid separator
+  g.append("line").attr("x1", 0).attr("x2", innerW).attr("y1", innerH / 2).attr("y2", innerH / 2)
+    .attr("stroke", "var(--border)").attr("stroke-dasharray", "2 3");
+
+  function renderView(v) {
+    const view = views[v];
+    // auto-scale each signal for display
+    function normalize(arr) {
+      const ex = d3.extent(arr);
+      const m = Math.max(Math.abs(ex[0]), Math.abs(ex[1]));
+      return arr.map(a => a / m * 3);
+    }
+    const a = normalize(view.a), b = normalize(view.b);
+    pathA.datum(a).transition().duration(250).attr("d", lineA);
+    pathB.datum(b).transition().duration(250).attr("d", lineB);
+    labA.text(view.labA);
+    labB.text(view.labB);
+  }
+
+  const buttons = document.querySelectorAll("#ica-toggle button");
+  buttons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      buttons.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      renderView(btn.dataset.view);
+    });
+  });
+  renderView("sources");
+})();
+
+// ---------- Figure 3: NMF ----------
+(function() {
+  const svg = d3.select("#nmf-svg");
+  const W = 680, H = 340;
+  const g = svg.append("g");
+
+  // Build 4 "parts" as 8x8 patterns
+  const partSize = 8;
+  const trueParts = [
+    // horizontal bar
+    Array.from({ length: partSize * partSize }, (_, i) => {
+      const r = Math.floor(i / partSize), c = i % partSize;
+      return (r === 2 || r === 3) ? 1.0 : 0.0;
+    }),
+    // vertical bar
+    Array.from({ length: partSize * partSize }, (_, i) => {
+      const r = Math.floor(i / partSize), c = i % partSize;
+      return (c === 5 || c === 6) ? 1.0 : 0.0;
+    }),
+    // top-left block
+    Array.from({ length: partSize * partSize }, (_, i) => {
+      const r = Math.floor(i / partSize), c = i % partSize;
+      return (r < 3 && c < 3) ? 1.0 : 0.0;
+    }),
+    // bottom-right block
+    Array.from({ length: partSize * partSize }, (_, i) => {
+      const r = Math.floor(i / partSize), c = i % partSize;
+      return (r > 4 && c > 4) ? 1.0 : 0.0;
+    }),
+  ];
+  const K_TRUE = trueParts.length;
+
+  // Generate 12 sample images as non-negative combinations
+  const rng = mulberry32(1);
+  const N = 12;
+  const samples = [];
+  const coefs = [];
+  for (let i = 0; i < N; i++) {
+    const c = trueParts.map(() => rng() * 0.9 + 0.1);
+    const img = new Array(partSize * partSize).fill(0);
+    for (let k = 0; k < K_TRUE; k++) {
+      for (let j = 0; j < img.length; j++) img[j] += c[k] * trueParts[k][j];
+    }
+    samples.push(img);
+    coefs.push(c);
+  }
+
+  // Simple NMF via multiplicative updates
+  function nmf(V, k, iters = 150) {
+    const n = V.length, m = V[0].length;
+    const W = Array.from({ length: n }, () => Array.from({ length: k }, () => rng() * 0.5 + 0.1));
+    const H = Array.from({ length: k }, () => Array.from({ length: m }, () => rng() * 0.5 + 0.1));
+    const EPS = 1e-9;
+    for (let it = 0; it < iters; it++) {
+      // H update: H = H * (W^T V) / (W^T W H)
+      const WTV = Array.from({ length: k }, () => new Array(m).fill(0));
+      for (let a = 0; a < k; a++)
+        for (let b = 0; b < m; b++)
+          for (let i = 0; i < n; i++) WTV[a][b] += W[i][a] * V[i][b];
+      const WTW = Array.from({ length: k }, () => new Array(k).fill(0));
+      for (let a = 0; a < k; a++)
+        for (let b = 0; b < k; b++)
+          for (let i = 0; i < n; i++) WTW[a][b] += W[i][a] * W[i][b];
+      const WTWH = Array.from({ length: k }, () => new Array(m).fill(0));
+      for (let a = 0; a < k; a++)
+        for (let b = 0; b < m; b++)
+          for (let c = 0; c < k; c++) WTWH[a][b] += WTW[a][c] * H[c][b];
+      for (let a = 0; a < k; a++)
+        for (let b = 0; b < m; b++)
+          H[a][b] = H[a][b] * WTV[a][b] / (WTWH[a][b] + EPS);
+      // W update: W = W * (V H^T) / (W H H^T)
+      const VHT = Array.from({ length: n }, () => new Array(k).fill(0));
+      for (let i = 0; i < n; i++)
+        for (let a = 0; a < k; a++)
+          for (let b = 0; b < m; b++) VHT[i][a] += V[i][b] * H[a][b];
+      const HHT = Array.from({ length: k }, () => new Array(k).fill(0));
+      for (let a = 0; a < k; a++)
+        for (let b = 0; b < k; b++)
+          for (let c = 0; c < m; c++) HHT[a][b] += H[a][c] * H[b][c];
+      const WHHT = Array.from({ length: n }, () => new Array(k).fill(0));
+      for (let i = 0; i < n; i++)
+        for (let a = 0; a < k; a++)
+          for (let b = 0; b < k; b++) WHHT[i][a] += W[i][b] * HHT[b][a];
+      for (let i = 0; i < n; i++)
+        for (let a = 0; a < k; a++)
+          W[i][a] = W[i][a] * VHT[i][a] / (WHHT[i][a] + EPS);
+    }
+    return { W, H };
+  }
+
+  // Draw a small 8x8 patch at (x, y) with cell size s
+  function drawPatch(container, data, x0, y0, cellSize, colorMax) {
+    const gPatch = container.append("g").attr("transform", `translate(${x0},${y0})`);
+    for (let i = 0; i < data.length; i++) {
+      const r = Math.floor(i / partSize), c = i % partSize;
+      const v = Math.max(0, Math.min(1, data[i] / colorMax));
+      gPatch.append("rect")
+        .attr("x", c * cellSize).attr("y", r * cellSize)
+        .attr("width", cellSize).attr("height", cellSize)
+        .attr("fill", d3.interpolateBlues(0.1 + 0.85 * v))
+        .attr("stroke", "white").attr("stroke-width", 0.3);
+    }
+    gPatch.append("rect")
+      .attr("width", partSize * cellSize).attr("height", partSize * cellSize)
+      .attr("fill", "none").attr("stroke", "var(--border-2)").attr("stroke-width", 0.5);
+  }
+
+  const samplesG = g.append("g");
+  const partsG = g.append("g");
+  const labelG = g.append("g");
+
+  labelG.append("text").attr("x", 20).attr("y", 14).style("font-size", "12px").style("font-weight", 600)
+    .attr("fill", "var(--text-2)").text("synthetic samples (sums of parts with random positive weights)");
+  labelG.append("text").attr("x", 20).attr("y", 174).style("font-size", "12px").style("font-weight", 600)
+    .attr("fill", "var(--text-2)").text("NMF-recovered parts:");
+
+  const kInput = document.getElementById("nmf-k");
+  const kVal = document.getElementById("nmf-k-val");
+
+  function render() {
+    const k = +kInput.value;
+    kVal.textContent = k;
+
+    // Draw samples
+    samplesG.selectAll("*").remove();
+    const cellS = 8;
+    const sampleW = partSize * cellS;
+    const gap = 12;
+    // Fit in one row
+    const perRow = 12;
+    const totalW = perRow * sampleW + (perRow - 1) * gap;
+    const startX = (W - totalW) / 2;
+    for (let i = 0; i < N; i++) {
+      drawPatch(samplesG, samples[i], startX + i * (sampleW + gap), 22, cellS, 2.5);
+    }
+
+    // Run NMF with k
+    const { H } = nmf(samples, k);
+    // Each row of H is a part (length = m = 64)
+    partsG.selectAll("*").remove();
+    const pCell = 12;
+    const pW = partSize * pCell;
+    const pGap = 18;
+    const pTotalW = k * pW + (k - 1) * pGap;
+    const pStartX = (W - pTotalW) / 2;
+    // Normalize each part so visualization is comparable
+    const parts = H.map(row => {
+      const maxV = d3.max(row);
+      return row.map(v => v / (maxV + 1e-9));
+    });
+    for (let a = 0; a < k; a++) {
+      drawPatch(partsG, parts[a], pStartX + a * (pW + pGap), 190, pCell, 1.0);
+      partsG.append("text").attr("x", pStartX + a * (pW + pGap) + pW / 2).attr("y", 190 + pW + 16)
+        .attr("text-anchor", "middle").style("font-size", "10px").attr("fill", "var(--text-3)")
+        .text(`part ${a + 1}`);
+    }
+  }
+
+  kInput.addEventListener("input", render);
+  render();
+})();
+
+// ---------- Figure 4: Random Projection ----------
+(function() {
+  const svg = d3.select("#jl-svg");
+  const W = 680, H = 340;
+  const margin = { top: 20, right: 24, bottom: 44, left: 56 };
+  const innerW = W - margin.left - margin.right;
+  const innerH = H - margin.top - margin.bottom;
+  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const ORIG_D = 200;
+
+  const xScale = d3.scaleLinear().range([0, innerW]);
+  const yScale = d3.scaleLinear().range([innerH, 0]);
+  const xAxisG = g.append("g").attr("class", "axis").attr("transform", `translate(0,${innerH})`);
+  const yAxisG = g.append("g").attr("class", "axis");
+  g.append("text").attr("class", "axis-label")
+    .attr("x", innerW / 2).attr("y", innerH + 36).attr("text-anchor", "middle")
+    .text("distance in 200-D original space");
+  g.append("text").attr("class", "axis-label")
+    .attr("transform", "rotate(-90)").attr("x", -innerH / 2).attr("y", -40).attr("text-anchor", "middle")
+    .text("distance after random projection");
+
+  const refLine = g.append("line").attr("stroke", "var(--border-2)").attr("stroke-width", 1).attr("stroke-dasharray", "3 3");
+  const ptG = g.append("g");
+  const statText = g.append("text").attr("x", innerW - 8).attr("y", 14).attr("text-anchor", "end")
+    .style("font-size", "12px").attr("fill", "var(--text-2)");
+
+  const kInput = document.getElementById("jl-k");
+  const nInput = document.getElementById("jl-n");
+  const kVal = document.getElementById("jl-k-val");
+  const nVal = document.getElementById("jl-n-val");
+
+  function render() {
+    const k = +kInput.value;
+    const n = +nInput.value;
+    kVal.textContent = k;
+    nVal.textContent = n;
+
+    const rng = mulberry32(17);
+    // Generate n points in ORIG_D dimensions — use a mixture of a few gaussian blobs for realism
+    const pts = [];
+    for (let i = 0; i < n; i++) {
+      const blob = Math.floor(rng() * 3);
+      const center = new Array(ORIG_D).fill(0).map((_, j) => blob === 0 ? 0 : blob === 1 ? (j < 50 ? 3 : 0) : (j > 150 ? 3 : 0));
+      const p = new Array(ORIG_D);
+      for (let j = 0; j < ORIG_D; j++) p[j] = center[j] + gaussian(rng) * 1.5;
+      pts.push(p);
+    }
+
+    // Random projection matrix — k x ORIG_D, Gaussian entries / sqrt(k)
+    const Wm = Array.from({ length: k }, () => {
+      const row = new Array(ORIG_D);
+      for (let j = 0; j < ORIG_D; j++) row[j] = gaussian(rng) / Math.sqrt(k);
+      return row;
+    });
+    const projected = pts.map(p => {
+      const q = new Array(k);
+      for (let a = 0; a < k; a++) {
+        let s = 0;
+        for (let j = 0; j < ORIG_D; j++) s += Wm[a][j] * p[j];
+        q[a] = s;
+      }
+      return q;
+    });
+
+    function dist(a, b) {
+      let s = 0; for (let i = 0; i < a.length; i++) s += (a[i] - b[i]) ** 2; return Math.sqrt(s);
+    }
+
+    // Sample pairs for scatter
+    const maxPairs = 800;
+    const pairs = [];
+    for (let i = 0; i < pts.length && pairs.length < maxPairs; i++) {
+      for (let j = i + 1; j < pts.length && pairs.length < maxPairs; j++) {
+        pairs.push({ o: dist(pts[i], pts[j]), p: dist(projected[i], projected[j]) });
+      }
+    }
+
+    const ext = d3.extent(pairs.flatMap(p => [p.o, p.p]));
+    xScale.domain([0, ext[1] * 1.05]);
+    yScale.domain([0, ext[1] * 1.05]);
+    xAxisG.call(d3.axisBottom(xScale).ticks(6));
+    yAxisG.call(d3.axisLeft(yScale).ticks(5));
+
+    refLine.attr("x1", xScale(0)).attr("y1", yScale(0)).attr("x2", xScale(ext[1] * 1.05)).attr("y2", yScale(ext[1] * 1.05));
+
+    ptG.selectAll("circle").data(pairs).join("circle")
+      .attr("cx", d => xScale(d.o)).attr("cy", d => yScale(d.p))
+      .attr("r", 2).attr("fill", "var(--accent)").attr("opacity", 0.35);
+
+    // Correlation for a quality read
+    const mx = d3.mean(pairs, d => d.o), my = d3.mean(pairs, d => d.p);
+    let num = 0, dx = 0, dy = 0;
+    for (const p of pairs) { num += (p.o - mx) * (p.p - my); dx += (p.o - mx) ** 2; dy += (p.p - my) ** 2; }
+    const corr = num / Math.sqrt(dx * dy);
+    statText.text(`distance correlation r = ${corr.toFixed(3)}`);
+  }
+
+  kInput.addEventListener("input", render);
+  nInput.addEventListener("input", render);
+  render();
+})();
+</script>
+</body>
+</html>

@@ -336,7 +336,7 @@ svg text { font-family: var(--heading-font); }
   <div class="figure figure-wide" id="fig-emitters">
     <div class="controls">
       <span>Click to add emitter. Shift+click to add sink. </span>
-      <label><input type="checkbox" id="emitter-vortex"> Vortex field</label>
+      <label><input type="checkbox" id="emitter-vortex" checked> Vortex field</label>
       <button id="emitter-clear-sources">Clear all</button>
       <button id="emitter-reset">Reset particles</button>
     </div>
@@ -604,23 +604,26 @@ class SpatialHash {
   const waterCtx = setupCanvas("sand-water-canvas");
   const sandCtx = setupCanvas("sand-sand-canvas");
 
-  const H = 10, pR = 4, stiffness = 2500, dt = 0.001, substeps = 4;
-  const gravity = 300;
+  const H = 10, pR = 4, stiffness = 10000, dt = 0.001, substeps = 16;
+  const gravity = 200;
 
   function createSim(isSand) {
-    const friction = isSand ? 15 : 0;
-    const viscosity = isSand ? 80 : 20;
-    const cohesion = isSand ? 5 : 0;
-    const restD = isSand ? 4.5 : 3.5;
-    let particles = [];
+    const friction = isSand ? 200 : 0;   // tangential damping
+    const viscosity = isSand ? 400 : 50; // much higher for sand
+    const cohesion = isSand ? 2 : 0;
+    const restD = isSand ? 2.5 : 1.5;
+    const simStiffness = isSand ? 3000 : stiffness; // lower stiffness = less bouncy grains
+    const staticThreshold = isSand ? 3 : 0; // velocity below this gets killed (static friction)
+    const velocityDamping = isSand ? 0.92 : 0.998; // strong per-step damping for sand
+    // Use a container object so the reference stays stable across drops
+    const sim = { particles: [] };
 
     function drop() {
-      particles = [];
-      // Drop a block of particles from top center
-      const cx = simW / 2, startY = 30;
-      const cols = 8, rows = 8, spacing = 7;
+      sim.particles = [];
+      const cx = simW / 2, startY = 40;
+      const cols = 6, rows = 6, spacing = 7;
       for (let r=0; r<rows; r++) for (let c=0; c<cols; c++) {
-        particles.push({
+        sim.particles.push({
           x: cx - (cols-1)*spacing/2 + c*spacing + (Math.random()-0.5)*2,
           y: startY + r*spacing + (Math.random()-0.5)*2,
           vx: 0, vy: 0, density: 0, pressure: 0, fx: 0, fy: 0
@@ -631,6 +634,7 @@ class SpatialHash {
     const hash = new SpatialHash(H);
 
     function step() {
+      const particles = sim.particles;
       hash.clear();
       for (let i=0; i<particles.length; i++) hash.insert(particles[i], i);
 
@@ -643,7 +647,7 @@ class SpatialHash {
           const dx=pi.x-pj.x, dy=pi.y-pj.y;
           pi.density += SPH.kernel(Math.sqrt(dx*dx+dy*dy), H);
         }
-        pi.pressure = stiffness * Math.max(0, pi.density - restD);
+        pi.pressure = simStiffness * Math.max(0, pi.density - restD);
       }
       // Forces
       for (let i=0; i<particles.length; i++) {
@@ -662,14 +666,15 @@ class SpatialHash {
             const l=SPH.lapKernel(dist,H);
             pi.fx += viscosity/rJ*(pj.vx-pi.vx)*l;
             pi.fy += viscosity/rJ*(pj.vy-pi.vy)*l;
-            // Friction (tangential)
+            // Friction (tangential): couple pi's tangential velocity to pj's
             if (friction > 0) {
               const dvx=pj.vx-pi.vx, dvy=pj.vy-pi.vy;
               const vn = dvx*nx + dvy*ny;
               const vtx = dvx - vn*nx, vty = dvy - vn*ny;
-              const w = SPH.kernel(dist, H);
-              pi.fx -= friction * vtx * w;
-              pi.fy -= friction * vty * w;
+              const w = SPH.kernel(dist, H) / rJ;
+              // Sign: pull pi toward pj's tangential velocity
+              pi.fx += friction * vtx * w;
+              pi.fy += friction * vty * w;
             }
             // Cohesion
             if (cohesion > 0) {
@@ -684,6 +689,13 @@ class SpatialHash {
       for (const p of particles) {
         const rho = Math.max(p.density, 0.01);
         p.vx += (p.fx/rho)*dt; p.vy += (p.fy/rho)*dt;
+        // Per-step velocity damping (strong for sand)
+        p.vx *= velocityDamping; p.vy *= velocityDamping;
+        // Static friction: kill tiny motions so sand piles hold still
+        if (staticThreshold > 0) {
+          const sp2 = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+          if (sp2 < staticThreshold) { p.vx = 0; p.vy = 0; }
+        }
         const sp=Math.sqrt(p.vx*p.vx+p.vy*p.vy);
         if(sp>400){const s=400/sp;p.vx*=s;p.vy*=s;}
         p.x += p.vx*dt; p.y += p.vy*dt;
@@ -693,7 +705,7 @@ class SpatialHash {
       }
     }
 
-    return { particles, drop, step };
+    return { sim, drop, step, get particles() { return sim.particles; } };
   }
 
   let waterSim = createSim(false);
@@ -750,21 +762,28 @@ class SpatialHash {
   }
   resize();
 
-  const H = 12, pR = 5, dt = 0.001, substeps = 4;
-  const baseStiffness = 2500, baseRestD = 4.0;
+  const H = 12, pR = 5, dt = 0.001, substeps = 16;
+  const baseStiffness = 10000, baseRestD = 1.5;
   let temperature = 0; // 0-100
   let particles = [], springPairs = [];
 
   const Tmelt = 40, Tboil = 75;
 
-  function getSpringK() { return 400 * Math.max(0, 1 - temperature / Tmelt); }
+  function getSpringK() { return 4000 * Math.max(0, 1 - temperature / Tmelt); }
   function getRestDensity() {
+    // Ice: high restD so SPH pressure is zero (springs do the work)
+    // Water: normal restD
+    // Gas: low restD so particles repel and spread
+    if (temperature < Tmelt) {
+      const icePct = 1 - temperature / Tmelt; // 1 at cold, 0 at melt
+      return baseRestD + icePct * 8; // up to ~9.5 when frozen
+    }
     if (temperature <= Tboil) return baseRestD;
     return baseRestD * Math.max(0.3, 1 - 0.5 * (temperature - Tboil) / (100 - Tboil));
   }
   function getGravity() {
-    if (temperature > Tboil) return 300 * Math.max(0, 1 - (temperature - Tboil) / (100 - Tboil) * 0.8);
-    return 300;
+    if (temperature > Tboil) return 200 * Math.max(0, 1 - (temperature - Tboil) / (100 - Tboil) * 0.8);
+    return 200;
   }
 
   function init() {
@@ -839,7 +858,7 @@ class SpatialHash {
         const f = kSpring * strain;
         const nx=dx/dist, ny=dy/dist;
         const dvx=b.vx-a.vx, dvy=b.vy-a.vy;
-        const dampF = 2 * (dvx*nx + dvy*ny);
+        const dampF = 15 * (dvx*nx + dvy*ny);
         const totalF = f + dampF;
         a.fx += totalF*nx; a.fy += totalF*ny;
         b.fx -= totalF*nx; b.fy -= totalF*ny;
@@ -919,7 +938,7 @@ class SpatialHash {
     d3.select("#temp-val").text(temperature);
     updatePhaseLabel();
   });
-  d3.select("#temp-reset").on("click", () => { init(); temperature = 0; d3.select("#temp-slider").property("value",0); d3.select("#temp-val").text("0"); updatePhaseLabel(); });
+  d3.select("#temp-reset").on("click", () => { init(); updatePhaseLabel(); });
 
   new ResizeObserver(resize).observe(canvas.parentElement);
   updatePhaseLabel();
@@ -945,8 +964,8 @@ class SpatialHash {
   }
   resize();
 
-  const H = 11, pR = 5, dt = 0.001, substeps = 4, stiffness = 2800, restD = 3.5;
-  let gravity = 200, maxP = 150;
+  const H = 11, pR = 5, dt = 0.001, substeps = 12, stiffness = 4000, restD = 3.0;
+  let gravity = 200, maxP = 200;
   let particles = [], emitTimer = 0;
 
   // Obstacles: a circle and a rectangle, draggable
@@ -1137,7 +1156,7 @@ class SpatialHash {
 
 
 // ============================================================
-// Figure 5: Emitters, Sinks, and Force Fields (Canvas)
+// Figure 5: Emitters, Sinks, and Force Fields (WebGPU with CPU fallback)
 // ============================================================
 (function() {
   const canvas = document.getElementById("emitter-canvas");
@@ -1155,12 +1174,13 @@ class SpatialHash {
   resize();
 
   const H = 11, pR = 4, dt = 0.001, substeps = 3, stiffness = 2500, restD = 3.0;
-  const maxParticles = 400;
-  let particles = [];
+  const gravity = 40, viscMu = 40;
+  let maxParticles = 3000; // scaled up for WebGPU; lowered for CPU fallback
   let emitters = []; // {x, y}
   let sinks = [];    // {x, y, r}
-  let vortexOn = false;
+  let vortexOn = true;
   let emitTimer = 0;
+  const emitInt = 4, emitN = 4;
 
   // Start with one emitter and one sink
   function initSources() {
@@ -1169,85 +1189,527 @@ class SpatialHash {
   }
   initSources();
 
-  const hash = new SpatialHash(H);
+  // ---- Backend abstraction ----
+  let backend = null;
+
+  // ============ CPU FALLBACK ============
+  function createCPUBackend() {
+    let particles = [];
+    const hash = new SpatialHash(H);
+
+    function step() {
+      hash.clear();
+      for (let i=0; i<particles.length; i++) hash.insert(particles[i], i);
+
+      for (let i=0; i<particles.length; i++) {
+        const pi=particles[i]; pi.density=0;
+        const nbrs=hash.query(pi.x,pi.y,H);
+        for (const j of nbrs) {
+          const pj=particles[j]; const dx=pi.x-pj.x,dy=pi.y-pj.y;
+          pi.density+=SPH.kernel(Math.sqrt(dx*dx+dy*dy),H);
+        }
+        pi.pressure=stiffness*Math.max(0,pi.density-restD);
+      }
+      for (let i=0; i<particles.length; i++) {
+        const pi=particles[i]; pi.fx=0; pi.fy=gravity;
+        const nbrs=hash.query(pi.x,pi.y,H);
+        for (const j of nbrs) {
+          if(i===j) continue;
+          const pj=particles[j];
+          const dx=pi.x-pj.x,dy=pi.y-pj.y,dist=Math.sqrt(dx*dx+dy*dy);
+          if(dist<H&&dist>0.1){
+            const nx=dx/dist,ny=dy/dist;
+            const g=SPH.gradKernel(dist,H),rJ=Math.max(pj.density,0.01);
+            const pA=(pi.pressure+pj.pressure)/(2*rJ);
+            pi.fx-=pA*g*nx;pi.fy-=pA*g*ny;
+            const l=SPH.lapKernel(dist,H);
+            pi.fx+=viscMu/rJ*(pj.vx-pi.vx)*l;pi.fy+=viscMu/rJ*(pj.vy-pi.vy)*l;
+          }
+        }
+        if (vortexOn) {
+          const cx=simW/2, cy=simH/2;
+          const dx=pi.x-cx, dy=pi.y-cy;
+          const dist=Math.sqrt(dx*dx+dy*dy)+1;
+          const strength = 40000 / (dist + 50);
+          pi.fx += -dy/dist * strength;
+          pi.fy += dx/dist * strength;
+        }
+      }
+      for (const p of particles) {
+        const rho=Math.max(p.density,0.01);
+        p.vx+=(p.fx/rho)*dt;p.vy+=(p.fy/rho)*dt;
+        p.vx*=0.999;p.vy*=0.999;
+        const sp=Math.sqrt(p.vx*p.vx+p.vy*p.vy);if(sp>400){const s=400/sp;p.vx*=s;p.vy*=s;}
+        p.x+=p.vx*dt;p.y+=p.vy*dt;
+        const m=pR+1;
+        if(p.x<m){p.x=m;p.vx=Math.abs(p.vx)*0.3;}
+        if(p.x>simW-m){p.x=simW-m;p.vx=-Math.abs(p.vx)*0.3;}
+        if(p.y<m){p.y=m;p.vy=Math.abs(p.vy)*0.3;}
+        if(p.y>simH-m){p.y=simH-m;p.vy=-Math.abs(p.vy)*0.3;}
+      }
+    }
+
+    function removeSunk() {
+      particles = particles.filter(p => {
+        for (const sk of sinks) {
+          const dx=p.x-sk.x,dy=p.y-sk.y;
+          if(Math.sqrt(dx*dx+dy*dy)<sk.r) return false;
+        }
+        return true;
+      });
+    }
+
+    return {
+      type: 'cpu',
+      step() { for (let s=0; s<substeps; s++) step(); },
+      removeSunk,
+      getCount() { return particles.length; },
+      getPositions() { return particles.map(p => [p.x, p.y]); },
+      getVelocities() { return particles.map(p => [p.vx, p.vy]); },
+      reset() { particles = []; },
+      addParticles(arr) {
+        const room = maxParticles - particles.length;
+        const n = Math.min(arr.length, room);
+        for (let i=0; i<n; i++) {
+          particles.push({
+            x: arr[i].x, y: arr[i].y, vx: arr[i].vx, vy: arr[i].vy,
+            density: 0, pressure: 0, fx: 0, fy: 0
+          });
+        }
+      }
+    };
+  }
+
+  // ============ WebGPU BACKEND ============
+  async function createWebGPUBackend() {
+    if (!navigator.gpu) return null;
+    let adapter, device;
+    try {
+      adapter = await navigator.gpu.requestAdapter();
+      if (!adapter) return null;
+      device = await adapter.requestDevice({ requiredLimits: { maxStorageBufferBindingSize: 256 * 1024 * 1024 } });
+    } catch(e) { return null; }
+
+    const MAX_PARTICLES = 4096;
+    const GRID_W = Math.ceil(900 / H);
+    const GRID_H = Math.ceil(500 / H);
+    const MAX_PER_CELL = 32;
+    const WORKGROUP_SIZE = 64;
+
+    // Params: [n, H, dt, stiffness, restD, gravity, viscMu, simW, simH,
+    //   vortexOn, vortexX, vortexY, vortexStrength,
+    //   pR, gridW, gridH, maxPerCell]
+    const PARAMS_COUNT = 17;
+    const paramsData = new Float32Array(PARAMS_COUNT);
+
+    const posBuffer = device.createBuffer({ size: MAX_PARTICLES * 2 * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
+    const velBuffer = device.createBuffer({ size: MAX_PARTICLES * 2 * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
+    const densityBuffer = device.createBuffer({ size: MAX_PARTICLES * 4, usage: GPUBufferUsage.STORAGE });
+    const pressureBuffer = device.createBuffer({ size: MAX_PARTICLES * 4, usage: GPUBufferUsage.STORAGE });
+    const forceBuffer = device.createBuffer({ size: MAX_PARTICLES * 2 * 4, usage: GPUBufferUsage.STORAGE });
+    const cellStride = 1 + MAX_PER_CELL;
+    const gridSize = GRID_W * GRID_H * cellStride * 4;
+    const gridBuffer = device.createBuffer({ size: gridSize, usage: GPUBufferUsage.STORAGE });
+    const paramsBuffer = device.createBuffer({ size: PARAMS_COUNT * 4, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    const readbackBuffer = device.createBuffer({ size: MAX_PARTICLES * 2 * 4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    const velReadbackBuffer = device.createBuffer({ size: MAX_PARTICLES * 2 * 4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+
+    const shaderCode = `
+struct Params {
+  n: f32,
+  H: f32,
+  dt: f32,
+  stiffness: f32,
+  restD: f32,
+  gravity: f32,
+  viscMu: f32,
+  simW: f32,
+  simH: f32,
+  vortexOn: f32,
+  vortexX: f32,
+  vortexY: f32,
+  vortexStrength: f32,
+  pR: f32,
+  gridW: f32,
+  gridH: f32,
+  maxPerCell: f32,
+};
+@group(0) @binding(0) var<uniform> params: Params;
+@group(0) @binding(1) var<storage, read_write> pos: array<f32>;
+@group(0) @binding(2) var<storage, read_write> vel: array<f32>;
+@group(0) @binding(3) var<storage, read_write> density: array<f32>;
+@group(0) @binding(4) var<storage, read_write> pressure: array<f32>;
+@group(0) @binding(5) var<storage, read_write> force: array<f32>;
+@group(0) @binding(6) var<storage, read_write> grid: array<atomic<u32>>;
+
+fn kernel_w(r: f32, h: f32) -> f32 {
+  let q = r / h;
+  if (q >= 1.0) { return 0.0; }
+  let t = 1.0 - q;
+  return t * t * t;
+}
+
+fn grad_kernel(r: f32, h: f32) -> f32 {
+  let q = r / h;
+  if (q >= 1.0 || r < 1e-6) { return 0.0; }
+  let t = 1.0 - q;
+  return -3.0 * t * t / h;
+}
+
+fn lap_kernel(r: f32, h: f32) -> f32 {
+  let q = r / h;
+  if (q >= 1.0) { return 0.0; }
+  return 6.0 * (1.0 - q) / (h * h);
+}
+
+fn cellIdx(cx: i32, cy: i32) -> i32 {
+  let gw = i32(params.gridW);
+  let mpc = i32(params.maxPerCell);
+  return (cy * gw + cx) * (1 + mpc);
+}
+
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn clearGrid(@builtin(global_invocation_id) id: vec3u) {
+  let totalCells = u32(params.gridW) * u32(params.gridH);
+  let mpc = u32(params.maxPerCell);
+  let stride = 1u + mpc;
+  let cellStart = id.x * stride;
+  if (id.x >= totalCells) { return; }
+  atomicStore(&grid[cellStart], 0u);
+}
+
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn insertParticles(@builtin(global_invocation_id) id: vec3u) {
+  let i = id.x;
+  let n = u32(params.n);
+  if (i >= n) { return; }
+  let px = pos[i * 2u];
+  let py = pos[i * 2u + 1u];
+  let cx = i32(floor(px / params.H));
+  let cy = i32(floor(py / params.H));
+  let gw = i32(params.gridW);
+  let gh = i32(params.gridH);
+  if (cx < 0 || cx >= gw || cy < 0 || cy >= gh) { return; }
+  let mpc = u32(params.maxPerCell);
+  let base = u32(cellIdx(cx, cy));
+  let slot = atomicAdd(&grid[base], 1u);
+  if (slot < mpc) {
+    atomicStore(&grid[base + 1u + slot], i);
+  }
+}
+
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn densityPass(@builtin(global_invocation_id) id: vec3u) {
+  let i = id.x;
+  let n = u32(params.n);
+  if (i >= n) { return; }
+  let px = pos[i * 2u];
+  let py = pos[i * 2u + 1u];
+  let cx = i32(floor(px / params.H));
+  let cy = i32(floor(py / params.H));
+  let gw = i32(params.gridW);
+  let gh = i32(params.gridH);
+  let mpc = u32(params.maxPerCell);
+  var rho = 0.0;
+  for (var dx = -1; dx <= 1; dx++) {
+    for (var dy = -1; dy <= 1; dy++) {
+      let ncx = cx + dx;
+      let ncy = cy + dy;
+      if (ncx < 0 || ncx >= gw || ncy < 0 || ncy >= gh) { continue; }
+      let base = u32(cellIdx(ncx, ncy));
+      let count = min(atomicLoad(&grid[base]), mpc);
+      for (var k = 0u; k < count; k++) {
+        let j = atomicLoad(&grid[base + 1u + k]);
+        let djx = px - pos[j * 2u];
+        let djy = py - pos[j * 2u + 1u];
+        let dist = sqrt(djx * djx + djy * djy);
+        rho += kernel_w(dist, params.H);
+      }
+    }
+  }
+  density[i] = rho;
+  pressure[i] = params.stiffness * max(0.0, rho - params.restD);
+}
+
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
+  let i = id.x;
+  let n = u32(params.n);
+  if (i >= n) { return; }
+  let px = pos[i * 2u];
+  let py = pos[i * 2u + 1u];
+  let vx = vel[i * 2u];
+  let vy = vel[i * 2u + 1u];
+  let cx = i32(floor(px / params.H));
+  let cy = i32(floor(py / params.H));
+  let gw = i32(params.gridW);
+  let gh = i32(params.gridH);
+  let mpc = u32(params.maxPerCell);
+
+  var fx = 0.0;
+  var fy = params.gravity;
+
+  let pi_pressure = pressure[i];
+  let pi_density = density[i];
+
+  for (var dx = -1; dx <= 1; dx++) {
+    for (var dy = -1; dy <= 1; dy++) {
+      let ncx = cx + dx;
+      let ncy = cy + dy;
+      if (ncx < 0 || ncx >= gw || ncy < 0 || ncy >= gh) { continue; }
+      let base = u32(cellIdx(ncx, ncy));
+      let count = min(atomicLoad(&grid[base]), mpc);
+      for (var k = 0u; k < count; k++) {
+        let j = atomicLoad(&grid[base + 1u + k]);
+        if (j == i) { continue; }
+        let djx = px - pos[j * 2u];
+        let djy = py - pos[j * 2u + 1u];
+        let dist = sqrt(djx * djx + djy * djy);
+        if (dist < params.H && dist > 0.1) {
+          let nx = djx / dist;
+          let ny = djy / dist;
+          let g = grad_kernel(dist, params.H);
+          let pj_density = max(density[j], 0.01);
+          let pA = (pi_pressure + pressure[j]) / (2.0 * pj_density);
+          fx -= pA * g * nx;
+          fy -= pA * g * ny;
+          let l = lap_kernel(dist, params.H);
+          let rJ = pj_density;
+          fx += params.viscMu / rJ * (vel[j * 2u] - vx) * l;
+          fy += params.viscMu / rJ * (vel[j * 2u + 1u] - vy) * l;
+        }
+      }
+    }
+  }
+
+  // Vortex field: tangential force around center
+  if (params.vortexOn > 0.5) {
+    let vdx = px - params.vortexX;
+    let vdy = py - params.vortexY;
+    let vdist = sqrt(vdx * vdx + vdy * vdy) + 1.0;
+    let s = params.vortexStrength / (vdist + 50.0);
+    fx = fx + (-vdy / vdist) * s;
+    fy = fy + ( vdx / vdist) * s;
+  }
+
+  // Integration
+  let rho = max(pi_density, 0.01);
+  var nvx = vx + (fx / rho) * params.dt;
+  var nvy = vy + (fy / rho) * params.dt;
+  nvx = nvx * 0.999;
+  nvy = nvy * 0.999;
+  let sp = sqrt(nvx * nvx + nvy * nvy);
+  if (sp > 400.0) { let s = 400.0 / sp; nvx *= s; nvy *= s; }
+  var npx = px + nvx * params.dt;
+  var npy = py + nvy * params.dt;
+
+  // Gentle edge bounce (no container)
+  let m = params.pR + 1.0;
+  if (npx < m) { npx = m; nvx = abs(nvx) * 0.3; }
+  if (npx > params.simW - m) { npx = params.simW - m; nvx = -abs(nvx) * 0.3; }
+  if (npy < m) { npy = m; nvy = abs(nvy) * 0.3; }
+  if (npy > params.simH - m) { npy = params.simH - m; nvy = -abs(nvy) * 0.3; }
+
+  pos[i * 2u] = npx;
+  pos[i * 2u + 1u] = npy;
+  vel[i * 2u] = nvx;
+  vel[i * 2u + 1u] = nvy;
+}
+`;
+
+    const shaderModule = device.createShaderModule({ code: shaderCode });
+
+    const bindGroupLayout = device.createBindGroupLayout({
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
+        { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+        { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+        { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+        { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+        { binding: 5, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+        { binding: 6, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+      ]
+    });
+
+    const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] });
+    const clearPipeline = device.createComputePipeline({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'clearGrid' } });
+    const insertPipeline = device.createComputePipeline({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'insertParticles' } });
+    const densityPipeline = device.createComputePipeline({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'densityPass' } });
+    const forcePipeline = device.createComputePipeline({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'forceAndIntegrate' } });
+
+    const bindGroup = device.createBindGroup({
+      layout: bindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: paramsBuffer } },
+        { binding: 1, resource: { buffer: posBuffer } },
+        { binding: 2, resource: { buffer: velBuffer } },
+        { binding: 3, resource: { buffer: densityBuffer } },
+        { binding: 4, resource: { buffer: pressureBuffer } },
+        { binding: 5, resource: { buffer: forceBuffer } },
+        { binding: 6, resource: { buffer: gridBuffer } },
+      ]
+    });
+
+    let gpuParticleCount = 0;
+    let posReadback = new Float32Array(MAX_PARTICLES * 2);
+    let velReadback = new Float32Array(MAX_PARTICLES * 2);
+    let readbackReady = true;
+
+    function updateParams() {
+      paramsData[0] = gpuParticleCount;
+      paramsData[1] = H;
+      paramsData[2] = dt;
+      paramsData[3] = stiffness;
+      paramsData[4] = restD;
+      paramsData[5] = gravity;
+      paramsData[6] = viscMu;
+      paramsData[7] = simW;
+      paramsData[8] = simH;
+      paramsData[9] = vortexOn ? 1 : 0;
+      paramsData[10] = simW / 2;
+      paramsData[11] = simH / 2;
+      paramsData[12] = 40000;
+      paramsData[13] = pR;
+      paramsData[14] = GRID_W;
+      paramsData[15] = GRID_H;
+      paramsData[16] = MAX_PER_CELL;
+      device.queue.writeBuffer(paramsBuffer, 0, paramsData);
+    }
+
+    function dispatch() {
+      if (gpuParticleCount === 0) return;
+      updateParams();
+      const totalCells = GRID_W * GRID_H;
+      const cellGroups = Math.ceil(totalCells / WORKGROUP_SIZE);
+      const particleGroups = Math.ceil(gpuParticleCount / WORKGROUP_SIZE);
+
+      const encoder = device.createCommandEncoder();
+      const p0 = encoder.beginComputePass(); p0.setPipeline(clearPipeline); p0.setBindGroup(0, bindGroup); p0.dispatchWorkgroups(cellGroups); p0.end();
+      const p1 = encoder.beginComputePass(); p1.setPipeline(insertPipeline); p1.setBindGroup(0, bindGroup); p1.dispatchWorkgroups(particleGroups); p1.end();
+      const p2 = encoder.beginComputePass(); p2.setPipeline(densityPipeline); p2.setBindGroup(0, bindGroup); p2.dispatchWorkgroups(particleGroups); p2.end();
+      const p3 = encoder.beginComputePass(); p3.setPipeline(forcePipeline); p3.setBindGroup(0, bindGroup); p3.dispatchWorkgroups(particleGroups); p3.end();
+
+      if (readbackReady) {
+        const byteCount = gpuParticleCount * 2 * 4;
+        encoder.copyBufferToBuffer(posBuffer, 0, readbackBuffer, 0, byteCount);
+        encoder.copyBufferToBuffer(velBuffer, 0, velReadbackBuffer, 0, byteCount);
+        readbackReady = false;
+        device.queue.submit([encoder.finish()]);
+        (async () => {
+          try {
+            await readbackBuffer.mapAsync(GPUMapMode.READ, 0, gpuParticleCount * 2 * 4);
+            posReadback.set(new Float32Array(readbackBuffer.getMappedRange(0, gpuParticleCount * 2 * 4)));
+            readbackBuffer.unmap();
+            await velReadbackBuffer.mapAsync(GPUMapMode.READ, 0, gpuParticleCount * 2 * 4);
+            velReadback.set(new Float32Array(velReadbackBuffer.getMappedRange(0, gpuParticleCount * 2 * 4)));
+            velReadbackBuffer.unmap();
+          } catch(e) { /* skip if busy */ }
+          readbackReady = true;
+        })();
+      } else {
+        device.queue.submit([encoder.finish()]);
+      }
+    }
+
+    // Compact particles on CPU: remove any inside sinks by swap-with-last.
+    function removeSunk() {
+      if (gpuParticleCount === 0 || sinks.length === 0) return;
+      let write = 0;
+      for (let read = 0; read < gpuParticleCount; read++) {
+        const px = posReadback[read*2];
+        const py = posReadback[read*2+1];
+        let dead = false;
+        for (let s = 0; s < sinks.length; s++) {
+          const dx = px - sinks[s].x, dy = py - sinks[s].y;
+          if (dx*dx + dy*dy < sinks[s].r * sinks[s].r) { dead = true; break; }
+        }
+        if (!dead) {
+          if (write !== read) {
+            posReadback[write*2] = posReadback[read*2];
+            posReadback[write*2+1] = posReadback[read*2+1];
+            velReadback[write*2] = velReadback[read*2];
+            velReadback[write*2+1] = velReadback[read*2+1];
+          }
+          write++;
+        }
+      }
+      if (write !== gpuParticleCount) {
+        // Upload compacted arrays back to GPU
+        if (write > 0) {
+          device.queue.writeBuffer(posBuffer, 0, posReadback.subarray(0, write * 2));
+          device.queue.writeBuffer(velBuffer, 0, velReadback.subarray(0, write * 2));
+        }
+        gpuParticleCount = write;
+      }
+    }
+
+    return {
+      type: 'webgpu',
+      step() { for (let s = 0; s < substeps; s++) dispatch(); },
+      removeSunk,
+      getCount() { return gpuParticleCount; },
+      getPositions() {
+        const result = [];
+        for (let i = 0; i < gpuParticleCount; i++) {
+          result.push([posReadback[i*2], posReadback[i*2+1]]);
+        }
+        return result;
+      },
+      getVelocities() {
+        const result = [];
+        for (let i = 0; i < gpuParticleCount; i++) {
+          result.push([velReadback[i*2], velReadback[i*2+1]]);
+        }
+        return result;
+      },
+      reset() {
+        gpuParticleCount = 0;
+        posReadback = new Float32Array(MAX_PARTICLES * 2);
+        velReadback = new Float32Array(MAX_PARTICLES * 2);
+        readbackReady = true;
+      },
+      addParticles(arr) {
+        const startIdx = gpuParticleCount;
+        const room = Math.min(MAX_PARTICLES, maxParticles) - gpuParticleCount;
+        const count = Math.min(arr.length, room);
+        if (count <= 0) return;
+        const posArr = new Float32Array(count * 2);
+        const velArr = new Float32Array(count * 2);
+        for (let i = 0; i < count; i++) {
+          posArr[i*2]   = arr[i].x;
+          posArr[i*2+1] = arr[i].y;
+          velArr[i*2]   = arr[i].vx;
+          velArr[i*2+1] = arr[i].vy;
+          posReadback[(startIdx+i)*2]   = arr[i].x;
+          posReadback[(startIdx+i)*2+1] = arr[i].y;
+          velReadback[(startIdx+i)*2]   = arr[i].vx;
+          velReadback[(startIdx+i)*2+1] = arr[i].vy;
+        }
+        device.queue.writeBuffer(posBuffer, startIdx * 2 * 4, posArr);
+        device.queue.writeBuffer(velBuffer, startIdx * 2 * 4, velArr);
+        gpuParticleCount += count;
+      }
+    };
+  }
 
   function emit() {
+    if (!backend || backend.getCount() >= maxParticles) return;
+    const arr = [];
     for (const em of emitters) {
-      if (particles.length >= maxParticles) break;
-      for (let i=0; i<2; i++) {
+      if (backend.getCount() + arr.length >= maxParticles) break;
+      for (let i=0; i<emitN; i++) {
+        if (backend.getCount() + arr.length >= maxParticles) break;
         const angle = Math.random() * Math.PI * 2;
-        particles.push({
+        const speed = 80 + Math.random() * 30;
+        arr.push({
           x: em.x + (Math.random()-0.5)*10,
           y: em.y + (Math.random()-0.5)*10,
-          vx: Math.cos(angle)*30 + (Math.random()-0.5)*10,
-          vy: Math.sin(angle)*30 + (Math.random()-0.5)*10,
-          density: 0, pressure: 0, fx: 0, fy: 0
+          vx: Math.cos(angle)*speed + (Math.random()-0.5)*15,
+          vy: Math.sin(angle)*speed + (Math.random()-0.5)*15,
         });
       }
     }
-  }
-
-  function removeSunk() {
-    particles = particles.filter(p => {
-      for (const sk of sinks) {
-        const dx=p.x-sk.x,dy=p.y-sk.y;
-        if(Math.sqrt(dx*dx+dy*dy)<sk.r) return false;
-      }
-      return true;
-    });
-  }
-
-  function step() {
-    hash.clear();
-    for (let i=0; i<particles.length; i++) hash.insert(particles[i], i);
-
-    for (let i=0; i<particles.length; i++) {
-      const pi=particles[i]; pi.density=0;
-      const nbrs=hash.query(pi.x,pi.y,H);
-      for (const j of nbrs) {
-        const pj=particles[j]; const dx=pi.x-pj.x,dy=pi.y-pj.y;
-        pi.density+=SPH.kernel(Math.sqrt(dx*dx+dy*dy),H);
-      }
-      pi.pressure=stiffness*Math.max(0,pi.density-restD);
-    }
-    for (let i=0; i<particles.length; i++) {
-      const pi=particles[i]; pi.fx=0; pi.fy=50; // light gravity
-      const nbrs=hash.query(pi.x,pi.y,H);
-      for (const j of nbrs) {
-        if(i===j) continue;
-        const pj=particles[j];
-        const dx=pi.x-pj.x,dy=pi.y-pj.y,dist=Math.sqrt(dx*dx+dy*dy);
-        if(dist<H&&dist>0.1){
-          const nx=dx/dist,ny=dy/dist;
-          const g=SPH.gradKernel(dist,H),rJ=Math.max(pj.density,0.01);
-          const pA=(pi.pressure+pj.pressure)/(2*rJ);
-          pi.fx-=pA*g*nx;pi.fy-=pA*g*ny;
-          const l=SPH.lapKernel(dist,H);
-          pi.fx+=40/rJ*(pj.vx-pi.vx)*l;pi.fy+=40/rJ*(pj.vy-pi.vy)*l;
-        }
-      }
-      // Vortex field: tangential force around center
-      if (vortexOn) {
-        const cx=simW/2, cy=simH/2;
-        const dx=pi.x-cx, dy=pi.y-cy;
-        const dist=Math.sqrt(dx*dx+dy*dy)+1;
-        const strength = 8000 / (dist + 50);
-        pi.fx += -dy/dist * strength;
-        pi.fy += dx/dist * strength;
-      }
-    }
-    for (const p of particles) {
-      const rho=Math.max(p.density,0.01);
-      p.vx+=(p.fx/rho)*dt;p.vy+=(p.fy/rho)*dt;
-      p.vx*=0.999;p.vy*=0.999;
-      const sp=Math.sqrt(p.vx*p.vx+p.vy*p.vy);if(sp>400){const s=400/sp;p.vx*=s;p.vy*=s;}
-      p.x+=p.vx*dt;p.y+=p.vy*dt;
-      const m=pR+1;
-      if(p.x<m){p.x=m;p.vx=Math.abs(p.vx)*0.3;}
-      if(p.x>simW-m){p.x=simW-m;p.vx=-Math.abs(p.vx)*0.3;}
-      if(p.y<m){p.y=m;p.vy=Math.abs(p.vy)*0.3;}
-      if(p.y>simH-m){p.y=simH-m;p.vy=-Math.abs(p.vy)*0.3;}
-    }
+    if (arr.length) backend.addParticles(arr);
   }
 
   function render() {
@@ -1267,7 +1729,6 @@ class SpatialHash {
         const nx=-dy/dist, ny=dx/dist;
         ctx.strokeStyle='#475569';ctx.lineWidth=1.5;
         ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+nx*s,y+ny*s);ctx.stroke();
-        // arrowhead
         const ax=x+nx*s, ay=y+ny*s;
         ctx.beginPath();ctx.arc(ax,ay,1.5,0,Math.PI*2);ctx.fillStyle='#475569';ctx.fill();
       }
@@ -1293,21 +1754,52 @@ class SpatialHash {
 
     // Particles
     const cs=d3.scaleSequential(t=>d3.interpolateBlues(0.35+t*0.55)).domain([0,150]);
-    for(const p of particles){
-      const sp=Math.sqrt(p.vx*p.vx+p.vy*p.vy);
-      ctx.beginPath();ctx.arc(p.x,p.y,pR,0,Math.PI*2);
+    const positions = backend ? backend.getPositions() : [];
+    const velocities = backend ? backend.getVelocities() : [];
+    for (let i=0; i<positions.length; i++) {
+      const [px, py] = positions[i];
+      const [vx, vy] = velocities[i];
+      const sp = Math.sqrt(vx*vx + vy*vy);
+      ctx.beginPath();ctx.arc(px,py,pR,0,Math.PI*2);
       ctx.fillStyle=cs(Math.min(sp,130));ctx.fill();
     }
 
-    ctx.fillStyle='#94a3b8';ctx.font='11px Source Sans 3,system-ui,sans-serif';
-    ctx.textAlign='right';ctx.fillText(`${particles.length}`,simW-10,14);ctx.textAlign='left';
+    // Label: WebGPU (green) or CPU fallback (red) + count
+    const count = backend ? backend.getCount() : 0;
+    ctx.font='11px Source Sans 3,system-ui,sans-serif';
+    ctx.textAlign='right';ctx.textBaseline='top';
+    if (backend && backend.type === 'webgpu') {
+      ctx.fillStyle = '#059669';
+      ctx.fillText('WebGPU', simW-10, 4);
+    } else if (backend) {
+      ctx.fillStyle = '#dc2626';
+      ctx.fillText('CPU fallback', simW-10, 4);
+    }
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(`${count}`, simW-10, 20);
+    ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  }
+
+  let initialized = false;
+
+  async function initBackend() {
+    const gpuBackend = await createWebGPUBackend();
+    if (gpuBackend) {
+      backend = gpuBackend;
+      maxParticles = 3000;
+    } else {
+      backend = createCPUBackend();
+      maxParticles = 400;
+    }
+    initialized = true;
   }
 
   function loopStep() {
+    if (!initialized) return;
     emitTimer++;
-    if(emitTimer>=4){emitTimer=0;emit();}
-    removeSunk();
-    for(let s=0;s<substeps;s++)step();
+    if (emitTimer >= emitInt) { emitTimer = 0; emit(); }
+    backend.step();
+    backend.removeSunk();
     render();
   }
 
@@ -1325,10 +1817,14 @@ class SpatialHash {
 
   d3.select("#emitter-vortex").on("change", function() { vortexOn = this.checked; });
   d3.select("#emitter-clear-sources").on("click", () => { emitters = []; sinks = []; });
-  d3.select("#emitter-reset").on("click", () => { particles = []; });
+  d3.select("#emitter-reset").on("click", () => { if (backend) backend.reset(); });
 
   new ResizeObserver(resize).observe(canvas.parentElement);
-  visibleLoop('fig-emitters', loopStep);
+
+  (async function() {
+    await initBackend();
+    visibleLoop('fig-emitters', loopStep);
+  })();
 })();
 </script>
 </body>

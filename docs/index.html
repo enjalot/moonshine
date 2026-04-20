@@ -405,14 +405,41 @@ svg .grid path { stroke: none; }
   <!-- Examples -->
   <h2>Examples</h2>
 
-  <p>Articles built with moonshine. Each is a self-contained HTML file with interactive D3 visualizations.</p>
+  <p>Articles built with moonshine. Each is a self-contained HTML file with interactive visualizations. See <a href="https://syntagmatic.github.io/moonshine/index.html">syntagmatic's collection</a> for many more examples across different domains.</p>
 
   <div class="examples-list">
+    <a class="example-card" href="latent-verse/index.html">
+      <div class="example-thumb" id="latent-thumb"></div>
+      <div>
+        <div class="example-card-title">Latent Verse</div>
+        <p class="example-card-desc">A workbench for studying latent spaces. From embedding text into vectors, to projecting with UMAP, to finding structure with clustering, to decomposing with sparse autoencoders.</p>
+        <div class="example-card-tags">embeddings &middot; UMAP &middot; clustering &middot; sparse autoencoders &middot; 5 articles</div>
+      </div>
+    </a>
+
+    <a class="example-card" href="dim-reduction/index.html">
+      <div class="example-thumb" id="dimred-thumb"></div>
+      <div>
+        <div class="example-card-title">What Dimensionality Reduction Preserves</div>
+        <p class="example-card-desc">A field guide to methods that turn high-dimensional data into something you can look at, organized by the structure each family protects: variance, distances, neighborhoods, topology, density.</p>
+        <div class="example-card-tags">PCA &middot; t-SNE &middot; UMAP &middot; hyperbolic &middot; autoencoders &middot; 10 articles</div>
+      </div>
+    </a>
+
+    <a class="example-card" href="ann/index.html">
+      <div class="example-thumb" id="ann-thumb"></div>
+      <div>
+        <div class="example-card-title">Approximate Nearest Neighbors</div>
+        <p class="example-card-desc">Finding neighbors in high-dimensional vector spaces. From the curse of dimensionality through partitioning, compression, and hardware-aware index design.</p>
+        <div class="example-card-tags">vector search &middot; LSH &middot; HNSW &middot; product quantization &middot; 5 articles</div>
+      </div>
+    </a>
+
     <a class="example-card" href="sph/index.html">
       <div class="example-thumb" id="sph-thumb"></div>
       <div>
         <div class="example-card-title">Smooth Particle Hydrodynamics</div>
-        <p class="example-card-desc">A four-part series on fluid simulation. Build intuition for how particles estimate density, exert forces, and move to the GPU, then play with the result in a sandbox.</p>
+        <p class="example-card-desc">A series on fluid simulation. Particles estimate density and exert forces on neighbors, then move to the GPU with WebGPU for real-time interaction.</p>
         <div class="example-card-tags">particle simulation &middot; WebGPU &middot; linked equations &middot; 4 articles</div>
       </div>
     </a>
@@ -859,6 +886,183 @@ rm -rf /tmp/moonshine</pre>
       ctx.globalAlpha = 1;
     });
 
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ─── Latent Verse thumbnail: point cloud with clusters ───
+(function() {
+  const el = document.getElementById('latent-thumb');
+  if (!el) return;
+  const canvas = document.createElement('canvas');
+  const s = 100, dpr = window.devicePixelRatio || 1;
+  canvas.width = s * dpr; canvas.height = s * dpr;
+  canvas.style.width = s + 'px'; canvas.style.height = s + 'px';
+  el.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const colors = ['#2563eb', '#059669', '#d97706', '#dc2626', '#7c3aed'];
+  const clusters = colors.map((c, i) => {
+    const cx = 25 + (i % 3) * 25 + Math.random() * 10;
+    const cy = 25 + Math.floor(i / 3) * 35 + Math.random() * 10;
+    const pts = [];
+    for (let j = 0; j < 18; j++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.random() * 14 + 2;
+      pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r, c });
+    }
+    return pts;
+  }).flat();
+
+  let highlighted = -1, t = 0;
+
+  function draw() {
+    t += 0.01;
+    highlighted = Math.floor((t * 0.5) % colors.length);
+    ctx.clearRect(0, 0, s, s);
+
+    clusters.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+      const isHigh = p.c === colors[highlighted];
+      ctx.fillStyle = p.c;
+      ctx.globalAlpha = isHigh ? 0.85 : 0.15;
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ─── Dim Reduction thumbnail: points projecting from 3D to 2D ───
+(function() {
+  const el = document.getElementById('dimred-thumb');
+  if (!el) return;
+  const canvas = document.createElement('canvas');
+  const s = 100, dpr = window.devicePixelRatio || 1;
+  canvas.width = s * dpr; canvas.height = s * dpr;
+  canvas.style.width = s + 'px'; canvas.style.height = s + 'px';
+  el.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // Points on a swiss roll shape
+  const N = 60;
+  const pts3d = [];
+  for (let i = 0; i < N; i++) {
+    const t = 1.5 * Math.PI * (1 + 2 * i / N);
+    const y = Math.random() * 20 - 10;
+    pts3d.push({ t, x3: t * Math.cos(t), y3: y, z3: t * Math.sin(t), hue: i / N });
+  }
+
+  let angle = 0;
+
+  function draw() {
+    angle += 0.008;
+    ctx.clearRect(0, 0, s, s);
+
+    // Rotate and project
+    const cosA = Math.cos(angle), sinA = Math.sin(angle);
+    const projected = pts3d.map(p => {
+      const rx = p.x3 * cosA - p.z3 * sinA;
+      const rz = p.x3 * sinA + p.z3 * cosA;
+      return {
+        x: 50 + rx * 2.2,
+        y: 50 + p.y3 * 2.2,
+        depth: rz,
+        hue: p.hue
+      };
+    }).sort((a, b) => a.depth - b.depth);
+
+    projected.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+      const h = Math.floor(p.hue * 270);
+      ctx.fillStyle = `hsl(${h}, 65%, 55%)`;
+      ctx.globalAlpha = 0.4 + 0.4 * ((p.depth + 20) / 40);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ─── ANN thumbnail: graph with nearest neighbor connections ───
+(function() {
+  const el = document.getElementById('ann-thumb');
+  if (!el) return;
+  const canvas = document.createElement('canvas');
+  const s = 100, dpr = window.devicePixelRatio || 1;
+  canvas.width = s * dpr; canvas.height = s * dpr;
+  canvas.style.width = s + 'px'; canvas.style.height = s + 'px';
+  el.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const N = 20;
+  const pts = [];
+  for (let i = 0; i < N; i++) {
+    pts.push({ x: 10 + Math.random() * 80, y: 10 + Math.random() * 80 });
+  }
+
+  // Precompute 2 nearest neighbors for each point
+  const edges = [];
+  pts.forEach((p, i) => {
+    const dists = pts.map((q, j) => ({ j, d: Math.hypot(p.x - q.x, p.y - q.y) }))
+      .filter(d => d.j !== i).sort((a, b) => a.d - b.d);
+    edges.push({ from: i, to: dists[0].j });
+    edges.push({ from: i, to: dists[1].j });
+  });
+
+  let queryIdx = 0, t = 0;
+
+  function draw() {
+    t += 0.015;
+    queryIdx = Math.floor((t * 0.4) % N);
+    ctx.clearRect(0, 0, s, s);
+
+    // Draw edges faintly
+    edges.forEach(e => {
+      ctx.beginPath();
+      ctx.moveTo(pts[e.from].x, pts[e.from].y);
+      ctx.lineTo(pts[e.to].x, pts[e.to].y);
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 0.5;
+      ctx.globalAlpha = 0.15;
+      ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+
+    // Highlight query and its neighbors
+    const q = pts[queryIdx];
+    const neighbors = pts.map((p, i) => ({ i, d: Math.hypot(p.x - q.x, p.y - q.y) }))
+      .filter(d => d.i !== queryIdx).sort((a, b) => a.d - b.d).slice(0, 3);
+
+    neighbors.forEach(n => {
+      ctx.beginPath();
+      ctx.moveTo(q.x, q.y);
+      ctx.lineTo(pts[n.i].x, pts[n.i].y);
+      ctx.strokeStyle = '#2563eb';
+      ctx.lineWidth = 1.2;
+      ctx.globalAlpha = 0.5;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    });
+
+    // Draw points
+    pts.forEach((p, i) => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, i === queryIdx ? 4 : 2.5, 0, Math.PI * 2);
+      const isNeighbor = neighbors.some(n => n.i === i);
+      ctx.fillStyle = i === queryIdx ? '#2563eb' : isNeighbor ? '#0891b2' : '#94a3b8';
+      ctx.globalAlpha = i === queryIdx || isNeighbor ? 0.9 : 0.3;
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
     requestAnimationFrame(draw);
   }
   draw();

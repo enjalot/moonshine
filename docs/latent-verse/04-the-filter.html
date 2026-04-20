@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Filter — Latent Verse</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem; --line-height: 1.6;
+  --text: #1a1a2e; --text-2: #4a4a6a;
+  --accent: #2563eb; --accent-light: #dbeafe;
+  --bg: #fafafa; --fig-bg: #ffffff; --border: #e2e2e8;
+}
+body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
+h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
+h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+code { font-family: var(--mono-font); font-size: 0.9em; background: #f0f0f5; padding: 0.15em 0.35em; border-radius: 3px; }
+.figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.figure-wide { margin-left: -2rem; margin-right: -2rem; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
+.figure-label { font-weight: 600; color: var(--text); }
+.insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
+.insight p { margin: 0; }
+.margin-note { font-size: 0.8125rem; color: var(--text-2); line-height: 1.4; border-left: 2px solid var(--border); padding-left: 0.75rem; margin: 1rem 0; }
+svg text { font-family: var(--heading-font); }
+
+.feature-bar-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.35rem 0; border-bottom: 1px solid #f5f5fa;
+  font-family: var(--heading-font); font-size: 0.85rem;
+  min-width: 0;
+}
+.feature-bar-row:last-child { border-bottom: none; }
+.feature-bar-label {
+  flex: 0 0 auto; max-width: 50%; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.feature-bar-track {
+  flex: 1 1 auto; min-width: 40px; height: 18px;
+  background: #f0f0f5; border-radius: 3px; overflow: hidden; position: relative;
+  display: block;
+}
+.feature-bar-fill {
+  display: block; height: 100%; border-radius: 3px;
+  transition: width 0.3s ease; min-width: 2px;
+}
+.feature-bar-value { flex: 0 0 auto; min-width: 2.5rem; text-align: right; font-family: var(--mono-font); font-size: 0.8rem; color: var(--text-2); }
+
+.joke-selector {
+  font-family: var(--body-font); font-size: 0.95rem; padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg);
+  color: var(--text); cursor: pointer; width: 100%; min-width: 0;
+  box-sizing: border-box;
+}
+
+.compare-grid {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem;
+}
+.compare-cell { min-width: 0; overflow: hidden; }
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .figure-wide { margin-left: 0; margin-right: 0; }
+  .compare-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+</style>
+</head>
+<body>
+<div class="article">
+  <header>
+    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.25rem;">
+      <a href="index.html" style="color: var(--text-2); text-decoration: none;">Latent Verse</a> / Part 4
+    </p>
+    <h1>The Filter</h1>
+    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
+      A Sparse Autoencoder decomposes embeddings into interpretable features. It works on any text, not just this dataset.
+    </p>
+    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">By Ian Johnson</p>
+  </header>
+
+  <h2>From local to global</h2>
+
+  <p>
+    In the previous articles, we used tools that are <strong>local</strong> to a dataset. Each time
+    we ran UMAP, we got a new projection. Each time we clustered, we got new groups. These are
+    useful for exploring a specific collection, but they don't generalize. The clusters you find in
+    dad jokes tell you nothing about a collection of news articles.
+  </p>
+
+  <p>
+    What if we could build a tool that decomposes <em>any</em> text into interpretable features?
+    Not groups specific to this dataset, but a universal vocabulary of concepts that the embedding
+    model recognizes?
+  </p>
+
+  <p>
+    This is what a <strong>Sparse Autoencoder</strong> (SAE) does. It learns to break an embedding
+    into a small number of active features from a much larger set of possible features. Think of it
+    like a polarizing filter on a microscope: it isolates specific wavelengths of meaning from the
+    full signal.
+  </p>
+
+  <h2>Decomposing a joke</h2>
+
+  <p>
+    An embedding is a dense vector: all 384 dimensions have nonzero values, and none of them are
+    individually interpretable. An SAE transforms this into a sparse vector: out of thousands of
+    possible features, only a handful are active for any given text. And each feature has a
+    human-readable label.
+  </p>
+
+  <p>
+    Pick a joke below and see its features:
+  </p>
+
+  <div class="figure figure-wide" id="fig-decompose">
+    <select id="joke-select" class="joke-selector"></select>
+    <div id="joke-text" style="font-style: italic; margin: 0.75rem 0; min-height: 1.5em;"></div>
+    <div id="feature-bars" style="margin-top: 0.5rem;"></div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 1.</span>
+      SAE decomposition of a dad joke. Each bar is an active feature. The length shows activation strength: how strongly this feature responds to the text.
+    </div>
+  </div>
+
+  <p>
+    Look at how the features describe different aspects of the joke. A joke about atoms might
+    activate "science and physics," "wordplay and puns," and "double meaning." These aren't
+    clusters specific to the dad jokes dataset. They're features the SAE learned from a large,
+    diverse training corpus. They apply to any text.
+  </p>
+
+  <h2>Shared features across jokes</h2>
+
+  <p>
+    The same feature can activate across very different texts. "Wordplay and puns" might light up
+    for a joke about atoms, a joke about noodles, and a joke about bicycles. This is what makes
+    SAE features useful as a <strong>taxonomy</strong>: a shared vocabulary for describing what
+    the model sees in any text.
+  </p>
+
+  <p>
+    Compare two jokes below. Notice which features they share and which are unique to each:
+  </p>
+
+  <div class="figure figure-wide" id="fig-compare">
+    <div class="compare-grid">
+      <div class="compare-cell">
+        <select id="compare-a-select" class="joke-selector"></select>
+        <div id="compare-a-text" style="font-style: italic; margin: 0.5rem 0; font-size: 0.95rem;"></div>
+        <div id="compare-a-bars"></div>
+      </div>
+      <div class="compare-cell">
+        <select id="compare-b-select" class="joke-selector"></select>
+        <div id="compare-b-text" style="font-style: italic; margin: 0.5rem 0; font-size: 0.95rem;"></div>
+        <div id="compare-b-bars"></div>
+      </div>
+    </div>
+    <div id="shared-features" style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border);"></div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 2.</span>
+      Two jokes decomposed side by side. Features they share appear in both columns. Features unique to each joke reveal what makes them different in the model's eyes.
+    </div>
+  </div>
+
+  <h2>A global vocabulary</h2>
+
+  <p>
+    The crucial difference between SAE features and clusters is scope. Clusters are computed
+    <em>from</em> a dataset and apply only <em>to</em> that dataset. SAE features are trained
+    to match the embedding model itself. They work on any text the model can embed.
+  </p>
+
+  <p>
+    This is what we mean by calling the SAE a <strong>global</strong> tool. It provides a
+    consistent set of concepts for describing what the model sees, regardless of what data you're
+    looking at. If clustering is like sorting your desk into piles, the SAE is like having a
+    filing system that works for any document.
+  </p>
+
+  <div class="insight">
+    <p>
+      Clustering asks: "what groups exist in this data?"
+      SAE asks: "what concepts does the model recognize in this text?"
+      The first is local. The second is global.
+    </p>
+  </div>
+
+  <p>
+    Together, these features form a <strong>taxonomy</strong> of what the embedding model
+    understands. In the <a href="05-the-atlas.html">next article</a>, we'll pair this taxonomy
+    with a global map: a permanent coordinate system where every text has a consistent address.
+  </p>
+
+  <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
+    <p>Part of <a href="index.html" style="color: var(--text-2);">Latent Verse</a>. Previous: <a href="03-finding-structure.html" style="color: var(--accent);">Finding Structure</a>. Next: <a href="05-the-atlas.html" style="color: var(--accent);">The Atlas</a>.</p>
+    <p style="margin-top: 0.5rem;">SAE concepts from <a href="https://transformer-circuits.pub/" style="color: var(--text-2);">Anthropic's mechanistic interpretability research</a>.</p>
+  </footer>
+</div>
+
+<script>
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// Feature color based on activation (warm scale)
+const featureColor = d3.scaleSequential(d3.interpolateYlOrRd).domain([0, 1]);
+
+function renderFeatureBars(containerId, features, featureLabels) {
+  const el = document.getElementById(containerId);
+  const maxAct = Math.max(...features.map(f => f.activation));
+
+  el.innerHTML = features.map(f => {
+    const label = featureLabels[String(f.idx)] || `feature ${f.idx}`;
+    const pct = (f.activation / maxAct * 100).toFixed(0);
+    const color = featureColor(f.activation / maxAct);
+    return `<div class="feature-bar-row">
+      <span class="feature-bar-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
+      <span class="feature-bar-track">
+        <span class="feature-bar-fill" style="width: ${pct}%; background: ${color};"></span>
+      </span>
+      <span class="feature-bar-value">${f.activation.toFixed(2)}</span>
+    </div>`;
+  }).join('');
+}
+
+async function init() {
+  const saeData = await fetch('data/sae-features.json').then(r => r.json());
+  const featureLabels = saeData.feature_labels;
+  const jokeFeatures = saeData.joke_features;
+
+  // Figure 1: Single joke decomposition
+  const select = document.getElementById('joke-select');
+  jokeFeatures.forEach((jf, i) => {
+    const label = jf.text.length > 60 ? jf.text.slice(0, 60) + '...' : jf.text;
+    select.add(new Option(label, i));
+  });
+
+  function updateDecompose() {
+    const idx = +select.value;
+    const jf = jokeFeatures[idx];
+    document.getElementById('joke-text').innerHTML = `"${escapeHtml(jf.text)}"`;
+    renderFeatureBars('feature-bars', jf.features, featureLabels);
+  }
+
+  select.addEventListener('change', updateDecompose);
+  updateDecompose();
+
+  // Figure 2: Comparison
+  const selA = document.getElementById('compare-a-select');
+  const selB = document.getElementById('compare-b-select');
+  jokeFeatures.forEach((jf, i) => {
+    const label = jf.text.length > 55 ? jf.text.slice(0, 55) + '...' : jf.text;
+    selA.add(new Option(label, i));
+    selB.add(new Option(label, i));
+  });
+  selA.value = 0; // atoms
+  selB.value = 11; // chemistry
+
+  function updateCompare() {
+    const iA = +selA.value, iB = +selB.value;
+    const jfA = jokeFeatures[iA], jfB = jokeFeatures[iB];
+
+    document.getElementById('compare-a-text').innerHTML = `"${escapeHtml(jfA.text)}"`;
+    document.getElementById('compare-b-text').innerHTML = `"${escapeHtml(jfB.text)}"`;
+
+    renderFeatureBars('compare-a-bars', jfA.features, featureLabels);
+    renderFeatureBars('compare-b-bars', jfB.features, featureLabels);
+
+    // Find shared features
+    const aSet = new Set(jfA.features.map(f => f.idx));
+    const bSet = new Set(jfB.features.map(f => f.idx));
+    const shared = [...aSet].filter(idx => bSet.has(idx));
+    const onlyA = [...aSet].filter(idx => !bSet.has(idx));
+    const onlyB = [...bSet].filter(idx => !aSet.has(idx));
+
+    let html = '';
+    if (shared.length > 0) {
+      const sharedLabels = shared.map(idx => featureLabels[String(idx)] || `feature ${idx}`);
+      html += `<div style="font-family: var(--heading-font); font-size: 0.85rem;">
+        <strong>Shared features (${shared.length}):</strong> ${sharedLabels.join(', ')}
+      </div>`;
+    }
+    if (onlyA.length > 0) {
+      const aLabels = onlyA.map(idx => featureLabels[String(idx)] || `feature ${idx}`);
+      html += `<div style="font-family: var(--heading-font); font-size: 0.85rem; margin-top: 0.4rem; color: var(--text-2);">
+        Only in A (${onlyA.length}): ${aLabels.join(', ')}
+      </div>`;
+    }
+    if (onlyB.length > 0) {
+      const bLabels = onlyB.map(idx => featureLabels[String(idx)] || `feature ${idx}`);
+      html += `<div style="font-family: var(--heading-font); font-size: 0.85rem; margin-top: 0.4rem; color: var(--text-2);">
+        Only in B (${onlyB.length}): ${bLabels.join(', ')}
+      </div>`;
+    }
+    document.getElementById('shared-features').innerHTML = html;
+  }
+
+  selA.addEventListener('change', updateCompare);
+  selB.addEventListener('change', updateCompare);
+  updateCompare();
+}
+
+init();
+</script>
+</body>
+</html>

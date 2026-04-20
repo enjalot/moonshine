@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyperbolic Embeddings</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem; --line-height: 1.6;
+  --text: #1a1a2e; --text-2: #4a4a6a; --text-3: #8a8a9e;
+  --accent: #2563eb; --accent-light: #dbeafe;
+  --warm: #ea580c; --warm-light: #ffedd5;
+  --green: #059669; --purple: #7c3aed;
+  --bg: #fafafa; --fig-bg: #ffffff;
+  --border: #e2e2e8; --border-2: #c5c5d1; --muted: #e8e8ee;
+  --c0: #2563eb; --c1: #ea580c; --c2: #059669; --c3: #7c3aed;
+}
+body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
+h1 { font-size: 2.4rem; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.4rem; margin: 3rem 0 1rem; }
+h3 { font-family: var(--heading-font); font-size: 1.1rem; font-weight: 700; margin: 2rem 0 0.75rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+em { font-style: italic; } strong { font-weight: 600; }
+.subtitle { font-family: var(--heading-font); font-size: 1.1rem; color: var(--text-2); line-height: 1.45; margin-bottom: 1rem; font-weight: 400; }
+.series-tag { font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+.figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.5; }
+.figure-label { font-weight: 600; color: var(--text); }
+.controls { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.controls input[type="range"] { width: 160px; accent-color: var(--accent); vertical-align: middle; }
+.controls label { display: inline-flex; align-items: center; gap: 0.5rem; }
+.controls .value { font-family: var(--mono-font); color: var(--text); min-width: 2ch; display: inline-block; }
+svg text { font-family: var(--heading-font); }
+svg .axis text { font-size: 11px; fill: var(--text-2); }
+svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crispEdges; }
+.margin-note { font-size: 0.875rem; color: var(--text-2); line-height: 1.5; border-left: 2px solid var(--border-2); padding-left: 0.9rem; margin: 1.25rem 0; }
+@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure { padding: 1rem; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+</style>
+</head>
+<body>
+<div class="article">
+
+<header>
+  <div class="series-tag">Part 8 of 10 · Preserves tree-like structure</div>
+  <h1>Hyperbolic Embeddings</h1>
+  <p class="subtitle">
+    When the data is tree-shaped, Euclidean space runs out of room. Hyperbolic geometry does not, because its volume grows exponentially with distance from the origin. Match the geometry of the space to the geometry of the data, and a hard problem becomes easy.
+  </p>
+</header>
+
+<p>
+  Every method we have seen so far embeds data into Euclidean space: a flat plane, or a flat higher-dimensional space when more coordinates are needed. This is such a default assumption that it is easy to miss. But Euclidean space has a property that fights some kinds of data: its volume grows slowly. The number of points you can fit at distance <em>r</em> from the origin, in a plane, is proportional to <em>r</em>. As distance grows, you get linearly more room.
+</p>
+
+<p>
+  Many interesting datasets do not grow linearly. Hierarchies, trees, taxonomies, and branching structures all have <em>exponential</em> growth: each level of depth has twice (or some constant factor more) nodes than the one above. A binary tree of depth 20 has about a million leaves, and trying to embed all of them in a plane with sensible distances is impossible; the leaves pile up and overlap at the edge no matter how cleverly you arrange the interior.
+</p>
+
+<p>
+  Hyperbolic space, the standard non-Euclidean geometry with constant negative curvature, has exponential volume growth. The number of points at hyperbolic distance <em>r</em> from the origin grows like <em>e<sup>r</sup></em>. This is the same growth rate as a tree. When you embed a tree into hyperbolic space, you can give every node plenty of room and preserve distances exactly; you no longer have to compromise the geometry to fit the data.
+</p>
+
+<h2>The Poincaré disk</h2>
+
+<p>
+  There are several ways to model hyperbolic space. The most widely used in dimensionality reduction is the <strong>Poincaré disk</strong>: the interior of the unit circle in the plane, with a special metric. Distances grow as you approach the boundary. A step near the center takes you some small distance in hyperbolic terms; a step the same visual size near the boundary takes you a huge hyperbolic distance. The boundary itself is infinitely far away.
+</p>
+
+<p>
+  Geodesics (shortest paths) in the Poincaré disk are not straight lines. They are either diameters of the disk or circular arcs perpendicular to the boundary. This is famously illustrated in Escher's <em>Circle Limit</em> woodcuts, where identical-sized hyperbolic triangles appear, in the Euclidean view, to shrink toward the boundary. The figure below makes this concrete.
+</p>
+
+<div class="figure" id="fig-volume">
+  <div class="controls">
+    <label>
+      depth <span class="value" id="hv-d-val">4</span>
+      <input type="range" id="hv-d" min="1" max="7" value="4" step="1">
+    </label>
+    <label>
+      branching factor <span class="value" id="hv-b-val">3</span>
+      <input type="range" id="hv-b" min="2" max="5" value="3" step="1">
+    </label>
+  </div>
+  <svg id="vol-svg" width="100%" height="400" viewBox="0 0 680 400" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="figure-caption">
+    <span class="figure-label">Figure 1.</span>
+    A balanced tree embedded in two ways. Left: Euclidean radial layout. Increasing the depth or branching factor crowds the leaves against the boundary. Right: the same tree in the Poincaré disk. Every node has room; every edge has roughly the same hyperbolic length; the whole tree fits comfortably inside the unit disk no matter how deep it goes.
+  </div>
+</div>
+
+<p>
+  The visual compression near the boundary can be disorienting at first, but it is not a distortion in the intrinsic geometry. To someone living in the hyperbolic plane, all those shrinking triangles near the boundary would look the same size. The Poincaré disk model is what hyperbolic geometry looks like from the outside, in the same sense that a world map projects the sphere onto a plane and introduces visual distortions. The underlying geometry is consistent; only the rendering is weird.
+</p>
+
+<h2>Embedding data into the Poincaré ball</h2>
+
+<p>
+  Nickel and Kiela's 2017 paper "Poincaré Embeddings for Learning Hierarchical Representations" popularized this idea in machine learning. They wanted to embed words from WordNet (or concepts from any hierarchical taxonomy) into a low-dimensional space so that the graph distance between concepts would be preserved. Euclidean embeddings at practical dimensions had to choose between preserving local relationships and preserving global structure; neither was good. Poincaré embeddings, with the same or smaller dimension, could do both, because the geometry matched.
+</p>
+
+<p>
+  The algorithm is an ordinary gradient descent on a loss defined using the Poincaré distance formula, with one twist: since the parameter space is the unit ball (not a Euclidean space), you cannot just take Euclidean gradient steps. You take <em>Riemannian</em> gradient steps, which account for how the metric changes across the ball. In practice this amounts to rescaling the gradient by a factor that becomes small near the boundary, so that a point near the edge does not jump over it in one step.
+</p>
+
+<p>
+  A 2018 follow-up paper proposed the Lorentz (hyperboloid) model as a numerically more stable parameterization: same geometry, different coordinates. Subsequent work extended the idea to variants of UMAP and t-SNE that embed into hyperbolic rather than Euclidean space, opening the technique to general dimensionality reduction rather than only graph embeddings.
+</p>
+
+<div class="margin-note">
+  The Poincaré distance between two points <em>u</em> and <em>v</em> in the unit ball is <em>arcosh(1 + 2 · ‖u − v‖² / ((1 − ‖u‖²)(1 − ‖v‖²)))</em>. The outer arcosh makes distances grow quickly as points approach the boundary (norm 1). The denominator is what creates the exponential-volume effect.
+</div>
+
+<h2>Single-cell biology rediscovers hierarchy</h2>
+
+<p>
+  One of the most useful applications of hyperbolic embeddings in ML-adjacent work has been in single-cell biology. In 2020, Klimovskaia and colleagues published "Poincaré maps for analyzing complex hierarchies in single-cell data," arguing that cell developmental trajectories are intrinsically tree-shaped (a progenitor cell divides into daughters, which divide into further-specialized granddaughters). A method that assumes Euclidean latent structure will garble this hierarchy; a method that matches the space to the tree will lay it out cleanly.
+</p>
+
+<p>
+  The broader lesson is worth stating clearly. <em>The choice of target geometry is a prior over what your data looks like.</em> Euclidean space is a prior that says the data lives in a flat, isotropic region. Hyperbolic space is a prior that says the data has exponential branching or hierarchical structure. If you know your data matches that prior, the embedding will look much better; if you do not, it will look worse. Matching the prior to the data is the insight that hyperbolic methods drive home.
+</p>
+
+<h2>Poincaré geodesics, up close</h2>
+
+<p>
+  The shortest path between two points in the Poincaré disk is not the straight line you see between them; it is the circular arc perpendicular to the boundary. This matters because it means the shortest path between two points on opposite sides of the disk <em>bends toward the center</em>. Points far from the origin "want" to be connected through the middle, which is how the hyperbolic plane accommodates its exponential room: long-distance traffic routes through the hub.
+</p>
+
+<div class="figure" id="fig-geodesic">
+  <svg id="geo-svg" width="100%" height="360" viewBox="0 0 680 360" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="figure-caption">
+    <span class="figure-label">Figure 2.</span>
+    Drag the two blue points. The gray line is the Euclidean segment between them; the blue arc is the hyperbolic geodesic. As the points approach the boundary, the geodesic bends more strongly toward the origin. Near the center, where the hyperbolic metric is close to Euclidean, the two almost coincide.
+  </div>
+</div>
+
+<p>
+  This bending behavior is worth building intuition for, because it is why hyperbolic embeddings are able to pack so much structure into a small Euclidean-looking area. Outer regions communicate through the interior, so they do not have to be arranged on a line or a curve; they can be placed in angular rings at any depth, with the knowledge that the geometry will route their interactions sensibly.
+</p>
+
+<h2>The cost</h2>
+
+<p>
+  Hyperbolic embeddings are not free. The parameterization is numerically delicate: points near the boundary have very high gradient norms and can easily drift out of the valid region. Interpretation is harder than in Euclidean space, because "distance" on the screen does not correspond to the actual hyperbolic distance. Many ML pipelines assume Euclidean latent spaces, so integrating hyperbolic embeddings with downstream tools takes work.
+</p>
+
+<p>
+  The most important cost is that the approach only pays off when the data is actually tree-shaped. If you run Poincaré embedding on data that lacks hierarchical structure, the method works, but it buys you nothing over Euclidean methods. It may even hurt, because you are paying the numerical and interpretive cost of hyperbolic geometry for data that does not benefit. This is why you see hyperbolic embeddings most often on WordNet, taxonomies, phylogenetic trees, and developmental trajectories, and rarely on image or audio embeddings.
+</p>
+
+<h2>A broader principle</h2>
+
+<p>
+  Hyperbolic embeddings are the clearest example in this series of a broader principle: <em>the geometry of the target space is a design choice</em>, not a fixed constraint. Most methods default to Euclidean space because it is familiar and because the math works out nicely. But Euclidean space is a particular choice, with particular assumptions baked in. For the right kind of data, other geometries can do better.
+</p>
+
+<p>
+  Related ideas include spherical embeddings (for data with a natural rotational symmetry or an intrinsic radius), product spaces (Euclidean times hyperbolic times spherical, for data with mixed structure), and pseudo-Riemannian spaces for relativistic data. None of these are as well-developed as hyperbolic embeddings, but each one represents the same move: match the geometry to the data.
+</p>
+
+<p>
+  The next article is about the last major family in this series: learned representations. Here the geometry of the target space is itself learned, not chosen in advance, because the embedding is produced by a neural network trained to reproduce whatever properties the training objective rewards.
+</p>
+
+<footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
+  <p>Part of <a href="index.html" style="color: var(--text-2);">What Dimensionality Reduction Preserves</a>. Previous: <a href="07-discrete-grids.html" style="color: var(--accent);">Self-Organizing Maps</a>. Next: <a href="09-learned.html" style="color: var(--accent);">Learned Representations</a>.</p>
+  <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+</footer>
+
+</div>
+
+<script>
+// ---------- Figure 1: volume/tree comparison ----------
+(function() {
+  const svg = d3.select("#vol-svg");
+  const W = 680, H = 400;
+  const paneW = W / 2;
+  const cx0 = paneW / 2, cy0 = H / 2;
+  const cx1 = paneW + paneW / 2, cy1 = H / 2;
+  const R = Math.min(paneW, H) / 2 - 30;
+
+  const leftG = svg.append("g");
+  const rightG = svg.append("g");
+
+  leftG.append("text").attr("x", paneW / 2).attr("y", 20).attr("text-anchor", "middle")
+    .style("font-size", "12px").style("font-weight", 700).attr("fill", "var(--text)").text("Euclidean radial layout");
+  rightG.append("text").attr("x", paneW + paneW / 2).attr("y", 20).attr("text-anchor", "middle")
+    .style("font-size", "12px").style("font-weight", 700).attr("fill", "var(--text)").text("Poincaré disk");
+
+  // Draw disk boundary on right
+  rightG.append("circle").attr("cx", cx1).attr("cy", cy1).attr("r", R)
+    .attr("fill", "white").attr("stroke", "var(--border-2)").attr("stroke-width", 1.5);
+
+  // Left: just a light circle to match scale
+  leftG.append("circle").attr("cx", cx0).attr("cy", cy0).attr("r", R)
+    .attr("fill", "white").attr("stroke", "var(--border-2)").attr("stroke-width", 1);
+
+  const leftEdges = leftG.append("g");
+  const leftNodes = leftG.append("g");
+  const rightEdges = rightG.append("g");
+  const rightNodes = rightG.append("g");
+
+  function buildTree(depth, b) {
+    const nodes = [{ id: 0, depth: 0, parent: -1, children: [] }];
+    let nextId = 1;
+    function expand(node) {
+      if (node.depth >= depth) return;
+      for (let i = 0; i < b; i++) {
+        const child = { id: nextId++, depth: node.depth + 1, parent: node.id, children: [] };
+        node.children.push(child);
+        nodes.push(child);
+        expand(child);
+      }
+    }
+    expand(nodes[0]);
+    return nodes;
+  }
+
+  function layoutEuclidean(nodes, depth) {
+    // Assign angular sector per node
+    nodes[0].theta0 = 0; nodes[0].theta1 = 2 * Math.PI; nodes[0].cx = 0; nodes[0].cy = 0;
+    // BFS
+    for (const n of nodes) {
+      if (n.children.length === 0) continue;
+      const span = (n.theta1 - n.theta0) / n.children.length;
+      n.children.forEach((c, i) => {
+        c.theta0 = n.theta0 + i * span;
+        c.theta1 = n.theta0 + (i + 1) * span;
+        const theta = (c.theta0 + c.theta1) / 2;
+        const r = (c.depth / depth) * R;
+        c.cx = r * Math.cos(theta);
+        c.cy = r * Math.sin(theta);
+      });
+    }
+  }
+
+  function layoutPoincare(nodes, depth) {
+    // Similar angular assignment, but hyperbolic radius converted to Poincaré.
+    // Target hyperbolic distance from origin = c * depth for some constant c.
+    // Poincaré radius r_p = tanh(D/2).
+    nodes[0].theta0 = 0; nodes[0].theta1 = 2 * Math.PI; nodes[0].px = 0; nodes[0].py = 0;
+    const scale = 1.05;
+    for (const n of nodes) {
+      if (n.children.length === 0) continue;
+      const span = (n.theta1 - n.theta0) / n.children.length;
+      n.children.forEach((c, i) => {
+        c.theta0 = n.theta0 + i * span;
+        c.theta1 = n.theta0 + (i + 1) * span;
+        const theta = (c.theta0 + c.theta1) / 2;
+        const D = c.depth * scale; // hyperbolic distance
+        const rp = Math.tanh(D / 2);
+        c.px = rp * Math.cos(theta);
+        c.py = rp * Math.sin(theta);
+      });
+    }
+  }
+
+  const depthInput = document.getElementById("hv-d");
+  const bInput = document.getElementById("hv-b");
+  const depthVal = document.getElementById("hv-d-val");
+  const bVal = document.getElementById("hv-b-val");
+
+  function render() {
+    const depth = +depthInput.value;
+    const b = +bInput.value;
+    depthVal.textContent = depth;
+    bVal.textContent = b;
+
+    const nodes = buildTree(depth, b);
+    layoutEuclidean(nodes, depth);
+    layoutPoincare(nodes, depth);
+
+    // Edges
+    const edges = nodes.filter(n => n.parent >= 0).map(n => ({ c: n, p: nodes[n.parent] }));
+    const depthColor = d3.scaleSequential(d3.interpolateBlues).domain([0, depth]);
+
+    // LEFT
+    leftEdges.selectAll("line").data(edges).join("line")
+      .attr("x1", e => cx0 + e.p.cx).attr("y1", e => cy0 + e.p.cy)
+      .attr("x2", e => cx0 + e.c.cx).attr("y2", e => cy0 + e.c.cy)
+      .attr("stroke", "var(--text-3)").attr("stroke-width", 0.7).attr("stroke-opacity", 0.5);
+    leftNodes.selectAll("circle").data(nodes).join("circle")
+      .attr("cx", n => cx0 + n.cx).attr("cy", n => cy0 + n.cy)
+      .attr("r", 2.5).attr("fill", n => depthColor(depth - n.depth))
+      .attr("stroke", "white").attr("stroke-width", 0.4);
+
+    // RIGHT (Poincaré) — draw edges as circular arcs perpendicular to boundary
+    // Approximate: just use straight lines in the Euclidean view; for Poincaré, geodesics bend inward.
+    // Draw a piecewise polyline approximating the geodesic arc, for visual effect.
+    function geodesicPath(p, q) {
+      // Approximate arc between two Poincaré points by interpolating along hyperbolic geodesic.
+      // For simplicity, we sample along a log-scaled interpolation that bends toward origin.
+      const steps = 10;
+      const pts = [];
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        // Simple interpolation: move along hyperbolic line — use Möbius addition approximation.
+        // Shortcut: linear interpolation pulled slightly toward origin
+        const x = p[0] * (1 - t) + q[0] * t;
+        const y = p[1] * (1 - t) + q[1] * t;
+        // bias toward origin based on endpoints' radii
+        const rp = Math.hypot(p[0], p[1]), rq = Math.hypot(q[0], q[1]);
+        const bias = Math.min(rp, rq) * 0.3 * Math.sin(t * Math.PI);
+        const norm = Math.hypot(x, y) + 1e-9;
+        pts.push([x * (1 - bias), y * (1 - bias)]);
+      }
+      return pts;
+    }
+
+    const lineGen = d3.line().x(d => cx1 + d[0] * R).y(d => cy1 + d[1] * R).curve(d3.curveCardinal.tension(0.5));
+
+    rightEdges.selectAll("path").data(edges).join("path")
+      .attr("d", e => lineGen(geodesicPath([e.p.px, e.p.py], [e.c.px, e.c.py])))
+      .attr("fill", "none").attr("stroke", "var(--accent)").attr("stroke-width", 0.9).attr("stroke-opacity", 0.6);
+
+    rightNodes.selectAll("circle").data(nodes).join("circle")
+      .attr("cx", n => cx1 + n.px * R).attr("cy", n => cy1 + n.py * R)
+      .attr("r", 2.5).attr("fill", n => depthColor(depth - n.depth))
+      .attr("stroke", "white").attr("stroke-width", 0.4);
+  }
+
+  depthInput.addEventListener("input", render);
+  bInput.addEventListener("input", render);
+  render();
+})();
+
+// ---------- Figure 2: Poincaré geodesic ----------
+(function() {
+  const svg = d3.select("#geo-svg");
+  const W = 680, H = 360;
+  const cx = W / 2, cy = H / 2;
+  const R = Math.min(W, H) / 2 - 30;
+
+  // Poincaré disk
+  svg.append("circle").attr("cx", cx).attr("cy", cy).attr("r", R)
+    .attr("fill", "white").attr("stroke", "var(--border-2)").attr("stroke-width", 1.5);
+
+  // A triangle tiling suggestion (decorative — faint radial/angular guides)
+  const guideG = svg.append("g").attr("opacity", 0.2);
+  for (let i = 0; i < 12; i++) {
+    const a = i * Math.PI / 6;
+    guideG.append("line").attr("x1", cx).attr("y1", cy)
+      .attr("x2", cx + Math.cos(a) * R).attr("y2", cy + Math.sin(a) * R)
+      .attr("stroke", "var(--border-2)").attr("stroke-width", 0.5);
+  }
+  // Concentric "hyperbolic circles" at integer hyperbolic radii
+  for (let d = 1; d <= 5; d++) {
+    const r_p = Math.tanh(d / 2);
+    guideG.append("circle").attr("cx", cx).attr("cy", cy).attr("r", r_p * R)
+      .attr("fill", "none").attr("stroke", "var(--border-2)").attr("stroke-width", 0.5);
+  }
+
+  // Two draggable points (in Poincaré coords, |p| < 1)
+  let p1 = [-0.5, -0.3], p2 = [0.6, 0.4];
+
+  const straightLine = svg.append("line").attr("stroke", "var(--text-3)").attr("stroke-width", 1.2).attr("stroke-dasharray", "4 3");
+  const geoPath = svg.append("path").attr("fill", "none").attr("stroke", "var(--accent)").attr("stroke-width", 2.2);
+  const dotG = svg.append("g");
+  const labelG = svg.append("g");
+
+  function poincareDist(u, v) {
+    const du = u[0] * u[0] + u[1] * u[1];
+    const dv = v[0] * v[0] + v[1] * v[1];
+    const dif = (u[0] - v[0]) ** 2 + (u[1] - v[1]) ** 2;
+    const arg = 1 + 2 * dif / ((1 - du) * (1 - dv) + 1e-9);
+    return Math.acosh(Math.max(1, arg));
+  }
+
+  function geodesicCircle(p, q) {
+    // If p, q, origin collinear (or one is origin), geodesic is a straight diameter.
+    // Otherwise: geodesic is circular arc perpendicular to unit circle.
+    // Center of that arc can be computed via inversion.
+    const cross = p[0] * q[1] - p[1] * q[0];
+    if (Math.abs(cross) < 1e-5 || (p[0] === 0 && p[1] === 0) || (q[0] === 0 && q[1] === 0)) {
+      return null; // straight line through origin
+    }
+    // Invert p: p* = p / |p|^2
+    const pnorm = p[0] * p[0] + p[1] * p[1];
+    const pStar = [p[0] / pnorm, p[1] / pnorm];
+    // Arc passes through p, q, pStar. Circle through three points.
+    const [x1, y1] = p, [x2, y2] = q, [x3, y3] = pStar;
+    const A = x2 - x1, B = y2 - y1, C = x3 - x1, D = y3 - y1;
+    const E = A * (x1 + x2) + B * (y1 + y2);
+    const F = C * (x1 + x3) + D * (y1 + y3);
+    const G = 2 * (A * (y3 - y2) - B * (x3 - x2));
+    if (Math.abs(G) < 1e-8) return null;
+    const ccx = (D * E - B * F) / G;
+    const ccy = (A * F - C * E) / G;
+    const rr = Math.hypot(x1 - ccx, y1 - ccy);
+    return { cx: ccx, cy: ccy, r: rr };
+  }
+
+  function render() {
+    straightLine
+      .attr("x1", cx + p1[0] * R).attr("y1", cy + p1[1] * R)
+      .attr("x2", cx + p2[0] * R).attr("y2", cy + p2[1] * R);
+
+    const circle = geodesicCircle(p1, p2);
+    if (circle) {
+      // Arc from p1 to p2 along circle
+      const a1 = Math.atan2(p1[1] - circle.cy, p1[0] - circle.cx);
+      const a2 = Math.atan2(p2[1] - circle.cy, p2[0] - circle.cx);
+      // choose shorter arc direction
+      let delta = a2 - a1;
+      while (delta > Math.PI) delta -= 2 * Math.PI;
+      while (delta < -Math.PI) delta += 2 * Math.PI;
+      const steps = 60;
+      const pts = [];
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const a = a1 + delta * t;
+        pts.push([circle.cx + circle.r * Math.cos(a), circle.cy + circle.r * Math.sin(a)]);
+      }
+      const lineGen = d3.line().x(d => cx + d[0] * R).y(d => cy + d[1] * R);
+      geoPath.attr("d", lineGen(pts));
+    } else {
+      // Straight diameter
+      const lineGen = d3.line().x(d => cx + d[0] * R).y(d => cy + d[1] * R);
+      geoPath.attr("d", lineGen([p1, p2]));
+    }
+
+    // Dots
+    dotG.selectAll("circle").data([p1, p2]).join("circle")
+      .attr("cx", p => cx + p[0] * R).attr("cy", p => cy + p[1] * R)
+      .attr("r", 7).attr("fill", "var(--accent)").attr("stroke", "white").attr("stroke-width", 2)
+      .attr("cursor", "grab")
+      .call(d3.drag()
+        .on("drag", (event, d) => {
+          const pt = d === p1 ? p1 : p2;
+          let nx = (event.x - cx) / R;
+          let ny = (event.y - cy) / R;
+          const r = Math.hypot(nx, ny);
+          if (r > 0.95) { nx = nx / r * 0.95; ny = ny / r * 0.95; }
+          pt[0] = nx; pt[1] = ny;
+          render();
+        })
+      );
+
+    // Labels
+    labelG.selectAll("*").remove();
+    const pd = poincareDist(p1, p2);
+    const ed = Math.hypot(p1[0] - p2[0], p1[1] - p2[1]);
+    labelG.append("rect").attr("x", 12).attr("y", 12).attr("width", 200).attr("height", 42)
+      .attr("fill", "white").attr("stroke", "var(--border)").attr("rx", 4);
+    labelG.append("text").attr("x", 20).attr("y", 28).style("font-size", "11px")
+      .attr("fill", "var(--text-3)").text("Euclidean:").append("tspan").attr("dx", 8)
+      .attr("fill", "var(--text)").style("font-family", "var(--mono-font)").text(ed.toFixed(3));
+    labelG.append("text").attr("x", 20).attr("y", 46).style("font-size", "11px")
+      .attr("fill", "var(--accent)").text("hyperbolic:").append("tspan").attr("dx", 4)
+      .style("font-family", "var(--mono-font)").text(pd.toFixed(3));
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

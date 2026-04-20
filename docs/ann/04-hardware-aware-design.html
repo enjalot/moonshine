@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hardware-Aware Design — Approximate Nearest Neighbors</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+
+  --c-query: #db2777;
+  --c-db: #64748b;
+  --c-neighbor: #f59e0b;
+  --c-partition: #0d9488;
+  --c-compress: #7c3aed;
+  --c-hardware: #ea580c;
+}
+
+body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
+h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
+h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+h3 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+.figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.figure-wide { margin-left: -2rem; margin-right: -2rem; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.45; }
+.figure-label { font-weight: 600; color: var(--text); }
+
+.controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.controls input[type="range"] { width: 160px; accent-color: var(--c-hardware); }
+.controls label { display: flex; align-items: center; gap: 0.5rem; }
+.controls .val { font-family: var(--mono-font); color: var(--text); min-width: 2.5em; display: inline-block; text-align: right; }
+.controls button { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.25rem 0.7rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text-2); cursor: pointer; }
+.controls button:hover { background: var(--bg); color: var(--text); }
+.controls button.active { border-color: var(--c-hardware); color: var(--c-hardware); background: #fff7ed; }
+
+svg text { font-family: var(--heading-font); }
+
+.t-query { color: var(--c-query); font-weight: 600; }
+.t-db { color: var(--c-db); font-weight: 600; }
+.t-neighbor { color: var(--c-neighbor); font-weight: 600; }
+.t-hw { color: var(--c-hardware); font-weight: 600; }
+.t-partition { color: var(--c-partition); font-weight: 600; }
+.t-compress { color: var(--c-compress); font-weight: 600; }
+
+.readout { font-family: var(--mono-font); font-size: 0.85rem; color: var(--text); }
+
+@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+</style>
+</head>
+<body>
+<div class="article">
+  <header>
+    <h1>Hardware-Aware Design</h1>
+    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
+      The third of three ideas behind modern ANN: the winning index depends on where the
+      data lives. RAM, SSD, and GPU reward very different layouts.
+    </p>
+    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">
+      Part 4 of <a href="index.html">Approximate Nearest Neighbors</a>
+    </p>
+  </header>
+
+  <p>
+    The first two articles turned search into a two-step sketch. <a href="02-partition-the-space.html" class="t-partition">Partition</a>
+    cuts the dataset into a handful of candidate regions. <a href="03-compress-the-vectors.html" class="t-compress">Compress</a>
+    replaces full vectors with tiny codes. Between them, the work you actually have to do
+    per query drops by several orders of magnitude.
+  </p>
+  <p>
+    The remaining question is almost boring to say out loud: how is all of this laid out in
+    storage. If your data fits in RAM, the answer is one thing. If it sits on an SSD, the
+    answer is another. If you are answering thousands of queries at once and have a GPU to
+    throw at them, the answer is a third thing entirely. The modern ANN story ends in a
+    place that is less about algorithms and more about memory.
+  </p>
+
+  <h2>The Latency Ladder</h2>
+  <p>
+    Every computer has a hierarchy of memory. A register read is free, an L1 cache hit takes
+    about a nanosecond, DRAM takes a hundred, an SSD takes a hundred thousand, and reading
+    across a network is in the millions. Each step down the ladder is roughly a hundred
+    times slower than the one above it.
+  </p>
+  <p>
+    A nanosecond is invisible. A microsecond feels instant. A millisecond is noticeable.
+    These feel like the same region of "fast" until you stack a million of them on top of
+    each other, which is exactly what a search index does. An index that misses cache on
+    every vector it touches can be a thousand times slower than one that streams through
+    memory in order, even if the algorithm is otherwise identical.
+  </p>
+
+  <div class="figure figure-wide" id="fig-ladder">
+    <svg id="ladder-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 1.</span>
+      Each bar shows one level of the memory hierarchy, with a pulse dot traveling at a
+      rate proportional to the latency. L1 cache hits flicker by; an SSD read takes long
+      enough that you can watch it traverse. The scale is logarithmic, so the visible gap
+      between neighboring bars is already a hundred-fold difference in real time.
+    </div>
+  </div>
+
+  <p>
+    The practical consequence is that the right ANN index depends on which rung of this
+    ladder your data lives on. The same algorithm that is fastest in RAM can be the worst
+    choice on an SSD, because on an SSD each "random pointer chase" costs a hundred
+    thousand times more than it did in memory.
+  </p>
+
+  <h2>In-Memory: Everything Fits</h2>
+  <p>
+    This is the classical regime, and for many applications it is still the right one. The
+    entire database of vectors fits in RAM on one machine, usually after compression. The
+    CPU can move through it at tens of gigabytes per second. Modern SIMD instructions let
+    a single CPU core compute sixteen float-by-float products in parallel. Even touching
+    every vector in a ten-million-row database is a matter of tens of milliseconds.
+  </p>
+  <p>
+    FAISS-flat (a linear scan with SIMD) and HNSW (a small-world graph walked in memory)
+    both live here. The right layout is a single contiguous block of floats per index,
+    with pointers between them that the CPU can prefetch. Graph walks are fine because
+    each hop costs a few nanoseconds, not a few microseconds.
+  </p>
+  <p>
+    In-memory indexes dominate the "small enough, fast enough" niche: tens of millions of
+    vectors at single-millisecond latency, where paying for the RAM to hold them is cheaper
+    than the engineering effort to squeeze them onto disk.
+  </p>
+
+  <h2>Disk-Based: Billion-Scale on One Machine</h2>
+  <p>
+    At a billion vectors, the math changes. A billion 768-dimensional float32 vectors is
+    three terabytes. RAM that size exists, but renting it is expensive. SSDs of the same
+    size are cheap. The question becomes how to answer a query without reading most of
+    the disk.
+  </p>
+  <p>
+    The brutal fact is that a random SSD read takes about a hundred microseconds. That is
+    a thousand times slower than a random RAM read. A graph-based index that hops through
+    a hundred neighbors during a query, which finishes in a millisecond in RAM, would take
+    a tenth of a second on disk. That is too slow for interactive use.
+  </p>
+
+  <div class="figure figure-wide" id="fig-disk">
+    <div class="controls">
+      <button id="disk-run">run query</button>
+      <button id="disk-reset">reset</button>
+    </div>
+    <svg id="disk-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 2.</span>
+      Two ways to walk the same graph on disk. On the left, a <strong>random walk</strong>
+      that chases each pointer as it arrives, paying the full SSD latency every hop. On
+      the right, a <strong>beam search</strong> that fetches a batch of candidate neighbors
+      together, turning many small reads into a few sequential ones. Press <em>run query</em>
+      to watch both traversals race. Both find the same answer. The beam search uses about
+      ten times fewer IOPS to get there.
+    </div>
+  </div>
+
+  <p>
+    This is the problem DiskANN (also called Vamana) solved. The index is a single graph
+    on disk, with edges carefully chosen so the graph has a small diameter, and the vectors
+    for each node stored in the same block as the edge list pointing out of it. Queries run
+    a <em>beam search</em>: they keep a frontier of the most promising candidates so far and
+    fetch all of their neighbors together, amortizing the per-read cost over many lookups.
+    The compressed codes from the previous article also help, since you can rank candidates
+    using the small codes in memory before fetching full vectors from disk.
+  </p>
+  <p>
+    A well-tuned DiskANN index can serve a billion vectors at tens-of-milliseconds latency
+    from a single machine. Ten years ago that would have needed a cluster.
+  </p>
+
+  <h2>GPU: Throughput Over Latency</h2>
+  <p>
+    A GPU sees the world differently. A single CPU core and a single GPU thread run at
+    comparable clock speeds, but a GPU has thousands of threads in flight at once. The cost
+    per thread is higher (data has to be shipped across the PCIe bus, results shipped back)
+    and the kernel launch overhead is non-trivial. But once a batch of queries is in GPU
+    memory, the cost of the tenth thousand query is barely more than the cost of the first.
+  </p>
+  <p>
+    This makes GPUs a bad choice for one-query-at-a-time, low-latency serving, and a great
+    choice for anything batch-shaped: embedding an entire corpus, building a kNN graph,
+    training-time retrieval, bulk re-indexing. The crossover point depends on the hardware
+    and the workload, but it usually sits around a batch size of a few dozen.
+  </p>
+
+  <div class="figure figure-wide" id="fig-gpu">
+    <div class="controls">
+      <label>batch size <input type="range" id="gpu-bs" min="1" max="1024" value="32" step="1"><span class="val" id="gpu-bs-val">32</span></label>
+    </div>
+    <svg id="gpu-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 3.</span>
+      Throughput (queries per second) as a function of batch size, for a
+      <span style="color: var(--c-db); font-weight:600;">CPU</span> and a
+      <span class="t-hw">GPU</span>. The CPU line is nearly flat: one thread does one query
+      at a time, and batching buys little. The GPU line starts below the CPU (launch
+      overhead costs more than the computation) and rises linearly until it saturates
+      memory bandwidth. Below a small batch size, the CPU wins on latency. Above it, the
+      GPU wins on throughput by a wide margin.
+    </div>
+  </div>
+
+  <p>
+    FAISS has a GPU implementation precisely for this regime. Training pipelines often use
+    a GPU-resident brute-force kNN search because it can process tens of thousands of
+    queries in a single kernel launch, which is faster than any CPU index even accounting
+    for data transfer.
+  </p>
+
+  <h2>Columnar on Disk: The Pragmatic Middle</h2>
+  <p>
+    Between "all in RAM" and "graph engineered for SSD" there is a broad middle ground
+    occupied by most of the production systems people actually reach for. Lancedb is a
+    clean example. It stores an IVF-PQ index columnarly, in Arrow format, on disk. When
+    a query arrives, it picks the two or three nearest partitions and reads them from
+    disk sequentially. The operating system's page cache handles the rest: hot partitions
+    stay resident, cold ones get evicted.
+  </p>
+  <p>
+    This is less clever than DiskANN, but it inherits two useful properties. Columnar
+    layout means reads within a partition are sequential, which is the access pattern
+    SSDs are fastest at. And the <a href="03-compress-the-vectors.html" class="t-compress">product
+    quantization</a> codes from the previous article are small enough that a medium-sized
+    dataset often has its hot partitions in RAM after a few queries, with the full codes
+    still on disk as a backstop.
+  </p>
+
+  <div class="figure figure-wide" id="fig-layout">
+    <div class="controls">
+      <label>partitions probed <input type="range" id="lay-nprobe" min="1" max="12" value="3" step="1"><span class="val" id="lay-nprobe-val">3</span></label>
+    </div>
+    <svg id="layout-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 4.</span>
+      A schematic of an IVF-PQ index on disk. The disk is one long strip. Each
+      <span class="t-partition">partition</span> is a contiguous block of
+      <span class="t-compress">PQ codes</span> stored columnarly. A query reads only the
+      partitions its query vector falls near, shown in orange. The rest of the disk is
+      skipped entirely. Adjust the slider to probe more partitions and watch how bytes
+      read scale linearly while the number of disk seeks barely grows.
+    </div>
+  </div>
+
+  <h2>Choosing the Stack</h2>
+  <p>
+    There is no single best index. The choice is a function of how much data you have, how
+    fast you need answers, how many queries arrive per second, and what you are willing to
+    spend on hardware. The good news is that the space of reasonable choices is small and
+    mostly non-overlapping. If you know your dataset size and your latency target, the
+    right index is usually obvious.
+  </p>
+
+  <div class="figure figure-wide" id="fig-decision">
+    <div class="controls">
+      <span>my scenario:</span>
+      <button class="scenario-btn active" data-scenario="faiss">in-memory serving</button>
+      <button class="scenario-btn" data-scenario="lance">medium on disk</button>
+      <button class="scenario-btn" data-scenario="diskann">billion on one box</button>
+      <button class="scenario-btn" data-scenario="gpu">batch analytics</button>
+    </div>
+    <svg id="decision-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 5.</span>
+      The decision space. The x-axis is dataset size, the y-axis is query latency target,
+      both on log scales. Each colored region marks where one class of index is the natural
+      fit. Click a scenario to move the <span class="t-hw">pointer</span> and read the
+      recommended stack. The boundaries are fuzzy and implementations overlap, but the shape
+      is stable: more data pushes you down (cheaper storage, higher latency), more QPS
+      pushes you right (batch-friendly hardware).
+    </div>
+  </div>
+
+  <p>
+    A useful mental shortcut: in-memory indexes are bought with RAM, disk-based indexes are
+    bought with engineering, and GPU indexes are bought with batch size. Each one converts
+    a scarce resource into latency.
+  </p>
+
+  <h2>Three Ideas, Stacked</h2>
+  <p>
+    We now have the full modern stack. <a href="02-partition-the-space.html" class="t-partition">Partition</a>
+    reduces how many vectors you look at. <a href="03-compress-the-vectors.html" class="t-compress">Compress</a>
+    reduces how many bytes per vector. <a href="#" class="t-hw">Hardware-aware layout</a>
+    chooses a storage pattern that matches the device you are reading from. Production
+    systems stack all three. FAISS-IVF-PQ stacks the first two in RAM. Lancedb stacks all
+    three on a laptop-sized SSD. DiskANN stacks all three to put a billion vectors on a
+    single box.
+  </p>
+  <p>
+    The next article is the payoff. Two of the most widely used tools in applied machine
+    learning, UMAP and semantic search, are both built on top of the same ANN primitive
+    we have been developing. They use it in very different ways, and lining them up side by
+    side makes both of them clearer.
+  </p>
+
+  <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
+    <p>Part of <a href="index.html" style="color: var(--text-2);">Approximate Nearest Neighbors</a>. Previous: <a href="03-compress-the-vectors.html" style="color: var(--accent);">Compress the Vectors</a>. Next: <a href="05-umap-vs-semantic-search.html" style="color: var(--accent);">UMAP vs Semantic Search</a>.</p>
+    <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+  </footer>
+</div>
+
+<script>
+// Seeded RNG for reproducibility
+function mulberry32(seed) {
+  return function() {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// ============================================================
+// Figure 1: The memory latency ladder
+// ============================================================
+(function() {
+  const svgEl = document.getElementById("ladder-svg");
+  const container = svgEl.parentElement;
+  let W = 0, H = 300;
+
+  const levels = [
+    { label: "L1 cache",      ns: 1,        note: "per-cycle load, hot data" },
+    { label: "L2 cache",      ns: 4,        note: "still on-die" },
+    { label: "L3 cache",      ns: 12,       note: "shared across cores" },
+    { label: "DRAM (RAM)",    ns: 100,      note: "off-chip, still local" },
+    { label: "SSD (NVMe)",    ns: 100000,   note: "persistent, per-read penalty" },
+    { label: "network disk",  ns: 1000000,  note: "another machine" },
+  ];
+
+  const svg = d3.select(svgEl);
+
+  function layout() {
+    W = container.clientWidth - 48;
+    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svgEl.setAttribute("width", W);
+    svgEl.setAttribute("height", H);
+  }
+
+  // Travel time tuned so L1 is very fast and SSD is very slow.
+  // Map ns on log scale to ms of animation, so reader can see the ratio.
+  function travelMs(ns) {
+    // L1: ~350ms. Network: ~8000ms.
+    const logNs = Math.log10(ns);
+    return 350 * Math.pow(1.9, logNs);
+  }
+
+  let raf = null;
+  let pulses = [];
+
+  function draw() {
+    svg.selectAll("*").remove();
+    svg.append("rect").attr("x", 10).attr("y", 10)
+      .attr("width", W - 20).attr("height", H - 20)
+      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
+
+    const margin = { top: 22, right: 140, bottom: 28, left: 120 };
+    const iw = W - margin.left - margin.right;
+    const ih = H - margin.top - margin.bottom;
+
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const rowH = ih / levels.length;
+    const barH = Math.min(18, rowH - 6);
+
+    // Log scale for bar width
+    const xS = d3.scaleLog().domain([0.5, 3e6]).range([0, iw]).clamp(true);
+
+    // Gridlines at decades
+    const ticks = [1, 10, 100, 1000, 10000, 100000, 1000000];
+    g.selectAll(".gridline").data(ticks).join("line")
+      .attr("class", "gridline")
+      .attr("x1", t => xS(t)).attr("x2", t => xS(t))
+      .attr("y1", 0).attr("y2", ih)
+      .attr("stroke", "#eef0f4").attr("stroke-width", 1);
+
+    // Tick labels
+    g.selectAll(".tick-label").data(ticks).join("text")
+      .attr("class", "tick-label")
+      .attr("x", t => xS(t)).attr("y", ih + 16)
+      .attr("text-anchor", "middle")
+      .attr("font-size", 10).attr("fill", "var(--text-2)")
+      .text(t => t < 1000 ? `${t} ns` : t < 1e6 ? `${t/1000} µs` : `${t/1e6} ms`);
+
+    // Bars
+    levels.forEach((L, i) => {
+      const y = i * rowH + (rowH - barH) / 2;
+      const w = xS(L.ns);
+
+      // Track
+      g.append("rect")
+        .attr("x", 0).attr("y", y)
+        .attr("width", iw).attr("height", barH)
+        .attr("fill", "#f1f5f9").attr("rx", 2);
+
+      // Bar (hardware orange, with slight gradient by depth in hierarchy)
+      const depth = i / (levels.length - 1);
+      const col = d3.interpolate("#fed7aa", "#9a3412")(depth);
+      g.append("rect")
+        .attr("x", 0).attr("y", y)
+        .attr("width", w).attr("height", barH)
+        .attr("fill", col).attr("rx", 2);
+
+      // Label on left
+      g.append("text")
+        .attr("x", -12).attr("y", y + barH / 2)
+        .attr("text-anchor", "end").attr("dominant-baseline", "middle")
+        .attr("font-size", 12).attr("font-weight", 600).attr("fill", "var(--text)")
+        .text(L.label);
+
+      // Note on right
+      g.append("text")
+        .attr("x", iw + 10).attr("y", y + barH / 2 - 5)
+        .attr("dominant-baseline", "middle")
+        .attr("font-size", 10).attr("fill", "var(--text-2)")
+        .text(L.note);
+      g.append("text")
+        .attr("x", iw + 10).attr("y", y + barH / 2 + 7)
+        .attr("dominant-baseline", "middle")
+        .attr("font-size", 10).attr("font-family", "var(--mono-font)").attr("fill", "var(--c-hardware)")
+        .text(L.ns < 1000 ? `${L.ns} ns` : L.ns < 1e6 ? `${L.ns/1000} µs` : `${L.ns/1e6} ms`);
+
+      // Pulse dot placeholder
+      const dot = g.append("circle")
+        .attr("cy", y + barH / 2).attr("r", 3)
+        .attr("fill", "#fff").attr("stroke", col).attr("stroke-width", 1.5);
+
+      pulses[i] = { dot, bar: w, start: performance.now() + i * 200, dur: travelMs(L.ns) };
+    });
+
+    // Title overlay
+    g.append("text")
+      .attr("x", 0).attr("y", -8)
+      .attr("font-size", 11).attr("fill", "var(--text-2)")
+      .text("time to complete one read, log scale");
+
+    // Footnote about ratios
+    const foot = g.append("g").attr("transform", `translate(0, ${ih + 24})`);
+    foot.append("text")
+      .attr("font-size", 11).attr("fill", "var(--text-2)")
+      .text("one SSD read ≈ 1,000 DRAM reads ≈ 100,000 L1 hits");
+  }
+
+  function animate() {
+    const now = performance.now();
+    pulses.forEach(p => {
+      if (!p.dot) return;
+      const elapsed = now - p.start;
+      const period = p.dur;
+      const frac = ((elapsed % period) + period) % period / period;
+      p.dot.attr("cx", frac * p.bar);
+    });
+    raf = requestAnimationFrame(animate);
+  }
+
+  const ro = new ResizeObserver(() => { layout(); draw(); });
+  ro.observe(container);
+  layout();
+  draw();
+  animate();
+})();
+
+// ============================================================
+// Figure 2: Random access vs beam search on disk
+// ============================================================
+(function() {
+  const svgEl = document.getElementById("disk-svg");
+  const container = svgEl.parentElement;
+  let W = 0, H = 340;
+
+  const svg = d3.select(svgEl);
+
+  // Build a small graph of nodes on a "disk strip"
+  const rng = mulberry32(9);
+  const N = 28;
+  const nodes = Array.from({length: N}, (_, i) => ({ id: i, x: i }));
+
+  // Random graph with ~4 neighbors per node
+  const neighbors = nodes.map(() => []);
+  for (let i = 0; i < N; i++) {
+    const set = new Set();
+    while (set.size < 4) {
+      const j = Math.floor(rng() * N);
+      if (j !== i) set.add(j);
+    }
+    neighbors[i] = [...set];
+  }
+
+  // "Answer" node (goal)
+  const goal = 22;
+  const start = 3;
+
+  function layout() {
+    W = container.clientWidth - 48;
+    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svgEl.setAttribute("width", W);
+    svgEl.setAttribute("height", H);
+  }
+
+  let running = false;
+  let leftIops = 0, rightIops = 0;
+
+  function resetState() {
+    leftIops = 0; rightIops = 0;
+    running = false;
+    draw();
+  }
+
+  function draw() {
+    svg.selectAll("*").remove();
+
+    svg.append("rect").attr("x", 10).attr("y", 10)
+      .attr("width", W - 20).attr("height", H - 20)
+      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
+
+    const halfW = (W - 40) / 2;
+    const gapX = 20;
+
+    drawPanel(svg, 20, 30, halfW - gapX / 2, "random walk", "left");
+    drawPanel(svg, 20 + halfW + gapX / 2, 30, halfW - gapX / 2, "beam search", "right");
+  }
+
+  function drawPanel(svg, x0, y0, panelW, title, side) {
+    const g = svg.append("g").attr("transform", `translate(${x0}, ${y0})`);
+    g.append("text")
+      .attr("x", 0).attr("y", 0)
+      .attr("font-size", 12).attr("font-weight", 600).attr("fill", "var(--text)")
+      .text(title);
+
+    // Disk strip
+    const stripY = 60;
+    const stripH = 24;
+    const stripPad = 4;
+    const cellW = (panelW - 2 * stripPad) / N;
+
+    g.append("rect")
+      .attr("x", 0).attr("y", stripY)
+      .attr("width", panelW).attr("height", stripH)
+      .attr("fill", "#f1f5f9").attr("stroke", "var(--border)").attr("rx", 2);
+
+    // Cells
+    for (let i = 0; i < N; i++) {
+      g.append("rect")
+        .attr("x", stripPad + i * cellW).attr("y", stripY + 3)
+        .attr("width", cellW - 0.5).attr("height", stripH - 6)
+        .attr("fill", "#fff").attr("stroke", "#e5e7eb").attr("stroke-width", 0.5)
+        .attr("class", `cell-${side}-${i}`);
+    }
+
+    // Label
+    g.append("text")
+      .attr("x", 0).attr("y", stripY - 4)
+      .attr("font-size", 10).attr("fill", "var(--text-2)")
+      .text("disk (block layout)");
+
+    // Goal marker
+    g.append("rect")
+      .attr("x", stripPad + goal * cellW).attr("y", stripY + 3)
+      .attr("width", cellW - 0.5).attr("height", stripH - 6)
+      .attr("fill", "rgba(245, 158, 11, 0.35)").attr("stroke", "var(--c-neighbor)").attr("stroke-width", 1);
+    g.append("text")
+      .attr("x", stripPad + goal * cellW + cellW / 2).attr("y", stripY - 4)
+      .attr("text-anchor", "middle")
+      .attr("font-size", 10).attr("fill", "var(--c-neighbor)").attr("font-weight", 600)
+      .text("answer");
+
+    // IOPS readout
+    const iopsText = g.append("text")
+      .attr("x", 0).attr("y", stripY + stripH + 28)
+      .attr("font-size", 14).attr("font-weight", 700).attr("font-family", "var(--mono-font)")
+      .attr("fill", "var(--c-hardware)")
+      .text(side === "left" ? `${leftIops} reads` : `${rightIops} reads`);
+
+    // Description
+    const descLines = side === "left"
+      ? ["one hop at a time,", "each chases a random block.", "every arrow is a new seek."]
+      : ["fetch a batch at once,", "neighbors arrive together,", "many hops become one seek."];
+    descLines.forEach((t, i) => {
+      g.append("text")
+        .attr("x", 0).attr("y", stripY + stripH + 54 + i * 14)
+        .attr("font-size", 11).attr("fill", "var(--text-2)").text(t);
+    });
+
+    // Seek arc storage
+    const arcLayer = g.append("g").attr("class", `arcs-${side}`);
+
+    return { g, arcLayer, stripPad, cellW, stripY, stripH, iopsText };
+  }
+
+  function refreshIopsText() {
+    const side = "left";
+    svg.selectAll("text").each(function() {
+      const t = d3.select(this);
+      const txt = t.text();
+      if (txt.endsWith(" reads")) {
+        // restore
+      }
+    });
+  }
+
+  function cellCenter(side, i, panelInfo) {
+    return {
+      x: panelInfo.stripPad + i * panelInfo.cellW + panelInfo.cellW / 2,
+      y: panelInfo.stripY + panelInfo.stripH / 2,
+    };
+  }
+
+  async function runQuery() {
+    if (running) return;
+    running = true;
+    leftIops = 0; rightIops = 0;
+    draw();
+
+    // Panel info lookups
+    const halfW = (W - 40) / 2;
+    const gapX = 20;
+    const leftInfo = {
+      g: svg.select("g:nth-of-type(1)"),
+      stripPad: 4, cellW: (halfW - gapX / 2 - 8) / N,
+      stripY: 60, stripH: 24,
+      x0: 20, y0: 30,
+    };
+    const rightInfo = {
+      g: svg.select("g:nth-of-type(2)"),
+      stripPad: 4, cellW: (halfW - gapX / 2 - 8) / N,
+      stripY: 60, stripH: 24,
+      x0: 20 + halfW + gapX / 2, y0: 30,
+    };
+
+    // Helper: highlight cell
+    function touch(side, i, color) {
+      const info = side === "left" ? leftInfo : rightInfo;
+      const cell = svg.select(`.cell-${side}-${i}`);
+      cell.transition().duration(150).attr("fill", color);
+    }
+
+    function arc(side, from, to, color, delay) {
+      const info = side === "left" ? leftInfo : rightInfo;
+      const fromC = { x: info.stripPad + from * info.cellW + info.cellW / 2 + info.x0, y: info.stripY + info.y0 };
+      const toC   = { x: info.stripPad + to   * info.cellW + info.cellW / 2 + info.x0, y: info.stripY + info.y0 };
+      const midX = (fromC.x + toC.x) / 2;
+      const dist = Math.abs(to - from);
+      const midY = fromC.y - 18 - dist * 0.8;
+      const path = `M ${fromC.x} ${fromC.y} Q ${midX} ${midY} ${toC.x} ${toC.y}`;
+      const p = svg.append("path").attr("d", path)
+        .attr("fill", "none").attr("stroke", color).attr("stroke-width", 1.3)
+        .attr("opacity", 0)
+        .attr("stroke-dasharray", "3 2");
+      p.transition().delay(delay).duration(280).attr("opacity", 0.8);
+    }
+
+    function updateCounter() {
+      // Re-render counters only
+      svg.selectAll("text").filter(function() {
+        const t = d3.select(this).text();
+        return t.endsWith(" reads");
+      }).remove();
+      svg.append("text")
+        .attr("x", leftInfo.x0).attr("y", leftInfo.y0 + leftInfo.stripY + leftInfo.stripH + 28)
+        .attr("font-size", 14).attr("font-weight", 700).attr("font-family", "var(--mono-font)")
+        .attr("fill", "var(--c-hardware)")
+        .text(`${leftIops} reads`);
+      svg.append("text")
+        .attr("x", rightInfo.x0).attr("y", rightInfo.y0 + rightInfo.stripY + rightInfo.stripH + 28)
+        .attr("font-size", 14).attr("font-weight", 700).attr("font-family", "var(--mono-font)")
+        .attr("fill", "var(--c-hardware)")
+        .text(`${rightIops} reads`);
+    }
+
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    // Random walk: visit node, pick best neighbor, visit, etc.
+    async function randomWalk() {
+      let current = start;
+      const visited = new Set([current]);
+      for (let step = 0; step < 18; step++) {
+        touch("left", current, current === goal ? "var(--c-neighbor)" : "rgba(239, 68, 68, 0.5)");
+        leftIops += 1;
+        updateCounter();
+        if (current === goal) break;
+        // Pick next: greedy toward goal
+        const nbrs = neighbors[current];
+        let best = nbrs[0], bestD = Infinity;
+        for (const n of nbrs) {
+          const d = Math.abs(n - goal) + (visited.has(n) ? 100 : 0);
+          if (d < bestD) { bestD = d; best = n; }
+        }
+        arc("left", current, best, "rgba(239, 68, 68, 0.7)", 0);
+        await sleep(350);
+        current = best;
+        visited.add(current);
+      }
+    }
+
+    // Beam search: fetch a frontier at once (batch)
+    async function beamSearch() {
+      let frontier = [start];
+      const visited = new Set(frontier);
+      for (let step = 0; step < 6; step++) {
+        // Touch all frontier cells as one IO (batched)
+        frontier.forEach(f => touch("right", f, f === goal ? "var(--c-neighbor)" : "rgba(34, 197, 94, 0.55)"));
+        rightIops += 1; // one batched read
+        updateCounter();
+        if (frontier.includes(goal)) break;
+
+        // Expand: gather all neighbors, score by distance to goal, keep top-3
+        const cand = new Set();
+        frontier.forEach(f => neighbors[f].forEach(n => { if (!visited.has(n)) cand.add(n); }));
+        const scored = [...cand].map(n => ({ n, d: Math.abs(n - goal) })).sort((a, b) => a.d - b.d);
+        const next = scored.slice(0, 3).map(s => s.n);
+        frontier.forEach(f => next.forEach(nx => arc("right", f, nx, "rgba(34, 197, 94, 0.6)", 0)));
+        await sleep(500);
+        frontier = next;
+        frontier.forEach(f => visited.add(f));
+      }
+    }
+
+    await Promise.all([randomWalk(), beamSearch()]);
+    running = false;
+  }
+
+  document.getElementById("disk-run").addEventListener("click", runQuery);
+  document.getElementById("disk-reset").addEventListener("click", () => {
+    leftIops = 0; rightIops = 0; draw();
+  });
+
+  const ro = new ResizeObserver(() => { layout(); draw(); });
+  ro.observe(container);
+  layout();
+  draw();
+})();
+
+// ============================================================
+// Figure 3: CPU vs GPU throughput
+// ============================================================
+(function() {
+  const svgEl = document.getElementById("gpu-svg");
+  const container = svgEl.parentElement;
+  let W = 0, H = 320;
+
+  const svg = d3.select(svgEl);
+
+  // Simple toy models of QPS as a function of batch size.
+  // CPU: single-threaded, minimal batch benefit.
+  //   qps_cpu(b) = C_cpu (saturates quickly)
+  function qpsCpu(b) {
+    const peak = 12000;
+    return peak * (1 - Math.exp(-b / 2));
+  }
+  // GPU: large overhead at low batch, scales roughly linearly then saturates.
+  //   qps_gpu(b) = peak * b / (b + bhalf), after accounting for overhead
+  function qpsGpu(b) {
+    const peak = 600000;
+    const bhalf = 64;
+    return peak * b / (b + bhalf);
+  }
+
+  let bs = 32;
+
+  function layout() {
+    W = container.clientWidth - 48;
+    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svgEl.setAttribute("width", W);
+    svgEl.setAttribute("height", H);
+  }
+
+  function draw() {
+    svg.selectAll("*").remove();
+    svg.append("rect").attr("x", 10).attr("y", 10)
+      .attr("width", W - 20).attr("height", H - 20)
+      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
+
+    const margin = { top: 22, right: 200, bottom: 42, left: 70 };
+    const iw = W - margin.left - margin.right;
+    const ih = H - margin.top - margin.bottom;
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const xS = d3.scaleLog().domain([1, 1024]).range([0, iw]);
+    const yS = d3.scaleLog().domain([100, 1e6]).range([ih, 0]);
+
+    // Axes
+    g.append("g").attr("transform", `translate(0,${ih})`)
+      .call(d3.axisBottom(xS).ticks(6, "~s"))
+      .call(g => g.selectAll(".tick text").attr("fill", "var(--text-2)").attr("font-size", 10))
+      .call(g => g.selectAll(".domain").attr("stroke", "var(--border)"));
+    g.append("g")
+      .call(d3.axisLeft(yS).ticks(4, "~s"))
+      .call(g => g.selectAll(".tick text").attr("fill", "var(--text-2)").attr("font-size", 10))
+      .call(g => g.selectAll(".domain").attr("stroke", "var(--border)"));
+
+    g.append("text").attr("x", iw / 2).attr("y", ih + 30).attr("text-anchor", "middle")
+      .attr("font-size", 11).attr("fill", "var(--text-2)").text("batch size (queries per request)");
+    g.append("text")
+      .attr("transform", `translate(-50,${ih/2}) rotate(-90)`).attr("text-anchor", "middle")
+      .attr("font-size", 11).attr("fill", "var(--text-2)").text("throughput (queries / second)");
+
+    // Curves
+    const bs_ = d3.range(1, 1025);
+    const lineCpu = d3.line().x(b => xS(b)).y(b => yS(qpsCpu(b)));
+    const lineGpu = d3.line().x(b => xS(b)).y(b => yS(qpsGpu(b)));
+
+    g.append("path").datum(bs_)
+      .attr("fill", "none").attr("stroke", "var(--c-db)").attr("stroke-width", 2)
+      .attr("d", lineCpu);
+    g.append("path").datum(bs_)
+      .attr("fill", "none").attr("stroke", "var(--c-hardware)").attr("stroke-width", 2)
+      .attr("d", lineGpu);
+
+    // Crossover point: find where GPU >= CPU
+    let cross = 1;
+    for (let b = 1; b <= 1024; b++) {
+      if (qpsGpu(b) >= qpsCpu(b)) { cross = b; break; }
+    }
+    g.append("line")
+      .attr("x1", xS(cross)).attr("x2", xS(cross))
+      .attr("y1", 0).attr("y2", ih)
+      .attr("stroke", "var(--text-2)").attr("stroke-dasharray", "3 3").attr("opacity", 0.4);
+    g.append("text")
+      .attr("x", xS(cross) + 4).attr("y", 12)
+      .attr("font-size", 10).attr("fill", "var(--text-2)")
+      .text(`crossover ≈ batch ${cross}`);
+
+    // Current marker
+    const cpuY = yS(qpsCpu(bs));
+    const gpuY = yS(qpsGpu(bs));
+    g.append("line").attr("x1", xS(bs)).attr("x2", xS(bs)).attr("y1", 0).attr("y2", ih)
+      .attr("stroke", "var(--c-hardware)").attr("opacity", 0.25);
+    g.append("circle").attr("cx", xS(bs)).attr("cy", cpuY).attr("r", 4)
+      .attr("fill", "var(--c-db)").attr("stroke", "white").attr("stroke-width", 1.5);
+    g.append("circle").attr("cx", xS(bs)).attr("cy", gpuY).attr("r", 4)
+      .attr("fill", "var(--c-hardware)").attr("stroke", "white").attr("stroke-width", 1.5);
+
+    // Side panel with readouts
+    const panel = svg.append("g").attr("transform", `translate(${margin.left + iw + 18}, ${margin.top + 10})`);
+    panel.append("text").attr("font-size", 11).attr("font-weight", 700).attr("fill", "var(--text)")
+      .text(`at batch size ${bs}`);
+    const cpuQps = qpsCpu(bs), gpuQps = qpsGpu(bs);
+    const cpuLat = 1000 * bs / cpuQps;
+    const gpuLat = 1000 * bs / gpuQps;
+    const rows = [
+      { label: "CPU", qps: cpuQps, lat: cpuLat, col: "var(--c-db)" },
+      { label: "GPU", qps: gpuQps, lat: gpuLat, col: "var(--c-hardware)" },
+    ];
+    rows.forEach((r, i) => {
+      const y0 = 22 + i * 50;
+      panel.append("circle").attr("cx", 0).attr("cy", y0).attr("r", 4).attr("fill", r.col);
+      panel.append("text").attr("x", 10).attr("y", y0 + 3)
+        .attr("font-size", 12).attr("font-weight", 600).attr("fill", "var(--text)").text(r.label);
+      panel.append("text").attr("x", 0).attr("y", y0 + 18)
+        .attr("font-size", 11).attr("fill", "var(--text-2)").text(`${Math.round(r.qps).toLocaleString()} qps`);
+      panel.append("text").attr("x", 0).attr("y", y0 + 32)
+        .attr("font-size", 11).attr("fill", "var(--text-2)")
+        .text(`${r.lat.toFixed(2)} ms / batch`);
+    });
+
+    // Verdict
+    const verdict = bs < cross ? "CPU wins (lower latency)" : "GPU wins (higher throughput)";
+    panel.append("text").attr("x", 0).attr("y", 22 + 2 * 50 + 8)
+      .attr("font-size", 11).attr("font-weight", 700).attr("fill", bs < cross ? "var(--c-db)" : "var(--c-hardware)")
+      .text(verdict);
+  }
+
+  document.getElementById("gpu-bs").addEventListener("input", e => {
+    bs = +e.target.value;
+    document.getElementById("gpu-bs-val").textContent = bs;
+    draw();
+  });
+
+  const ro = new ResizeObserver(() => { layout(); draw(); });
+  ro.observe(container);
+  layout();
+  draw();
+})();
+
+// ============================================================
+// Figure 4: Disk layout for IVF-PQ
+// ============================================================
+(function() {
+  const svgEl = document.getElementById("layout-svg");
+  const container = svgEl.parentElement;
+  let W = 0, H = 260;
+
+  const svg = d3.select(svgEl);
+
+  // 12 partitions, each with different number of vectors for visual variety
+  const rng = mulberry32(21);
+  const nParts = 12;
+  const partSizes = Array.from({length: nParts}, () => 0.6 + rng() * 0.8);
+  // Normalize so sizes sum to 1
+  const totalSize = partSizes.reduce((a, b) => a + b, 0);
+  const partFracs = partSizes.map(s => s / totalSize);
+
+  // "Distance from query" per partition (static, for the schematic)
+  const partDists = Array.from({length: nParts}, () => rng());
+  const sortedByDist = [...Array(nParts).keys()].sort((a, b) => partDists[a] - partDists[b]);
+
+  let nprobe = 3;
+
+  function layout() {
+    W = container.clientWidth - 48;
+    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svgEl.setAttribute("width", W);
+    svgEl.setAttribute("height", H);
+  }
+
+  function draw() {
+    svg.selectAll("*").remove();
+    svg.append("rect").attr("x", 10).attr("y", 10)
+      .attr("width", W - 20).attr("height", H - 20)
+      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
+
+    const margin = { top: 50, right: 20, bottom: 60, left: 20 };
+    const iw = W - margin.left - margin.right;
+    const stripY = margin.top;
+    const stripH = 54;
+
+    const g = svg.append("g").attr("transform", `translate(${margin.left}, 0)`);
+
+    // Which partitions are probed?
+    const probed = new Set(sortedByDist.slice(0, nprobe));
+
+    // Strip with colored blocks
+    let cursor = 0;
+    const partitions = partFracs.map((f, i) => {
+      const x0 = cursor * iw;
+      const w = f * iw;
+      cursor += f;
+      return { i, x0, w };
+    });
+
+    // Partition blocks
+    g.selectAll(".part").data(partitions).join("rect")
+      .attr("class", "part")
+      .attr("x", p => p.x0).attr("y", stripY)
+      .attr("width", p => p.w - 1).attr("height", stripH)
+      .attr("fill", p => probed.has(p.i) ? "rgba(234, 88, 12, 0.18)" : "#f1f5f9")
+      .attr("stroke", p => probed.has(p.i) ? "var(--c-hardware)" : "#d1d5db")
+      .attr("stroke-width", p => probed.has(p.i) ? 1.5 : 1);
+
+    // Draw PQ codes as mini rows within each partition
+    partitions.forEach(p => {
+      const rows = 4;
+      const colSlotW = 6;
+      const nCols = Math.floor(p.w / colSlotW);
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < nCols; c++) {
+          const isProbed = probed.has(p.i);
+          const cx = p.x0 + 3 + c * colSlotW;
+          const cy = stripY + 4 + r * ((stripH - 8) / rows);
+          g.append("rect")
+            .attr("x", cx).attr("y", cy)
+            .attr("width", colSlotW - 1.5).attr("height", (stripH - 8) / rows - 1)
+            .attr("fill", isProbed ? "var(--c-compress)" : "#cbd5e1")
+            .attr("opacity", isProbed ? 0.35 + 0.4 * rng() : 0.25);
+        }
+      }
+      // Partition label
+      g.append("text")
+        .attr("x", p.x0 + p.w / 2).attr("y", stripY + stripH + 14)
+        .attr("text-anchor", "middle")
+        .attr("font-size", 9)
+        .attr("fill", probed.has(p.i) ? "var(--c-hardware)" : "var(--text-2)")
+        .attr("font-weight", probed.has(p.i) ? 700 : 400)
+        .text(`P${p.i}`);
+    });
+
+    // Brackets: "probed" vs "skipped"
+    // Disk label
+    g.append("text")
+      .attr("x", 0).attr("y", stripY - 24)
+      .attr("font-size", 11).attr("font-weight", 600).attr("fill", "var(--text)")
+      .text("disk");
+    g.append("text")
+      .attr("x", 0).attr("y", stripY - 10)
+      .attr("font-size", 10).attr("fill", "var(--text-2)")
+      .text("each block is one IVF partition, filled with PQ codes stored columnarly");
+
+    // Ruler showing read vs skipped
+    const readFrac = sortedByDist.slice(0, nprobe).reduce((acc, i) => acc + partFracs[i], 0);
+    const totalBytes = 12800; // KB, fictional
+    const bytesRead = Math.round(totalBytes * readFrac);
+    const bytesSkipped = totalBytes - bytesRead;
+
+    // Legend and readout below
+    const legendY = stripY + stripH + 40;
+
+    g.append("rect").attr("x", 0).attr("y", legendY - 8).attr("width", 10).attr("height", 10)
+      .attr("fill", "rgba(234, 88, 12, 0.18)").attr("stroke", "var(--c-hardware)");
+    g.append("text").attr("x", 16).attr("y", legendY + 1)
+      .attr("font-size", 11).attr("fill", "var(--text-2)").text(`bytes read: ${bytesRead.toLocaleString()} KB`);
+
+    g.append("rect").attr("x", 180).attr("y", legendY - 8).attr("width", 10).attr("height", 10)
+      .attr("fill", "#f1f5f9").attr("stroke", "#d1d5db");
+    g.append("text").attr("x", 196).attr("y", legendY + 1)
+      .attr("font-size", 11).attr("fill", "var(--text-2)").text(`bytes skipped: ${bytesSkipped.toLocaleString()} KB`);
+
+    // Query vector bar on top
+    const queryY = stripY - 40;
+    g.append("rect")
+      .attr("x", iw / 2 - 30).attr("y", queryY).attr("width", 60).attr("height", 12)
+      .attr("fill", "var(--c-query)").attr("opacity", 0.8).attr("rx", 2);
+    g.append("text")
+      .attr("x", iw / 2).attr("y", queryY + 9)
+      .attr("text-anchor", "middle").attr("font-size", 10).attr("font-weight", 700).attr("fill", "#fff")
+      .text("query");
+
+    // Arrows from query to probed partitions
+    partitions.forEach(p => {
+      if (!probed.has(p.i)) return;
+      const x2 = p.x0 + p.w / 2;
+      g.append("line")
+        .attr("x1", iw / 2).attr("y1", queryY + 14)
+        .attr("x2", x2).attr("y2", stripY)
+        .attr("stroke", "var(--c-hardware)").attr("stroke-width", 1).attr("opacity", 0.7);
+    });
+
+    // Summary text
+    g.append("text")
+      .attr("x", iw).attr("y", legendY + 20)
+      .attr("text-anchor", "end")
+      .attr("font-size", 11).attr("font-family", "var(--mono-font)").attr("fill", "var(--text)")
+      .text(`reading ${(readFrac * 100).toFixed(1)}% of the index, skipping ${((1 - readFrac) * 100).toFixed(1)}%`);
+  }
+
+  document.getElementById("lay-nprobe").addEventListener("input", e => {
+    nprobe = +e.target.value;
+    document.getElementById("lay-nprobe-val").textContent = nprobe;
+    draw();
+  });
+
+  const ro = new ResizeObserver(() => { layout(); draw(); });
+  ro.observe(container);
+  layout();
+  draw();
+})();
+
+// ============================================================
+// Figure 5: Decision matrix
+// ============================================================
+(function() {
+  const svgEl = document.getElementById("decision-svg");
+  const container = svgEl.parentElement;
+  let W = 0, H = 440;
+
+  const svg = d3.select(svgEl);
+
+  // Regions (in log-log space): each has a polygon of (logN, logLat) corners
+  // x: log10(dataset size) from 5 to 10 (100K to 10B)
+  // y: log10(latency ms) from 0 to 3 (1ms to 1000ms)
+  // We'll define regions as rectangles/polygons and shade them.
+  const regions = [
+    {
+      key: "hnsw",
+      name: "HNSW / FAISS-flat (in-memory)",
+      example: "FAISS, HNSWlib",
+      fill: "rgba(13, 148, 136, 0.14)",
+      stroke: "#0d9488",
+      poly: [[5, 0], [7.5, 0], [7.5, 1], [5, 1]],
+    },
+    {
+      key: "ivfpq_mem",
+      name: "IVF-PQ in memory",
+      example: "FAISS-IVF-PQ",
+      fill: "rgba(124, 58, 237, 0.14)",
+      stroke: "#7c3aed",
+      poly: [[5, 1], [8.5, 1], [8.5, 1.7], [5, 1.7]],
+    },
+    {
+      key: "lance",
+      name: "Columnar on disk",
+      example: "lancedb",
+      fill: "rgba(234, 88, 12, 0.14)",
+      stroke: "#ea580c",
+      poly: [[6, 0.5], [9, 0.5], [9, 1.7], [6, 1.7]],
+    },
+    {
+      key: "diskann",
+      name: "DiskANN / Vamana",
+      example: "DiskANN, SPANN",
+      fill: "rgba(219, 39, 119, 0.14)",
+      stroke: "#db2777",
+      poly: [[8, 1], [10, 1], [10, 2], [8, 2]],
+    },
+    {
+      key: "gpu",
+      name: "GPU batch",
+      example: "FAISS-GPU",
+      fill: "rgba(100, 116, 139, 0.18)",
+      stroke: "#334155",
+      poly: [[7, 1.7], [10, 1.7], [10, 3], [7, 3]],
+    },
+  ];
+
+  // Scenarios: (logN, logLat) target
+  const scenarios = {
+    faiss:   { logN: 6.7, logLat: 0.3, name: "in-memory serving",   region: "hnsw" },
+    lance:   { logN: 7.8, logLat: 1.2, name: "medium on disk",       region: "lance" },
+    diskann: { logN: 9.0, logLat: 1.5, name: "billion on one box",   region: "diskann" },
+    gpu:     { logN: 8.5, logLat: 2.2, name: "batch analytics",      region: "gpu" },
+  };
+
+  let active = "faiss";
+
+  function layout() {
+    W = container.clientWidth - 48;
+    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svgEl.setAttribute("width", W);
+    svgEl.setAttribute("height", H);
+  }
+
+  function draw() {
+    svg.selectAll("*").remove();
+    svg.append("rect").attr("x", 10).attr("y", 10)
+      .attr("width", W - 20).attr("height", H - 20)
+      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
+
+    const margin = { top: 22, right: 24, bottom: 60, left: 70 };
+    const iw = W - margin.left - margin.right;
+    const ih = H - margin.top - margin.bottom;
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // logN: 5 to 10  (100K to 10B)
+    // logLat: 0 to 3 (1ms to 1000ms)
+    const xS = d3.scaleLinear().domain([5, 10]).range([0, iw]);
+    const yS = d3.scaleLinear().domain([0, 3]).range([ih, 0]);
+
+    // Axes
+    const xTicks = [5, 6, 7, 8, 9, 10];
+    const xLabels = { 5: "100K", 6: "1M", 7: "10M", 8: "100M", 9: "1B", 10: "10B" };
+    const yTicks = [0, 1, 2, 3];
+    const yLabels = { 0: "1 ms", 1: "10 ms", 2: "100 ms", 3: "1 s" };
+
+    // Gridlines
+    xTicks.forEach(t => {
+      g.append("line").attr("x1", xS(t)).attr("x2", xS(t)).attr("y1", 0).attr("y2", ih)
+        .attr("stroke", "#eef0f4").attr("stroke-width", 1);
+    });
+    yTicks.forEach(t => {
+      g.append("line").attr("x1", 0).attr("x2", iw).attr("y1", yS(t)).attr("y2", yS(t))
+        .attr("stroke", "#eef0f4").attr("stroke-width", 1);
+    });
+
+    // Regions (draw from back to front so overlaps blend sensibly)
+    regions.forEach(r => {
+      const path = "M " + r.poly.map(([lx, ly]) => `${xS(lx)} ${yS(ly)}`).join(" L ") + " Z";
+      g.append("path").attr("d", path)
+        .attr("fill", r.fill).attr("stroke", r.stroke).attr("stroke-width", 1.2).attr("opacity", 0.85);
+
+      // Label at centroid-ish position
+      const cx = r.poly.reduce((s, p) => s + p[0], 0) / r.poly.length;
+      const cy = r.poly.reduce((s, p) => s + p[1], 0) / r.poly.length;
+      g.append("text")
+        .attr("x", xS(cx)).attr("y", yS(cy) - 6)
+        .attr("text-anchor", "middle")
+        .attr("font-size", 11).attr("font-weight", 700).attr("fill", r.stroke)
+        .text(r.example);
+      g.append("text")
+        .attr("x", xS(cx)).attr("y", yS(cy) + 8)
+        .attr("text-anchor", "middle")
+        .attr("font-size", 10).attr("fill", "var(--text-2)")
+        .text(r.name);
+    });
+
+    // Axes rendering
+    g.append("line").attr("x1", 0).attr("x2", iw).attr("y1", ih).attr("y2", ih)
+      .attr("stroke", "var(--border)");
+    g.append("line").attr("x1", 0).attr("x2", 0).attr("y1", 0).attr("y2", ih)
+      .attr("stroke", "var(--border)");
+
+    xTicks.forEach(t => {
+      g.append("text").attr("x", xS(t)).attr("y", ih + 16).attr("text-anchor", "middle")
+        .attr("font-size", 11).attr("fill", "var(--text-2)").text(xLabels[t]);
+    });
+    yTicks.forEach(t => {
+      g.append("text").attr("x", -8).attr("y", yS(t) + 4).attr("text-anchor", "end")
+        .attr("font-size", 11).attr("fill", "var(--text-2)").text(yLabels[t]);
+    });
+    g.append("text").attr("x", iw / 2).attr("y", ih + 40).attr("text-anchor", "middle")
+      .attr("font-size", 11).attr("fill", "var(--text-2)").text("dataset size");
+    g.append("text")
+      .attr("transform", `translate(-50,${ih/2}) rotate(-90)`).attr("text-anchor", "middle")
+      .attr("font-size", 11).attr("fill", "var(--text-2)").text("query latency target");
+
+    // Active scenario pointer
+    const sc = scenarios[active];
+    const px = xS(sc.logN), py = yS(sc.logLat);
+    g.append("circle").attr("cx", px).attr("cy", py).attr("r", 14)
+      .attr("fill", "none").attr("stroke", "var(--c-hardware)").attr("stroke-width", 1).attr("opacity", 0.5);
+    g.append("circle").attr("cx", px).attr("cy", py).attr("r", 7)
+      .attr("fill", "var(--c-hardware)").attr("stroke", "#fff").attr("stroke-width", 2);
+    g.append("text").attr("x", px + 16).attr("y", py - 4)
+      .attr("font-size", 11).attr("font-weight", 700).attr("fill", "var(--c-hardware)")
+      .text("you are here");
+    g.append("text").attr("x", px + 16).attr("y", py + 9)
+      .attr("font-size", 10).attr("fill", "var(--text-2)").text(sc.name);
+  }
+
+  document.querySelectorAll(".scenario-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      active = btn.dataset.scenario;
+      document.querySelectorAll(".scenario-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      draw();
+    });
+  });
+
+  const ro = new ResizeObserver(() => { layout(); draw(); });
+  ro.observe(container);
+  layout();
+  draw();
+})();
+</script>
+</body>
+</html>

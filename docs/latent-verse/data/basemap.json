@@ -1,0 +1,586 @@
+{
+  "model_info": {
+    "model_path": "latent-basemap/models/dedicated/ded-15m-bigger-model.pt",
+    "model_name": "ded-15m-bigger-model",
+    "architecture": "UMAPNet (ResNet-style MLP)",
+    "config": {
+      "d_in": 384,
+      "hidden_dim": 1024,
+      "n_layers": 3,
+      "d_out": 2
+    },
+    "trained_on": "all-MiniLM-L6-v2 embeddings (FineWeb-edu)",
+    "embeddings_from": "BAAI/bge-small-en-v1.5",
+    "note": "Basemap model trained on MiniLM embeddings but applied to bge-small embeddings. Both 384D but different models, so projections are cross-model approximations."
+  },
+  "joke_projections": [
+    {
+      "joke_idx": 0,
+      "x": -591.92511,
+      "y": 1874.266968
+    },
+    {
+      "joke_idx": 1,
+      "x": 2143.162354,
+      "y": 1693.701416
+    },
+    {
+      "joke_idx": 2,
+      "x": 1403.520874,
+      "y": 1999.187622
+    },
+    {
+      "joke_idx": 3,
+      "x": 2668.153809,
+      "y": 1911.814575
+    },
+    {
+      "joke_idx": 4,
+      "x": 2457.641846,
+      "y": 2081.66626
+    },
+    {
+      "joke_idx": 5,
+      "x": 1397.905762,
+      "y": 2273.407959
+    },
+    {
+      "joke_idx": 6,
+      "x": 1926.991821,
+      "y": 1382.949585
+    },
+    {
+      "joke_idx": 7,
+      "x": 2223.164551,
+      "y": 2128.39624
+    },
+    {
+      "joke_idx": 8,
+      "x": 2319.103271,
+      "y": 3001.753418
+    },
+    {
+      "joke_idx": 9,
+      "x": 634.787354,
+      "y": 2909.607422
+    },
+    {
+      "joke_idx": 10,
+      "x": 684.170471,
+      "y": 2063.54541
+    },
+    {
+      "joke_idx": 11,
+      "x": 1815.014771,
+      "y": 850.385132
+    }
+  ],
+  "sample_projections": [
+    {
+      "text": "What does a baby computer call its father? Data",
+      "x": -1911.514771,
+      "y": 1311.946777
+    },
+    {
+      "text": "An architect friend of mine keeps going on and on and on about how he has designed the greatest skyscraper of all time. But I think he's built it up too much.",
+      "x": 1121.458008,
+      "y": 1848.506592
+    },
+    {
+      "text": "Two peanuts rolling down the hill One of them was assaulted.",
+      "x": 1468.127441,
+      "y": 1616.565063
+    },
+    {
+      "text": "I met my boyfriend while visiting the zoo. There he was, in his uniform... straightaway I knew he was a keeper",
+      "x": 1794.425903,
+      "y": 1951.190796
+    },
+    {
+      "text": "Which weighs more, a pound of water or a pound of kerosene? The water, because the other one is the lighter fluid.",
+      "x": -2408.550537,
+      "y": -477.892151
+    },
+    {
+      "text": "What\u2019s The Difference Between A Choking Fetish And Necrophilia About 15 seconds",
+      "x": 41.783325,
+      "y": 2007.39209
+    },
+    {
+      "text": "What do you get when you cross a cookie and a hammer? Cookie crumbs!!!!",
+      "x": 1301.632568,
+      "y": 2244.258545
+    },
+    {
+      "text": "Did you hear about the new restaurant on the moon? The food is great, but there\u2019s just no atmosphere.",
+      "x": 466.33017,
+      "y": 2013.249878
+    },
+    {
+      "text": "Why did the octopus beat the shark in a fight? Because it was well armed.",
+      "x": -1330.057251,
+      "y": 2265.459961
+    },
+    {
+      "text": "What do you call a fly with no wings? A walk.",
+      "x": 1832.059204,
+      "y": 2664.498535
+    },
+    {
+      "text": "What did the corn farmer say to his therapist? An ear full.",
+      "x": 1866.50354,
+      "y": 1542.690552
+    },
+    {
+      "text": "2 years ago, the doctor told me I was losing my hearing. Haven't heard from him since then.",
+      "x": 1260.986328,
+      "y": 1514.05249
+    },
+    {
+      "text": "Me: A leopard can't chang its stripes My son: Dad leopards have spots\nMe: well what do you know, they did it!",
+      "x": 1699.619263,
+      "y": 2346.207275
+    },
+    {
+      "text": "Dad can you tell me what a Solar eclipse is? No son",
+      "x": 36.157021,
+      "y": 2144.885986
+    },
+    {
+      "text": "Before my surgery my anesthetist offered to knock me out with gas or a boat paddle it was an ether/oar situation",
+      "x": 2595.852783,
+      "y": 3201.584717
+    },
+    {
+      "text": "How do you find Will Smith in the snow? Look for fresh prints!",
+      "x": 1343.78125,
+      "y": 2174.932617
+    },
+    {
+      "text": "What sound does a motorised duster make? 'Broom'",
+      "x": 1128.812378,
+      "y": 2615.193359
+    },
+    {
+      "text": "Me: I would rather drink out of a straw, than straight from the cup Dad: straws are for suckers!",
+      "x": 1477.934326,
+      "y": 1581.367432
+    },
+    {
+      "text": "What did the driver say to the one-legged hitchhiker? Hop in!",
+      "x": 1775.288696,
+      "y": 2619.752686
+    },
+    {
+      "text": "The difference between being under the moonlight and out in the sun... ...is just night and day",
+      "x": 692.661865,
+      "y": 2276.219727
+    },
+    {
+      "text": "What did the teddy bear say when he was offered dessert? No thanks, I'm stuffed",
+      "x": 1665.527466,
+      "y": 2326.789307
+    },
+    {
+      "text": "My friend asked me about the process of colonoscopy. Me: forget it...its a pain in the ass.",
+      "x": 1132.346313,
+      "y": 1557.940552
+    },
+    {
+      "text": "Why did the four-legged semiaquatic carnivorous mammal cross the playground? To get to the otter slide.",
+      "x": 927.947693,
+      "y": 2081.409668
+    },
+    {
+      "text": "What did the gold digger say to the rich entrepreneur? I just want your company",
+      "x": 1436.427124,
+      "y": 1718.105835
+    },
+    {
+      "text": "I have a DIY scar on my knee. It was made from scratch.",
+      "x": 1810.993286,
+      "y": 2260.953125
+    },
+    {
+      "text": "Hmmm What's the difference between me and a calendar??\nA calendar has dates \n:///",
+      "x": 616.754761,
+      "y": 1703.643311
+    },
+    {
+      "text": "What is brown and sticky? A stick",
+      "x": -155.432053,
+      "y": 2217.830078
+    },
+    {
+      "text": "What do you call a smart dinosaur? A thesaurus ",
+      "x": 1.207042,
+      "y": 1837.87915
+    },
+    {
+      "text": "Why is Peter Pan always flying? Because he Neverlands....\n\nAnd this joke never grows old.",
+      "x": 2203.766357,
+      "y": 2952.541016
+    },
+    {
+      "text": "You\u2019re a unit of power Harry I\u2019m a watt?",
+      "x": 2230.750977,
+      "y": 4159.354004
+    },
+    {
+      "text": "My son had a nightmare, and threw the linens off his bed. He was scared sheetless.",
+      "x": 2265.315674,
+      "y": 1604.289185
+    },
+    {
+      "text": "The cops in my town are looking for a thief who has been stealing futons from different stores. I think he is lying low.",
+      "x": 1101.808838,
+      "y": 1741.749146
+    },
+    {
+      "text": "Dad: what\u2019s that noise coming from your closet? Son: It\u2019s narnia business, dad",
+      "x": 1809.621704,
+      "y": 2598.876465
+    },
+    {
+      "text": "Did you take a shower today? Make sure to bring it back.",
+      "x": 996.518372,
+      "y": 2258.262207
+    },
+    {
+      "text": "I collected and analyzed a lot of data trying to disprove observation bias. The results were exactly what I expected.",
+      "x": 1411.69458,
+      "y": 769.522461
+    },
+    {
+      "text": "I've taken to watching episodes of Friends on multiple screens all at the same time I just love synchronised Schwimmers",
+      "x": 1042.432983,
+      "y": 3014.776611
+    },
+    {
+      "text": "Did you hear about the woman who won first place in a sewing contest without using any thread? Her performance was seamless.",
+      "x": 2306.319824,
+      "y": 2924.588867
+    },
+    {
+      "text": "Russian dolls don\u2019t make very good friends. They\u2019re so full of themselves. ",
+      "x": 1883.442627,
+      "y": 2339.50293
+    },
+    {
+      "text": "You know what I heard? Sheep",
+      "x": 1395.585083,
+      "y": 2414.320068
+    },
+    {
+      "text": "What kind of a car does an egg drive? A Yolkswagen",
+      "x": -1723.616455,
+      "y": 1978.57959
+    },
+    {
+      "text": "What do you do when you are attacked by a group of clowns? Go straight for the juggler.",
+      "x": 999.405334,
+      "y": 3086.226074
+    },
+    {
+      "text": "I have decided to write all my jokes in capitols from now on. This one was written in London.",
+      "x": 1687.572144,
+      "y": 2189.182617
+    },
+    {
+      "text": "I went to my dads funeral in disbelief I said is he really dead?! I swear I heard a faint no I am dad from the coffin.",
+      "x": 1930.466187,
+      "y": 2069.718018
+    },
+    {
+      "text": "He who farts in church Sits in his own pew. ",
+      "x": 3170.891357,
+      "y": 1684.491699
+    },
+    {
+      "text": "Got my son with this one... Me: \"I know a guy  that talks like an owl\"\n\nSon: \"Who?\"     pause....  than....facepalm!",
+      "x": 1840.681152,
+      "y": 2197.486084
+    },
+    {
+      "text": "How to walk Step one\nStep two\nStep three \nStep four",
+      "x": 134.641663,
+      "y": 2065.029541
+    },
+    {
+      "text": "What is a bees favorite Disney character? BUZZ Lightyear",
+      "x": 1438.07605,
+      "y": 2678.189697
+    },
+    {
+      "text": "I'm really worried about this ecoli outbreak But lettuce romaine calm.",
+      "x": -253.954346,
+      "y": 1989.220825
+    },
+    {
+      "text": "Me: I was named after Thomas Jefferson. \"\"Kiddo:** But... your name is Tim.\n\n**Me:** Right. I was named *AFTER* Thomas Jefferson.",
+      "x": 2445.845459,
+      "y": 1998.427979
+    },
+    {
+      "text": "I used to have a job collecting leaves. I was raking it in.",
+      "x": 1662.94812,
+      "y": 1606.55896
+    },
+    {
+      "text": "What is a cheap mathematician's favorite theorem to use on a dinner date? The binomial (buy-no-meal) theorem.",
+      "x": 958.06012,
+      "y": 1465.320557
+    },
+    {
+      "text": "What do you call a deer with no eyes? I have no eye deer",
+      "x": 623.779541,
+      "y": 2995.620117
+    },
+    {
+      "text": "Why did the new programmer wear glasses? Because he couldn't C#",
+      "x": 494.339233,
+      "y": 1502.101074
+    },
+    {
+      "text": "What noise does a 747 make when it bounces? Boeing, Boeing, Boeing.",
+      "x": 549.818909,
+      "y": 2670.793457
+    },
+    {
+      "text": "Working at Costco; we've been doing a sale on fresh baguettes, there has been someone standing by the entrance door promoting it. I proposed a sales pitch that got the \"Did you really just say that?\" look. Can I baguette you some fresh bread!?",
+      "x": 324.412201,
+      "y": 1849.116577
+    },
+    {
+      "text": "What did one nut say to another nut? I'm gonna cashew outside.",
+      "x": 1614.10022,
+      "y": 1879.845337
+    },
+    {
+      "text": "Son: \" Dad, what is child molestation?\" Dad: \"Well son, its a very touchy subject\"",
+      "x": 1728.510986,
+      "y": 1488.874878
+    },
+    {
+      "text": "How do you catch a polar bear? First find a frozen body of water, and cut a hole in the ice. Then line the hole with peas. When the polar bear comes to take a pea, you kick him in the ice hole.",
+      "x": -141.143295,
+      "y": 2139.106201
+    },
+    {
+      "text": "Dad, can you give me money for glasses? Dad: \"What? Do i look like a bank to you?\"\nMe: \"I dont know, i can't see\"",
+      "x": 946.078552,
+      "y": 1601.249878
+    },
+    {
+      "text": "Cat Woman's real name is... ...Catherine Woman.",
+      "x": 1196.735107,
+      "y": 2151.495605
+    },
+    {
+      "text": "Wife: What are some names of orchids? Me: Free Willy \n\nWife: I said \"orCHIDS\"\n\nMe: Baby Free Willy?\n\nWife: Shame on you\n\nMe: No, but Shamu would work\n\n*Posted on mobile, please forgive formatting issues",
+      "x": 1299.543823,
+      "y": 1868.908325
+    },
+    {
+      "text": "What\u2019s deliciously sweet and creamy and can tell the future? A chocolate eclairvoyant.",
+      "x": 2239.192383,
+      "y": 2196.388428
+    },
+    {
+      "text": "Did you hear about the politician with no body? They say he's ahead in the polls.",
+      "x": 1896.860962,
+      "y": 1213.958618
+    },
+    {
+      "text": "Dishwashers My sister was filling up the dishwasher and asked me  \n\"Is it safe to put this here?\"  \n\"What?\"  \n\"A whisk\"  \n\"I wouldn't whisk it.\"",
+      "x": 906.578918,
+      "y": 1978.168091
+    },
+    {
+      "text": "What's ET short for? Because he's got small legs.",
+      "x": 1750.803467,
+      "y": 2531.383789
+    },
+    {
+      "text": "Why did the blind lady fall into the well? Because she couldn't see that well.",
+      "x": 2633.713867,
+      "y": 2384.673584
+    },
+    {
+      "text": "I was watching John Wick with my girlfriend last night. She had seen it before and I was a bit confused. \n\n\"Is Willem Dafoe in this movie?...Or is he Da-friend?\"",
+      "x": 2028.155762,
+      "y": 3066.946289
+    },
+    {
+      "text": "[NSFW] I got into bed with my wife tonight, started rubbing her shoulders and kissing her neck, then she said \"I'm tired, Honey.\" \"Nice to meet you,*Tired*, and the name's *Horny*.\"\n\nShe groaned so hard I had to go give myself a hand.",
+      "x": 2024.03418,
+      "y": 2123.428711
+    },
+    {
+      "text": "What do fish use for money? Dollar gills. ",
+      "x": -48.207703,
+      "y": 1648.536743
+    },
+    {
+      "text": "Some coworkers were talking about some trouble they were having with knives They said it was a nightmare\n \nI said \"wouldn't that be more of a... knifemare?\"",
+      "x": 1739.928955,
+      "y": 1698.148071
+    },
+    {
+      "text": "WE GET IT! SEPTEMBER'S OVER! GREEN DAY! YADA YADA Every year . . .",
+      "x": 673.174744,
+      "y": 2023.186035
+    },
+    {
+      "text": "Dad got me as we were driving by an Indian resturant... \"Do you think they'd refuse to serve cowboys there?\"",
+      "x": 2817.040283,
+      "y": 2247.770752
+    },
+    {
+      "text": "It's amazing the Kardashians can even see Caitlyn Jenner. She's just so trans-parent.",
+      "x": 1401.152588,
+      "y": 2821.158936
+    },
+    {
+      "text": "Decided to tell my parents some good news with a dad joke \"So, do you have to work on Labor Day this year?\" \n\n\"No, we both have off.\"\n\n\"Did you hear they're changing it next year?\"\n\n\"What?\" \n\n\"Yeah, they're moving it to April.\"\n\nLooks of confusion\n\n\"At least that's what my doctor said.\"\n\nThe dawning of comprehension on their faces, then big smiles and hugs!\n\n\n\n..... Btw, I am a woman.  I didn't specify in the post, but the context clue would be \"MY doctor.\"  I was just raised on sarcasm and corny jokes.  \n",
+      "x": 1743.824951,
+      "y": 1478.880371
+    },
+    {
+      "text": "What's the worst part about being a cross-eyed teacher? They can't control their pupils.",
+      "x": 2537.589355,
+      "y": 509.072418
+    },
+    {
+      "text": "\"Dad, can you pass the salt?\" \"Dad, can you pass the salt?\"\n\n\"Surely.\" *points at the salt shaker approvingly* \"You get a B+.\"\n\n\"**Dad.**\"\n\n(This happened at least once a week)",
+      "x": 609.751404,
+      "y": 1629.946533
+    },
+    {
+      "text": "I was drinking a beer with my dad Then after taking a sip,  he said \"this beer is incredible, you put it in your mouth, and then it dissappears! \". \n\n",
+      "x": 1511.501709,
+      "y": 1929.429565
+    },
+    {
+      "text": "So my dad was leaving for work this morning. On his way out he turns to me and says,\n\n\"You be Beethoven, I'll be Bach.\"",
+      "x": 2088.99292,
+      "y": 2524.027344
+    },
+    {
+      "text": "What did the fog say to the mist? Two's company, three's a cloud",
+      "x": 1595.273438,
+      "y": 1704.923828
+    },
+    {
+      "text": "What's the most sarcastic flower? The forget-me ... NOT!",
+      "x": 1962.058472,
+      "y": 1408.430664
+    },
+    {
+      "text": "I was trying to make up a joke about the ocean... ... but I couldn't think of anything pacific.",
+      "x": -1091.388794,
+      "y": 2573.787842
+    },
+    {
+      "text": "My boyfriend got me at the grocery store with this one We were in the produce section and a few leeks fell out of their display on to the floor..\n\nSO: Look! They're leeking!",
+      "x": 718.300476,
+      "y": 1610.69812
+    },
+    {
+      "text": "Why do midgets make bad parents? They always struggle to put food on the table.",
+      "x": 1385.640747,
+      "y": 1631.573364
+    },
+    {
+      "text": "Why did Adele cross the road? To say hello from the other side.",
+      "x": 2417.663818,
+      "y": 2220.469482
+    },
+    {
+      "text": "I asked my dad if he had a black belt I could borrow \"Nah I never took karate\"\n\n-_-",
+      "x": 1759.079224,
+      "y": 1899.748169
+    },
+    {
+      "text": "How many optometrists does it take to change a lightbulb? One, or two? One, or two?",
+      "x": 325.375458,
+      "y": 1214.381714
+    },
+    {
+      "text": "I once asked my dad if I'd make a good father. He said, if you have a child you'll make a grand father. ",
+      "x": 3010.452148,
+      "y": 892.309753
+    },
+    {
+      "text": "What did they call the person to invent denim? In-jean-ious!",
+      "x": 2131.238281,
+      "y": 3051.707275
+    },
+    {
+      "text": "My wife asked why the road was so rough I said \"because it was raised on the streets.\"",
+      "x": 1594.552002,
+      "y": 1177.292969
+    },
+    {
+      "text": "Watching a paraplegic swimmer on the news last night. Me: \"I wonder how he manages to swim without legs?\"\n\nDad: \"They should change his name to bob\"\n\nMe: *throws up*",
+      "x": 1357.640137,
+      "y": 2351.635742
+    },
+    {
+      "text": "Got my wife in the grocery check out aisle. When my wife and I shop, she tends to go up and down the aisles, and I'll take a few trips to get hamburger, fish, whatever. So we're checking out and she notices I grabbed a pack of sausages.\n\n\"Wow that's a lot of sausages.\"\n\n\"Yeah, they were on sale. Super cheap.\"\n\n\"Sweet!\"\n\n\"...actually, they're hot.\"\n\n*grinning intensifies*\n\n\"LAME! OH THAT WAS LAME!\"\n\n*maximum grinning*",
+      "x": 861.598877,
+      "y": 1928.281616
+    },
+    {
+      "text": "My dad on ear problems So my mom is in Florida on a business trip (we live further up the east coast), which leaves dad and I all by ourselves. I have also been having trouble with the area around my ear and jaw hurting, and the three of us were discussing it around the phone. \n\nMom: Do you think you should go to the doctor?\nMe: Not right now. I think if it gets worse it could become a possibility\nDad: I guess we'll just play this one by... Ear. \n\nHe got the biggest grin on his face, and me shaking my head only made him laugh harder.",
+      "x": 1364.061646,
+      "y": 1875.765381
+    },
+    {
+      "text": "If I could be half the man my father is... I would be a pair of legs. ",
+      "x": 2692.73999,
+      "y": 3551.298828
+    },
+    {
+      "text": "My dad recieved a phone call from the magazine \"Runner's World\" women on the phone asks: \"is (mother) home?\"\ndad: \"no, she just ran off\"\nwomen: \"oh, ok\"\n\nI dont think she got it.\n\n\nedit: This is actually funnier how he said it in dutch (our native language). his words were \"ze heeft ze benen genomen\" which literally means \" she has taken the legs\". ",
+      "x": 1832.585327,
+      "y": 2309.614258
+    },
+    {
+      "text": "Told my father my knee hurt with my brother in the car. F: \"You know, I was born with 3 knees. So were you. Your brother too. I asked the doctor about it when you were born.. Sorry i didn't tell you.\" \n\n\nMe: \"That seems like important information.\"\n\n\nBrother:   \"Why wait until now?\"\n\n\nF: \"Well, i figured you'd notice yous by now. The right knee, the left knee, and the wee knee.\"\n\n\nvery audible groans were had.\n\n\nEdit: words",
+      "x": 2049.297852,
+      "y": 2087.353027
+    },
+    {
+      "text": "Dad got a new phone number Me: Can you send me something?\n\nDad: Ok.\n\nMy phone did a notification sound. I pulled out the phone, I got a text from a number that said \"something\".\n\nDad looked at me for a reaction.\n\n\nE: grammar\n",
+      "x": 702.394958,
+      "y": 1547.669556
+    },
+    {
+      "text": "Dad dropped this in the car My sister was telling a story about how zoos raise cheetahs and dogs together and therefore the adult cheetahs would take their cues from the dogs. When the dogs are calm, the cheetahs are calm too. To which my dad says, \"That sounds like cheeting to me.\" ",
+      "x": -689.512024,
+      "y": 2563.714844
+    },
+    {
+      "text": "Every. Single. Halloween. Every Halloween when someone asks my dad (a white dude) what he's going to dress up as, he responds with the following:\n\n\"A match.\"\n\n\"A match? How do you dress up as a match?\"\n\n\"I just take all my clothes off and my face turns red instantly.\"",
+      "x": 1536.350708,
+      "y": 2624.796631
+    },
+    {
+      "text": "At the coffee shop Wife and I approach the counter to give our order.\n\nClerk \"are you together\"\n\nMe \"married actually but I'm flattered\"\n\nWife groans the clerk just looked confused.",
+      "x": 716.026672,
+      "y": 1992.32373
+    },
+    {
+      "text": "Crazy people. I was talking with my mother about a crazy woman she worked for while she was an undergrad, and we got on the subject of how a lot of people in the academic world have strange personalities. She said something about how academia is different than other parts of life when I paused for a second and said \"Well, mom, there are a lot of nuts in macadamia.\"\n\n^(I know it doesn't make sense if you think about it, just turn off your brains for a minute please.)\n\nNot a dad yet, but I aspire to walk among the best.\n\n^^^EDIT: ^^^Formatting.",
+      "x": 1505.85022,
+      "y": 1264.24353
+    }
+  ],
+  "bounds": {
+    "x_min": -2408.550537,
+    "x_max": 3170.891357,
+    "y_min": -477.892151,
+    "y_max": 4159.354004
+  }
+}

@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Projector — Latent Verse</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem; --line-height: 1.6;
+  --text: #1a1a2e; --text-2: #4a4a6a;
+  --accent: #2563eb; --accent-light: #dbeafe;
+  --bg: #fafafa; --fig-bg: #ffffff; --border: #e2e2e8;
+}
+body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
+h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
+h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+code { font-family: var(--mono-font); font-size: 0.9em; background: #f0f0f5; padding: 0.15em 0.35em; border-radius: 3px; }
+.figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.figure-wide { margin-left: -2rem; margin-right: -2rem; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
+.figure-label { font-weight: 600; color: var(--text); }
+.insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
+.insight p { margin: 0; }
+.margin-note { font-size: 0.8125rem; color: var(--text-2); line-height: 1.4; border-left: 2px solid var(--border); padding-left: 0.75rem; margin: 1rem 0; }
+.controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.controls input[type="range"] { width: 160px; accent-color: var(--accent); }
+svg text { font-family: var(--heading-font); }
+.tip { position: fixed; pointer-events: none; background: rgba(26,26,46,0.92); color: #fff; font-family: var(--heading-font); font-size: 0.8rem; padding: 0.5rem 0.75rem; border-radius: 4px; max-width: 320px; line-height: 1.4; z-index: 100; }
+@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+</style>
+</head>
+<body>
+<div class="article">
+  <header>
+    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.25rem;">
+      <a href="index.html" style="color: var(--text-2); text-decoration: none;">Latent Verse</a> / Part 2
+    </p>
+    <h1>The Projector</h1>
+    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
+      UMAP flattens high-dimensional embeddings into two dimensions so you can see the whole landscape at once.
+    </p>
+    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">By Ian Johnson</p>
+  </header>
+
+  <h2>Seeing the whole space</h2>
+
+  <p>
+    In the <a href="01-the-lens.html">previous article</a>, we looked at embeddings one at a time
+    or in pairs. We could search for similar jokes, but we couldn't <em>see</em> the space they live in.
+    Each joke is a point in 384-dimensional space. We need a way to flatten that space onto a surface
+    our eyes can actually read.
+  </p>
+
+  <p>
+    This is what dimensionality reduction does. It takes high-dimensional data and projects it
+    down to two dimensions, trying to preserve the relationships between points. Points that were
+    close in 384 dimensions should stay close in 2D. Points that were far apart should stay apart.
+  </p>
+
+  <p>
+    The algorithm we use is called <strong>UMAP</strong> (Uniform Manifold Approximation and Projection).
+    Here are 1,000 dad jokes, projected from 384 dimensions down to two:
+  </p>
+
+  <div class="figure figure-wide" id="fig-scatter">
+    <div id="scatter-container" style="width: 100%; height: 500px; position: relative;"></div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 1.</span>
+      1,000 dad jokes projected to 2D by UMAP. Each dot is a joke. Hover to read them. Jokes about similar topics cluster together, even though no one told the algorithm what the jokes are about.
+    </div>
+  </div>
+
+  <p>
+    Hover over the dots. You'll find that nearby jokes tend to be about similar things. There may be
+    a clump of animal jokes here, food puns there, science humor in another corner. The model's
+    understanding of meaning creates this structure, and UMAP makes it visible.
+  </p>
+
+  <h2>What UMAP preserves and what it doesn't</h2>
+
+  <p>
+    UMAP is good at preserving <strong>local neighborhoods</strong>. If two jokes are close in the
+    original 384-dimensional space, they'll usually be close on the 2D map. This is why you see
+    coherent clusters of related jokes.
+  </p>
+
+  <p>
+    But it distorts <strong>global distances</strong>. The distance between two far-apart clusters
+    on the map doesn't tell you much about how different those topics actually are. UMAP can place
+    unrelated clusters near each other or related clusters far apart, depending on how the algorithm
+    resolves the compression from 384 dimensions to 2.
+  </p>
+
+  <div class="insight">
+    <p>
+      Trust the neighborhoods, not the distances. If two points are close on a UMAP plot,
+      they're likely similar. If they're far apart, you can't conclude much.
+    </p>
+  </div>
+
+  <h2>Parameters shape what you see</h2>
+
+  <p>
+    UMAP has two key parameters that change the character of the projection:
+  </p>
+
+  <p>
+    <strong>n_neighbors</strong> controls how many nearby points UMAP considers when deciding where
+    to place each point. Low values (5-10) emphasize very local structure, creating tight, separated
+    clusters. High values (30-50) capture broader patterns, producing more connected, flowing shapes.
+  </p>
+
+  <p>
+    <strong>min_dist</strong> controls how tightly points can pack together. Low values (0.01) allow
+    dense clumps. High values (0.5) spread points out more evenly.
+  </p>
+
+  <p>
+    Use the controls below to see how these parameters change the same 1,000 jokes:
+  </p>
+
+  <div class="figure figure-wide" id="fig-params">
+    <div class="controls">
+      <label>n_neighbors: <select id="nn-select" style="font-family: var(--mono-font); padding: 0.2rem 0.4rem;">
+        <option value="0">5</option>
+        <option value="1" selected>15</option>
+        <option value="2">30</option>
+      </select></label>
+      <label>min_dist: <select id="md-select" style="font-family: var(--mono-font); padding: 0.2rem 0.4rem;">
+        <option value="0" selected>0.1</option>
+        <option value="1">0.01</option>
+        <option value="2">0.5</option>
+      </select></label>
+    </div>
+    <div id="params-container" style="width: 100%; height: 500px; position: relative;"></div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 2.</span>
+      The same data projected with different UMAP parameters. Low n_neighbors creates tight islands. High min_dist spreads them into continents. Every setting shows real structure in the data, just different aspects of it.
+    </div>
+  </div>
+
+  <p>
+    There is no single "correct" projection. Each parameter setting reveals different aspects of
+    the data's structure. Tight clusters are useful for finding distinct groups. Spread-out projections
+    show gradients and transitions between topics.
+  </p>
+
+  <h2>The full landscape</h2>
+
+  <p>
+    So far we've looked at 1,000 jokes. Here is the full dataset: 53,133 dad jokes, all projected
+    at once. At this scale, the broad topography of the joke-space becomes visible.
+  </p>
+
+  <div class="figure figure-wide" id="fig-full">
+    <div id="full-container" style="width: 100%; height: 550px; position: relative;"></div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 3.</span>
+      All 53,133 dad jokes projected to 2D. Zoom in (scroll wheel) and pan (drag) to explore. Dense regions contain many similar jokes. Sparse regions contain unusual ones.
+    </div>
+  </div>
+
+  <h2>A local map</h2>
+
+  <p>
+    There is something important to know about UMAP: it is computed fresh for each dataset.
+    If you add new jokes and re-run UMAP, the whole map reshuffles. The neighborhoods stay
+    mostly intact, but the overall layout changes. Your map of 1,000 jokes looks nothing like
+    your map of 53,000, even though the same jokes appear in both.
+  </p>
+
+  <p>
+    This makes UMAP a <strong>local</strong> tool. It gives you a map of <em>this</em> dataset,
+    not a map of language in general. Every time you project, you get a new map. In
+    <a href="05-the-atlas.html">Article 5</a>, we'll see how to build a permanent map that gives
+    every text a consistent address. But first, let's find structure in the landscape we can see.
+  </p>
+
+  <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
+    <p>Part of <a href="index.html" style="color: var(--text-2);">Latent Verse</a>. Previous: <a href="01-the-lens.html" style="color: var(--accent);">The Lens</a>. Next: <a href="03-finding-structure.html" style="color: var(--accent);">Finding Structure</a>.</p>
+    <p style="margin-top: 0.5rem;">Dad jokes from <a href="https://www.reddit.com/r/dadjokes/" style="color: var(--text-2);">r/dadjokes</a>. UMAP by <a href="https://umap-learn.readthedocs.io/" style="color: var(--text-2);">umap-learn</a>.</p>
+  </footer>
+</div>
+
+<script>
+// Decode base64 float32
+function decodeF32(b64, n) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Float32Array(bytes.buffer);
+}
+
+// Tooltip
+const tip = d3.select("body").append("div").attr("class", "tip").style("opacity", 0);
+
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// Draw scatter plot in a container
+function drawScatter(container, x, y, texts, opts = {}) {
+  const el = document.getElementById(container);
+  el.innerHTML = '';
+  const rect = el.getBoundingClientRect();
+  const W = rect.width, H = opts.height || rect.height;
+  const margin = { top: 10, right: 10, bottom: 10, left: 10 };
+  const w = W - margin.left - margin.right;
+  const h = H - margin.top - margin.bottom;
+
+  const canvas = document.createElement('canvas');
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  canvas.style.position = 'absolute';
+  canvas.style.top = '0';
+  canvas.style.left = '0';
+  el.appendChild(canvas);
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const xExt = d3.extent(x);
+  const yExt = d3.extent(y);
+  const pad = 0.05;
+  const xRange = (xExt[1] - xExt[0]) || 1;
+  const yRange = (yExt[1] - yExt[0]) || 1;
+  const paddedX = xRange * (1 + pad * 2);
+  const paddedY = yRange * (1 + pad * 2);
+
+  // Preserve aspect ratio by letterboxing the data into the canvas
+  const availW = W - margin.left - margin.right;
+  const availH = H - margin.top - margin.bottom;
+  const scale = Math.min(availW / paddedX, availH / paddedY);
+  const dataW = paddedX * scale;
+  const dataH = paddedY * scale;
+  const offX = margin.left + (availW - dataW) / 2;
+  const offY = margin.top + (availH - dataH) / 2;
+
+  let xScale = d3.scaleLinear()
+    .domain([xExt[0] - xRange * pad, xExt[1] + xRange * pad])
+    .range([offX, offX + dataW]);
+  let yScale = d3.scaleLinear()
+    .domain([yExt[0] - yRange * pad, yExt[1] + yRange * pad])
+    .range([offY + dataH, offY]);
+
+  const n = x.length;
+  const pointR = n > 10000 ? 1.5 : n > 1000 ? 2.5 : 3.5;
+  const color = opts.color || '#4a6fa5';
+  const alpha = n > 10000 ? 0.3 : n > 1000 ? 0.5 : 0.7;
+
+  function render(transform) {
+    const tx = transform || d3.zoomIdentity;
+    const xs = tx.rescaleX(xScale);
+    const ys = tx.rescaleY(yScale);
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    for (let i = 0; i < n; i++) {
+      const px = xs(x[i]);
+      const py = ys(y[i]);
+      if (px < -5 || px > W + 5 || py < -5 || py > H + 5) continue;
+      ctx.beginPath();
+      ctx.arc(px, py, pointR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    return { xs, ys };
+  }
+
+  let currentTransform = d3.zoomIdentity;
+  let currentScales = render();
+
+  // Zoom
+  if (opts.zoomable !== false) {
+    const zoom = d3.zoom()
+      .scaleExtent([0.5, 20])
+      .on('zoom', (event) => {
+        currentTransform = event.transform;
+        currentScales = render(currentTransform);
+      });
+    d3.select(canvas).call(zoom);
+  }
+
+  // Hover
+  if (texts) {
+    // Build quadtree for hover detection
+    canvas.addEventListener('pointermove', (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = event.clientX - rect.left;
+      const my = event.clientY - rect.top;
+      const { xs, ys } = currentScales;
+
+      let bestI = -1, bestD = Infinity;
+      for (let i = 0; i < n; i++) {
+        const px = xs(x[i]), py = ys(y[i]);
+        const d = (px - mx) ** 2 + (py - my) ** 2;
+        if (d < bestD) { bestD = d; bestI = i; }
+      }
+
+      if (bestD < 400 && bestI >= 0) {
+        tip.html(escapeHtml(texts[bestI]))
+          .style('opacity', 1);
+        const tw = tip.node().offsetWidth;
+        const tx = Math.min(event.clientX + 12, window.innerWidth - tw - 8);
+        const ty = Math.max(event.clientY - 40, 8);
+        tip.style('left', tx + 'px').style('top', ty + 'px');
+      } else {
+        tip.style('opacity', 0);
+      }
+    });
+    canvas.addEventListener('pointerleave', () => tip.style('opacity', 0));
+  }
+
+  return { render, xScale, yScale };
+}
+
+// Animate transition between projections
+function animateScatter(container, fromX, fromY, toX, toY, texts, opts = {}) {
+  const el = document.getElementById(container);
+  el.innerHTML = '';
+  const rect = el.getBoundingClientRect();
+  const W = rect.width, H = opts.height || rect.height;
+  const margin = { top: 10, right: 10, bottom: 10, left: 10 };
+
+  const canvas = document.createElement('canvas');
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  el.appendChild(canvas);
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const n = fromX.length;
+  const pointR = 3;
+
+  // Normalize each projection to its own aspect-preserved canvas rect
+  function layout(xArr, yArr) {
+    const xExt = d3.extent(xArr), yExt = d3.extent(yArr);
+    const xR = (xExt[1] - xExt[0]) || 1, yR = (yExt[1] - yExt[0]) || 1;
+    const availW = W - margin.left - margin.right;
+    const availH = H - margin.top - margin.bottom;
+    const scale = Math.min(availW / xR, availH / yR);
+    const dataW = xR * scale, dataH = yR * scale;
+    const offX = margin.left + (availW - dataW) / 2;
+    const offY = margin.top + (availH - dataH) / 2;
+    return xArr.map((v, i) => [
+      offX + (v - xExt[0]) / xR * dataW,
+      offY + (1 - (yArr[i] - yExt[0]) / yR) * dataH
+    ]);
+  }
+  const fromPos = layout(fromX, fromY);
+  const toPos = layout(toX, toY);
+
+  const duration = 800;
+  let start = null;
+
+  function frame(timestamp) {
+    if (!start) start = timestamp;
+    const t = Math.min((timestamp - start) / duration, 1);
+    const ease = d3.easeCubicInOut(t);
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = '#4a6fa5';
+    for (let i = 0; i < n; i++) {
+      const px = fromPos[i][0] + (toPos[i][0] - fromPos[i][0]) * ease;
+      const py = fromPos[i][1] + (toPos[i][1] - fromPos[i][1]) * ease;
+      ctx.beginPath();
+      ctx.arc(px, py, pointR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    if (t < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // After animation, set up interactive version with final positions
+  setTimeout(() => {
+    drawScatter(container, toX, toY, texts, { ...opts, zoomable: false });
+  }, duration + 50);
+}
+
+// Load data and initialize
+async function init() {
+  const [projData, fullData, jokesData] = await Promise.all([
+    fetch('data/umap-projections.json').then(r => r.json()),
+    fetch('data/umap-full.json').then(r => r.json()),
+    fetch('data/jokes-1k.json').then(r => r.json()),
+  ]);
+
+  const texts = jokesData.texts;
+
+  // Figure 1: Default scatter (n_neighbors=15, min_dist=0.1)
+  const defaultProj = projData.projections[1]; // nn=15, md=0.1
+  drawScatter('scatter-container', defaultProj.x, defaultProj.y, texts, { color: '#4a6fa5' });
+
+  // Figure 2: Parameter exploration
+  // Build lookup: "nn-md" -> projection
+  const projMap = {};
+  const nnValues = [5, 15, 30];
+  const mdValues = [0.1, 0.01, 0.5];
+
+  projData.projections.forEach(p => {
+    projMap[`${p.n_neighbors}-${p.min_dist}`] = p;
+  });
+
+  let currentProj = defaultProj;
+
+  function getSelectedProj() {
+    const nnIdx = +document.getElementById('nn-select').value;
+    const mdIdx = +document.getElementById('md-select').value;
+    const nn = nnValues[nnIdx];
+    const md = mdValues[mdIdx];
+    const key = `${nn}-${md}`;
+    return projMap[key] || null;
+  }
+
+  function updateParams() {
+    const newProj = getSelectedProj();
+    if (!newProj) {
+      // This combination doesn't exist, show closest
+      document.getElementById('params-container').innerHTML =
+        '<div style="text-align:center; padding:2rem; font-family:var(--heading-font); color:var(--text-2);">This parameter combination was not pre-computed. Try another.</div>';
+      return;
+    }
+    animateScatter('params-container', currentProj.x, currentProj.y, newProj.x, newProj.y, texts);
+    currentProj = newProj;
+  }
+
+  drawScatter('params-container', defaultProj.x, defaultProj.y, texts, { zoomable: false });
+
+  document.getElementById('nn-select').addEventListener('change', updateParams);
+  document.getElementById('md-select').addEventListener('change', updateParams);
+
+  // Figure 3: Full 53k scatter
+  const fullX = decodeF32(fullData.x_b64, fullData.count);
+  const fullY = decodeF32(fullData.y_b64, fullData.count);
+  drawScatter('full-container', fullX, fullY, null, { color: '#4a6fa5', zoomable: true });
+}
+
+init();
+</script>
+</body>
+</html>

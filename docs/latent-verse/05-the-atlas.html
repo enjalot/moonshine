@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Atlas — Latent Verse</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem; --line-height: 1.6;
+  --text: #1a1a2e; --text-2: #4a4a6a;
+  --accent: #2563eb; --accent-light: #dbeafe;
+  --bg: #fafafa; --fig-bg: #ffffff; --border: #e2e2e8;
+  --atlas-purple: #6b5b95;
+  --atlas-teal: #2a9d8f;
+}
+body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
+h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
+h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+h3 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+code { font-family: var(--mono-font); font-size: 0.9em; background: #f0f0f5; padding: 0.15em 0.35em; border-radius: 3px; }
+.figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.figure-wide { margin-left: -2rem; margin-right: -2rem; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
+.figure-label { font-weight: 600; color: var(--text); }
+.insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
+.insight p { margin: 0; }
+svg text { font-family: var(--heading-font); }
+.tip { position: fixed; pointer-events: none; background: rgba(26,26,46,0.92); color: #fff; font-family: var(--heading-font); font-size: 0.8rem; padding: 0.5rem 0.75rem; border-radius: 4px; max-width: 320px; line-height: 1.4; z-index: 100; }
+
+.comparison-grid {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem;
+}
+.comparison-grid > div { min-width: 0; }
+.comparison-label {
+  font-family: var(--heading-font); font-size: 0.85rem; font-weight: 600;
+  color: var(--text-2); margin-bottom: 0.4rem;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.comparison-badge {
+  font-size: 0.7rem; font-weight: 500; padding: 0.1rem 0.4rem;
+  border-radius: 3px; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.badge-local { background: #fef3c7; color: #92400e; }
+.badge-global { background: #e0e7ff; color: #4338ca; }
+
+.feature-tag {
+  display: inline-block; font-family: var(--heading-font); font-size: 0.75rem;
+  background: var(--accent-light); color: var(--accent); padding: 0.15rem 0.5rem;
+  border-radius: 3px; margin: 0.15rem 0.1rem;
+}
+.feature-tag.strong { background: #fee2e2; color: #991b1b; }
+.feature-tag.medium { background: #ffedd5; color: #9a3412; }
+
+.microscope-panel {
+  border: 1px solid var(--border); border-radius: 6px; padding: 1rem;
+  margin-top: 1rem; background: #fafaff;
+}
+.microscope-panel.hidden { display: none; }
+.microscope-section {
+  margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #f0f0f5;
+}
+.microscope-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.microscope-heading {
+  font-family: var(--heading-font); font-size: 0.75rem; font-weight: 600;
+  color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em;
+  margin-bottom: 0.4rem;
+}
+.microscope-grid {
+  display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 1rem;
+  align-items: start;
+}
+.neighbor-row {
+  font-size: 0.85rem; padding: 0.3rem 0; color: var(--text);
+  border-bottom: 1px solid #f5f5fa;
+}
+.neighbor-row:last-child { border-bottom: none; }
+.neighbor-dist {
+  font-family: var(--mono-font); font-size: 0.72rem; color: var(--text-2);
+  margin-right: 0.5rem;
+}
+
+.pipeline-container { display: flex; flex-direction: column; gap: 1rem; }
+.pipeline-step {
+  display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 1rem;
+  align-items: center; padding: 0.75rem; background: #fafaff;
+  border: 1px solid var(--border); border-radius: 5px;
+}
+.pipeline-step-label {
+  font-family: var(--heading-font); font-size: 0.85rem; font-weight: 600;
+  color: var(--text);
+}
+.pipeline-step-sub {
+  font-family: var(--heading-font); font-size: 0.72rem; color: var(--text-2);
+  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;
+}
+.embedding-canvas { width: 100%; height: 40px; display: block; border-radius: 3px; }
+
+.joke-input {
+  font-family: var(--body-font); font-size: 0.95rem; width: 100%;
+  padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--fig-bg); color: var(--text); outline: none;
+  box-sizing: border-box;
+}
+.joke-input:focus { border-color: var(--accent); }
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .figure-wide { margin-left: 0; margin-right: 0; }
+  .comparison-grid, .microscope-grid { grid-template-columns: 1fr; }
+  .pipeline-step { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+</style>
+</head>
+<body>
+<div class="article">
+  <header>
+    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.25rem;">
+      <a href="index.html" style="color: var(--text-2); text-decoration: none;">Latent Verse</a> / Part 5
+    </p>
+    <h1>The Atlas</h1>
+    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
+      A parametric UMAP gives every text a permanent address. Combined with SAE, it forms a complete atlas of meaning.
+    </p>
+    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">By Ian Johnson</p>
+  </header>
+
+  <h2>The problem with local maps</h2>
+
+  <p>
+    In <a href="02-the-projector.html">Article 2</a>, we saw that UMAP gives you a map of your
+    data. But that map is disposable. Add new data, re-run UMAP, and the whole layout reshuffles.
+    The neighborhoods stay roughly intact, but every point moves. Two UMAP plots of overlapping
+    datasets can't be compared directly, because they don't share a coordinate system.
+  </p>
+
+  <p>
+    This is fine when you just want to explore one dataset. But it creates problems when you want
+    to do any of these things:
+  </p>
+
+  <ul style="margin: 0 0 1rem 1.5rem;">
+    <li>Compare the structure of two different datasets</li>
+    <li>Add new texts to an existing map without rebuilding it</li>
+    <li>Ask where a single piece of text lives in relation to <em>all</em> text</li>
+    <li>Share a map with someone else and have it mean the same thing to both of you</li>
+  </ul>
+
+  <p>
+    What we want is a permanent coordinate system. A map that doesn't change when the data changes.
+    A map where every text already has an address.
+  </p>
+
+  <h2>Training a permanent projector</h2>
+
+  <p>
+    The approach is straightforward in concept: instead of running UMAP from scratch on each
+    dataset, train a neural network to learn the UMAP projection. Feed it millions of diverse
+    embeddings along with their UMAP coordinates. The network learns a function: embedding goes
+    in, two coordinates come out.
+  </p>
+
+  <p>
+    Once trained, this network can project any new embedding instantly. It doesn't need to see the
+    whole dataset. It doesn't need to recompute. It gives every text a consistent position on a
+    permanent map, because the map was shaped by the vast corpus the network trained on.
+  </p>
+
+  <p>
+    This is called <strong>parametric UMAP</strong>. "Parametric" means the projection is defined
+    by the learned parameters of the network, rather than by the specific dataset you're looking
+    at. Once you have a trained network, you have a basemap: a global map of meaning that any new
+    text can be placed onto.
+  </p>
+
+  <h3>Same jokes, two different maps</h3>
+
+  <p>
+    Here are the same dad jokes plotted two ways: on a fresh local UMAP computed from just these
+    jokes, and on a global basemap trained on millions of diverse texts. Hover to see the jokes.
+    Watch which points move and which stay close.
+  </p>
+
+  <div class="figure figure-wide" id="fig-comparison">
+    <div class="comparison-grid">
+      <div>
+        <div class="comparison-label">
+          <span>Per-dataset UMAP</span>
+          <span class="comparison-badge badge-local">local</span>
+        </div>
+        <div id="local-scatter" style="width: 100%; height: 360px; position: relative;"></div>
+      </div>
+      <div>
+        <div class="comparison-label">
+          <span>Basemap</span>
+          <span class="comparison-badge badge-global">global</span>
+        </div>
+        <div id="global-scatter" style="width: 100%; height: 360px; position: relative;"></div>
+      </div>
+    </div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 1.</span>
+      The same 100 jokes on two different maps. The local UMAP uses all its space to spread these specific jokes out. The basemap places them somewhere on a much larger coordinate system. Notice that local neighborhoods are mostly preserved, but the overall layout differs.
+    </div>
+  </div>
+
+  <p>
+    The local UMAP treats the 100 jokes as the whole universe. The basemap treats them as a
+    small region of a much larger territory. On the basemap, all 100 jokes might end up in a
+    corner of the full space, because "dad jokes" is just one neighborhood within the map of all
+    text. The fine structure within that neighborhood is still visible, but now it sits in a
+    broader context.
+  </p>
+
+  <h2>What lives where</h2>
+
+  <p>
+    Every SAE feature has a characteristic activation pattern: some jokes activate it strongly,
+    others not at all. When we color the map by feature activation, we can see where each concept
+    lives in the coordinate system. Features tend to concentrate in specific regions of the map.
+  </p>
+
+  <p>
+    Pick a feature below and watch it light up on the map:
+  </p>
+
+  <div class="figure figure-wide" id="fig-feature-map">
+    <div style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+      <span style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">Show where this feature activates:</span>
+      <select id="feature-select" class="joke-input" style="flex: 1; min-width: 200px;"></select>
+    </div>
+    <div id="feature-map-container" style="width: 100%; height: 400px; position: relative;"></div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 2.</span>
+      The basemap colored by SAE feature activation. Bright points are jokes where this feature activates strongly. Different features concentrate in different regions of the map.
+    </div>
+  </div>
+
+  <p>
+    This is what makes the combination powerful. The basemap gives every text a position.
+    The SAE tells us what concepts activate in that text. Put them together, and the coordinate
+    system starts to mean something: a region of the map is a region of <em>meaning</em>, not
+    just an arbitrary cluster of similar dots.
+  </p>
+
+  <h2>The full microscope</h2>
+
+  <p>
+    Now we have all the pieces of the instrument:
+  </p>
+
+  <ul style="margin: 0 0 1rem 1.5rem;">
+    <li>The <strong>lens</strong> (embedding model) turns text into a high-dimensional point.</li>
+    <li>The <strong>projector</strong> (basemap) gives that point a position on a permanent map.</li>
+    <li>The <strong>filter</strong> (SAE) decomposes the point into interpretable features.</li>
+  </ul>
+
+  <p>
+    Click any joke on the map below. The panel that appears shows everything the microscope
+    reveals about it: where it lives, what concepts it activates, and what its nearest neighbors
+    are in the full embedding space.
+  </p>
+
+  <div class="figure figure-wide" id="fig-microscope">
+    <div class="microscope-grid">
+      <div>
+        <div id="microscope-scatter" style="width: 100%; height: 420px; position: relative;"></div>
+      </div>
+      <div>
+        <div id="microscope-panel" class="microscope-panel">
+          <div class="microscope-section">
+            <div class="microscope-heading">Selected</div>
+            <div id="microscope-text" style="font-style: italic; font-size: 0.9rem; color: var(--text-2);">Click a highlighted joke on the map.</div>
+          </div>
+          <div class="microscope-section" id="section-position" style="display:none;">
+            <div class="microscope-heading">Position on the atlas</div>
+            <div id="microscope-position" style="font-family: var(--mono-font); font-size: 0.8rem; color: var(--text);"></div>
+          </div>
+          <div class="microscope-section" id="section-features" style="display:none;">
+            <div class="microscope-heading">SAE features</div>
+            <div id="microscope-features"></div>
+          </div>
+          <div class="microscope-section" id="section-neighbors" style="display:none;">
+            <div class="microscope-heading">Nearest neighbors</div>
+            <div id="microscope-neighbors"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 3.</span>
+      The complete microscope. The orange points are the 12 detailed jokes with SAE data; purple points are other jokes for context. Click an orange point to see everything the instrument reveals.
+    </div>
+  </div>
+
+  <h2>A single joke's journey</h2>
+
+  <p>
+    To make the pipeline concrete, here is what happens to a single joke as it passes through the
+    complete instrument. Each stage transforms the joke in a different way. Pick a joke and watch
+    it travel:
+  </p>
+
+  <div class="figure figure-wide" id="fig-pipeline">
+    <div style="margin-bottom: 1rem;">
+      <label style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); display: block; margin-bottom: 0.4rem;">Joke to trace:</label>
+      <select id="pipeline-select" class="joke-input"></select>
+    </div>
+    <div class="pipeline-container">
+      <div class="pipeline-step">
+        <div>
+          <div class="pipeline-step-sub">1. The lens</div>
+          <div class="pipeline-step-label">Embedding</div>
+        </div>
+        <canvas id="pipeline-embedding" class="embedding-canvas"></canvas>
+      </div>
+      <div class="pipeline-step">
+        <div>
+          <div class="pipeline-step-sub">2. The filter</div>
+          <div class="pipeline-step-label">SAE features</div>
+        </div>
+        <div id="pipeline-features"></div>
+      </div>
+      <div class="pipeline-step">
+        <div>
+          <div class="pipeline-step-sub">3. The projector</div>
+          <div class="pipeline-step-label">Basemap position</div>
+        </div>
+        <div id="pipeline-position-viz" style="height: 100px; position: relative;"></div>
+      </div>
+      <div class="pipeline-step">
+        <div>
+          <div class="pipeline-step-sub">4. Neighborhood</div>
+          <div class="pipeline-step-label">Nearest in meaning</div>
+        </div>
+        <div id="pipeline-neighbors" style="font-size: 0.85rem;"></div>
+      </div>
+    </div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 4.</span>
+      One joke, four views. The same text becomes a vector (lens), a set of features (filter), a point on the map (projector), and a set of neighbors (similarity).
+    </div>
+  </div>
+
+  <h2>An atlas of meaning</h2>
+
+  <p>
+    An atlas is more than a map. It's a map plus a vocabulary: the names of places, the features
+    of terrain, the categories that help you navigate. The basemap provides the geography. The SAE
+    taxonomy provides the vocabulary. Together they form a system for understanding what an
+    embedding model has learned.
+  </p>
+
+  <p>
+    Different embedding models produce different atlases, just as different lenses show different
+    things. A model trained on scientific literature produces an atlas where chemistry papers
+    form dense continents. A model trained on source code produces an atlas where function signatures
+    cluster together. Within any one atlas, though, everything has a place and a description:
+    a dad joke, a news article, a line of code, each locatable and describable in the same terms.
+  </p>
+
+  <div class="insight">
+    <p>
+      The microscope is complete. The lens focuses meaning into points. The projector shows
+      where those points live. The filter shows what they are made of. These three instruments,
+      trained to match each other, let you look at any text through a consistent view of the
+      space it inhabits.
+    </p>
+  </div>
+
+  <h2>Where to go from here</h2>
+
+  <p>
+    This series has walked through the components of a latent space workbench: embedding,
+    projection, clustering, feature decomposition, and global mapping. Each piece is
+    interchangeable. You can swap in a different embedding model, try a different clustering
+    algorithm, train a basemap on a different corpus, or use a different SAE architecture.
+    The pipeline stays the same. The views change.
+  </p>
+
+  <p>
+    We used dad jokes because they're fun, small, and accessible. The same tools work on any
+    text. The workbench was built to be applied broadly: to scientific literature, to legal
+    documents, to customer feedback, to code repositories, to anything written down. Every
+    application reveals something different about the data and something different about the
+    model looking at it.
+  </p>
+
+  <p>
+    The point has been the same throughout. Models have already learned something about your
+    data. These tools help you see what they learned. Embeddings, projections, clusters,
+    features, maps: none of them are the data, and none of them are the model. They're
+    instruments for looking through one at the other.
+  </p>
+
+  <p>
+    Now go put something under the microscope.
+  </p>
+
+  <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
+    <p>End of series. Back to <a href="index.html" style="color: var(--accent);">Latent Verse</a>. Previous: <a href="04-the-filter.html" style="color: var(--accent);">The Filter</a>.</p>
+    <p style="margin-top: 0.5rem;">Basemap concept from <a href="https://github.com/enjalot/latent-basemap" style="color: var(--text-2);">latent-basemap</a>. SAE concept from <a href="https://github.com/enjalot/latent-sae" style="color: var(--text-2);">latent-sae</a>.</p>
+  </footer>
+</div>
+
+<script>
+const tip = d3.select("body").append("div").attr("class", "tip").style("opacity", 0);
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function decodeF32(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Float32Array(bytes.buffer);
+}
+
+function decodeEmbeddings(b64, count, dims) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const floats = new Float32Array(bytes.buffer);
+  const result = [];
+  for (let i = 0; i < count; i++) result.push(floats.subarray(i * dims, (i + 1) * dims));
+  return result;
+}
+
+function cosineSim(a, b) {
+  let dot = 0, ma = 0, mb = 0;
+  for (let i = 0; i < a.length; i++) { dot += a[i]*b[i]; ma += a[i]*a[i]; mb += b[i]*b[i]; }
+  return dot / (Math.sqrt(ma) * Math.sqrt(mb));
+}
+
+// Aspect-ratio-preserving scatter
+function makeScales(x, y, W, H, margin=15) {
+  const xExt = d3.extent(x), yExt = d3.extent(y);
+  const xR = (xExt[1]-xExt[0]) || 1, yR = (yExt[1]-yExt[0]) || 1;
+  const pad = 0.05;
+  const paddedX = xR * (1 + pad*2), paddedY = yR * (1 + pad*2);
+  const availW = W - margin*2, availH = H - margin*2;
+  const s = Math.min(availW / paddedX, availH / paddedY);
+  const dw = paddedX * s, dh = paddedY * s;
+  const ox = margin + (availW - dw) / 2;
+  const oy = margin + (availH - dh) / 2;
+  return {
+    xScale: d3.scaleLinear().domain([xExt[0]-xR*pad, xExt[1]+xR*pad]).range([ox, ox+dw]),
+    yScale: d3.scaleLinear().domain([yExt[0]-yR*pad, yExt[1]+yR*pad]).range([oy+dh, oy])
+  };
+}
+
+function drawScatter(containerId, x, y, opts = {}) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  const rect = el.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+
+  const canvas = document.createElement('canvas');
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  el.appendChild(canvas);
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const { xScale, yScale } = makeScales(x, y, W, H);
+  const n = x.length;
+  const r = opts.pointR || 3;
+  const colors = opts.colors; // optional per-point color
+  const highlights = opts.highlights || new Set();
+  let selectedIdx = null;
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+    for (let i = 0; i < n; i++) {
+      const isHl = selectedIdx === i;
+      const isStrong = highlights.has(i);
+      let alpha, color, pointR;
+      if (isHl) { alpha = 1; color = '#e63946'; pointR = r + 2.5; }
+      else if (colors) { alpha = 0.75; color = colors[i]; pointR = isStrong ? r + 1 : r; }
+      else if (isStrong) { alpha = 0.85; color = '#f4a261'; pointR = r + 1; }
+      else { alpha = 0.35; color = opts.color || '#6b5b95'; pointR = r; }
+
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(xScale(x[i]), yScale(y[i]), pointR, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  render();
+
+  function findNearest(event) {
+    const crect = canvas.getBoundingClientRect();
+    const mx = event.clientX - crect.left, my = event.clientY - crect.top;
+    let bestI = -1, bestD = Infinity;
+    for (let i = 0; i < n; i++) {
+      const d = (xScale(x[i]) - mx)**2 + (yScale(y[i]) - my)**2;
+      if (d < bestD) { bestD = d; bestI = i; }
+    }
+    return bestD < 400 ? bestI : -1;
+  }
+
+  if (opts.texts) {
+    canvas.addEventListener('pointermove', (event) => {
+      const i = findNearest(event);
+      if (i >= 0) {
+        tip.html(escapeHtml(opts.texts[i])).style('opacity', 1);
+        const tw = tip.node().offsetWidth;
+        tip.style('left', Math.min(event.clientX+12, window.innerWidth-tw-8)+'px')
+           .style('top', Math.max(event.clientY-40, 8)+'px');
+      } else tip.style('opacity', 0);
+    });
+    canvas.addEventListener('pointerleave', () => tip.style('opacity', 0));
+  }
+
+  if (opts.onClick) {
+    canvas.style.cursor = 'pointer';
+    canvas.addEventListener('click', (event) => {
+      const i = findNearest(event);
+      if (i >= 0) opts.onClick(i);
+    });
+  }
+
+  return {
+    select(idx) { selectedIdx = idx; render(); },
+    redraw() { render(); },
+    xScale, yScale
+  };
+}
+
+function renderFeatureBars(containerId, features, featureLabels, maxCount = 8) {
+  const el = document.getElementById(containerId);
+  const maxAct = Math.max(...features.map(f => f.activation));
+  const color = d3.scaleSequential(d3.interpolateYlOrRd).domain([0, 1]);
+  el.innerHTML = features.slice(0, maxCount).map(f => {
+    const label = featureLabels[String(f.idx)] || `feature ${f.idx}`;
+    const pct = Math.max(4, (f.activation / maxAct * 100));
+    const c = color(f.activation / maxAct);
+    return `<div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0; font-family: var(--heading-font); font-size: 0.8rem; min-width: 0;">
+      <span style="flex: 0 0 auto; max-width: 45%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
+      <span style="flex: 1 1 auto; display: block; height: 14px; background: #f0f0f5; border-radius: 2px; overflow: hidden; min-width: 30px;">
+        <span style="display: block; height: 100%; width: ${pct}%; background: ${c}; border-radius: 2px;"></span>
+      </span>
+      <span style="flex: 0 0 auto; font-family: var(--mono-font); font-size: 0.72rem; color: var(--text-2); min-width: 2rem; text-align: right;">${f.activation.toFixed(2)}</span>
+    </div>`;
+  }).join('');
+}
+
+// Draw embedding bars on a canvas
+function drawEmbedding(canvas, embedding) {
+  if (!embedding || !embedding.length) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+  const n = embedding.length;
+  const barW = w / n;
+  const maxAbs = Math.max(...Array.from(embedding).map(Math.abs)) || 1;
+  const pos = d3.interpolateOranges, neg = d3.interpolateBlues;
+  for (let i = 0; i < n; i++) {
+    const v = embedding[i];
+    const norm = Math.abs(v) / maxAbs;
+    const barH = norm * h * 0.45;
+    const x = i * barW;
+    if (v >= 0) {
+      ctx.fillStyle = pos(0.2 + norm * 0.7);
+      ctx.fillRect(x, h/2 - barH, Math.max(barW, 0.5), barH);
+    } else {
+      ctx.fillStyle = neg(0.2 + norm * 0.7);
+      ctx.fillRect(x, h/2, Math.max(barW, 0.5), barH);
+    }
+  }
+  ctx.strokeStyle = '#ccc'; ctx.lineWidth = 0.5;
+  ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
+}
+
+async function init() {
+  const [projData, basemapData, saeData, fixtures, jokesData] = await Promise.all([
+    fetch('data/umap-projections.json').then(r => r.json()),
+    fetch('data/basemap.json').then(r => r.json()),
+    fetch('data/sae-features.json').then(r => r.json()),
+    fetch('data/fixtures.json').then(r => r.json()),
+    fetch('data/jokes-1k.json').then(r => r.json()),
+  ]);
+
+  const featureLabels = saeData.feature_labels;
+  const jokeFeatures = saeData.joke_features;
+  const jokeEmbs = decodeEmbeddings(fixtures.joke_embeddings_b64, fixtures.joke_texts.length, fixtures.dimensions);
+  const jokeTexts = fixtures.joke_texts;
+
+  // Figure 1: Side-by-side local vs global (first 100 jokes from 1k)
+  const sampleTexts = basemapData.sample_projections.map(p => p.text);
+  const sampleX = basemapData.sample_projections.map(p => p.x);
+  const sampleY = basemapData.sample_projections.map(p => p.y);
+
+  const localProj = projData.projections[1]; // nn=15
+  const localX = localProj.x.slice(0, 100);
+  const localY = localProj.y.slice(0, 100);
+  const localTexts = jokesData.texts.slice(0, 100);
+
+  drawScatter('local-scatter', localX, localY, {
+    texts: localTexts,
+    color: '#f4a261'
+  });
+  drawScatter('global-scatter', sampleX, sampleY, {
+    texts: sampleTexts,
+    color: '#6b5b95'
+  });
+
+  // Figure 2: Feature-colored basemap
+  // Use the 12 sample jokes with detailed SAE features, combined with 100 basemap samples
+  const detailX = basemapData.joke_projections.map(p => p.x);
+  const detailY = basemapData.joke_projections.map(p => p.y);
+
+  // Build a joined dataset: [...sample(100 context), ...detailed(12)]
+  const ctxX = [...sampleX, ...detailX];
+  const ctxY = [...sampleY, ...detailY];
+  const ctxTexts = [...sampleTexts, ...jokeTexts];
+  const nCtx = sampleX.length;
+
+  // Build feature select
+  const featureSelect = document.getElementById('feature-select');
+  // Find features that appear in our data
+  const allFeatureIds = new Set();
+  jokeFeatures.forEach(jf => jf.features.forEach(f => allFeatureIds.add(f.idx)));
+  const sortedFeatures = [...allFeatureIds]
+    .filter(idx => featureLabels[String(idx)])
+    .map(idx => ({ idx, label: featureLabels[String(idx)] }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  sortedFeatures.forEach(f => {
+    featureSelect.add(new Option(f.label, f.idx));
+  });
+
+  function updateFeatureMap() {
+    const selectedFeatureIdx = +featureSelect.value;
+    // Compute per-point activation for the 12 detailed jokes
+    const activations = new Array(ctxX.length).fill(0);
+    jokeFeatures.forEach((jf, i) => {
+      const match = jf.features.find(f => f.idx === selectedFeatureIdx);
+      if (match) activations[nCtx + i] = match.activation;
+    });
+
+    // Build per-point colors based on activation
+    const colorScale = d3.scaleSequential(d3.interpolateYlOrRd).domain([0, 1]);
+    const colors = activations.map((a, i) => {
+      if (i < nCtx) return '#e8e8f0'; // context points
+      return a > 0 ? colorScale(a) : '#d0d0d8';
+    });
+
+    // Highlight active points
+    const highlights = new Set();
+    activations.forEach((a, i) => { if (a > 0.3) highlights.add(i); });
+
+    drawScatter('feature-map-container', ctxX, ctxY, {
+      texts: ctxTexts,
+      colors,
+      highlights,
+      pointR: 4
+    });
+  }
+  featureSelect.addEventListener('change', updateFeatureMap);
+  if (sortedFeatures.length > 0) {
+    featureSelect.value = sortedFeatures[0].idx;
+    updateFeatureMap();
+  }
+
+  // Figure 3: Full microscope
+  // Mark the 12 sample points as "interactive" with orange
+  const microHighlights = new Set();
+  for (let i = 0; i < 12; i++) microHighlights.add(nCtx + i);
+
+  const microChart = drawScatter('microscope-scatter', ctxX, ctxY, {
+    texts: ctxTexts,
+    color: '#6b5b95',
+    highlights: microHighlights,
+    pointR: 4,
+    onClick(idx) {
+      // Only respond to clicks on the detailed jokes
+      if (idx < nCtx) return;
+      const jokeIdx = idx - nCtx;
+      microChart.select(idx);
+
+      document.getElementById('microscope-text').textContent = jokeTexts[jokeIdx];
+      document.getElementById('microscope-text').style.fontStyle = 'italic';
+      document.getElementById('microscope-text').style.color = 'var(--text)';
+
+      const jp = basemapData.joke_projections[jokeIdx];
+      document.getElementById('section-position').style.display = 'block';
+      document.getElementById('microscope-position').textContent =
+        `x: ${jp.x.toFixed(1)}, y: ${jp.y.toFixed(1)}`;
+
+      const jf = jokeFeatures[jokeIdx];
+      if (jf) {
+        document.getElementById('section-features').style.display = 'block';
+        document.getElementById('microscope-features').innerHTML =
+          jf.features.slice(0, 6).map(f => {
+            const label = featureLabels[String(f.idx)] || `feature ${f.idx}`;
+            const cls = f.activation > 0.8 ? 'strong' : f.activation > 0.5 ? 'medium' : '';
+            return `<span class="feature-tag ${cls}">${escapeHtml(label)}</span>`;
+          }).join(' ');
+      }
+
+      const emb = jokeEmbs[jokeIdx];
+      const sims = jokeTexts.map((t, i) => ({ text: t, sim: cosineSim(emb, jokeEmbs[i]), i }))
+        .filter(d => d.i !== jokeIdx)
+        .sort((a, b) => b.sim - a.sim)
+        .slice(0, 4);
+      document.getElementById('section-neighbors').style.display = 'block';
+      document.getElementById('microscope-neighbors').innerHTML =
+        sims.map(d =>
+          `<div class="neighbor-row"><span class="neighbor-dist">${(d.sim*100).toFixed(0)}%</span>${escapeHtml(d.text)}</div>`
+        ).join('');
+    }
+  });
+
+  // Figure 4: Single joke pipeline
+  const pipelineSelect = document.getElementById('pipeline-select');
+  jokeTexts.forEach((t, i) => {
+    const label = t.length > 65 ? t.slice(0, 65) + '...' : t;
+    pipelineSelect.add(new Option(label, i));
+  });
+
+  function updatePipeline() {
+    const idx = +pipelineSelect.value;
+    const joke = jokeTexts[idx];
+    const emb = jokeEmbs[idx];
+    const jf = jokeFeatures[idx];
+
+    // Stage 1: Embedding
+    drawEmbedding(document.getElementById('pipeline-embedding'), emb);
+
+    // Stage 2: Features
+    if (jf) renderFeatureBars('pipeline-features', jf.features, featureLabels, 5);
+
+    // Stage 3: Position on mini basemap
+    const posEl = document.getElementById('pipeline-position-viz');
+    posEl.innerHTML = '';
+    const prect = posEl.getBoundingClientRect();
+    const pW = prect.width, pH = prect.height;
+    const pCanvas = document.createElement('canvas');
+    pCanvas.style.width = pW + 'px'; pCanvas.style.height = pH + 'px';
+    posEl.appendChild(pCanvas);
+    const pdpr = window.devicePixelRatio || 1;
+    pCanvas.width = pW * pdpr; pCanvas.height = pH * pdpr;
+    const pctx = pCanvas.getContext('2d'); pctx.scale(pdpr, pdpr);
+    const { xScale: pxs, yScale: pys } = makeScales(ctxX, ctxY, pW, pH, 8);
+    // Draw context points
+    pctx.globalAlpha = 0.3;
+    pctx.fillStyle = '#c4c4d4';
+    for (let i = 0; i < nCtx; i++) {
+      pctx.beginPath();
+      pctx.arc(pxs(ctxX[i]), pys(ctxY[i]), 1.5, 0, Math.PI*2);
+      pctx.fill();
+    }
+    // Highlight selected
+    const jp = basemapData.joke_projections[idx];
+    pctx.globalAlpha = 1;
+    pctx.fillStyle = '#e63946';
+    pctx.beginPath();
+    pctx.arc(pxs(jp.x), pys(jp.y), 5, 0, Math.PI*2);
+    pctx.fill();
+    pctx.strokeStyle = '#e63946';
+    pctx.lineWidth = 1.5;
+    pctx.beginPath();
+    pctx.arc(pxs(jp.x), pys(jp.y), 9, 0, Math.PI*2);
+    pctx.stroke();
+
+    // Stage 4: Neighbors
+    const sims = jokeTexts.map((t, i) => ({ text: t, sim: cosineSim(emb, jokeEmbs[i]), i }))
+      .filter(d => d.i !== idx)
+      .sort((a, b) => b.sim - a.sim)
+      .slice(0, 3);
+    document.getElementById('pipeline-neighbors').innerHTML =
+      sims.map(d =>
+        `<div style="padding: 0.15rem 0;"><span style="font-family: var(--mono-font); font-size: 0.72rem; color: var(--text-2); margin-right: 0.5rem;">${(d.sim*100).toFixed(0)}%</span>${escapeHtml(d.text)}</div>`
+      ).join('');
+  }
+  pipelineSelect.addEventListener('change', updatePipeline);
+  pipelineSelect.value = 0;
+  updatePipeline();
+}
+
+init();
+</script>
+</body>
+</html>

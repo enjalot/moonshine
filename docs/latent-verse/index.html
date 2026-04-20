@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Latent Verse</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem; --line-height: 1.6;
+  --text: #1a1a2e; --text-2: #4a4a6a;
+  --accent: #2563eb; --accent-light: #dbeafe;
+  --bg: #fafafa; --fig-bg: #ffffff; --border: #e2e2e8;
+}
+body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
+h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+.card-list { display: flex; flex-direction: column; gap: 1rem; margin: 2.5rem 0; }
+.card {
+  display: grid; grid-template-columns: 80px 1fr; gap: 1.25rem;
+  background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px;
+  padding: 1.25rem 1.5rem; text-decoration: none; transition: border-color 0.15s;
+}
+.card:hover { border-color: var(--accent); }
+.card-thumb {
+  width: 80px; height: 80px; border-radius: 4px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.card-thumb canvas { width: 80px; height: 80px; }
+.card-body { display: flex; flex-direction: column; justify-content: center; }
+.card-number { font-family: var(--mono-font); font-size: 0.8rem; color: var(--text-2); }
+.card-title { font-family: var(--heading-font); font-weight: 700; font-size: 1.2rem; color: var(--text); margin-bottom: 0.3rem; }
+.card-desc { font-size: 0.95rem; color: var(--text-2); margin: 0; }
+.card-tags { font-family: var(--heading-font); font-size: 0.75rem; color: var(--accent); margin-top: 0.5rem; }
+
+.header-scatter { width: 100%; height: 180px; margin: 1.25rem 0 0.5rem; border-radius: 4px; display: block; background: #f5f5fa; }
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .card { grid-template-columns: 1fr; }
+  .card-thumb { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="article">
+  <header>
+    <h1>Latent Verse</h1>
+    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
+      A workbench for studying latent spaces.
+    </p>
+    <canvas id="header-scatter" class="header-scatter"></canvas>
+  </header>
+
+  <p>
+    Language models learn something about the meaning of text. When they embed a sentence, they
+    compress their understanding into a list of numbers, placing it at a specific point in a
+    high-dimensional space. Similar texts land near each other. Related ideas form neighborhoods.
+    Structure emerges that no one explicitly designed.
+  </p>
+
+  <p>
+    This series explores that structure. Using 50,000 dad jokes as our specimen, we build up a
+    set of tools for seeing what models have learned: projecting high-dimensional spaces into
+    visible landscapes, finding and naming groups, decomposing embeddings into interpretable
+    features, and constructing permanent maps of meaning.
+  </p>
+
+  <p>
+    Think of it as setting up a microscope. Each article adds a piece of the instrument. By the
+    end, familiar data looks completely different.
+  </p>
+
+  <div class="card-list">
+    <a class="card" href="01-the-lens.html">
+      <div class="card-thumb"><canvas id="thumb-1"></canvas></div>
+      <div class="card-body">
+        <div class="card-number">01</div>
+        <div class="card-title">The Lens</div>
+        <p class="card-desc">An embedding model turns text into numbers that encode meaning. Similar texts get similar numbers.</p>
+        <div class="card-tags">embeddings &middot; cosine similarity &middot; nearest neighbor search</div>
+      </div>
+    </a>
+
+    <a class="card" href="02-the-projector.html">
+      <div class="card-thumb"><canvas id="thumb-2"></canvas></div>
+      <div class="card-body">
+        <div class="card-number">02</div>
+        <div class="card-title">The Projector</div>
+        <p class="card-desc">UMAP flattens high-dimensional embeddings into two dimensions so you can see the whole landscape.</p>
+        <div class="card-tags">UMAP &middot; dimensionality reduction &middot; scatter plot</div>
+      </div>
+    </a>
+
+    <a class="card" href="03-finding-structure.html">
+      <div class="card-thumb"><canvas id="thumb-3"></canvas></div>
+      <div class="card-body">
+        <div class="card-number">03</div>
+        <div class="card-title">Finding Structure</div>
+        <p class="card-desc">Clustering algorithms find groups in the data. Labels give those groups names. Both are choices, not facts.</p>
+        <div class="card-tags">HDBSCAN &middot; clustering &middot; labeling</div>
+      </div>
+    </a>
+
+    <a class="card" href="04-the-filter.html">
+      <div class="card-thumb"><canvas id="thumb-4"></canvas></div>
+      <div class="card-body">
+        <div class="card-number">04</div>
+        <div class="card-title">The Filter</div>
+        <p class="card-desc">A Sparse Autoencoder decomposes embeddings into interpretable features. It works on any text, not just this dataset.</p>
+        <div class="card-tags">sparse autoencoder &middot; features &middot; taxonomy</div>
+      </div>
+    </a>
+
+    <a class="card" href="05-the-atlas.html">
+      <div class="card-thumb"><canvas id="thumb-5"></canvas></div>
+      <div class="card-body">
+        <div class="card-number">05</div>
+        <div class="card-title">The Atlas</div>
+        <p class="card-desc">A parametric UMAP gives every text a permanent address. Combined with SAE, it forms a complete atlas of meaning.</p>
+        <div class="card-tags">parametric UMAP &middot; basemap &middot; global features</div>
+      </div>
+    </a>
+  </div>
+
+  <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
+    <p>By <a href="https://github.com/enjalot" style="color: var(--text-2);">Ian Johnson</a>. Built with <a href="https://github.com/enjalot/latent-scope" style="color: var(--text-2);">Latent Scope</a>.</p>
+    <p style="margin-top: 0.25rem;">Data: 50,000 dad jokes from <a href="https://www.reddit.com/r/dadjokes/" style="color: var(--text-2);">r/dadjokes</a>.</p>
+  </footer>
+</div>
+
+<script>
+function decodeF32(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Float32Array(bytes.buffer);
+}
+
+function drawMiniScatter(canvasId, x, y, opts = {}) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const size = opts.size || 80;
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const n = x.length;
+  const xExt = d3.extent(x), yExt = d3.extent(y);
+  const pad = 0.08;
+  const xR = (xExt[1] - xExt[0]) || 1, yR = (yExt[1] - yExt[0]) || 1;
+  const paddedXR = xR * (1 + pad * 2);
+  const paddedYR = yR * (1 + pad * 2);
+
+  // Preserve aspect ratio
+  const inner = size - 8;
+  const scale = Math.min(inner / paddedXR, inner / paddedYR);
+  const dataW = paddedXR * scale;
+  const dataH = paddedYR * scale;
+  const offX = (size - dataW) / 2;
+  const offY = (size - dataH) / 2;
+
+  const xS = d3.scaleLinear().domain([xExt[0]-xR*pad, xExt[1]+xR*pad]).range([offX, offX + dataW]);
+  const yS = d3.scaleLinear().domain([yExt[0]-yR*pad, yExt[1]+yR*pad]).range([offY + dataH, offY]);
+
+  ctx.fillStyle = '#f5f5fa';
+  ctx.fillRect(0, 0, size, size);
+
+  const r = opts.pointR || (n > 5000 ? 0.5 : n > 500 ? 1 : 1.5);
+  ctx.globalAlpha = n > 5000 ? 0.15 : n > 500 ? 0.35 : 0.5;
+  ctx.fillStyle = opts.color || '#4a6fa5';
+
+  for (let i = 0; i < n; i++) {
+    ctx.beginPath();
+    ctx.arc(xS(x[i]), yS(y[i]), r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Header scatter using full UMAP data
+async function init() {
+  const [fullData, projData, clusterData, basemapData] = await Promise.all([
+    fetch('data/umap-full.json').then(r => r.json()),
+    fetch('data/umap-projections.json').then(r => r.json()),
+    fetch('data/clusters.json').then(r => r.json()),
+    fetch('data/basemap.json').then(r => r.json()),
+  ]);
+
+  // Header: wide scatter of all 53k jokes, preserving aspect ratio
+  const fullX = decodeF32(fullData.x_b64);
+  const fullY = decodeF32(fullData.y_b64);
+
+  const headerCanvas = document.getElementById('header-scatter');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = headerCanvas.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  headerCanvas.width = W * dpr;
+  headerCanvas.height = H * dpr;
+  const ctx = headerCanvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const xExt = d3.extent(fullX), yExt = d3.extent(fullY);
+  const pad = 0.05;
+  const xR = (xExt[1]-xExt[0]) * (1 + pad * 2);
+  const yR = (yExt[1]-yExt[0]) * (1 + pad * 2);
+
+  // Preserve aspect ratio: fit data into canvas with letterboxing
+  const scale = Math.min(W / xR, H / yR);
+  const dataW = xR * scale;
+  const dataH = yR * scale;
+  const offsetX = (W - dataW) / 2;
+  const offsetY = (H - dataH) / 2;
+
+  const xS = d3.scaleLinear()
+    .domain([xExt[0] - (xExt[1]-xExt[0])*pad, xExt[1] + (xExt[1]-xExt[0])*pad])
+    .range([offsetX, offsetX + dataW]);
+  const yS = d3.scaleLinear()
+    .domain([yExt[0] - (yExt[1]-yExt[0])*pad, yExt[1] + (yExt[1]-yExt[0])*pad])
+    .range([offsetY + dataH, offsetY]);
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = '#4a6fa5';
+  for (let i = 0; i < fullX.length; i++) {
+    ctx.beginPath();
+    ctx.arc(xS(fullX[i]), yS(fullY[i]), 0.9, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Thumbnails
+  // 1: Embedding bars (simple colored bars)
+  const t1 = document.getElementById('thumb-1');
+  const t1ctx = t1.getContext('2d');
+  const t1dpr = dpr;
+  t1.width = 80 * t1dpr; t1.height = 80 * t1dpr;
+  t1ctx.scale(t1dpr, t1dpr);
+  t1ctx.fillStyle = '#f5f5fa';
+  t1ctx.fillRect(0, 0, 80, 80);
+  const pos = d3.interpolateOranges, neg = d3.interpolateBlues;
+  for (let i = 0; i < 80; i++) {
+    const v = Math.sin(i * 0.3) * Math.cos(i * 0.17) + Math.sin(i * 0.7) * 0.5;
+    const norm = Math.abs(v);
+    const barH = norm * 35;
+    if (v >= 0) {
+      t1ctx.fillStyle = pos(0.3 + norm * 0.5);
+      t1ctx.fillRect(i, 40 - barH, 1, barH);
+    } else {
+      t1ctx.fillStyle = neg(0.3 + norm * 0.5);
+      t1ctx.fillRect(i, 40, 1, barH);
+    }
+  }
+
+  // 2: UMAP scatter
+  const proj = projData.projections[1];
+  drawMiniScatter('thumb-2', proj.x, proj.y);
+
+  // 3: Clustered scatter (preserve aspect ratio)
+  const mcs5 = clusterData.clusterings.find(c => c.min_cluster_size === 5);
+  const t3 = document.getElementById('thumb-3');
+  t3.width = 80 * dpr; t3.height = 80 * dpr;
+  t3.style.width = '80px'; t3.style.height = '80px';
+  const t3ctx = t3.getContext('2d');
+  t3ctx.scale(dpr, dpr);
+  t3ctx.fillStyle = '#f5f5fa';
+  t3ctx.fillRect(0, 0, 80, 80);
+  const colors = d3.schemeTableau10;
+  const nPts = proj.x.length;
+  const pxExt = d3.extent(proj.x), pyExt = d3.extent(proj.y);
+  const pxR = pxExt[1] - pxExt[0], pyR = pyExt[1] - pyExt[0];
+  const innerT3 = 72;
+  const scT3 = Math.min(innerT3 / pxR, innerT3 / pyR);
+  const dwT3 = pxR * scT3, dhT3 = pyR * scT3;
+  const oxT3 = (80 - dwT3) / 2, oyT3 = (80 - dhT3) / 2;
+  const t3xS = d3.scaleLinear().domain(pxExt).range([oxT3, oxT3 + dwT3]);
+  const t3yS = d3.scaleLinear().domain(pyExt).range([oyT3 + dhT3, oyT3]);
+  t3ctx.globalAlpha = 0.5;
+  for (let i = 0; i < nPts; i++) {
+    const c = mcs5.labels[i];
+    t3ctx.fillStyle = c < 0 ? '#d0d0d8' : colors[c % 10];
+    t3ctx.beginPath();
+    t3ctx.arc(t3xS(proj.x[i]), t3yS(proj.y[i]), 1.5, 0, Math.PI * 2);
+    t3ctx.fill();
+  }
+  t3ctx.globalAlpha = 1;
+
+  // 4: Feature bars
+  const t4 = document.getElementById('thumb-4');
+  t4.width = 80 * dpr; t4.height = 80 * dpr;
+  const t4ctx = t4.getContext('2d');
+  t4ctx.scale(dpr, dpr);
+  t4ctx.fillStyle = '#f5f5fa';
+  t4ctx.fillRect(0, 0, 80, 80);
+  const featureHeights = [0.92, 0.88, 0.85, 0.82, 0.65, 0.58, 0.45, 0.38];
+  const barColor = d3.scaleSequential(d3.interpolateYlOrRd).domain([0, 1]);
+  featureHeights.forEach((h, i) => {
+    const y = 6 + i * 9;
+    t4ctx.fillStyle = barColor(h);
+    t4ctx.fillRect(6, y, h * 68, 7);
+  });
+
+  // 5: Basemap scatter
+  const bx = basemapData.sample_projections.map(p => p.x);
+  const by = basemapData.sample_projections.map(p => p.y);
+  drawMiniScatter('thumb-5', bx, by, { color: '#6b5b95' });
+}
+
+init();
+</script>
+</body>
+</html>

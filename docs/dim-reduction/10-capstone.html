@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opportunities & Open Problems</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem; --line-height: 1.6;
+  --text: #1a1a2e; --text-2: #4a4a6a; --text-3: #8a8a9e;
+  --accent: #2563eb; --accent-light: #dbeafe;
+  --warm: #ea580c; --warm-light: #ffedd5;
+  --green: #059669; --purple: #7c3aed;
+  --bg: #fafafa; --fig-bg: #ffffff;
+  --border: #e2e2e8; --border-2: #c5c5d1; --muted: #e8e8ee;
+  --c0: #2563eb; --c1: #ea580c; --c2: #059669; --c3: #7c3aed;
+}
+body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
+h1 { font-size: 2.4rem; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.4rem; margin: 3rem 0 1rem; }
+h3 { font-family: var(--heading-font); font-size: 1.1rem; font-weight: 700; margin: 2rem 0 0.75rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+em { font-style: italic; } strong { font-weight: 600; }
+.subtitle { font-family: var(--heading-font); font-size: 1.1rem; color: var(--text-2); line-height: 1.45; margin-bottom: 1rem; font-weight: 400; }
+.series-tag { font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+.figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.5; }
+.figure-label { font-weight: 600; color: var(--text); }
+.margin-note { font-size: 0.875rem; color: var(--text-2); line-height: 1.5; border-left: 2px solid var(--border-2); padding-left: 0.9rem; margin: 1.25rem 0; }
+svg text { font-family: var(--heading-font); }
+@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure { padding: 1rem; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+</style>
+</head>
+<body>
+<div class="article">
+
+<header>
+  <div class="series-tag">Part 10 of 10 · The capstone</div>
+  <h1>Opportunities &amp; Open Problems</h1>
+  <p class="subtitle">
+    The families we have met each answer a piece of the question "what should a projection preserve?" None of them answers all of it, and the gaps between them are where the useful work still lives.
+  </p>
+</header>
+
+<p>
+  Nine articles of methods, covering about forty years of dimensionality reduction research. Looking back on them as a single landscape, a few patterns stand out. Methods cluster tightly within families; families are defined by what they preserve; and no single family covers everything. Every method has a blind spot, and that blind spot is the start of the next method.
+</p>
+
+<p>
+  What follows is not a roadmap for research but a set of observations about where the current methods fall short, especially for the use case that motivated this series: understanding the latent spaces of large machine learning models. The goal here is not to claim novelty; most of these directions have been explored somewhere. The goal is to be honest about what current practice gets you and where it runs out.
+</p>
+
+<h2>The design space, seen at once</h2>
+
+<div class="figure" id="fig-matrix">
+  <svg id="matrix-svg" width="100%" height="480" viewBox="0 0 680 480" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="figure-caption">
+    <span class="figure-label">Figure 1.</span>
+    A rough sketch of which properties each family prioritizes (filled), handles but does not emphasize (half), or tends to destroy (empty). No method fills every cell. Workflows that need multiple cells filled have to compose several methods or tolerate losses.
+  </div>
+</div>
+
+<p>
+  The matrix makes the tradeoffs concrete. PCA is strong on global linear variance and interpretable components, weak on anything else. t-SNE and UMAP are strong on local neighborhoods, weak on distances and density. Mapper preserves topology well but produces graphs, not scatter plots. Poincaré embeddings are strong on hierarchy, weak on most other things. Learned representations are strong on the objective they are trained on, which is whatever you make it, and weak on the rest.
+</p>
+
+<p>
+  This is a healthy state of affairs: different tools for different jobs. It becomes a problem when practitioners treat one method as a default and forget that its defaults are choices. The single most common failure mode, across every ML domain, is reading a UMAP plot as if its global layout were a map. The second most common is running only one method and not cross-checking.
+</p>
+
+<h2>Evaluation is not solved</h2>
+
+<p>
+  We use trustworthiness, continuity, stress, and Shepard diagrams to tell whether an embedding "preserves structure." Each of these is defined with respect to a particular notion of structure, and none of them captures whether the embedding actually helps a human understand the data. That is a much harder thing to evaluate, and the field is only beginning to think about it seriously.
+</p>
+
+<p>
+  For understanding ML latent spaces, the evaluation problem is sharper. What does it mean for a projection to "explain" a language model's embedding space? Preservation metrics are necessary but not sufficient. The end user is trying to form mental models: which concepts cluster, which attributes are directions, where the failure modes live. A projection that scores well on trustworthiness can still be useless for these purposes if, for example, it puts meaningful axes at random orientations.
+</p>
+
+<p>
+  Better evaluation likely requires task-specific benchmarks: projections scored by their ability to support specific downstream analyses (concept discovery, anomaly detection, counterfactual reasoning). This is harder than publishing a metric on MNIST. It is also where the most useful progress is likely to come from.
+</p>
+
+<h2>Composition is underdeveloped</h2>
+
+<p>
+  In practice, sophisticated workflows chain methods. PCA first, then UMAP. UMAP for visualization, Mapper for topological validation. Autoencoder for compression, then t-SNE on the latent. These compositions are not accidents; they are attempts to fill in each other's gaps. But the composition is almost always ad hoc. There are no principled frameworks for combining methods with different preservation objectives into a single view, and the compositions we do have are chosen by practitioner intuition rather than designed.
+</p>
+
+<p>
+  A concrete opportunity: a method that jointly optimizes for neighborhood preservation <em>and</em> density preservation <em>and</em> global distance preservation, with user-adjustable weights on each. densMAP is a partial step in this direction (neighborhood + density); PaCMAP is another (neighborhood + global). A full three- or four-property version, with weights that the user can slide, would make the tradeoffs explicit in the UI rather than hidden in the algorithm's defaults.
+</p>
+
+<p>
+  Another concrete opportunity: a method that produces multiple linked views simultaneously, each with a different objective, with the guarantee that points are consistent across views. The Grand Tour from the 1980s is the closest classical analog; a modern reinvention using neural encoders and contrastive objectives is overdue.
+</p>
+
+<h2>Domain-specific priors are underused</h2>
+
+<p>
+  The learned-representation family taught us that matching the likelihood to the data helps a lot. scVI's zero-inflated negative binomial is not glamorous, but it is the difference between a useful embedding and a broken one for count data. Yet outside of biology, domain-specific priors are rare. We run generic UMAP on language model embeddings, on code embeddings, on image embeddings, as if they all had the same structure.
+</p>
+
+<p>
+  Language model hidden states have structure we know about: superposition, polysemanticity, token-level features interacting with concept-level features, residual stream direction reuse across layers. A projection method that explicitly modeled this structure (e.g., a learned encoder whose loss rewarded disentangling superposed features) would, in principle, produce better latent visualizations for interpretability research than a generic UMAP. This has not been built. Related ideas from the sparse autoencoder literature gesture at it but stop short of offering a DR workflow around them.
+</p>
+
+<h2>Interactive projections are stuck at 2D scatter plots</h2>
+
+<p>
+  Most of the methods in this series produce a 2D scatter plot and stop. Interaction, when it exists, is usually "hover to see the label" or "brush to filter." For exploring a latent space, that is a very limited interface. We have seen what Mapper looks like (a graph), what SOMs look like (a grid), what Poincaré embeddings look like (a disk). But the synthesis is missing: we do not routinely build interfaces that let you switch between scatter, graph, grid, and hyperbolic views of the same embedding, linked and updated live.
+</p>
+
+<p>
+  Tools like latent-scope, Atlas, and the Embedding Projector are early moves in this direction, but they almost all fall back to UMAP or t-SNE for the main view. A more ambitious tool would treat the projection method itself as a first-class object the user can manipulate: pick the preserve-this-not-that priorities, see the projection update, compare views side by side, annotate regions with labels that persist across projections.
+</p>
+
+<div class="margin-note">
+  This is an area where a series of papers has been published at IEEE VIS and TVCG for the last decade, collectively known as the "visual analytics of DR" literature. The ideas are there; the adoption in mainstream ML tools has been slow.
+</div>
+
+<h2>Specifically for LLMs and large models</h2>
+
+<p>
+  The need is acute for large models. Hidden state dimensions reach into the tens of thousands; training runs produce terabytes of activations; features span superposed, polysemantic directions that do not show up cleanly in any single projection. Generic methods struggle here because the structure we care about is not the structure they preserve.
+</p>
+
+<p>
+  Specific opportunities worth considering:
+</p>
+
+<p>
+  <strong>Projections that respect the model's own geometry.</strong> A transformer's residual stream has a natural notion of "direction" that matters for downstream layers. A projection that treated directions as first-class objects (projecting directions, not just points) would align better with how practitioners already think about these spaces. This is closer to the ICA side of the world than the UMAP side, and it is underexplored for modern architectures.
+</p>
+
+<p>
+  <strong>Temporal projections.</strong> We rarely look at how a single prompt's hidden state evolves across layers, because no DR method is designed for that kind of temporal data. A projection that treated each layer as a timestep and produced a consistent 2D trajectory across layers would be immediately useful for interpretability research.
+</p>
+
+<p>
+  <strong>Compositional projections.</strong> Large latent spaces have subspaces (certain directions encode sentiment, others encode topic, others syntax). Projections that let you choose a subspace of interest and project within it, with the rest held constant, would let researchers interrogate specific features without drowning in global structure.
+</p>
+
+<p>
+  <strong>Projections integrated with probing.</strong> The current interpretability workflow runs a probe, gets a result, and then runs UMAP separately for visualization. Integrating the two — projections that condition on probe directions, or that optimize for preserving probe-readable structure — would tighten the loop.
+</p>
+
+<h2>What the families suggest but have not yet done</h2>
+
+<p>
+  If we take each family's headline idea and ask what it has not yet been combined with, a list of plausible directions falls out.
+</p>
+
+<p>
+  Hyperbolic space for neighborhood-preserving methods has been done at small scale; a mature hyperbolic UMAP tuned for large model activations would be valuable wherever concept hierarchies matter (which is almost everywhere in LLMs). Topological regularization of learned representations (beyond the existing topological autoencoders) could be built into the training of sparse autoencoders to preserve interpretable feature structure. Density-aware methods could be extended from single-cell biology into dashboard tools for comparing model checkpoints, where relative density of the activation space carries training-dynamics signal.
+</p>
+
+<p>
+  None of these are moonshots. Each one is a recombination of ideas already in this series. What is missing is usually not the conceptual step but the engineering: building the method, scaling it, building UI around it, and getting it into the hands of people doing the work it could help with.
+</p>
+
+<h2>Practical takeaways</h2>
+
+<p>
+  If you are a practitioner using DR on ML data, a few rules of thumb that fall out of this series:
+</p>
+
+<p>
+  Always start with PCA. It is cheap, deterministic, and tells you whether the interesting structure is linear. If PCA already reveals what you care about, you do not need anything fancier.
+</p>
+
+<p>
+  Run two methods, not one. UMAP plus PCA is a reasonable minimum; UMAP plus Mapper or UMAP plus densMAP is better. If the methods agree on the major features, those features are real. If they disagree, the disagreement is information.
+</p>
+
+<p>
+  Vary the hyperparameters. Stability across n_neighbors, perplexity, and random seed is how you tell signal from artifact. Structure that shows up only at one parameter value should be treated skeptically.
+</p>
+
+<p>
+  Remember what each method preserves. Cluster sizes in a t-SNE plot are not meaningful. Distances in a UMAP plot are not meaningful. Positions in a Mapper graph are not meaningful. The meaningful content of each visualization is narrower than it looks, and reading it accurately is itself a skill.
+</p>
+
+<p>
+  Consider whether your data has structure that a specific family is designed for. Tree-shaped data wants hyperbolic embeddings. Count data wants scVI or similar. Data with meaningful density gradients wants densMAP or PHATE. The generic default is not always the right default.
+</p>
+
+<h2>Where this series goes next</h2>
+
+<p>
+  This series was built as a survey, grounded in the literature and organized around a single organizing question. The grounding material, 108 paper summaries in the latent-verse research directory, is linked from the index. Where this series goes next depends on what you do with it.
+</p>
+
+<p>
+  If you are an ML researcher, the most interesting opportunities are probably in compositions and domain-specific priors, especially for large-model interpretability. If you are a tool builder, the interactive-view opportunity is wide open. If you are a practitioner, the rules of thumb above will carry you further than adopting a new method.
+</p>
+
+<p>
+  The families covered in this series are each answers to the question "what should we preserve." The better questions, the ones worth asking next, are about how we combine them, how we evaluate them in context, and how we build interfaces that make the tradeoffs visible instead of hiding them.
+</p>
+
+<footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
+  <p>Part of <a href="index.html" style="color: var(--text-2);">What Dimensionality Reduction Preserves</a>. Previous: <a href="09-learned.html" style="color: var(--accent);">Learned Representations</a>.</p>
+  <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+</footer>
+
+</div>
+
+<script>
+// ---------- Figure 1: design space matrix ----------
+(function() {
+  const svg = d3.select("#matrix-svg");
+  const W = 680, H = 480;
+
+  const families = [
+    "Linear (PCA, ICA, NMF)",
+    "Global distances (MDS, Isomap)",
+    "Diffusion (diffusion maps, PHATE)",
+    "Neighbor graphs (t-SNE, UMAP)",
+    "Topology (Mapper)",
+    "Density (densMAP)",
+    "Discrete grids (SOM)",
+    "Hyperbolic (Poincaré)",
+    "Learned (AE, VAE, param UMAP, scVI)",
+  ];
+
+  const props = [
+    "global distances",
+    "neighborhoods",
+    "topology",
+    "density",
+    "hierarchy",
+    "interpretability",
+    "out-of-sample",
+    "scalability",
+  ];
+
+  // Rating: 0 = empty, 1 = half, 2 = full
+  // Indexing [family][prop]
+  const R = [
+    //  dist nbh topo dens hier interp outofs scale
+    [   2,    0,   0,   0,   0,   2,    2,     2 ], // Linear
+    [   2,    1,   1,   0,   0,   1,    1,     0 ], // Global distances
+    [   1,    2,   1,   1,   1,   0,    0,     1 ], // Diffusion
+    [   0,    2,   0,   0,   0,   0,    0,     2 ], // Neighbor
+    [   0,    1,   2,   0,   1,   1,    0,     1 ], // Topology
+    [   0,    2,   0,   2,   0,   0,    0,     2 ], // Density
+    [   0,    1,   1,   1,   0,   2,    2,     1 ], // SOM
+    [   1,    1,   1,   0,   2,   0,    1,     0 ], // Hyperbolic
+    [   1,    1,   1,   1,   1,   0,    2,     2 ], // Learned
+  ];
+
+  const leftPad = 230, topPad = 80;
+  const cellW = 44, cellH = 38;
+  const rowH = 40;
+
+  // Column headers
+  props.forEach((p, j) => {
+    const x = leftPad + j * cellW + cellW / 2;
+    svg.append("text")
+      .attr("transform", `translate(${x}, ${topPad - 14}) rotate(-38)`)
+      .attr("text-anchor", "start")
+      .style("font-size", "11px").attr("fill", "var(--text-2)").text(p);
+  });
+
+  // Rows
+  families.forEach((f, i) => {
+    const y = topPad + i * rowH + rowH / 2;
+    svg.append("text").attr("x", leftPad - 12).attr("y", y).attr("dy", "0.35em")
+      .attr("text-anchor", "end").style("font-size", "11px").style("font-weight", 600)
+      .attr("fill", "var(--text)").text(f);
+
+    props.forEach((_, j) => {
+      const cx = leftPad + j * cellW + cellW / 2;
+      const r = R[i][j];
+      const fill = r === 2 ? "var(--accent)" : r === 1 ? "var(--accent-light)" : "var(--muted)";
+      svg.append("rect").attr("x", leftPad + j * cellW + 2).attr("y", y - cellH / 2 + 3)
+        .attr("width", cellW - 4).attr("height", cellH - 6)
+        .attr("fill", fill).attr("stroke", "var(--border)").attr("rx", 3);
+      if (r === 2) {
+        svg.append("text").attr("x", cx).attr("y", y).attr("dy", "0.35em")
+          .attr("text-anchor", "middle").style("font-size", "12px")
+          .attr("fill", "white").style("font-weight", 700).text("●");
+      } else if (r === 1) {
+        svg.append("text").attr("x", cx).attr("y", y).attr("dy", "0.35em")
+          .attr("text-anchor", "middle").style("font-size", "12px")
+          .attr("fill", "var(--accent)").text("◐");
+      }
+    });
+  });
+
+  // Legend
+  const legendY = H - 36;
+  const legendX = 12;
+  const items = [
+    { label: "preserves well", fill: "var(--accent)", marker: "●", markerFill: "white" },
+    { label: "partial", fill: "var(--accent-light)", marker: "◐", markerFill: "var(--accent)" },
+    { label: "does not preserve", fill: "var(--muted)", marker: "", markerFill: "var(--text-3)" },
+  ];
+  items.forEach((it, i) => {
+    const x = legendX + i * 180;
+    svg.append("rect").attr("x", x).attr("y", legendY).attr("width", 22).attr("height", 20)
+      .attr("fill", it.fill).attr("stroke", "var(--border)").attr("rx", 3);
+    if (it.marker) {
+      svg.append("text").attr("x", x + 11).attr("y", legendY + 14).attr("text-anchor", "middle")
+        .style("font-size", "12px").attr("fill", it.markerFill).text(it.marker);
+    }
+    svg.append("text").attr("x", x + 32).attr("y", legendY + 14).style("font-size", "11px")
+      .attr("fill", "var(--text-2)").text(it.label);
+  });
+})();
+</script>
+</body>
+</html>

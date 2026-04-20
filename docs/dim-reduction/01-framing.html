@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Geometry of High-Dimensional Data</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --text-3: #8a8a9e;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --warm: #ea580c;
+  --warm-light: #ffedd5;
+  --green: #059669;
+  --purple: #7c3aed;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+  --border-2: #c5c5d1;
+  --muted: #e8e8ee;
+  --c0: #2563eb;
+  --c1: #ea580c;
+  --c2: #059669;
+  --c3: #7c3aed;
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
+h1 { font-size: 2.4rem; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.4rem; margin: 3rem 0 1rem; }
+h3 { font-size: 1.1rem; margin: 2rem 0 0.75rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+em { font-style: italic; color: var(--text); }
+strong { font-weight: 600; }
+
+.subtitle {
+  font-family: var(--heading-font);
+  font-size: 1.1rem;
+  color: var(--text-2);
+  line-height: 1.45;
+  margin-bottom: 1rem;
+  font-weight: 400;
+}
+.series-tag {
+  font-family: var(--heading-font);
+  font-size: 0.8rem;
+  color: var(--text-3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.figure {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.figure-wide { margin-left: -2rem; margin-right: -2rem; }
+.figure-caption {
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  color: var(--text-2);
+  margin-top: 0.75rem;
+  line-height: 1.5;
+}
+.figure-label { font-weight: 600; color: var(--text); }
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.controls input[type="range"] { width: 160px; accent-color: var(--accent); vertical-align: middle; }
+.controls label { display: inline-flex; align-items: center; gap: 0.5rem; }
+.controls .value {
+  font-family: var(--mono-font);
+  color: var(--text);
+  min-width: 2ch;
+  display: inline-block;
+}
+
+.toggle-group {
+  display: inline-flex;
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.toggle-group button {
+  font-family: var(--heading-font);
+  font-size: 0.8rem;
+  padding: 0.35rem 0.7rem;
+  background: var(--fig-bg);
+  color: var(--text-2);
+  border: none;
+  border-right: 1px solid var(--border-2);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.toggle-group button:last-child { border-right: none; }
+.toggle-group button:hover { background: var(--muted); }
+.toggle-group button.active {
+  background: var(--accent);
+  color: white;
+}
+
+svg text { font-family: var(--heading-font); }
+svg .axis text { font-size: 11px; fill: var(--text-2); }
+svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crispEdges; }
+svg .axis-label { font-size: 12px; fill: var(--text-2); font-weight: 600; }
+
+.margin-note {
+  font-size: 0.875rem;
+  color: var(--text-2);
+  line-height: 1.5;
+  border-left: 2px solid var(--border-2);
+  padding-left: 0.9rem;
+  margin: 1.25rem 0;
+}
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .figure-wide { margin-left: 0; margin-right: 0; }
+  .figure { padding: 1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }
+}
+</style>
+</head>
+<body>
+<div class="article">
+
+<header>
+  <div class="series-tag">Part 1 of 10 · What Dimensionality Reduction Preserves</div>
+  <h1>The Geometry of High-Dimensional Data</h1>
+  <p class="subtitle">
+    Before comparing methods, we need to agree on what they are trying to preserve. This article builds intuition for high-dimensional space and the different kinds of structure that a dimensionality reduction method might care about.
+  </p>
+</header>
+
+<p>
+  An image classifier produces a 2048-dimensional feature vector. A language model produces a 4096-dimensional residual stream activation. A single-cell RNA sequencing assay produces a 20,000-dimensional expression profile. Each row of such data sits in a space we cannot draw, cannot picture, and cannot navigate directly. The whole point of dimensionality reduction is to give us a picture. But a picture of what?
+</p>
+
+<p>
+  Every dimensionality reduction method throws information away. The interesting question is not whether it distorts the data, but <em>which</em> properties it tries to keep and which it is willing to sacrifice. t-SNE, UMAP, PCA, PHATE, and Mapper are not different answers to the same question. They are answers to different questions. Once you see that, choosing between them becomes a question about your data and your goal, rather than a beauty contest between scatter plots.
+</p>
+
+<p>
+  This series works through the main families of methods one by one, organized by what they preserve. This first article establishes the shared vocabulary: what high-dimensional space actually looks like, what kinds of structure live in it, and how we can tell whether a projection has kept them or lost them.
+</p>
+
+<h2>High-dimensional space is strange</h2>
+
+<p>
+  Most of our visual intuition for points, distances, and neighborhoods comes from two- and three-dimensional space. Those intuitions do not extend to the spaces where real ML data lives. Before we can reason about methods that summarize high-dimensional data, we have to see how high-dimensional space behaves on its own.
+</p>
+
+<p>
+  Consider a uniform random cloud of points and measure the distances between every pair. In one or two dimensions, those distances are spread out: some points are close, some are far. As the dimension grows, something counterintuitive happens. The distances bunch up. Every pair of points ends up roughly the same distance apart. The scatter plot below lets you watch this happen.
+</p>
+
+<div class="figure" id="fig-curse">
+  <div class="controls">
+    <label>
+      dimension <span class="value" id="curse-d-val">2</span>
+      <input type="range" id="curse-d" min="1" max="50" value="2" step="1">
+    </label>
+    <label>
+      points <span class="value" id="curse-n-val">200</span>
+      <input type="range" id="curse-n" min="50" max="500" value="200" step="50">
+    </label>
+  </div>
+  <svg id="curse-svg" width="100%" height="320" viewBox="0 0 680 320" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="figure-caption">
+    <span class="figure-label">Figure 1.</span>
+    Distribution of pairwise distances between uniformly random points, as the dimension increases. At high dimensions the distribution narrows until nearly every pair is the same distance apart. "Nearest" and "farthest" stop being meaningful.
+  </div>
+</div>
+
+<p>
+  In everyday three-dimensional space, the nearest point is clearly closer than the farthest point. In fifty-dimensional space drawn from the same uniform distribution, the ratio between them shrinks toward one. Notions we take for granted, like "the closest point is meaningfully close," weaken as dimension grows. This effect is sometimes called the concentration of distances, and it is a core piece of the <em>curse of dimensionality</em>.
+</p>
+
+<p>
+  Real data is rarely uniform, and this is exactly what saves us. A language model's embeddings do not fill their 4096-dimensional ambient space uniformly. They cluster, they trace curves and manifolds, they leave enormous regions empty. The meaningful information lives on a much lower-dimensional structure <em>embedded</em> in a high-dimensional container. Dimensionality reduction is the craft of finding that structure and rendering it at a size we can look at.
+</p>
+
+<div class="margin-note">
+  The intrinsic dimension of a dataset is the number of parameters needed to describe it, which is often far smaller than the number of coordinates it is stored in. A rotating 3D object recorded as 100-pixel-by-100-pixel frames has 10,000 coordinates but only a few degrees of freedom. Finding the intrinsic dimension is itself an active research area.
+</div>
+
+<h2>What counts as "structure"?</h2>
+
+<p>
+  If the goal of dimensionality reduction is to preserve structure, we should be precise about what structure means. There is no single answer. The same dataset has many kinds of structure layered on top of each other, and different methods foreground different layers.
+</p>
+
+<p>
+  Take a simple two-dimensional dataset with two intertwined crescents. We can look at it through at least five different lenses, shown in the figure below. Each lens emphasizes a different property and ignores others. A dimensionality reduction method is, in effect, a decision about which lens to prioritize when the data gets squished.
+</p>
+
+<div class="figure" id="fig-lenses">
+  <div class="controls">
+    <div class="toggle-group" id="lens-toggle">
+      <button class="active" data-lens="points">points</button>
+      <button data-lens="distances">distances</button>
+      <button data-lens="neighbors">neighbors</button>
+      <button data-lens="density">density</button>
+      <button data-lens="topology">topology</button>
+    </div>
+  </div>
+  <svg id="lenses-svg" width="100%" height="380" viewBox="0 0 680 380" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="figure-caption">
+    <span class="figure-label">Figure 2.</span>
+    The same dataset seen through five different notions of structure. A dimensionality reduction method is, implicitly, a choice about which of these to prioritize when projecting to fewer dimensions.
+  </div>
+</div>
+
+<p>
+  The <strong>points</strong> view shows raw coordinates. Two crescents, each a different color. This is the rawest form of the data.
+</p>
+
+<p>
+  The <strong>distances</strong> view draws lines for every pairwise distance, thicker for shorter distances. It shows that each crescent is a tight cluster, but also that some points in one crescent are closer to points in the other crescent than to points at the far end of their own. A method that tries to preserve all pairwise distances will have a hard time with this shape, because the distances lie to you: two points are geometrically close while being meaningfully far apart along the crescent.
+</p>
+
+<p>
+  The <strong>neighbors</strong> view draws edges only to each point's k nearest neighbors. The crescents become two connected clusters. This is a much more honest picture of the data's shape, which is why many of the most successful methods we will meet later, t-SNE and UMAP among them, build on neighborhood graphs rather than raw distances.
+</p>
+
+<p>
+  The <strong>density</strong> view colors the plane by how many points live nearby. The dense cores of the crescents show as bright regions; the sparse tails fade out. Density is information that most methods discard: clusters get repositioned to be visually separated even when one is actually much denser than another.
+</p>
+
+<p>
+  The <strong>topology</strong> view ignores metric detail entirely and summarizes what connects to what. Two crescents show up as two connected components with no loops. Topology is a lossy summary, but it captures properties that survive distortion, and it is what a method like Mapper is designed to preserve.
+</p>
+
+<p>
+  No single projection can maintain all five views faithfully. When a method collapses 4096 dimensions to 2, it has to pick its battles. The rest of this series is organized around those choices.
+</p>
+
+<h2>How we tell if the picture is honest</h2>
+
+<p>
+  Once we know what a method is trying to preserve, we can ask whether it succeeded. The field has settled on a few standard measurements, each of them probing a different kind of honesty.
+</p>
+
+<p>
+  <strong>Trustworthiness</strong> asks: of the points that appear close in the 2D picture, how many were actually close in the original space? A trustworthy embedding does not invent false neighbors. <strong>Continuity</strong> asks the reverse: of the points that were close in the original space, how many are still close in the picture? A continuous embedding does not rip apart neighborhoods that belonged together. A projection can be high on one and low on the other, and usually is. These two metrics together form a minimum viable check.
+</p>
+
+<p>
+  <strong>Stress</strong> measures how well all pairwise distances agree between the original space and the embedding. It is the natural metric when a method targets global distance preservation (like MDS), and an unfair one when the method deliberately warps distances in favor of neighborhoods (like t-SNE). <strong>Shepard diagrams</strong> plot original distances against embedded distances point by point, revealing at a glance where and how the projection distorts.
+</p>
+
+<p>
+  No single number captures quality, because quality itself is conditional on what you wanted to preserve. When we compare methods in later articles, we will return to these measures and show what each family looks good (and bad) at.
+</p>
+
+<h2>The series, at a glance</h2>
+
+<p>
+  The remaining nine articles each take one family of methods, built around a single answer to "what should we preserve."
+</p>
+
+<div class="figure" id="fig-taxonomy">
+  <svg id="tax-svg" width="100%" height="480" viewBox="0 0 680 480" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="figure-caption">
+    <span class="figure-label">Figure 3.</span>
+    The nine method families covered in this series, organized by what they try to preserve. Each family is a different answer to the same question. Methods within a family share a viewpoint; methods across families do not.
+  </div>
+</div>
+
+<p>
+  The progression is roughly from the simplest idea (preserve variance along orthogonal directions) to the most elaborate (learn a neural network whose latent space is the dimensionality reduction). Along the way, each family makes a new move that the previous family could not: preserve nonlinear distances, preserve neighborhoods rather than distances, preserve topology rather than geometry, preserve density, fit data to a grid, use a non-flat geometry, learn from data. We finish with a capstone article on open problems, where the families we have met suggest directions they have not yet gone.
+</p>
+
+<p>
+  Each article is self-contained, but they build on each other. The linear family sets up problems that the nonlinear families try to solve. The local-neighborhood family creates evaluation puzzles that the topological and density families respond to. The learned-representation family borrows ideas from everywhere else. Read in order for the narrative; read out of order for reference.
+</p>
+
+<footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
+  <p>Part of <a href="index.html" style="color: var(--text-2);">What Dimensionality Reduction Preserves</a>. Next: <a href="02-linear.html" style="color: var(--accent);">The Linear Family</a>.</p>
+  <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+</footer>
+
+</div>
+
+<script>
+// ---------- utilities ----------
+function mulberry32(seed) {
+  return function() {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function gaussian(rng) {
+  // Box-Muller
+  const u = 1 - rng(), v = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// ---------- Figure 1: curse of dimensionality ----------
+(function() {
+  const svg = d3.select("#curse-svg");
+  const W = 680, H = 320;
+  const margin = { top: 20, right: 24, bottom: 44, left: 48 };
+  const innerW = W - margin.left - margin.right;
+  const innerH = H - margin.top - margin.bottom;
+  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // Axes placeholders
+  const xScale = d3.scaleLinear().domain([0, 1]).range([0, innerW]);
+  const yScale = d3.scaleLinear().domain([0, 1]).range([innerH, 0]);
+  const xAxisG = g.append("g").attr("class", "axis").attr("transform", `translate(0,${innerH})`);
+  const yAxisG = g.append("g").attr("class", "axis");
+  g.append("text").attr("class", "axis-label")
+    .attr("x", innerW / 2).attr("y", innerH + 36).attr("text-anchor", "middle")
+    .text("pairwise distance (normalized)");
+  g.append("text").attr("class", "axis-label")
+    .attr("transform", `rotate(-90)`).attr("x", -innerH / 2).attr("y", -34).attr("text-anchor", "middle")
+    .text("count");
+
+  const barsG = g.append("g");
+  const refG = g.append("g");
+
+  const dInput = document.getElementById("curse-d");
+  const nInput = document.getElementById("curse-n");
+  const dVal = document.getElementById("curse-d-val");
+  const nVal = document.getElementById("curse-n-val");
+
+  function sample(n, d, rng) {
+    // uniform in [0,1]^d
+    const pts = [];
+    for (let i = 0; i < n; i++) {
+      const p = new Float64Array(d);
+      for (let j = 0; j < d; j++) p[j] = rng();
+      pts.push(p);
+    }
+    return pts;
+  }
+
+  function pairwise(pts) {
+    const n = pts.length;
+    const d = pts[0].length;
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        let s = 0;
+        for (let k = 0; k < d; k++) {
+          const x = pts[i][k] - pts[j][k];
+          s += x * x;
+        }
+        out.push(Math.sqrt(s));
+      }
+    }
+    return out;
+  }
+
+  function render() {
+    const d = +dInput.value;
+    const n = +nInput.value;
+    dVal.textContent = d;
+    nVal.textContent = n;
+
+    const rng = mulberry32(42);
+    const pts = sample(n, d, rng);
+    const dists = pairwise(pts);
+
+    // normalize distances by theoretical max sqrt(d) so the x-axis is comparable across d
+    const theoMax = Math.sqrt(d);
+    const norm = dists.map(x => x / theoMax);
+
+    const extent = d3.extent(norm);
+    xScale.domain([0, 1]);
+    const bins = d3.bin().domain([0, 1]).thresholds(40)(norm);
+    const yMax = d3.max(bins, b => b.length);
+    yScale.domain([0, yMax * 1.05]);
+
+    xAxisG.call(d3.axisBottom(xScale).ticks(6));
+    yAxisG.call(d3.axisLeft(yScale).ticks(5));
+
+    const bars = barsG.selectAll("rect").data(bins);
+    bars.join(
+      enter => enter.append("rect").attr("y", innerH).attr("height", 0).attr("fill", "var(--accent)"),
+      update => update,
+      exit => exit.remove()
+    )
+      .transition().duration(250)
+      .attr("x", b => xScale(b.x0) + 1)
+      .attr("width", b => Math.max(0, xScale(b.x1) - xScale(b.x0) - 1))
+      .attr("y", b => yScale(b.length))
+      .attr("height", b => innerH - yScale(b.length))
+      .attr("fill", "var(--accent)")
+      .attr("opacity", 0.85);
+
+    // annotate min/max ratio
+    const minD = d3.min(norm), maxD = d3.max(norm);
+    const ratio = maxD / minD;
+    refG.selectAll("*").remove();
+    refG.append("text")
+      .attr("x", innerW - 8)
+      .attr("y", 14)
+      .attr("text-anchor", "end")
+      .attr("fill", "var(--text-2)")
+      .style("font-size", "12px")
+      .text(`max / min = ${ratio.toFixed(2)}`);
+  }
+
+  dInput.addEventListener("input", render);
+  nInput.addEventListener("input", render);
+  render();
+})();
+
+// ---------- Figure 2: lenses ----------
+(function() {
+  const svg = d3.select("#lenses-svg");
+  const W = 680, H = 380;
+  const margin = { top: 16, right: 16, bottom: 16, left: 16 };
+  const innerW = W - margin.left - margin.right;
+  const innerH = H - margin.top - margin.bottom;
+  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // Generate two intertwined crescents (half-moons)
+  const rng = mulberry32(7);
+  const N_PER = 80;
+  const data = [];
+  for (let i = 0; i < N_PER; i++) {
+    const t = i / (N_PER - 1);
+    const a = Math.PI * t;
+    const x = Math.cos(a) + gaussian(rng) * 0.05;
+    const y = Math.sin(a) + gaussian(rng) * 0.05;
+    data.push({ x, y, c: 0, id: `a${i}` });
+  }
+  for (let i = 0; i < N_PER; i++) {
+    const t = i / (N_PER - 1);
+    const a = Math.PI * t;
+    const x = 1 - Math.cos(a) + gaussian(rng) * 0.05;
+    const y = 0.5 - Math.sin(a) + gaussian(rng) * 0.05;
+    data.push({ x, y, c: 1, id: `b${i}` });
+  }
+
+  const xExt = d3.extent(data, d => d.x);
+  const yExt = d3.extent(data, d => d.y);
+  const pad = 0.15;
+  const xScale = d3.scaleLinear().domain([xExt[0] - pad, xExt[1] + pad]).range([0, innerW]);
+  const yScale = d3.scaleLinear().domain([yExt[0] - pad, yExt[1] + pad]).range([innerH, 0]);
+
+  const bgLayer = g.append("g");  // density / topology backgrounds
+  const edgeLayer = g.append("g");
+  const pointLayer = g.append("g");
+
+  function drawPoints(opacity = 1, useColor = true) {
+    const sel = pointLayer.selectAll("circle").data(data, d => d.id);
+    sel.join(
+      enter => enter.append("circle").attr("r", 3.2)
+        .attr("cx", d => xScale(d.x)).attr("cy", d => yScale(d.y)),
+      update => update
+    )
+      .transition().duration(200)
+      .attr("fill", d => useColor ? (d.c === 0 ? "var(--c0)" : "var(--c1)") : "var(--text-3)")
+      .attr("opacity", opacity)
+      .attr("stroke", "white")
+      .attr("stroke-width", 0.5);
+  }
+
+  // k-NN graph
+  function kNN(k) {
+    const edges = [];
+    for (let i = 0; i < data.length; i++) {
+      const dists = data.map((d, j) => ({ j, d: Math.hypot(data[i].x - d.x, data[i].y - d.y) }))
+        .filter(e => e.j !== i).sort((a, b) => a.d - b.d).slice(0, k);
+      for (const e of dists) {
+        if (i < e.j) edges.push({ a: i, b: e.j, d: e.d });
+      }
+    }
+    return edges;
+  }
+
+  function renderLens(lens) {
+    bgLayer.selectAll("*").remove();
+    edgeLayer.selectAll("*").remove();
+
+    if (lens === "points") {
+      drawPoints(1, true);
+    } else if (lens === "distances") {
+      // draw all pairwise distances, line width inversely related to distance
+      const maxDraw = 1200; // cap for performance
+      const pairs = [];
+      for (let i = 0; i < data.length; i++) {
+        for (let j = i + 1; j < data.length; j++) {
+          pairs.push({ a: i, b: j, d: Math.hypot(data[i].x - data[j].x, data[i].y - data[j].y) });
+        }
+      }
+      pairs.sort((a, b) => a.d - b.d);
+      const sel = pairs.slice(0, maxDraw);
+      const maxD = sel[sel.length - 1].d;
+      edgeLayer.selectAll("line").data(sel).join("line")
+        .attr("x1", p => xScale(data[p.a].x)).attr("y1", p => yScale(data[p.a].y))
+        .attr("x2", p => xScale(data[p.b].x)).attr("y2", p => yScale(data[p.b].y))
+        .attr("stroke", "var(--accent)")
+        .attr("stroke-opacity", p => 0.02 + 0.25 * (1 - p.d / maxD))
+        .attr("stroke-width", p => 0.3 + 1.4 * (1 - p.d / maxD));
+      drawPoints(1, true);
+    } else if (lens === "neighbors") {
+      const edges = kNN(5);
+      edgeLayer.selectAll("line").data(edges).join("line")
+        .attr("x1", e => xScale(data[e.a].x)).attr("y1", e => yScale(data[e.a].y))
+        .attr("x2", e => xScale(data[e.b].x)).attr("y2", e => yScale(data[e.b].y))
+        .attr("stroke", d => data[d.a].c === data[d.b].c ? "var(--text-2)" : "var(--warm)")
+        .attr("stroke-opacity", 0.5)
+        .attr("stroke-width", 0.8);
+      drawPoints(1, true);
+    } else if (lens === "density") {
+      // 2D density contours
+      const contours = d3.contourDensity()
+        .x(d => xScale(d.x)).y(d => yScale(d.y))
+        .size([innerW, innerH])
+        .bandwidth(22)
+        .thresholds(10)(data);
+      const maxV = d3.max(contours, c => c.value);
+      bgLayer.selectAll("path").data(contours).join("path")
+        .attr("d", d3.geoPath())
+        .attr("fill", c => d3.interpolateBlues(0.15 + 0.85 * c.value / maxV))
+        .attr("stroke", "none")
+        .attr("opacity", 0.75);
+      drawPoints(0.85, true);
+    } else if (lens === "topology") {
+      // show two connected components as blobs with hulls
+      const c0 = data.filter(d => d.c === 0);
+      const c1 = data.filter(d => d.c === 1);
+      const h0 = d3.polygonHull(c0.map(d => [xScale(d.x), yScale(d.y)]));
+      const h1 = d3.polygonHull(c1.map(d => [xScale(d.x), yScale(d.y)]));
+      const line = d3.line().curve(d3.curveCatmullRomClosed);
+      bgLayer.append("path").attr("d", line(h0))
+        .attr("fill", "var(--accent-light)")
+        .attr("stroke", "var(--accent)")
+        .attr("stroke-width", 2)
+        .attr("opacity", 0.7);
+      bgLayer.append("path").attr("d", line(h1))
+        .attr("fill", "var(--warm-light)")
+        .attr("stroke", "var(--warm)")
+        .attr("stroke-width", 2)
+        .attr("opacity", 0.7);
+      // label components
+      const centroid = arr => [d3.mean(arr, p => p[0]), d3.mean(arr, p => p[1])];
+      const cen0 = centroid(h0), cen1 = centroid(h1);
+      bgLayer.append("text").attr("x", cen0[0]).attr("y", cen0[1] - 6)
+        .attr("text-anchor", "middle").attr("fill", "var(--accent)")
+        .style("font-size", "13px").style("font-weight", 700).text("component A");
+      bgLayer.append("text").attr("x", cen1[0]).attr("y", cen1[1] + 16)
+        .attr("text-anchor", "middle").attr("fill", "var(--warm)")
+        .style("font-size", "13px").style("font-weight", 700).text("component B");
+      drawPoints(0.9, true);
+    }
+  }
+
+  // Toggle logic
+  const buttons = document.querySelectorAll("#lens-toggle button");
+  buttons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      buttons.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      renderLens(btn.dataset.lens);
+    });
+  });
+
+  renderLens("points");
+})();
+
+// ---------- Figure 3: taxonomy preview ----------
+(function() {
+  const svg = d3.select("#tax-svg");
+  const W = 680, H = 480;
+  const g = svg.append("g");
+
+  const families = [
+    { n: "02", title: "Linear",           preserves: "variance, independence",         methods: "PCA · ICA · NMF · Kernel PCA" },
+    { n: "03", title: "Global distances", preserves: "pairwise & geodesic distances",  methods: "MDS · Sammon · Isomap · diffusion maps" },
+    { n: "04", title: "Local neighborhoods", preserves: "who-is-near-whom",            methods: "t-SNE · UMAP · LargeVis · PaCMAP · TriMap" },
+    { n: "05", title: "Topology",         preserves: "connectivity & shape",           methods: "Mapper · Reeb graphs · topo-autoencoders" },
+    { n: "06", title: "Density",          preserves: "how tightly packed regions are", methods: "densMAP · PHATE" },
+    { n: "07", title: "Discrete grids",   preserves: "an ordered grid layout",         methods: "Self-Organizing Maps" },
+    { n: "08", title: "Hierarchy",        preserves: "tree-like structure",            methods: "Poincaré / hyperbolic embeddings" },
+    { n: "09", title: "Learned reps",     preserves: "whatever the objective says",    methods: "autoencoders · VAE · scVI · parametric UMAP" },
+    { n: "10", title: "Capstone",         preserves: "open questions",                 methods: "gaps · combinations · opportunities" },
+  ];
+
+  const rowH = 48;
+  const leftColW = 32;
+  const titleColW = 170;
+  const sepX = leftColW + 8;
+  const titleX = sepX + 12;
+  const mainX = titleX + titleColW;
+  const yOf = i => 28 + i * rowH;
+
+  families.forEach((f, i) => {
+    const y = yOf(i);
+    const row = g.append("g").attr("transform", `translate(0,${y})`);
+
+    row.append("text").attr("x", 4).attr("y", 0).attr("dy", "0.35em")
+      .style("font-family", "var(--mono-font)").style("font-size", "12px")
+      .attr("fill", "var(--text-3)")
+      .text(f.n);
+    row.append("line").attr("x1", sepX).attr("x2", sepX).attr("y1", -18).attr("y2", 20)
+      .attr("stroke", "var(--border)");
+    row.append("text").attr("x", titleX).attr("y", -4)
+      .style("font-family", "var(--heading-font)").style("font-size", "14px").style("font-weight", 700)
+      .attr("fill", "var(--text)").text(f.title);
+    row.append("text").attr("x", titleX).attr("y", 14)
+      .style("font-family", "var(--heading-font)").style("font-size", "12px")
+      .attr("fill", "var(--text-2)").text(f.preserves);
+    row.append("text").attr("x", mainX).attr("y", 0).attr("dy", "0.35em")
+      .style("font-family", "var(--heading-font)").style("font-size", "13px")
+      .attr("fill", "var(--text-2)").text(f.methods);
+  });
+
+  // A subtle accent bar on the left for the framing article's "current position"
+  g.append("text").attr("x", 4).attr("y", 8).attr("dy", "0.35em")
+    .style("font-family", "var(--heading-font)").style("font-size", "11px")
+    .style("letter-spacing", "0.08em").style("text-transform", "uppercase")
+    .attr("fill", "var(--text-3)").text("# · family · preserves · methods");
+})();
+</script>
+</body>
+</html>

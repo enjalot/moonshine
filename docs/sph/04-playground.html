@@ -31,6 +31,9 @@
   --c-mass: #d97706;
   --c-position: #0891b2;
   --c-velocity: #be185d;
+  --c-water: #2563eb;
+  --c-sand: #d97706;
+  --c-jelly: #7c3aed;
 }
 
 body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
@@ -51,12 +54,6 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
 .insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
 .insight p { margin: 0; }
 
-.controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
-.controls input[type="range"] { width: 140px; accent-color: var(--accent); }
-.controls label { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
-.controls button { font-family: var(--heading-font); font-size: 0.85rem; padding: 0.25rem 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); cursor: pointer; }
-.controls button:hover { background: var(--bg); }
-
 svg text { font-family: var(--heading-font); }
 
 /* Toolbar-specific styles */
@@ -66,8 +63,8 @@ svg text { font-family: var(--heading-font); }
 .tool-btn { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.2rem 0.6rem; border: 1px solid var(--border); border-radius: 3px; background: var(--fig-bg); cursor: pointer; color: var(--text-2); transition: background 0.1s, border-color 0.1s; }
 .tool-btn:hover { background: var(--bg); }
 .tool-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-.toolbar select { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.2rem 0.4rem; border: 1px solid var(--border); border-radius: 3px; background: var(--fig-bg); color: var(--text); cursor: pointer; }
 .status-text { font-family: var(--mono-font); font-size: 0.7rem; color: var(--text-2); margin-left: auto; white-space: nowrap; }
+.legend-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; margin-right: 3px; }
 
 @media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
@@ -78,7 +75,7 @@ svg text { font-family: var(--heading-font); }
   <header>
     <h1>Playground</h1>
     <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
-      A sandbox for building your own particle scenes.
+      A multi-material sandbox with three streams that mix in mid-air.
     </p>
     <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">
       Part 4 of <a href="index.html">Smooth Particle Hydrodynamics</a>
@@ -86,62 +83,73 @@ svg text { font-family: var(--heading-font); }
   </header>
 
   <p>
-    Everything from the previous articles comes together here. You have particles
-    governed by density, pressure, and viscosity. You have spatial hashing for fast
-    neighbor lookups. And you have material models that change how particles behave.
+    Everything from the previous articles comes together here. Water, sand, and
+    jelly all run in one simulation, side by side. Each particle carries a material
+    tag, and the shader looks up its own stiffness, viscosity, and rest density
+    before computing forces. Jelly particles hold onto each other through
+    springs; sand sticks to itself through high viscosity and static friction;
+    water just flows.
   </p>
   <p>
-    Pick a material, place emitters and obstacles, paint force fields, and watch
-    particles interact. The toolbar gives you everything you need to build small
-    scenes. Try dropping water onto an obstacle, or filling a space with jelly
-    and poking it.
+    Three emitters are already running. Your job is to get in the way. Drop
+    obstacles, paint air blowers that push particles up or sideways, and watch
+    the streams tangle. On WebGPU the scene holds up to 5,000 particles. On
+    machines without WebGPU it falls back to CPU and caps at 500.
   </p>
 
   <div class="figure figure-wide" id="fig-sandbox">
     <div class="toolbar" id="sandbox-toolbar">
       <div class="toolbar-group">
-        <label>Material:</label>
-        <select id="material-select">
-          <option value="water">Water</option>
-          <option value="sand">Sand</option>
-          <option value="jelly">Jelly</option>
-          <option value="ice">Ice</option>
-        </select>
-      </div>
-      <div class="toolbar-group">
         <label>Tool:</label>
-        <button class="tool-btn active" data-tool="emitter">Emitter</button>
-        <button class="tool-btn" data-tool="obstacle">Obstacle</button>
-        <button class="tool-btn" data-tool="force">Force</button>
+        <button class="tool-btn active" data-tool="obstacle">Obstacle</button>
+        <button class="tool-btn" data-tool="blower">Blower</button>
+        <button class="tool-btn" data-tool="jelly">Stamp Jelly</button>
         <button class="tool-btn" data-tool="erase">Erase</button>
       </div>
       <div class="toolbar-group">
-        <button class="tool-btn" id="play-btn">Play</button>
+        <button class="tool-btn active" id="play-btn">Pause</button>
         <button class="tool-btn" id="reset-btn">Reset</button>
       </div>
-      <span class="status-text" id="status-text">0 particles | -- fps</span>
+      <span class="status-text" id="status-text"><span id="backend-label">...</span> &middot; <span id="particle-count">0</span> particles &middot; <span id="fps">--</span> fps</span>
+    </div>
+    <div style="font-family:var(--heading-font);font-size:0.75rem;color:var(--text-2);margin-bottom:0.5rem;">
+      <span class="legend-swatch" style="background:#2563eb;"></span>Water
+      &nbsp;<span class="legend-swatch" style="background:#d97706;"></span>Sand
+      &nbsp;<span class="legend-swatch" style="background:#7c3aed;"></span>Jelly (springs)
     </div>
     <canvas id="sandbox-canvas" style="width:100%;border-radius:4px;cursor:crosshair;"></canvas>
     <div class="figure-caption">
       <span class="figure-label">Playground.</span>
-      Click the canvas to place emitters (drag to set direction), obstacles, or force fields.
-      Particles are colored by speed: dark blue is slow, lighter blue is fast.
-      Switch materials to change the physics.
+      Water and sand pour in continuously from the left. Use Stamp Jelly to place
+      a connected blob of jelly particles anywhere on the canvas. Obstacles are
+      circles (click and drag to set the radius). Blowers are rectangles that push
+      particles in a direction; click an existing blower to rotate its direction.
+      The erase tool removes anything you click.
     </div>
   </div>
 
   <p>
-    The sandbox measures frame time and displays the current FPS alongside
-    the particle count. If the simulation struggles to keep up, you can
-    reduce the load by erasing emitters or pressing Reset. The simulation
-    targets 60 fps and caps particles at 500 to stay smooth on most devices.
+    The physics for all three materials runs in a single compute shader. Each
+    particle reads its material index, looks up the right stiffness and
+    viscosity from a small uniform array, and computes its own forces. The
+    neighbor loop does not care which material a particle is; it treats them
+    uniformly through the same SPH kernel. Mixtures fall out for free.
+  </p>
+  <p>
+    Springs for jelly run in their own compute pass before forces. Each jelly
+    particle stores up to four neighbor indices that were within range at
+    spawn time, and the spring pass applies a stiff restoring force toward
+    each one&apos;s rest length. The fixed buffer keeps it simple and fast:
+    sentinel values mark empty slots, and that&apos;s it.
   </p>
 
   <p>
-    Everything here runs on a single thread using Canvas 2D. Spatial hashing
-    keeps the neighbor search fast, and substeps keep the integration stable.
-    The same ideas scale to GPU compute shaders as shown in
-    <a href="02-gpu.html">Part 2</a> if you need thousands of particles.
+    Everything stays on a single thread of JavaScript above the GPU, mostly to
+    handle the user tools and particle spawning. The compute shader does the
+    real work. If your browser does not support WebGPU the same physics still
+    runs on CPU, just at a lower particle budget. The same ideas from
+    <a href="02-gpu.html">Part 2</a> and <a href="03-beyond-water.html">Part 3</a>
+    scaled out and combined in one place.
   </p>
 
   <footer style="margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border);font-family:var(--heading-font);font-size:0.85rem;color:var(--text-2);">
@@ -174,489 +182,1210 @@ function visibleLoop(elementId, loopFn) {
 }
 
 // ============================================================
-// Playground sandbox
+// Playground sandbox (multi-material WebGPU w/ CPU fallback)
 // ============================================================
 (function() {
   const canvas = document.getElementById("sandbox-canvas");
   const ctx = canvas.getContext("2d");
   const dpr = window.devicePixelRatio || 1;
-  let simW = 680, simH = 500;
+  let simW = 700, simH = 450;
 
   function resizeCanvas() {
     const rect = canvas.parentElement.getBoundingClientRect();
-    simW = Math.floor(rect.width - 48);
-    simH = 500;
+    simW = Math.min(700, Math.floor(rect.width - 48));
+    simH = 450;
     canvas.width = simW * dpr; canvas.height = simH * dpr;
     canvas.style.height = simH + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   resizeCanvas();
 
-  // --- Material presets ---
-  const materials = {
-    water:  { viscosity: 100, stiffness: 1500, restD: 3.5, friction: 0.3, springs: false, springK: 0,    label: 'Water' },
-    sand:   { viscosity: 200, stiffness: 2000, restD: 4.0, friction: 0.05, springs: false, springK: 0,   label: 'Sand'  },
-    jelly:  { viscosity: 50,  stiffness: 800,  restD: 3.0, friction: 0.3, springs: true,  springK: 800,  label: 'Jelly' },
-    ice:    { viscosity: 300, stiffness: 3000, restD: 3.5, friction: 0.3, springs: true,  springK: 3000, label: 'Ice'   },
-  };
-  let currentMaterial = 'water';
+  // ---- Materials: 0=water, 1=sand, 2=jelly ----
+  // Parallel arrays indexed by material. Keep in sync with WGSL.
+  const MAT_WATER = 0, MAT_SAND = 1, MAT_JELLY = 2;
+  const MAT_STIFFNESS = [10000, 2500, 1000];
+  const MAT_VISCOSITY = [50,    150,  80];
+  const MAT_RESTD     = [1.5,   3.5,  1.5];  // sand has high restD so weak bulk pressure
+  const MAT_FRICTION  = [0,     800,  0];    // sand friction cranked up
+  // Per-substep damping
+  const MAT_DAMPING   = [0.9995, 0.997, 0.9995];
+  const MAT_STATIC_VC = [0,      0,    0];
+  const MAT_SPRINGY   = [0,      0,    1];
+  const MAT_COLORS    = ['#2563eb', '#d97706', '#7c3aed'];
 
-  // --- Simulation state ---
-  const H = 14, substeps = 5, dt = 0.001, pR = 5, maxP = 500;
-  const gravity = 300;
-  let particles = [];
-  let springs = []; // {a, b, restLen}
-  let emitters = []; // {x, y, dx, dy}
-  let obstacles = []; // {x, y, r}
-  let forceFields = []; // {x, y, dx, dy, r}
-  let paused = true;
-  let activeTool = 'emitter';
+  // ---- Simulation constants ----
+  const H = 12, pR = 4;
+  const dt = 0.001, substeps = 16;
+  const gravity = 200;
+  const MAX_OBSTACLES = 8;
+  const MAX_BLOWERS = 6;
+  const MAX_SPRINGS_PER_PARTICLE = 8;
+  const SPRING_K = 1500;
+  const SPRING_DAMP = 30;
+  const JELLY_SPRING_RANGE = H * 1.5;
+  const JELLY_REST_LEN = H * 0.55; // fixed rest length so springs don't start at random lengths
 
-  // Pointer state
-  let pointerDown = false, pointerX = 0, pointerY = 0;
-  let dragStartX = 0, dragStartY = 0;
-  let isDragging = false;
+  // Per-backend particle cap
+  let maxP = 5000;
+
+  // ---- State ----
+  let obstacles = [];  // { x, y, r }
+  let blowers = [];    // { x, y, w, h, dir } dir: 0=up, 1=right, 2=down, 3=left
+  let pendingStamps = []; // stamps queued for next frame (applied once backend is ready)
+  let paused = false;
+  let activeTool = 'obstacle';
+
+  // ---- Emitters (pre-placed, not user-editable) ----
+  // Each: { material, x, y, vx, vy, rate (particles per frame, may be fractional), acc }
+  let emitters = [];
+  function seedEmitters() {
+    emitters = [
+      // Water at upper-left, spraying right
+      { material: MAT_WATER, x: simW * 0.08, y: 50,  vx: 150, vy: 15, rate: 3.0, acc: 0 },
+      // Sand below, to its own pile
+      { material: MAT_SAND,  x: simW * 0.12, y: 180, vx: 100, vy: 40, rate: 2.0, acc: 0 },
+    ];
+    blowers = [
+      { x: simW * 0.5 - 40, y: simH - 80, w: 80, h: 40, dir: 0 },
+    ];
+    // Stamp a jelly blob on the right side so there's one ready at load time
+    pendingStamps = [{ type: 'jelly', x: simW * 0.75, y: 100 }];
+    obstacles = [];
+  }
+  seedEmitters();
 
   // FPS tracking
-  let lastFrameTime = performance.now(), frameCount = 0, fps = 0, fpsTimer = 0;
+  let lastFrameTime = performance.now(), fpsSmooth = 60;
 
-  // --- Spatial hash ---
-  const hashMap = new Map();
-  function hashKey(cx, cy) { return cx * 73856093 ^ cy * 19349663; }
-  function buildHash() {
-    hashMap.clear();
-    for (let i = 0; i < particles.length; i++) {
-      const p = particles[i];
-      const cx = Math.floor(p.x / H), cy = Math.floor(p.y / H);
-      const key = hashKey(cx, cy);
-      if (!hashMap.has(key)) hashMap.set(key, []);
-      hashMap.get(key).push(i);
-    }
-  }
-  function getNeighbors(pi) {
-    const p = particles[pi];
-    const cx = Math.floor(p.x / H), cy = Math.floor(p.y / H);
-    const result = [];
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        const key = hashKey(cx + dx, cy + dy);
-        const cell = hashMap.get(key);
-        if (cell) for (const j of cell) if (j !== pi) result.push(j);
+  // ---- Backend abstraction ----
+  // Both backends expose: step(), addParticles(arr), getParticles(),
+  // reset(), getCount(). Each particle is {x, y, vx, vy, material, neighbors[4]}.
+  // Neighbors are indices for springs; MAT_JELLY only. 0xFFFFFFFF = empty slot.
+  let backend = null;
+
+  // ============================================================
+  // CPU FALLBACK
+  // ============================================================
+  function createCPUBackend() {
+    let particles = [];
+    const hashMap = new Map();
+    function hashKey(cx, cy) { return (cx * 73856093) ^ (cy * 19349663); }
+    function rebuildHash() {
+      hashMap.clear();
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        const cx = Math.floor(p.x / H), cy = Math.floor(p.y / H);
+        const k = hashKey(cx, cy);
+        if (!hashMap.has(k)) hashMap.set(k, []);
+        hashMap.get(k).push(i);
       }
     }
-    return result;
-  }
-
-  // --- Spring management ---
-  function addSpringsForParticle(idx) {
-    const mat = materials[currentMaterial];
-    if (!mat.springs) return;
-    const p = particles[idx];
-    for (let j = 0; j < particles.length; j++) {
-      if (j === idx) continue;
-      const q = particles[j];
-      const dx = p.x - q.x, dy = p.y - q.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < H && dist > 0.1) {
-        springs.push({ a: idx, b: j, restLen: dist });
+    function neighborsOf(px, py) {
+      const cx = Math.floor(px / H), cy = Math.floor(py / H);
+      const out = [];
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+        const cell = hashMap.get(hashKey(cx + dx, cy + dy));
+        if (cell) for (const j of cell) out.push(j);
       }
-    }
-  }
-
-  // --- Emitter logic ---
-  function emitParticles() {
-    const mat = materials[currentMaterial];
-    for (const em of emitters) {
-      if (particles.length >= maxP) break;
-      const count = Math.min(2 + Math.floor(Math.random() * 2), maxP - particles.length);
-      for (let i = 0; i < count; i++) {
-        const spread = (Math.random() - 0.5) * 6;
-        const idx = particles.length;
-        particles.push({
-          x: em.x + spread,
-          y: em.y + (Math.random() - 0.5) * 4,
-          vx: em.dx * 80 + (Math.random() - 0.5) * 10,
-          vy: em.dy * 80 + (Math.random() - 0.5) * 10,
-          density: 0, pressure: 0, fx: 0, fy: 0,
-          material: currentMaterial
-        });
-        addSpringsForParticle(idx);
-      }
-    }
-  }
-
-  // --- Physics step ---
-  function step() {
-    const mat = materials[currentMaterial];
-    buildHash();
-
-    // Compute density
-    for (let i = 0; i < particles.length; i++) {
-      const pi = particles[i];
-      pi.density = SPH.kernel(0, H); // self
-      const nbrs = getNeighbors(i);
-      for (const j of nbrs) {
-        const pj = particles[j];
-        const dx = pi.x - pj.x, dy = pi.y - pj.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        pi.density += SPH.kernel(dist, H);
-      }
-      pi.pressure = mat.stiffness * Math.max(0, pi.density - mat.restD);
+      return out;
     }
 
-    // Compute forces
-    for (let i = 0; i < particles.length; i++) {
-      const pi = particles[i];
-      pi.fx = 0; pi.fy = gravity;
-      const nbrs = getNeighbors(i);
-      for (const j of nbrs) {
-        const pj = particles[j];
-        const dx = pi.x - pj.x, dy = pi.y - pj.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < H && dist > 0.1) {
+    function step() {
+      rebuildHash();
+
+      // --- Density + pressure ---
+      for (let i = 0; i < particles.length; i++) {
+        const pi = particles[i];
+        let rho = 0;
+        const nbrs = neighborsOf(pi.x, pi.y);
+        for (const j of nbrs) {
+          const pj = particles[j];
+          const dx = pi.x - pj.x, dy = pi.y - pj.y;
+          rho += SPH.kernel(Math.sqrt(dx * dx + dy * dy), H);
+        }
+        pi.density = rho;
+        pi.pressure = MAT_STIFFNESS[pi.material] * Math.max(0, rho - MAT_RESTD[pi.material]);
+      }
+
+      // --- Spring forces (jelly) ---
+      for (let i = 0; i < particles.length; i++) {
+        const pi = particles[i];
+        if (pi.material !== MAT_JELLY) continue;
+        for (let s = 0; s < MAX_SPRINGS_PER_PARTICLE; s++) {
+          const j = pi.nbr[s];
+          if (j === 0xFFFFFFFF || j >= particles.length) continue;
+          const pj = particles[j];
+          if (pj.material !== MAT_JELLY) continue;
+          const dx = pi.x - pj.x, dy = pi.y - pj.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 0.001) continue;
+          const rest = pi.nbrRest[s];
           const nx = dx / dist, ny = dy / dist;
-          const g = SPH.gradKernel(dist, H);
-          const pA = (pi.pressure + pj.pressure) / (2 * Math.max(pj.density, 0.01));
-          pi.fx -= pA * g * nx;
-          pi.fy -= pA * g * ny;
-          const l = SPH.lapKernel(dist, H);
-          const rJ = Math.max(pj.density, 0.01);
-          pi.fx += mat.viscosity / rJ * (pj.vx - pi.vx) * l;
-          pi.fy += mat.viscosity / rJ * (pj.vy - pi.vy) * l;
+          const stretch = dist - rest;
+          const f = SPRING_K * stretch;
+          // damping on relative velocity along spring axis
+          const dvx = pi.vx - pj.vx, dvy = pi.vy - pj.vy;
+          const vAlong = dvx * nx + dvy * ny;
+          const fd = SPRING_DAMP * vAlong;
+          pi.fx = (pi.fx || 0) - (f + fd) * nx;
+          pi.fy = (pi.fy || 0) - (f + fd) * ny;
         }
       }
 
-      // Force fields
-      for (const ff of forceFields) {
-        const dx = pi.x - ff.x, dy = pi.y - ff.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < ff.r) {
-          const strength = 200 * (1 - dist / ff.r);
-          pi.fx += ff.dx * strength;
-          pi.fy += ff.dy * strength;
+      // --- SPH forces + external ---
+      for (let i = 0; i < particles.length; i++) {
+        const pi = particles[i];
+        const mat = pi.material;
+        const visc = MAT_VISCOSITY[mat];
+        const fric = MAT_FRICTION[mat];
+        // Keep spring accumulation
+        let fx = (pi.fx || 0);
+        let fy = (pi.fy || 0) + gravity;
+        pi.fx = 0; pi.fy = 0;
+
+        const nbrs = neighborsOf(pi.x, pi.y);
+        for (const j of nbrs) {
+          if (j === i) continue;
+          const pj = particles[j];
+          const dx = pi.x - pj.x, dy = pi.y - pj.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < H && dist > 0.1) {
+            const nx = dx / dist, ny = dy / dist;
+            const g = SPH.gradKernel(dist, H);
+            const rJ = Math.max(pj.density, 0.01);
+            const pA = (pi.pressure + pj.pressure) / (2 * rJ);
+            fx -= pA * g * nx;
+            fy -= pA * g * ny;
+            const l = SPH.lapKernel(dist, H);
+            fx += visc / rJ * (pj.vx - pi.vx) * l;
+            fy += visc / rJ * (pj.vy - pi.vy) * l;
+            // Sand friction (tangential)
+            if (fric > 0) {
+              const dvx = pj.vx - pi.vx, dvy = pj.vy - pi.vy;
+              const vn = dvx * nx + dvy * ny;
+              const vtx = dvx - vn * nx, vty = dvy - vn * ny;
+              const w = SPH.kernel(dist, H) / rJ;
+              fx += fric * vtx * w;
+              fy += fric * vty * w;
+            }
+          }
         }
+
+        // Blowers (directional vector field inside rectangle)
+        for (const b of blowers) {
+          if (pi.x >= b.x && pi.x <= b.x + b.w && pi.y >= b.y && pi.y <= b.y + b.h) {
+            const [bx, by] = blowerDir(b.dir);
+            // Apply as strong force
+            fx += bx * 80000;
+            fy += by * 80000;
+          }
+        }
+
+        pi.fxAcc = fx;
+        pi.fyAcc = fy;
+      }
+
+      // --- Integrate ---
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        const mat = p.material;
+        const rho = Math.max(p.density, 0.01);
+        p.vx += (p.fxAcc / rho) * dt;
+        p.vy += (p.fyAcc / rho) * dt;
+        // Per-step damping
+        p.vx *= MAT_DAMPING[mat];
+        p.vy *= MAT_DAMPING[mat];
+        // Static friction (sand)
+        const stc = MAT_STATIC_VC[mat];
+        if (stc > 0) {
+          const sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+          if (sp < stc) { p.vx = 0; p.vy = 0; }
+        }
+        // Cap speed
+        const sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+        if (sp > 500) { const s = 500 / sp; p.vx *= s; p.vy *= s; }
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+
+        // Obstacle collisions
+        for (const o of obstacles) {
+          const ox = p.x - o.x, oy = p.y - o.y;
+          const d = Math.sqrt(ox * ox + oy * oy);
+          const mind = o.r + pR;
+          if (d < mind && d > 0.01) {
+            const nx = ox / d, ny = oy / d;
+            p.x = o.x + nx * mind;
+            p.y = o.y + ny * mind;
+            const vn = p.vx * nx + p.vy * ny;
+            if (vn < 0) {
+              p.vx -= 1.5 * vn * nx;
+              p.vy -= 1.5 * vn * ny;
+            }
+          }
+        }
+
+        // Walls
+        const m = pR + 1;
+        if (p.x < m) { p.x = m; p.vx = Math.abs(p.vx) * 0.3; }
+        if (p.x > simW - m) { p.x = simW - m; p.vx = -Math.abs(p.vx) * 0.3; }
+        if (p.y < m) { p.y = m; p.vy = Math.abs(p.vy) * 0.3; }
+        if (p.y > simH - m) { p.y = simH - m; p.vy = -Math.abs(p.vy) * 0.3; }
       }
     }
 
-    // Spring forces (jelly/ice)
-    for (const sp of springs) {
-      if (sp.a >= particles.length || sp.b >= particles.length) continue;
-      const pa = particles[sp.a], pb = particles[sp.b];
-      const dx = pa.x - pb.x, dy = pa.y - pb.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 0.01) continue;
-      const pMat = materials[pa.material] || mat;
-      const force = pMat.springK * (dist - sp.restLen);
-      const nx = dx / dist, ny = dy / dist;
-      pa.fx -= force * nx; pa.fy -= force * ny;
-      pb.fx += force * nx; pb.fy += force * ny;
+    return {
+      type: 'cpu',
+      step() { for (let s = 0; s < substeps; s++) step(); },
+      addParticles(arr) {
+        const room = maxP - particles.length;
+        const n = Math.min(arr.length, room);
+        for (let i = 0; i < n; i++) {
+          const a = arr[i];
+          const nbr = new Uint32Array(MAX_SPRINGS_PER_PARTICLE);
+          const nbrRest = new Float32Array(MAX_SPRINGS_PER_PARTICLE);
+          for (let k = 0; k < MAX_SPRINGS_PER_PARTICLE; k++) nbr[k] = 0xFFFFFFFF;
+          const newIdx = particles.length;
+          particles.push({
+            x: a.x, y: a.y, vx: a.vx, vy: a.vy,
+            material: a.material,
+            density: 0, pressure: 0,
+            fx: 0, fy: 0, fxAcc: 0, fyAcc: 0,
+            nbr, nbrRest
+          });
+          // If jelly: form springs with up to MAX_SPRINGS_PER_PARTICLE nearby jelly
+          if (a.material === MAT_JELLY) {
+            let slot = 0;
+            for (let j = 0; j < particles.length - 1 && slot < MAX_SPRINGS_PER_PARTICLE; j++) {
+              const pj = particles[j];
+              if (pj.material !== MAT_JELLY) continue;
+              const dx = a.x - pj.x, dy = a.y - pj.y;
+              const d = Math.sqrt(dx * dx + dy * dy);
+              if (d < JELLY_SPRING_RANGE && d > 0.1) {
+                nbr[slot] = j;
+                nbrRest[slot] = d;
+                slot++;
+                // Also back-link (find free slot in pj)
+                for (let k = 0; k < MAX_SPRINGS_PER_PARTICLE; k++) {
+                  if (pj.nbr[k] === 0xFFFFFFFF) { pj.nbr[k] = newIdx; pj.nbrRest[k] = d; break; }
+                }
+              }
+            }
+          }
+        }
+      },
+      getParticles() { return particles; },
+      getCount() { return particles.length; },
+      reset() { particles = []; }
+    };
+  }
+
+  // ============================================================
+  // WebGPU BACKEND
+  // ============================================================
+  async function createWebGPUBackend() {
+    if (!navigator.gpu) return null;
+    let adapter, device;
+    try {
+      adapter = await navigator.gpu.requestAdapter();
+      if (!adapter) return null;
+      // Request higher limits (adapter permitting) for the 9 storage buffers we need
+      const want = {
+        maxStorageBufferBindingSize: 256 * 1024 * 1024,
+        maxStorageBuffersPerShaderStage: 10,
+      };
+      const allowed = {};
+      for (const k in want) {
+        if (adapter.limits[k] !== undefined && adapter.limits[k] >= want[k]) allowed[k] = want[k];
+      }
+      device = await adapter.requestDevice({ requiredLimits: allowed });
+    } catch(e) { return null; }
+
+    const MAX_PARTICLES = 5120;
+    const GRID_W = Math.ceil(900 / H);
+    const GRID_H = Math.ceil(600 / H);
+    const MAX_PER_CELL = 32;
+    const WORKGROUP_SIZE = 64;
+
+    // Params layout (std140-friendly: all f32 scalars, then vec4 arrays)
+    // Fixed scalars:
+    //   0 n, 1 H, 2 dt, 3 gravity, 4 pR, 5 simW, 6 simH,
+    //   7 gridW, 8 gridH, 9 maxPerCell,
+    //   10 obstacleCount, 11 blowerCount,
+    //   12..15 padding to vec4 boundary
+    // Material table (vec4 per material × 3):
+    //   [stiffness, viscosity, restD, friction]  (vec4)
+    //   [damping, staticVc, springy, pad]         (vec4)
+    // Obstacles: 8 × vec4(x, y, r, 0)
+    // Blowers:   6 × vec4(x, y, w, h)  +  6 × vec4(dirX, dirY, 0, 0)
+    const SCALARS = 16;                // rounded up to vec4
+    const MAT_V4 = 2 * 3;              // 6 vec4 (3 materials × 2)
+    const OBS_V4 = MAX_OBSTACLES;      // 8 vec4
+    const BLOW_POS_V4 = MAX_BLOWERS;   // 6 vec4
+    const BLOW_DIR_V4 = MAX_BLOWERS;   // 6 vec4
+    const PARAMS_VECS = SCALARS / 4 + MAT_V4 + OBS_V4 + BLOW_POS_V4 + BLOW_DIR_V4;
+    const PARAMS_FLOATS = PARAMS_VECS * 4;
+    const paramsData = new Float32Array(PARAMS_FLOATS);
+
+    // Buffers
+    const posBuffer = device.createBuffer({ size: MAX_PARTICLES * 2 * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
+    const velBuffer = device.createBuffer({ size: MAX_PARTICLES * 2 * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
+    const densityBuffer = device.createBuffer({ size: MAX_PARTICLES * 4, usage: GPUBufferUsage.STORAGE });
+    const pressureBuffer = device.createBuffer({ size: MAX_PARTICLES * 4, usage: GPUBufferUsage.STORAGE });
+    const forceBuffer = device.createBuffer({ size: MAX_PARTICLES * 2 * 4, usage: GPUBufferUsage.STORAGE });
+    const matBuffer = device.createBuffer({ size: MAX_PARTICLES * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+    const nbrBuffer = device.createBuffer({ size: MAX_PARTICLES * MAX_SPRINGS_PER_PARTICLE * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+    const nbrRestBuffer = device.createBuffer({ size: MAX_PARTICLES * MAX_SPRINGS_PER_PARTICLE * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+
+    const cellStride = 1 + MAX_PER_CELL;
+    const gridSize = GRID_W * GRID_H * cellStride * 4;
+    const gridBuffer = device.createBuffer({ size: gridSize, usage: GPUBufferUsage.STORAGE });
+    const paramsBuffer = device.createBuffer({ size: PARAMS_FLOATS * 4, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    const posReadbackBuf = device.createBuffer({ size: MAX_PARTICLES * 2 * 4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    const velReadbackBuf = device.createBuffer({ size: MAX_PARTICLES * 2 * 4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+
+    const shaderCode = `
+struct MatA { stiffness: f32, viscosity: f32, restD: f32, friction: f32 };
+struct MatB { damping: f32, staticVc: f32, springy: f32, pad: f32 };
+struct Obs { x: f32, y: f32, r: f32, pad: f32 };
+struct BlowPos { x: f32, y: f32, w: f32, h: f32 };
+struct BlowDir { dx: f32, dy: f32, pad0: f32, pad1: f32 };
+
+struct Params {
+  n: f32, H: f32, dt: f32, gravity: f32,
+  pR: f32, simW: f32, simH: f32, gridW: f32,
+  gridH: f32, maxPerCell: f32, obsCount: f32, blowCount: f32,
+  p0: f32, p1: f32, p2: f32, p3: f32,
+  matA: array<MatA, 3>,
+  matB: array<MatB, 3>,
+  obs: array<Obs, ${MAX_OBSTACLES}>,
+  blowPos: array<BlowPos, ${MAX_BLOWERS}>,
+  blowDir: array<BlowDir, ${MAX_BLOWERS}>,
+};
+
+@group(0) @binding(0) var<uniform> params: Params;
+@group(0) @binding(1) var<storage, read_write> pos: array<f32>;
+@group(0) @binding(2) var<storage, read_write> vel: array<f32>;
+@group(0) @binding(3) var<storage, read_write> density: array<f32>;
+@group(0) @binding(4) var<storage, read_write> pressure: array<f32>;
+@group(0) @binding(5) var<storage, read_write> force: array<f32>;
+@group(0) @binding(6) var<storage, read_write> grid: array<atomic<u32>>;
+@group(0) @binding(7) var<storage, read> pmat: array<u32>;
+@group(0) @binding(8) var<storage, read> nbr: array<u32>;
+@group(0) @binding(9) var<storage, read> nbrRest: array<f32>;
+
+fn kernel_w(r: f32, h: f32) -> f32 {
+  let q = r / h;
+  if (q >= 1.0) { return 0.0; }
+  let t = 1.0 - q;
+  return t * t * t;
+}
+fn grad_kernel(r: f32, h: f32) -> f32 {
+  let q = r / h;
+  if (q >= 1.0 || r < 1e-6) { return 0.0; }
+  let t = 1.0 - q;
+  return -3.0 * t * t / h;
+}
+fn lap_kernel(r: f32, h: f32) -> f32 {
+  let q = r / h;
+  if (q >= 1.0) { return 0.0; }
+  return 6.0 * (1.0 - q) / (h * h);
+}
+fn cellIdx(cx: i32, cy: i32) -> i32 {
+  let gw = i32(params.gridW);
+  let mpc = i32(params.maxPerCell);
+  return (cy * gw + cx) * (1 + mpc);
+}
+
+// --- Pass 0: clear grid ---
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn clearGrid(@builtin(global_invocation_id) id: vec3u) {
+  let totalCells = u32(params.gridW) * u32(params.gridH);
+  let mpc = u32(params.maxPerCell);
+  let stride = 1u + mpc;
+  if (id.x >= totalCells) { return; }
+  atomicStore(&grid[id.x * stride], 0u);
+}
+
+// --- Pass 1: insert particles ---
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn insertParticles(@builtin(global_invocation_id) id: vec3u) {
+  let i = id.x;
+  let n = u32(params.n);
+  if (i >= n) { return; }
+  let px = pos[i * 2u];
+  let py = pos[i * 2u + 1u];
+  let cx = i32(floor(px / params.H));
+  let cy = i32(floor(py / params.H));
+  let gw = i32(params.gridW);
+  let gh = i32(params.gridH);
+  if (cx < 0 || cx >= gw || cy < 0 || cy >= gh) { return; }
+  let mpc = u32(params.maxPerCell);
+  let base = u32(cellIdx(cx, cy));
+  let slot = atomicAdd(&grid[base], 1u);
+  if (slot < mpc) { atomicStore(&grid[base + 1u + slot], i); }
+}
+
+// --- Pass 2: density + pressure (material-aware) ---
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn densityPass(@builtin(global_invocation_id) id: vec3u) {
+  let i = id.x;
+  let n = u32(params.n);
+  if (i >= n) { return; }
+  let px = pos[i * 2u];
+  let py = pos[i * 2u + 1u];
+  let cx = i32(floor(px / params.H));
+  let cy = i32(floor(py / params.H));
+  let gw = i32(params.gridW);
+  let gh = i32(params.gridH);
+  let mpc = u32(params.maxPerCell);
+  var rho = 0.0;
+  for (var dx = -1; dx <= 1; dx++) {
+    for (var dy = -1; dy <= 1; dy++) {
+      let ncx = cx + dx;
+      let ncy = cy + dy;
+      if (ncx < 0 || ncx >= gw || ncy < 0 || ncy >= gh) { continue; }
+      let base = u32(cellIdx(ncx, ncy));
+      let count = min(atomicLoad(&grid[base]), mpc);
+      for (var k = 0u; k < count; k++) {
+        let j = atomicLoad(&grid[base + 1u + k]);
+        let djx = px - pos[j * 2u];
+        let djy = py - pos[j * 2u + 1u];
+        rho += kernel_w(sqrt(djx * djx + djy * djy), params.H);
+      }
     }
+  }
+  let mi = pmat[i];
+  density[i] = rho;
+  pressure[i] = params.matA[mi].stiffness * max(0.0, rho - params.matA[mi].restD);
+}
 
-    // Integrate
-    for (let i = 0; i < particles.length; i++) {
-      const p = particles[i];
-      const pMat = materials[p.material] || mat;
-      const rho = Math.max(p.density, 0.01);
-      p.vx += (p.fx / rho) * dt;
-      p.vy += (p.fy / rho) * dt;
-      const sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
-      if (sp > 500) { const s = 500 / sp; p.vx *= s; p.vy *= s; }
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
+// --- Pass 3: springs (jelly only) ---
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn springPass(@builtin(global_invocation_id) id: vec3u) {
+  let i = id.x;
+  let n = u32(params.n);
+  if (i >= n) { return; }
+  let mi = pmat[i];
+  // Clear force accumulator for this frame
+  force[i * 2u] = 0.0;
+  force[i * 2u + 1u] = 0.0;
+  if (params.matB[mi].springy < 0.5) { return; }
+  let px = pos[i * 2u];
+  let py = pos[i * 2u + 1u];
+  let vx = vel[i * 2u];
+  let vy = vel[i * 2u + 1u];
+  var fx = 0.0;
+  var fy = 0.0;
+  let k_spring = ${SPRING_K}.0;
+  let k_damp = ${SPRING_DAMP}.0;
+  for (var s = 0u; s < ${MAX_SPRINGS_PER_PARTICLE}u; s++) {
+    let j = nbr[i * ${MAX_SPRINGS_PER_PARTICLE}u + s];
+    if (j == 0xFFFFFFFFu || j >= n) { continue; }
+    if (pmat[j] != mi) { continue; }
+    let djx = px - pos[j * 2u];
+    let djy = py - pos[j * 2u + 1u];
+    let dist = sqrt(djx * djx + djy * djy);
+    if (dist < 0.001) { continue; }
+    let rest = nbrRest[i * ${MAX_SPRINGS_PER_PARTICLE}u + s];
+    let nx = djx / dist;
+    let ny = djy / dist;
+    let stretch = dist - rest;
+    let dvx = vx - vel[j * 2u];
+    let dvy = vy - vel[j * 2u + 1u];
+    let vAlong = dvx * nx + dvy * ny;
+    let f = k_spring * stretch + k_damp * vAlong;
+    fx -= f * nx;
+    fy -= f * ny;
+  }
+  force[i * 2u] = fx;
+  force[i * 2u + 1u] = fy;
+}
 
-      // Obstacle collision
-      for (const obs of obstacles) {
-        const dx = p.x - obs.x, dy = p.y - obs.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const minDist = obs.r + pR;
-        if (dist < minDist && dist > 0.01) {
-          const nx = dx / dist, ny = dy / dist;
-          p.x = obs.x + nx * minDist;
-          p.y = obs.y + ny * minDist;
-          const vDotN = p.vx * nx + p.vy * ny;
-          if (vDotN < 0) {
-            p.vx -= 1.5 * vDotN * nx;
-            p.vy -= 1.5 * vDotN * ny;
+// --- Pass 4: SPH forces + integrate ---
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
+  let i = id.x;
+  let n = u32(params.n);
+  if (i >= n) { return; }
+  let mi = pmat[i];
+  let px = pos[i * 2u];
+  let py = pos[i * 2u + 1u];
+  let vx = vel[i * 2u];
+  let vy = vel[i * 2u + 1u];
+  let cx = i32(floor(px / params.H));
+  let cy = i32(floor(py / params.H));
+  let gw = i32(params.gridW);
+  let gh = i32(params.gridH);
+  let mpc = u32(params.maxPerCell);
+
+  // Start from spring forces (already in force buffer) plus gravity
+  var fx = force[i * 2u];
+  var fy = force[i * 2u + 1u] + params.gravity;
+
+  let pi_pressure = pressure[i];
+  let pi_density = density[i];
+  let visc = params.matA[mi].viscosity;
+  let fric = params.matA[mi].friction;
+
+  for (var dx = -1; dx <= 1; dx++) {
+    for (var dy = -1; dy <= 1; dy++) {
+      let ncx = cx + dx;
+      let ncy = cy + dy;
+      if (ncx < 0 || ncx >= gw || ncy < 0 || ncy >= gh) { continue; }
+      let base = u32(cellIdx(ncx, ncy));
+      let count = min(atomicLoad(&grid[base]), mpc);
+      for (var k = 0u; k < count; k++) {
+        let j = atomicLoad(&grid[base + 1u + k]);
+        if (j == i) { continue; }
+        let djx = px - pos[j * 2u];
+        let djy = py - pos[j * 2u + 1u];
+        let dist = sqrt(djx * djx + djy * djy);
+        if (dist < params.H && dist > 0.1) {
+          let nx = djx / dist;
+          let ny = djy / dist;
+          let g = grad_kernel(dist, params.H);
+          let pj_density = max(density[j], 0.01);
+          let pA = (pi_pressure + pressure[j]) / (2.0 * pj_density);
+          fx -= pA * g * nx;
+          fy -= pA * g * ny;
+          let l = lap_kernel(dist, params.H);
+          fx += visc / pj_density * (vel[j * 2u] - vx) * l;
+          fy += visc / pj_density * (vel[j * 2u + 1u] - vy) * l;
+          if (fric > 0.0) {
+            let dvx = vel[j * 2u] - vx;
+            let dvy = vel[j * 2u + 1u] - vy;
+            let vn = dvx * nx + dvy * ny;
+            let vtx = dvx - vn * nx;
+            let vty = dvy - vn * ny;
+            let w = kernel_w(dist, params.H) / pj_density;
+            fx += fric * vtx * w;
+            fy += fric * vty * w;
           }
         }
       }
+    }
+  }
 
-      // Wall collision (all 4 sides)
-      const m = pR + 1;
-      if (p.x < m) { p.x = m; p.vx = Math.abs(p.vx) * pMat.friction; }
-      if (p.x > simW - m) { p.x = simW - m; p.vx = -Math.abs(p.vx) * pMat.friction; }
-      if (p.y < m) { p.y = m; p.vy = Math.abs(p.vy) * pMat.friction; }
-      if (p.y > simH - m) { p.y = simH - m; p.vy = -Math.abs(p.vy) * pMat.friction; }
+  // Blowers
+  let bc = u32(params.blowCount);
+  for (var bi = 0u; bi < bc; bi++) {
+    let b = params.blowPos[bi];
+    if (px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) {
+      let d = params.blowDir[bi];
+      fx += d.dx * 80000.0;
+      fy += d.dy * 80000.0;
+    }
+  }
 
-      // Sand: extra velocity damping on floor contact
-      if (p.material === 'sand' && p.y >= simH - m - 1) {
-        p.vx *= 0.9;
-        p.vy *= 0.9;
+  // Integrate
+  let rho = max(pi_density, 0.01);
+  var nvx = vx + (fx / rho) * params.dt;
+  var nvy = vy + (fy / rho) * params.dt;
+  // Per-material damping
+  nvx = nvx * params.matB[mi].damping;
+  nvy = nvy * params.matB[mi].damping;
+  // Static friction (sand)
+  let stc = params.matB[mi].staticVc;
+  if (stc > 0.0) {
+    let sp2 = sqrt(nvx * nvx + nvy * nvy);
+    if (sp2 < stc) { nvx = 0.0; nvy = 0.0; }
+  }
+  let sp = sqrt(nvx * nvx + nvy * nvy);
+  if (sp > 500.0) { let s = 500.0 / sp; nvx *= s; nvy *= s; }
+  var npx = px + nvx * params.dt;
+  var npy = py + nvy * params.dt;
+
+  // Obstacle collisions
+  let oc = u32(params.obsCount);
+  for (var oi = 0u; oi < oc; oi++) {
+    let o = params.obs[oi];
+    let ox = npx - o.x;
+    let oy = npy - o.y;
+    let d = sqrt(ox * ox + oy * oy);
+    let mind = o.r + params.pR;
+    if (d < mind && d > 0.01) {
+      let nx = ox / d;
+      let ny = oy / d;
+      npx = o.x + nx * mind;
+      npy = o.y + ny * mind;
+      let vn = nvx * nx + nvy * ny;
+      if (vn < 0.0) {
+        nvx = nvx - 1.5 * vn * nx;
+        nvy = nvy - 1.5 * vn * ny;
       }
     }
   }
 
-  // --- Color scale (blue gradient, never going to white) ---
-  const speedColor = d3.scaleSequential(t => d3.interpolateBlues(0.35 + t * 0.55)).domain([0, 200]);
+  // Walls
+  let m = params.pR + 1.0;
+  if (npx < m) { npx = m; nvx = abs(nvx) * 0.3; }
+  if (npx > params.simW - m) { npx = params.simW - m; nvx = -abs(nvx) * 0.3; }
+  if (npy < m) { npy = m; nvy = abs(nvy) * 0.3; }
+  if (npy > params.simH - m) { npy = params.simH - m; nvy = -abs(nvy) * 0.3; }
 
-  // --- Rendering ---
+  pos[i * 2u] = npx;
+  pos[i * 2u + 1u] = npy;
+  vel[i * 2u] = nvx;
+  vel[i * 2u + 1u] = nvy;
+}
+`;
+
+    // Capture any uncaught device errors so failures surface in the console
+    device.addEventListener('uncapturederror', (ev) => {
+      console.error('[playground WebGPU error]', ev.error.message);
+    });
+
+    let shaderModule;
+    try {
+      shaderModule = device.createShaderModule({ code: shaderCode });
+      // Await compilation info synchronously before creating pipelines so
+      // we catch shader errors with line numbers.
+      const info = await shaderModule.getCompilationInfo();
+      let hadError = false;
+      for (const m of info.messages) {
+        console[m.type === 'error' ? 'error' : 'warn']('[playground WGSL]', m.type, `line ${m.lineNum}:${m.linePos}`, m.message);
+        if (m.type === 'error') hadError = true;
+      }
+      if (hadError) { console.error('[playground] shader code:\n' + shaderCode); return null; }
+    } catch(e) { console.error('Shader compile failed', e); return null; }
+
+    const bindGroupLayout = device.createBindGroupLayout({
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
+        { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+        { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+        { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+        { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+        { binding: 5, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+        { binding: 6, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+        { binding: 7, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } },
+        { binding: 8, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } },
+        { binding: 9, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } },
+      ]
+    });
+
+    const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] });
+
+    let clearPipeline, insertPipeline, densityPipeline, springPipeline, forcePipeline;
+    try {
+      // Async variant throws on shader validation errors
+      clearPipeline   = await device.createComputePipelineAsync({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'clearGrid' } });
+      insertPipeline  = await device.createComputePipelineAsync({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'insertParticles' } });
+      densityPipeline = await device.createComputePipelineAsync({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'densityPass' } });
+      springPipeline  = await device.createComputePipelineAsync({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'springPass' } });
+      forcePipeline   = await device.createComputePipelineAsync({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'forceAndIntegrate' } });
+    } catch(e) { console.error('[playground] Pipeline create failed:', e.message || e); return null; }
+
+    const bindGroup = device.createBindGroup({
+      layout: bindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: paramsBuffer } },
+        { binding: 1, resource: { buffer: posBuffer } },
+        { binding: 2, resource: { buffer: velBuffer } },
+        { binding: 3, resource: { buffer: densityBuffer } },
+        { binding: 4, resource: { buffer: pressureBuffer } },
+        { binding: 5, resource: { buffer: forceBuffer } },
+        { binding: 6, resource: { buffer: gridBuffer } },
+        { binding: 7, resource: { buffer: matBuffer } },
+        { binding: 8, resource: { buffer: nbrBuffer } },
+        { binding: 9, resource: { buffer: nbrRestBuffer } },
+      ]
+    });
+
+    // CPU-side mirrors for particle data (used for readback-free rendering
+    // after adding, neighbor lookup for springs, and bookkeeping).
+    let gpuCount = 0;
+    const cpuX = new Float32Array(MAX_PARTICLES);
+    const cpuY = new Float32Array(MAX_PARTICLES);
+    const cpuVX = new Float32Array(MAX_PARTICLES);
+    const cpuVY = new Float32Array(MAX_PARTICLES);
+    const cpuMat = new Uint32Array(MAX_PARTICLES);
+    const cpuNbr = new Uint32Array(MAX_PARTICLES * MAX_SPRINGS_PER_PARTICLE);
+    const cpuNbrRest = new Float32Array(MAX_PARTICLES * MAX_SPRINGS_PER_PARTICLE);
+    cpuNbr.fill(0xFFFFFFFF);
+
+    let posReadback = new Float32Array(MAX_PARTICLES * 2);
+    let velReadback = new Float32Array(MAX_PARTICLES * 2);
+    let readbackReady = true;
+
+    function writeParams() {
+      let o = 0;
+      paramsData[o++] = gpuCount;
+      paramsData[o++] = H;
+      paramsData[o++] = dt;
+      paramsData[o++] = gravity;
+      paramsData[o++] = pR;
+      paramsData[o++] = simW;
+      paramsData[o++] = simH;
+      paramsData[o++] = GRID_W;
+      paramsData[o++] = GRID_H;
+      paramsData[o++] = MAX_PER_CELL;
+      paramsData[o++] = obstacles.length;
+      paramsData[o++] = blowers.length;
+      paramsData[o++] = 0; paramsData[o++] = 0; paramsData[o++] = 0; paramsData[o++] = 0;
+      // Mat (3 × 4 floats)
+      for (let m = 0; m < 3; m++) {
+        paramsData[o++] = MAT_STIFFNESS[m];
+        paramsData[o++] = MAT_VISCOSITY[m];
+        paramsData[o++] = MAT_RESTD[m];
+        paramsData[o++] = MAT_FRICTION[m];
+      }
+      // Mat2 (3 × 4 floats)
+      for (let m = 0; m < 3; m++) {
+        paramsData[o++] = MAT_DAMPING[m];
+        paramsData[o++] = MAT_STATIC_VC[m];
+        paramsData[o++] = MAT_SPRINGY[m];
+        paramsData[o++] = 0;
+      }
+      // Obstacles (MAX_OBSTACLES × vec4)
+      for (let i = 0; i < MAX_OBSTACLES; i++) {
+        if (i < obstacles.length) {
+          const ob = obstacles[i];
+          paramsData[o++] = ob.x; paramsData[o++] = ob.y; paramsData[o++] = ob.r; paramsData[o++] = 0;
+        } else {
+          paramsData[o++] = 0; paramsData[o++] = 0; paramsData[o++] = 0; paramsData[o++] = 0;
+        }
+      }
+      // Blower positions
+      for (let i = 0; i < MAX_BLOWERS; i++) {
+        if (i < blowers.length) {
+          const b = blowers[i];
+          paramsData[o++] = b.x; paramsData[o++] = b.y; paramsData[o++] = b.w; paramsData[o++] = b.h;
+        } else {
+          paramsData[o++] = 0; paramsData[o++] = 0; paramsData[o++] = 0; paramsData[o++] = 0;
+        }
+      }
+      // Blower directions
+      for (let i = 0; i < MAX_BLOWERS; i++) {
+        if (i < blowers.length) {
+          const [bx, by] = blowerDir(blowers[i].dir);
+          paramsData[o++] = bx; paramsData[o++] = by; paramsData[o++] = 0; paramsData[o++] = 0;
+        } else {
+          paramsData[o++] = 0; paramsData[o++] = 0; paramsData[o++] = 0; paramsData[o++] = 0;
+        }
+      }
+      device.queue.writeBuffer(paramsBuffer, 0, paramsData);
+    }
+
+    function dispatchOne() {
+      if (gpuCount === 0) return;
+      writeParams();
+      const totalCells = GRID_W * GRID_H;
+      const cellGroups = Math.ceil(totalCells / WORKGROUP_SIZE);
+      const particleGroups = Math.ceil(gpuCount / WORKGROUP_SIZE);
+
+      const encoder = device.createCommandEncoder();
+      const p0 = encoder.beginComputePass(); p0.setPipeline(clearPipeline);   p0.setBindGroup(0, bindGroup); p0.dispatchWorkgroups(cellGroups);      p0.end();
+      const p1 = encoder.beginComputePass(); p1.setPipeline(insertPipeline);  p1.setBindGroup(0, bindGroup); p1.dispatchWorkgroups(particleGroups);  p1.end();
+      const p2 = encoder.beginComputePass(); p2.setPipeline(densityPipeline); p2.setBindGroup(0, bindGroup); p2.dispatchWorkgroups(particleGroups);  p2.end();
+      const p3 = encoder.beginComputePass(); p3.setPipeline(springPipeline);  p3.setBindGroup(0, bindGroup); p3.dispatchWorkgroups(particleGroups);  p3.end();
+      const p4 = encoder.beginComputePass(); p4.setPipeline(forcePipeline);   p4.setBindGroup(0, bindGroup); p4.dispatchWorkgroups(particleGroups);  p4.end();
+
+      if (readbackReady) {
+        const byteCount = gpuCount * 2 * 4;
+        encoder.copyBufferToBuffer(posBuffer, 0, posReadbackBuf, 0, byteCount);
+        encoder.copyBufferToBuffer(velBuffer, 0, velReadbackBuf, 0, byteCount);
+        readbackReady = false;
+        device.queue.submit([encoder.finish()]);
+        (async () => {
+          try {
+            await posReadbackBuf.mapAsync(GPUMapMode.READ, 0, byteCount);
+            posReadback.set(new Float32Array(posReadbackBuf.getMappedRange(0, byteCount)));
+            posReadbackBuf.unmap();
+            await velReadbackBuf.mapAsync(GPUMapMode.READ, 0, byteCount);
+            velReadback.set(new Float32Array(velReadbackBuf.getMappedRange(0, byteCount)));
+            velReadbackBuf.unmap();
+            // Also refresh cpu mirrors so spring neighbor lookups at spawn time
+            // use up-to-date positions
+            for (let i = 0; i < gpuCount; i++) {
+              cpuX[i] = posReadback[i*2];
+              cpuY[i] = posReadback[i*2+1];
+              cpuVX[i] = velReadback[i*2];
+              cpuVY[i] = velReadback[i*2+1];
+            }
+          } catch(e) { /* busy */ }
+          readbackReady = true;
+        })();
+      } else {
+        device.queue.submit([encoder.finish()]);
+      }
+    }
+
+    return {
+      type: 'webgpu',
+      step() { for (let s = 0; s < substeps; s++) dispatchOne(); },
+      addParticles(arr) {
+        const room = Math.min(MAX_PARTICLES, maxP) - gpuCount;
+        const n = Math.min(arr.length, room);
+        if (n <= 0) return;
+        const startIdx = gpuCount;
+        const posArr = new Float32Array(n * 2);
+        const velArr = new Float32Array(n * 2);
+        const matArr = new Uint32Array(n);
+        for (let i = 0; i < n; i++) {
+          const a = arr[i];
+          posArr[i*2]   = a.x;
+          posArr[i*2+1] = a.y;
+          velArr[i*2]   = a.vx;
+          velArr[i*2+1] = a.vy;
+          matArr[i]     = a.material;
+          const gi = startIdx + i;
+          cpuX[gi] = a.x; cpuY[gi] = a.y;
+          cpuVX[gi] = a.vx; cpuVY[gi] = a.vy;
+          cpuMat[gi] = a.material;
+          posReadback[gi*2] = a.x;
+          posReadback[gi*2+1] = a.y;
+          velReadback[gi*2] = a.vx;
+          velReadback[gi*2+1] = a.vy;
+          // Initialize neighbor slots
+          for (let k = 0; k < MAX_SPRINGS_PER_PARTICLE; k++) {
+            cpuNbr[gi * MAX_SPRINGS_PER_PARTICLE + k] = 0xFFFFFFFF;
+            cpuNbrRest[gi * MAX_SPRINGS_PER_PARTICLE + k] = 0;
+          }
+        }
+        // For jelly particles, link to existing nearby jelly (using cpu mirrors)
+        // We do this only for the new ones; back-link into existing slots if free.
+        const touched = new Set();
+        for (let i = 0; i < n; i++) {
+          const gi = startIdx + i;
+          if (cpuMat[gi] !== MAT_JELLY) continue;
+          const x = cpuX[gi], y = cpuY[gi];
+          let slot = 0;
+          for (let j = 0; j < gi && slot < MAX_SPRINGS_PER_PARTICLE; j++) {
+            if (cpuMat[j] !== MAT_JELLY) continue;
+            const dx = x - cpuX[j], dy = y - cpuY[j];
+            const d = Math.sqrt(dx*dx + dy*dy);
+            if (d < JELLY_SPRING_RANGE && d > 0.1) {
+              cpuNbr[gi * MAX_SPRINGS_PER_PARTICLE + slot] = j;
+              cpuNbrRest[gi * MAX_SPRINGS_PER_PARTICLE + slot] = JELLY_REST_LEN;
+              slot++;
+              // back-link
+              for (let k = 0; k < MAX_SPRINGS_PER_PARTICLE; k++) {
+                const sIdx = j * MAX_SPRINGS_PER_PARTICLE + k;
+                if (cpuNbr[sIdx] === 0xFFFFFFFF) {
+                  cpuNbr[sIdx] = gi;
+                  cpuNbrRest[sIdx] = JELLY_REST_LEN;
+                  touched.add(j);
+                  break;
+                }
+              }
+            }
+          }
+        }
+        // Upload
+        device.queue.writeBuffer(posBuffer, startIdx * 2 * 4, posArr);
+        device.queue.writeBuffer(velBuffer, startIdx * 2 * 4, velArr);
+        device.queue.writeBuffer(matBuffer, startIdx * 4, matArr);
+        // Rewrite neighbor slices for new particles and for any old jelly we back-linked
+        device.queue.writeBuffer(nbrBuffer,     startIdx * MAX_SPRINGS_PER_PARTICLE * 4, cpuNbr.subarray(startIdx * MAX_SPRINGS_PER_PARTICLE, (startIdx + n) * MAX_SPRINGS_PER_PARTICLE));
+        device.queue.writeBuffer(nbrRestBuffer, startIdx * MAX_SPRINGS_PER_PARTICLE * 4, cpuNbrRest.subarray(startIdx * MAX_SPRINGS_PER_PARTICLE, (startIdx + n) * MAX_SPRINGS_PER_PARTICLE));
+        // For back-linked existing jelly particles, upload their slices
+        for (const j of touched) {
+          device.queue.writeBuffer(nbrBuffer,     j * MAX_SPRINGS_PER_PARTICLE * 4, cpuNbr.subarray(j * MAX_SPRINGS_PER_PARTICLE, (j + 1) * MAX_SPRINGS_PER_PARTICLE));
+          device.queue.writeBuffer(nbrRestBuffer, j * MAX_SPRINGS_PER_PARTICLE * 4, cpuNbrRest.subarray(j * MAX_SPRINGS_PER_PARTICLE, (j + 1) * MAX_SPRINGS_PER_PARTICLE));
+        }
+        gpuCount += n;
+      },
+      getParticles() {
+        // Return a lazy iterable for rendering only. Use posReadback + cpuMat.
+        const out = [];
+        for (let i = 0; i < gpuCount; i++) {
+          out.push({
+            x: posReadback[i*2],
+            y: posReadback[i*2+1],
+            vx: velReadback[i*2],
+            vy: velReadback[i*2+1],
+            material: cpuMat[i],
+          });
+        }
+        return out;
+      },
+      getCount() { return gpuCount; },
+      reset() {
+        gpuCount = 0;
+        posReadback = new Float32Array(MAX_PARTICLES * 2);
+        velReadback = new Float32Array(MAX_PARTICLES * 2);
+        cpuNbr.fill(0xFFFFFFFF);
+        cpuNbrRest.fill(0);
+        readbackReady = true;
+      }
+    };
+  }
+
+  // ---- Stamping helpers ----
+  // Lay down a compact grid of jelly particles; springs form automatically between nearby jelly
+  // because addParticles scans existing jelly within JELLY_SPRING_RANGE.
+  function stampJelly(cx, cy) {
+    if (!backend) return;
+    const cols = 5, rows = 5;
+    const spacing = JELLY_REST_LEN; // matches rest length exactly → starts at equilibrium
+    const ox = cx - (cols - 1) * spacing / 2;
+    const oy = cy - (rows - 1) * spacing / 2;
+    const arr = [];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        arr.push({
+          x: ox + c * spacing,
+          y: oy + r * spacing,
+          vx: 0, vy: 0,
+          material: MAT_JELLY,
+        });
+      }
+    }
+    backend.addParticles(arr);
+  }
+
+  function flushPendingStamps() {
+    if (!backend) return;
+    while (pendingStamps.length) {
+      const s = pendingStamps.shift();
+      if (s.type === 'jelly') stampJelly(s.x, s.y);
+    }
+  }
+
+  // ---- Blower direction helpers ----
+  function blowerDir(d) {
+    // 0=up, 1=right, 2=down, 3=left
+    if (d === 0) return [0, -1];
+    if (d === 1) return [1, 0];
+    if (d === 2) return [0, 1];
+    return [-1, 0];
+  }
+
+  // ---- Emission logic ----
+  function runEmitters() {
+    if (!backend) return;
+    for (const e of emitters) {
+      e.acc += e.rate;
+      const n = Math.floor(e.acc);
+      if (n <= 0) continue;
+      e.acc -= n;
+      const arr = [];
+      // Spread particles along a line perpendicular to the emission velocity,
+      // so the stream is a wide band rather than a single point (same lesson as Part 2).
+      const vMag = Math.sqrt(e.vx * e.vx + e.vy * e.vy) || 1;
+      const perpX = -e.vy / vMag;
+      const perpY = e.vx / vMag;
+      const lineSpacing = H * 0.6;
+      const jitter = e.material === MAT_JELLY ? 2 : 1;
+      for (let i = 0; i < n; i++) {
+        const t = (i - (n - 1) / 2) * lineSpacing;
+        arr.push({
+          x: e.x + perpX * t + (Math.random() - 0.5) * jitter,
+          y: e.y + perpY * t + (Math.random() - 0.5) * jitter,
+          vx: e.vx + (Math.random() - 0.5) * 15,
+          vy: e.vy + (Math.random() - 0.5) * 10,
+          material: e.material,
+        });
+      }
+      backend.addParticles(arr);
+    }
+  }
+
+  // ---- Rendering ----
   function render() {
     ctx.clearRect(0, 0, simW, simH);
     ctx.fillStyle = '#f0f4f8';
     ctx.fillRect(0, 0, simW, simH);
 
-    // Force field regions
-    for (const ff of forceFields) {
+    // Blowers (draw under particles)
+    for (const b of blowers) {
       ctx.save();
-      ctx.globalAlpha = 0.08;
-      ctx.fillStyle = '#2563eb';
+      ctx.fillStyle = 'rgba(148,163,184,0.15)';
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.strokeStyle = 'rgba(100,116,139,0.6)';
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1;
+      ctx.strokeRect(b.x, b.y, b.w, b.h);
+      ctx.setLineDash([]);
+      // Arrows indicating direction
+      const [dx, dy] = blowerDir(b.dir);
+      const cxr = b.x + b.w / 2, cyr = b.y + b.h / 2;
+      const arrLen = Math.min(b.w, b.h) * 0.35;
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 2;
+      const ax = cxr + dx * arrLen, ay = cyr + dy * arrLen;
+      const bx = cxr - dx * arrLen, by = cyr - dy * arrLen;
       ctx.beginPath();
-      ctx.arc(ff.x, ff.y, ff.r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 0.25;
-      // Arrow showing direction
-      const aLen = ff.r * 0.5;
-      ctx.strokeStyle = '#2563eb';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(ff.x, ff.y);
-      ctx.lineTo(ff.x + ff.dx * aLen, ff.y + ff.dy * aLen);
+      ctx.moveTo(bx, by);
+      ctx.lineTo(ax, ay);
       ctx.stroke();
-      // Arrowhead
-      const ax = ff.x + ff.dx * aLen, ay = ff.y + ff.dy * aLen;
-      const angle = Math.atan2(ff.dy, ff.dx);
+      const ang = Math.atan2(dy, dx);
       ctx.beginPath();
       ctx.moveTo(ax, ay);
-      ctx.lineTo(ax - 6 * Math.cos(angle - 0.4), ay - 6 * Math.sin(angle - 0.4));
+      ctx.lineTo(ax - 8 * Math.cos(ang - 0.5), ay - 8 * Math.sin(ang - 0.5));
       ctx.moveTo(ax, ay);
-      ctx.lineTo(ax - 6 * Math.cos(angle + 0.4), ay - 6 * Math.sin(angle + 0.4));
+      ctx.lineTo(ax - 8 * Math.cos(ang + 0.5), ay - 8 * Math.sin(ang + 0.5));
       ctx.stroke();
       ctx.restore();
     }
 
     // Obstacles
-    for (const obs of obstacles) {
+    for (const o of obstacles) {
       ctx.beginPath();
-      ctx.arc(obs.x, obs.y, obs.r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(148,163,184,0.25)';
+      ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(71,85,105,0.28)';
       ctx.fill();
-      ctx.strokeStyle = '#94a3b8';
+      ctx.strokeStyle = '#475569';
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
 
-    // Emitters
-    for (const em of emitters) {
+    // Emitter nozzles (visual only)
+    for (const e of emitters) {
       ctx.save();
-      ctx.fillStyle = '#64748b';
-      ctx.fillRect(em.x - 6, em.y - 10, 12, 20);
-      // Direction arrow
-      ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 1.5;
-      const aLen = 18;
-      const ax = em.x + em.dx * aLen, ay = em.y + em.dy * aLen;
+      ctx.fillStyle = MAT_COLORS[e.material];
+      ctx.globalAlpha = 0.85;
       ctx.beginPath();
-      ctx.moveTo(em.x, em.y);
-      ctx.lineTo(ax, ay);
-      ctx.stroke();
-      const angle = Math.atan2(em.dy, em.dx);
+      ctx.arc(e.x, e.y, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.3;
+      // tiny direction line
+      const L = 14;
+      ctx.strokeStyle = MAT_COLORS[e.material];
+      ctx.lineWidth = 2;
+      const sp = Math.sqrt(e.vx * e.vx + e.vy * e.vy) || 1;
       ctx.beginPath();
-      ctx.moveTo(ax, ay);
-      ctx.lineTo(ax - 7 * Math.cos(angle - 0.4), ay - 7 * Math.sin(angle - 0.4));
-      ctx.moveTo(ax, ay);
-      ctx.lineTo(ax - 7 * Math.cos(angle + 0.4), ay - 7 * Math.sin(angle + 0.4));
+      ctx.moveTo(e.x, e.y);
+      ctx.lineTo(e.x + e.vx / sp * L, e.y + e.vy / sp * L);
       ctx.stroke();
       ctx.restore();
     }
 
-    // Particles
-    for (const p of particles) {
-      const sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+    // Particles (colored by material, modulated by speed)
+    const particles = backend ? backend.getParticles() : [];
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      const t = Math.min(speed / 200, 1);
+      let base;
+      if (p.material === MAT_WATER) {
+        base = d3.interpolateBlues(0.45 + t * 0.3);
+      } else if (p.material === MAT_SAND) {
+        base = d3.interpolateOranges(0.45 + t * 0.3);
+      } else {
+        base = d3.interpolatePurples(0.45 + t * 0.3);
+      }
       ctx.beginPath();
       ctx.arc(p.x, p.y, pR, 0, Math.PI * 2);
-      ctx.fillStyle = speedColor(Math.min(sp, 180));
+      ctx.fillStyle = base;
       ctx.fill();
-      ctx.strokeStyle = 'rgba(30,64,175,0.15)';
-      ctx.lineWidth = 0.5;
-      ctx.stroke();
     }
 
     // Drag preview
     if (pointerDown && isDragging) {
-      if (activeTool === 'emitter') {
-        ctx.save();
-        ctx.strokeStyle = 'rgba(100,116,139,0.5)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4, 4]);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(71,85,105,0.6)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      if (activeTool === 'obstacle') {
+        const r = Math.max(15, Math.min(80, Math.sqrt((pointerX - dragStartX) ** 2 + (pointerY - dragStartY) ** 2)));
         ctx.beginPath();
-        ctx.moveTo(dragStartX, dragStartY);
-        ctx.lineTo(pointerX, pointerY);
+        ctx.arc(dragStartX, dragStartY, r, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.fillStyle = 'rgba(100,116,139,0.3)';
-        ctx.fillRect(dragStartX - 6, dragStartY - 10, 12, 20);
-        ctx.restore();
-      } else if (activeTool === 'obstacle') {
-        const r = Math.sqrt((pointerX - dragStartX) ** 2 + (pointerY - dragStartY) ** 2);
-        ctx.beginPath();
-        ctx.arc(dragStartX, dragStartY, Math.max(r, 10), 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(148,163,184,0.5)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4, 4]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      } else if (activeTool === 'force') {
-        const r = Math.sqrt((pointerX - dragStartX) ** 2 + (pointerY - dragStartY) ** 2);
-        ctx.beginPath();
-        ctx.arc(dragStartX, dragStartY, Math.max(r, 10), 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(37,99,235,0.3)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4, 4]);
-        ctx.stroke();
-        ctx.setLineDash([]);
+      } else if (activeTool === 'blower') {
+        const x = Math.min(dragStartX, pointerX);
+        const y = Math.min(dragStartY, pointerY);
+        const w = Math.abs(pointerX - dragStartX);
+        const h = Math.abs(pointerY - dragStartY);
+        ctx.strokeRect(x, y, w, h);
       }
+      ctx.setLineDash([]);
+      ctx.restore();
     }
 
-    // Wall indicators (subtle lines at edges)
+    // Border
     ctx.strokeStyle = '#cbd5e1';
     ctx.lineWidth = 2;
     ctx.strokeRect(1, 1, simW - 2, simH - 2);
   }
 
-  // --- Main loop ---
-  let emitTimer = 0;
-  const emitInterval = 3;
+  // ---- Pointer handling ----
+  let pointerDown = false, pointerX = 0, pointerY = 0;
+  let dragStartX = 0, dragStartY = 0;
+  let isDragging = false;
 
-  function loopStep() {
-    // FPS
-    const now = performance.now();
-    frameCount++;
-    fpsTimer += now - lastFrameTime;
-    lastFrameTime = now;
-    if (fpsTimer >= 500) {
-      fps = Math.round(frameCount / (fpsTimer / 1000));
-      frameCount = 0;
-      fpsTimer = 0;
-    }
-
-    if (!paused) {
-      // Emit
-      emitTimer++;
-      if (emitTimer >= emitInterval) {
-        emitTimer = 0;
-        emitParticles();
-      }
-
-      // Substeps
-      for (let s = 0; s < substeps; s++) step();
-
-      // Prune broken springs
-      if (springs.length > 0) {
-        springs = springs.filter(sp =>
-          sp.a < particles.length && sp.b < particles.length
-        );
-      }
-    }
-
-    render();
-    document.getElementById("status-text").textContent =
-      `${particles.length} particles | ${fps} fps`;
-  }
-
-  // --- Tool handling ---
-  function getCanvasPos(e) {
+  function canvasPos(e) {
     const r = canvas.getBoundingClientRect();
     return {
       x: (e.clientX - r.left) * (simW / r.width),
-      y: (e.clientY - r.top) * (simH / r.height)
+      y: (e.clientY - r.top) * (simH / r.height),
     };
   }
 
   canvas.addEventListener("pointerdown", e => {
-    const pos = getCanvasPos(e);
+    const pos = canvasPos(e);
     pointerDown = true;
-    pointerX = pos.x;
-    pointerY = pos.y;
-    dragStartX = pos.x;
-    dragStartY = pos.y;
+    pointerX = pos.x; pointerY = pos.y;
+    dragStartX = pos.x; dragStartY = pos.y;
     isDragging = false;
 
+    if (activeTool === 'blower') {
+      // Check if we're clicking on an existing blower -> rotate its direction
+      for (let i = blowers.length - 1; i >= 0; i--) {
+        const b = blowers[i];
+        if (pos.x >= b.x && pos.x <= b.x + b.w && pos.y >= b.y && pos.y <= b.y + b.h) {
+          b.dir = (b.dir + 1) % 4;
+          pointerDown = false;
+          return;
+        }
+      }
+    }
+
+    if (activeTool === 'jelly') {
+      // Queue a stamp for next frame (stamp directly at click, no drag required)
+      pendingStamps.push({ type: 'jelly', x: pos.x, y: pos.y });
+      pointerDown = false;
+      return;
+    }
+
     if (activeTool === 'erase') {
-      // Check if clicking near an emitter, obstacle, or force field
-      let erased = false;
-      for (let i = emitters.length - 1; i >= 0; i--) {
-        const em = emitters[i];
-        if (Math.sqrt((pos.x - em.x) ** 2 + (pos.y - em.y) ** 2) < 20) {
-          emitters.splice(i, 1); erased = true; break;
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const o = obstacles[i];
+        const d = Math.sqrt((pos.x - o.x) ** 2 + (pos.y - o.y) ** 2);
+        if (d < o.r + 6) { obstacles.splice(i, 1); pointerDown = false; return; }
+      }
+      for (let i = blowers.length - 1; i >= 0; i--) {
+        const b = blowers[i];
+        if (pos.x >= b.x - 4 && pos.x <= b.x + b.w + 4 && pos.y >= b.y - 4 && pos.y <= b.y + b.h + 4) {
+          blowers.splice(i, 1); pointerDown = false; return;
         }
       }
-      if (!erased) {
-        for (let i = obstacles.length - 1; i >= 0; i--) {
-          const obs = obstacles[i];
-          if (Math.sqrt((pos.x - obs.x) ** 2 + (pos.y - obs.y) ** 2) < obs.r + 5) {
-            obstacles.splice(i, 1); erased = true; break;
-          }
-        }
-      }
-      if (!erased) {
-        for (let i = forceFields.length - 1; i >= 0; i--) {
-          const ff = forceFields[i];
-          if (Math.sqrt((pos.x - ff.x) ** 2 + (pos.y - ff.y) ** 2) < ff.r + 5) {
-            forceFields.splice(i, 1); erased = true; break;
-          }
-        }
-      }
+      pointerDown = false;
     }
   });
 
   canvas.addEventListener("pointermove", e => {
     if (!pointerDown) return;
-    const pos = getCanvasPos(e);
-    pointerX = pos.x;
-    pointerY = pos.y;
-    const dist = Math.sqrt((pointerX - dragStartX) ** 2 + (pointerY - dragStartY) ** 2);
-    if (dist > 5) isDragging = true;
+    const pos = canvasPos(e);
+    pointerX = pos.x; pointerY = pos.y;
+    const d = Math.sqrt((pointerX - dragStartX) ** 2 + (pointerY - dragStartY) ** 2);
+    if (d > 5) isDragging = true;
   });
 
   canvas.addEventListener("pointerup", e => {
     if (!pointerDown) return;
-    const pos = getCanvasPos(e);
+    const pos = canvasPos(e);
     pointerDown = false;
-
-    if (activeTool === 'emitter') {
-      let dx = 0, dy = 1; // default: downward
+    if (activeTool === 'obstacle') {
+      let r = 24;
       if (isDragging) {
-        const len = Math.sqrt((pos.x - dragStartX) ** 2 + (pos.y - dragStartY) ** 2);
-        if (len > 3) {
-          dx = (pos.x - dragStartX) / len;
-          dy = (pos.y - dragStartY) / len;
+        r = Math.max(15, Math.min(80, Math.sqrt((pos.x - dragStartX) ** 2 + (pos.y - dragStartY) ** 2)));
+      }
+      if (obstacles.length < MAX_OBSTACLES) {
+        obstacles.push({ x: dragStartX, y: dragStartY, r });
+      }
+    } else if (activeTool === 'blower') {
+      if (isDragging) {
+        const x = Math.min(dragStartX, pos.x);
+        const y = Math.min(dragStartY, pos.y);
+        const w = Math.max(24, Math.abs(pos.x - dragStartX));
+        const h = Math.max(24, Math.abs(pos.y - dragStartY));
+        if (blowers.length < MAX_BLOWERS) {
+          blowers.push({ x, y, w, h, dir: 0 });
         }
       }
-      emitters.push({ x: dragStartX, y: dragStartY, dx, dy });
-      if (paused) {
-        paused = false;
-        document.getElementById("play-btn").textContent = 'Pause';
-        document.getElementById("play-btn").classList.add('active');
-      }
-    } else if (activeTool === 'obstacle') {
-      let r = 20;
-      if (isDragging) {
-        r = Math.max(10, Math.sqrt((pos.x - dragStartX) ** 2 + (pos.y - dragStartY) ** 2));
-      }
-      obstacles.push({ x: dragStartX, y: dragStartY, r });
-    } else if (activeTool === 'force') {
-      if (isDragging) {
-        const r = Math.max(15, Math.sqrt((pos.x - dragStartX) ** 2 + (pos.y - dragStartY) ** 2));
-        const len = Math.sqrt((pos.x - dragStartX) ** 2 + (pos.y - dragStartY) ** 2);
-        const dx = len > 3 ? (pos.x - dragStartX) / len : 0;
-        const dy = len > 3 ? (pos.y - dragStartY) / len : 1;
-        forceFields.push({ x: dragStartX, y: dragStartY, dx, dy, r });
-      } else {
-        // Click without drag: small upward force
-        forceFields.push({ x: dragStartX, y: dragStartY, dx: 0, dy: -1, r: 30 });
-      }
     }
-
     isDragging = false;
   });
 
@@ -665,18 +1394,13 @@ function visibleLoop(elementId, loopFn) {
     isDragging = false;
   });
 
-  // --- Toolbar buttons ---
+  // ---- Toolbar ----
   document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       activeTool = btn.dataset.tool;
-      // Update cursor
-      if (activeTool === 'erase') {
-        canvas.style.cursor = 'not-allowed';
-      } else {
-        canvas.style.cursor = 'crosshair';
-      }
+      canvas.style.cursor = activeTool === 'erase' ? 'not-allowed' : 'crosshair';
     });
   });
 
@@ -687,25 +1411,56 @@ function visibleLoop(elementId, loopFn) {
   });
 
   document.getElementById("reset-btn").addEventListener("click", () => {
-    particles = [];
-    springs = [];
-    emitters = [];
-    obstacles = [];
-    forceFields = [];
-    paused = true;
-    document.getElementById("play-btn").textContent = 'Play';
-    document.getElementById("play-btn").classList.remove('active');
+    if (backend) backend.reset();
+    seedEmitters();
   });
 
-  document.getElementById("material-select").addEventListener("change", function() {
-    currentMaterial = this.value;
-  });
+  // ---- Init ----
+  let initialized = false;
+  async function initBackend() {
+    const gpu = await createWebGPUBackend();
+    if (gpu) {
+      backend = gpu;
+      maxP = 5000;
+      d3.select("#backend-label").text("WebGPU").style("color", "var(--c-kernel)");
+    } else {
+      backend = createCPUBackend();
+      maxP = 500;
+      d3.select("#backend-label").text("CPU fallback").style("color", "var(--c-pressure)");
+    }
+    initialized = true;
+  }
 
-  // --- Place a default emitter so the scene isn't empty ---
-  emitters.push({ x: simW * 0.3, y: 40, dx: 0.15, dy: 0.98 });
+  function loopStep() {
+    if (!initialized) return;
+    // FPS smoothing
+    const now = performance.now();
+    const frameDt = now - lastFrameTime;
+    lastFrameTime = now;
+    if (frameDt > 0) fpsSmooth = fpsSmooth * 0.9 + (1000 / frameDt) * 0.1;
 
-  new ResizeObserver(() => { resizeCanvas(); }).observe(canvas.parentElement);
-  visibleLoop('fig-sandbox', loopStep);
+    if (!paused) {
+      runEmitters();
+      flushPendingStamps();
+      backend.step();
+    }
+    render();
+
+    document.getElementById("particle-count").textContent = backend.getCount();
+    document.getElementById("fps").textContent = Math.round(fpsSmooth);
+  }
+
+  new ResizeObserver(() => {
+    resizeCanvas();
+    // Keep the default emitters positioned relative to the canvas width
+    if (emitters[0]) emitters[0].x = simW * 0.08;
+    if (emitters[1]) emitters[1].x = simW * 0.12;
+  }).observe(canvas.parentElement);
+
+  (async function() {
+    await initBackend();
+    visibleLoop('fig-sandbox', loopStep);
+  })();
 })();
 </script>
 </body>

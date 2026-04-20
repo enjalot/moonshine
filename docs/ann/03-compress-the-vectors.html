@@ -1,0 +1,1643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compress the Vectors — Approximate Nearest Neighbors</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+
+  --c-query: #db2777;
+  --c-db: #64748b;
+  --c-neighbor: #f59e0b;
+  --c-partition: #0d9488;
+  --c-compress: #7c3aed;
+  --c-hardware: #ea580c;
+}
+
+body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
+h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
+h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+h3 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+.figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.figure-wide { margin-left: -2rem; margin-right: -2rem; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.45; }
+.figure-label { font-weight: 600; color: var(--text); }
+
+.controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.controls input[type="range"] { width: 160px; accent-color: var(--c-compress); }
+.controls label { display: flex; align-items: center; gap: 0.5rem; }
+.controls .val { font-family: var(--mono-font); color: var(--text); min-width: 2.5em; display: inline-block; text-align: right; }
+.controls button { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.25rem 0.7rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text-2); cursor: pointer; }
+.controls button:hover { background: var(--bg); color: var(--text); }
+.controls select { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.2rem 0.4rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text); }
+
+svg text { font-family: var(--heading-font); }
+
+.t-query { color: var(--c-query); font-weight: 600; }
+.t-db { color: var(--c-db); font-weight: 600; }
+.t-neighbor { color: var(--c-neighbor); font-weight: 600; }
+.t-compress { color: var(--c-compress); font-weight: 600; }
+
+.readout { font-family: var(--mono-font); font-size: 0.8rem; color: var(--text-2); }
+.readout strong { color: var(--text); font-weight: 600; }
+
+@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+</style>
+</head>
+<body>
+<div class="article">
+  <header>
+    <h1>Compress the Vectors</h1>
+    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
+      The second of three ideas behind modern ANN: replace full-precision vectors with small
+      codes that are dozens of times smaller and still let you estimate distance.
+    </p>
+    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">
+      Part 3 of <a href="index.html">Approximate Nearest Neighbors</a>.
+      Previous: <a href="02-partition-the-space.html">Partition the Space</a>.
+    </p>
+  </header>
+
+  <p>
+    Partitioning was the first trick: cut the space into regions so a query only scans a
+    small fraction of the database. That gets you a lot, but it leaves a second problem
+    untouched. The vectors themselves are enormous. Modern embedding models emit 768- or
+    1536-dimensional float32 vectors, and the inner loop of any nearest-neighbor search still
+    has to read those vectors from memory and do arithmetic on them.
+  </p>
+  <p>
+    Compression attacks that inner loop. If you can replace a full 3 KB vector with a
+    handful of bytes, three things happen at once. The database gets small enough to fit in
+    RAM, sometimes in L2 cache. The distance kernel becomes cheaper because there is less
+    data to pull through the ALU. And because the database is smaller, cache misses plummet.
+    Compression is as much about speed as it is about storage.
+  </p>
+
+  <h2>Why Compression Matters</h2>
+
+  <p>
+    Start with a back-of-envelope. A single 768-dimensional float32 vector is 768 × 4 = 3072
+    bytes, about 3 KB. A million of them is 3 GB. A hundred million is 300 GB. At that scale,
+    the only question is which storage tier the database lives in, and each jump (L2 to RAM
+    to SSD to network) costs an order of magnitude in latency.
+  </p>
+  <p>
+    The figure below shows how quickly compression changes your hardware constraints. Drag
+    the slider to change the bit budget per dimension. The bar shrinks, and labels mark the
+    thresholds where the database moves between memory tiers.
+  </p>
+
+  <div class="figure figure-wide" id="fig-memory">
+    <div class="controls">
+      <label>scheme
+        <select id="mem-scheme">
+          <option value="fp32" selected>float32 (32 bits/dim)</option>
+          <option value="fp16">float16 (16 bits/dim)</option>
+          <option value="int8">int8 scalar (8 bits/dim)</option>
+          <option value="int4">int4 scalar (4 bits/dim)</option>
+          <option value="bin">binary (1 bit/dim)</option>
+          <option value="pq64">PQ, 64 bytes/vec</option>
+          <option value="pq32">PQ, 32 bytes/vec</option>
+          <option value="pq16">PQ, 16 bytes/vec</option>
+        </select>
+      </label>
+      <label>vectors <input type="range" id="mem-n" min="5" max="9" value="6" step="1"><span class="val" id="mem-n-val">1M</span></label>
+      <label>dim <input type="range" id="mem-d" min="64" max="1536" value="768" step="64"><span class="val" id="mem-d-val">768</span></label>
+    </div>
+    <svg id="mem-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 1.</span>
+      Total storage for the chosen scheme on the left, plotted against the memory tiers on
+      the right. float32 at 1M × 768 is about 3 GB, already too big for a typical L2 cache
+      and pushing against commodity RAM. PQ at 16 bytes per vector is 16 MB, small enough to
+      sit comfortably in RAM with room to spare. Compression changes the tier, and the tier
+      determines latency.
+    </div>
+  </div>
+
+  <p>
+    There are three families of compression we will look at. Scalar quantization reduces
+    bits per dimension. Binary quantization takes that to the extreme. Product quantization
+    throws out the one-bit-per-dimension constraint entirely and replaces subvectors with
+    codebook indices. They trade off differently, and modern systems often combine them.
+  </p>
+
+  <h2>Scalar Quantization: Fewer Bits per Dimension</h2>
+
+  <p>
+    The simplest compression is also the oldest. Pick a per-dimension range, divide it into
+    buckets, and store a bucket index instead of a float. Eight-bit scalar quantization uses
+    256 buckets per dimension and cuts storage by 4x compared to float32. Four-bit uses 16
+    buckets and cuts 8x. Two-bit is more aggressive still.
+  </p>
+  <p>
+    Scalar quantization preserves the shape of the vector space. Vectors that were close
+    before are still close after, with small rounding errors. The cost is that every
+    dimension still has to be touched during distance computation. You are paying "full"
+    distance cost on compressed data, which is fine when the bottleneck is memory bandwidth
+    and not arithmetic.
+  </p>
+  <p>
+    Use the slider below to watch what happens as the bit budget shrinks. Database points
+    snap to a coarser and coarser grid. The k nearest neighbors by the compressed
+    representation start to diverge from the true nearest neighbors computed on the full
+    precision points.
+  </p>
+
+  <div class="figure figure-wide" id="fig-sq">
+    <div class="controls">
+      <label>bits per dim
+        <select id="sq-bits">
+          <option value="32">32 (float)</option>
+          <option value="8" selected>8 (int8)</option>
+          <option value="4">4 (int4)</option>
+          <option value="2">2 (int2)</option>
+          <option value="1">1 (binary)</option>
+        </select>
+      </label>
+      <label>k <input type="range" id="sq-k" min="1" max="15" value="5" step="1"><span class="val" id="sq-k-val">5</span></label>
+      <label><input type="checkbox" id="sq-grid" checked> show grid</label>
+    </div>
+    <svg id="sq-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 2.</span>
+      Each database point is quantized to a grid determined by the bit budget. Move the
+      cursor to place the <span class="t-query">query</span>. Amber points are the true
+      top-k by the full-precision vectors. Purple rings mark the top-k found using the
+      compressed vectors. Recall is the overlap. At 8 bits recall stays near perfect. At 2
+      bits the grid is visible and neighbors start to disagree. At 1 bit, the grid collapses
+      to four corners and most of the geometry is gone.
+    </div>
+  </div>
+
+  <h2>Binary Quantization: One Bit per Dimension</h2>
+
+  <p>
+    Push scalar quantization to its limit and each dimension becomes a single bit: above or
+    below the per-dimension median. A 768-dim vector becomes 96 bytes. Distance between two
+    binary vectors is the Hamming distance, which is a bitwise XOR followed by a population
+    count. On modern CPUs, that is one of the cheapest instructions available. A distance
+    comparison that used to involve 768 multiplies and adds becomes a handful of 64-bit
+    popcount instructions.
+  </p>
+  <p>
+    Binary quantization loses a lot of information. It works surprisingly well on
+    well-trained embedding vectors, mostly because those vectors tend to be roughly
+    isotropic after layer normalization, and the sign pattern of each dimension carries more
+    signal than you would guess. It also fails gracefully: you can use it as a very fast
+    first pass, then rerank survivors with a less aggressive scheme.
+  </p>
+
+  <h2>Product Quantization: The Key Idea</h2>
+
+  <p>
+    The most important compression technique for ANN is Product Quantization, usually called
+    PQ. The insight is that you can beat scalar quantization's one-bit-per-dimension limit
+    by correlating dimensions with each other.
+  </p>
+  <p>
+    Here is the recipe. Take the d-dimensional vector and split it into m chunks, each of
+    size d/m. Treat each chunk as a point in (d/m)-dimensional space. Run k-means on the
+    whole database restricted to that chunk, producing 256 centroids per chunk. Now every
+    chunk of every vector can be replaced with the index of the nearest centroid, a single
+    byte. The full vector becomes m bytes.
+  </p>
+  <p>
+    The combinatorial space is <span class="readout"><strong>256<sup>m</sup></strong></span>
+    possible codes, which for m = 16 is about 10<sup>38</sup>. You are not limited to 256
+    possibilities per vector. You are limited to 256 possibilities per subspace, and the
+    subspaces combine freely.
+  </p>
+  <p>
+    The figure below is a small working example. An 8-dimensional vector is split into 4
+    subvectors of 2 dimensions each. Each subspace has a codebook of 16 centroids (visualized
+    as a small 2D scatter). Drag the sliders at the top to change the vector and watch each
+    subvector snap to its closest centroid, producing a 4-integer code.
+  </p>
+
+  <div class="figure figure-wide" id="fig-pq">
+    <div class="controls">
+      <button id="pq-random">randomize vector</button>
+      <label>drag sliders below to edit the vector</label>
+    </div>
+    <div id="pq-sliders" style="display:grid; grid-template-columns: repeat(8, 1fr); gap: 0.5rem; padding: 0 1rem; margin-bottom: 0.8rem;"></div>
+    <svg id="pq-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 3.</span>
+      An 8-dim vector (top) split into 4 subvectors of 2 dims each. Each subspace (middle
+      row) has its own codebook of 16 centroids. The subvector lands in its 2D space, and
+      the closest centroid is highlighted. The bottom row shows the resulting 4-byte code.
+      The raw vector is 32 bytes in float32. The code is 4 bytes, an 8x reduction for this
+      toy. At realistic dimensions (d = 768, m = 16), the reduction is closer to 200x.
+    </div>
+  </div>
+
+  <h2>Asymmetric Distance Computation</h2>
+
+  <p>
+    Compression is only half the story. The other half is how you compare a query to the
+    compressed database. You could decompress every database vector back to floats, but that
+    would throw away the speedup. You could also compress the query and compare codes
+    directly, but that loses query-side precision. PQ's contribution is a third option that
+    is usually better than both.
+  </p>
+  <p>
+    The trick is called Asymmetric Distance Computation. When a query arrives, split it
+    into the same m subvectors as the database uses. For each subspace, precompute the
+    distance from the query's subvector to every one of the 256 centroids. That builds an m
+    × 256 lookup table, computed once per query.
+  </p>
+  <p>
+    Now comparing the query to any database vector is almost free. Each database vector is m
+    bytes, one centroid index per subspace. Look up m distances from the table and add them.
+    m additions, and the total is the PQ estimate of the query-to-vector distance. No
+    multiplies, no square roots, and the query stayed at full precision.
+  </p>
+
+  <div class="figure figure-wide" id="fig-adc">
+    <div class="controls">
+      <button id="adc-newq">new query</button>
+      <label>database vector <input type="range" id="adc-pick" min="0" max="4" value="0" step="1"><span class="val" id="adc-pick-val">A</span></label>
+    </div>
+    <svg id="adc-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 4.</span>
+      The heatmap is the m × K lookup table for a query: each row is one subspace, each
+      column is one centroid, cell color is the distance from the query's subvector to that
+      centroid (dark = close, light = far). Below, five database vectors are shown as
+      sequences of centroid indices. For the selected vector, the m lookup cells it touches
+      are highlighted, and the PQ-estimated distance is the sum of those cells. Comparing
+      the query to any database vector is m additions and no multiplies.
+    </div>
+  </div>
+
+  <p>
+    The name asymmetric is there because the query is not quantized. The database is coded,
+    the query is floats. Symmetric distance (quantize both) is faster still (the table is
+    precomputed once for the whole database) but gives worse accuracy. Asymmetric is the
+    usual choice.
+  </p>
+
+  <h2>Reranking: the Error Budget</h2>
+
+  <p>
+    PQ distance is an estimate, not a measurement. It can be off by several percent on any
+    single comparison, and the ordering of the top candidates can shuffle. The standard fix
+    is reranking. Pull the top k×10 or top k×20 candidates by PQ distance, then recompute
+    exact distance for only those candidates and return the top k.
+  </p>
+  <p>
+    The exact pass costs a few thousand full distance computations, which is tiny compared
+    to the millions avoided by the PQ shortlist. Recall climbs back to near its
+    full-precision value, and the total cost is dominated by the PQ scan rather than the
+    exact rerank.
+  </p>
+
+  <div class="figure figure-wide" id="fig-rerank">
+    <div class="controls">
+      <label>shortlist size <input type="range" id="rr-short" min="10" max="200" value="50" step="5"><span class="val" id="rr-short-val">50</span></label>
+      <label>k (final) <input type="range" id="rr-k" min="5" max="20" value="10" step="1"><span class="val" id="rr-k-val">10</span></label>
+      <button id="rr-new">new query</button>
+    </div>
+    <div id="rr-panels" style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <div><svg id="rr-svg-1" style="width:100%; display:block; border-radius:4px;"></svg></div>
+      <div><svg id="rr-svg-2" style="width:100%; display:block; border-radius:4px;"></svg></div>
+    </div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 5.</span>
+      Left panel: the PQ-approximate shortlist of the top N candidates, ordered by PQ
+      distance. Each bar is colored by the candidate's true rank (amber = should be in the
+      final top-k, gray = should not be). Notice that some true top-k candidates are not at
+      the top, and some non-top-k candidates are. Right panel: after reranking the shortlist
+      by exact distance, the true top-k emerges cleanly. Widen the shortlist until recall
+      hits 1.0.
+    </div>
+  </div>
+
+  <h2>IVF-PQ: Stacking Partition and Compression</h2>
+
+  <p>
+    Partition and compression are complementary. Partition narrows the candidate set to one
+    or a few cells. Compression makes scanning inside those cells fast. Put them together
+    and you get IVF-PQ, the workhorse index behind FAISS, lancedb, and many other
+    production systems.
+  </p>
+  <p>
+    A query arrives. IVF picks the <span class="readout"><strong>nprobe</strong></span> closest
+    cells. The query's PQ lookup table is computed. For each vector inside the selected
+    cells, sum m table entries to get a PQ estimate. Take the top candidates, rerank with
+    exact distance, and return the top k. The figure below traces that pipeline once on
+    load, then loops.
+  </p>
+
+  <div class="figure figure-wide" id="fig-ivfpq">
+    <div class="controls">
+      <button id="ivfpq-play">pause</button>
+      <button id="ivfpq-step">step</button>
+      <label>nprobe <input type="range" id="ivfpq-np" min="1" max="5" value="2" step="1"><span class="val" id="ivfpq-np-val">2</span></label>
+    </div>
+    <svg id="ivfpq-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 6.</span>
+      IVF-PQ in motion. The space is partitioned into Voronoi cells (teal). Each database
+      vector is stored as a short stack of PQ codes inside its cell. A query arrives,
+      <span class="t-partition" style="color: var(--c-partition); font-weight: 600;">nprobe</span>
+      cells light up, the PQ lookup table is computed, candidates are scored, and a final
+      top-k is returned. This is the skeleton of production ANN.
+    </div>
+  </div>
+
+  <p>
+    The pattern generalizes. HNSW indexes use PQ on the bottom layer to avoid storing full
+    vectors per node. DiskANN uses PQ-compressed vectors in RAM for scoring and the full
+    vectors on SSD for reranking. The next article, on hardware-aware design, is about
+    matching this structure to the memory tier your database actually lives in.
+  </p>
+
+  <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 2rem 0; font-family: var(--heading-font);">
+    <div style="padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-partition);">
+      <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 0.4rem;">Previous</div>
+      <div style="font-size: 1rem; font-weight: 700; color: var(--c-partition);"><a href="02-partition-the-space.html" style="color: var(--c-partition); text-decoration: none;">Partition</a></div>
+      <div style="font-size: 0.85rem; color: var(--text-2); line-height: 1.45;">Cut the space into regions and only search the ones near the query.</div>
+    </div>
+    <div style="padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-compress);">
+      <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 0.4rem;">This article</div>
+      <div style="font-size: 1rem; font-weight: 700; color: var(--c-compress);">Compress</div>
+      <div style="font-size: 0.85rem; color: var(--text-2); line-height: 1.45;">Replace full vectors with small codes that are cheap to compare.</div>
+    </div>
+    <div style="padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-hardware);">
+      <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 0.4rem;">Next</div>
+      <div style="font-size: 1rem; font-weight: 700; color: var(--c-hardware);"><a href="04-hardware-aware-design.html" style="color: var(--c-hardware); text-decoration: none;">Hardware</a></div>
+      <div style="font-size: 0.85rem; color: var(--text-2); line-height: 1.45;">Design for where the data lives: RAM, SSD, or GPU.</div>
+    </div>
+  </div>
+
+  <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
+    <p>Part of <a href="index.html" style="color: var(--text-2);">Approximate Nearest Neighbors</a>. Previous: <a href="02-partition-the-space.html" style="color: var(--accent);">Partition the Space</a>. Next: <a href="04-hardware-aware-design.html" style="color: var(--accent);">Hardware-Aware Design</a>.</p>
+    <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+  </footer>
+</div>
+
+<script>
+// Seeded RNG for reproducibility
+function mulberry32(seed) {
+  return function() {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function formatBytes(b) {
+  if (b >= 1e12) return (b / 1e12).toFixed(2) + " TB";
+  if (b >= 1e9) return (b / 1e9).toFixed(2) + " GB";
+  if (b >= 1e6) return (b / 1e6).toFixed(2) + " MB";
+  if (b >= 1e3) return (b / 1e3).toFixed(2) + " KB";
+  return b.toFixed(0) + " B";
+}
+
+function formatCount(n) {
+  if (n >= 1e9) return (n / 1e9).toFixed(0) + "B";
+  if (n >= 1e6) return (n / 1e6).toFixed(0) + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(0) + "K";
+  return n.toFixed(0);
+}
+
+// ============================================================
+// Figure 1: Memory math for different compression schemes
+// ============================================================
+(function() {
+  const svgEl = document.getElementById("mem-svg");
+  const container = svgEl.parentElement;
+  let W = 0, H = 320;
+
+  const schemes = {
+    fp32:  { label: "float32",       bytesPerVec: d => d * 4 },
+    fp16:  { label: "float16",       bytesPerVec: d => d * 2 },
+    int8:  { label: "int8 scalar",   bytesPerVec: d => d * 1 },
+    int4:  { label: "int4 scalar",   bytesPerVec: d => d * 0.5 },
+    bin:   { label: "binary (1 bit)",bytesPerVec: d => d / 8 },
+    pq64:  { label: "PQ, 64 B/vec",  bytesPerVec: d => 64 },
+    pq32:  { label: "PQ, 32 B/vec",  bytesPerVec: d => 32 },
+    pq16:  { label: "PQ, 16 B/vec",  bytesPerVec: d => 16 },
+  };
+
+  let scheme = "fp32";
+  let logN = 6; // 10^6 vectors
+  let d = 768;
+
+  const tiers = [
+    { name: "L2 cache",    bytes: 1e6,   color: "#fef3c7" },
+    { name: "L3 cache",    bytes: 32e6,  color: "#fde68a" },
+    { name: "RAM (commodity)", bytes: 32e9, color: "#bfdbfe" },
+    { name: "SSD",         bytes: 2e12,  color: "#ddd6fe" },
+    { name: "cluster (RAM)", bytes: 1e14, color: "#e5e7eb" },
+  ];
+
+  const svg = d3.select(svgEl);
+
+  function layout() {
+    W = container.clientWidth - 48;
+    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svgEl.setAttribute("width", W);
+    svgEl.setAttribute("height", H);
+  }
+
+  function draw() {
+    svg.selectAll("*").remove();
+    const N = Math.pow(10, logN);
+    const bytes = schemes[scheme].bytesPerVec(d) * N;
+
+    // X scale is logarithmic in bytes.
+    const margin = { top: 30, right: 30, bottom: 60, left: 120 };
+    const iw = W - margin.left - margin.right;
+    const ih = H - margin.top - margin.bottom;
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const xS = d3.scaleLog().domain([1e4, 1e14]).range([0, iw]).clamp(true);
+
+    // Tier bands
+    let prev = 1e4;
+    tiers.forEach(t => {
+      g.append("rect")
+        .attr("x", xS(prev)).attr("y", 0)
+        .attr("width", Math.max(0, xS(t.bytes) - xS(prev))).attr("height", ih)
+        .attr("fill", t.color).attr("opacity", 0.55);
+      g.append("text")
+        .attr("x", (xS(prev) + xS(t.bytes)) / 2).attr("y", 14)
+        .attr("text-anchor", "middle").attr("font-size", 10.5)
+        .attr("fill", "var(--text-2)").attr("font-weight", 600)
+        .text(t.name);
+      prev = t.bytes;
+    });
+
+    // Axis
+    g.append("g").attr("transform", `translate(0,${ih})`)
+      .call(d3.axisBottom(xS).ticks(6, d3.format(".0s"))
+        .tickFormat(v => formatBytes(v)))
+      .call(g => g.selectAll(".tick text").attr("fill", "var(--text-2)").attr("font-size", 10.5))
+      .call(g => g.selectAll(".domain").attr("stroke", "var(--border)"));
+    g.append("text")
+      .attr("x", iw / 2).attr("y", ih + 34).attr("text-anchor", "middle")
+      .attr("font-size", 11).attr("fill", "var(--text-2)")
+      .text("total database size");
+
+    // Bar from 0 (well, from left edge) to current bytes
+    const barY = ih / 2 - 14, barH = 28;
+    g.append("rect")
+      .attr("x", 0).attr("y", barY)
+      .attr("width", xS(bytes)).attr("height", barH)
+      .attr("fill", "var(--c-compress)").attr("opacity", 0.85)
+      .attr("rx", 2);
+    // End marker
+    g.append("line")
+      .attr("x1", xS(bytes)).attr("x2", xS(bytes))
+      .attr("y1", barY - 6).attr("y2", barY + barH + 6)
+      .attr("stroke", "var(--c-compress)").attr("stroke-width", 1.5);
+
+    // Label
+    const labelX = Math.min(xS(bytes) + 10, iw - 130);
+    g.append("text")
+      .attr("x", labelX).attr("y", barY - 10)
+      .attr("font-size", 12).attr("font-weight", 600).attr("fill", "var(--text)")
+      .text(`${schemes[scheme].label}: ${formatBytes(bytes)}`);
+    g.append("text")
+      .attr("x", labelX).attr("y", barY + barH + 18)
+      .attr("font-size", 10.5).attr("fill", "var(--text-2)")
+      .text(`${formatCount(N)} vectors × ${schemes[scheme].bytesPerVec(d).toFixed(1)} B/vec`);
+
+    // Reference lines for fp32 baseline
+    if (scheme !== "fp32") {
+      const baseBytes = schemes.fp32.bytesPerVec(d) * N;
+      g.append("line")
+        .attr("x1", xS(baseBytes)).attr("x2", xS(baseBytes))
+        .attr("y1", barY - 20).attr("y2", barY + barH + 20)
+        .attr("stroke", "var(--text-2)").attr("stroke-dasharray", "3 3").attr("opacity", 0.5);
+      g.append("text")
+        .attr("x", xS(baseBytes)).attr("y", barY - 24)
+        .attr("text-anchor", "middle").attr("font-size", 10)
+        .attr("fill", "var(--text-2)").text("float32 baseline");
+    }
+  }
+
+  document.getElementById("mem-scheme").addEventListener("change", e => {
+    scheme = e.target.value; draw();
+  });
+  document.getElementById("mem-n").addEventListener("input", e => {
+    logN = +e.target.value;
+    document.getElementById("mem-n-val").textContent = formatCount(Math.pow(10, logN));
+    draw();
+  });
+  document.getElementById("mem-d").addEventListener("input", e => {
+    d = +e.target.value;
+    document.getElementById("mem-d-val").textContent = d;
+    draw();
+  });
+
+  const ro = new ResizeObserver(() => { layout(); draw(); });
+  ro.observe(container);
+  layout();
+  draw();
+})();
+
+// ============================================================
+// Figure 2: Scalar quantization and recall
+// ============================================================
+(function() {
+  const svgEl = document.getElementById("sq-svg");
+  const container = svgEl.parentElement;
+  let W = 0, H = 340;
+
+  const rng = mulberry32(31);
+  const N = 200;
+  // Generate two Gaussian-ish clusters so there's interesting structure.
+  const rawPts = [];
+  for (let i = 0; i < N; i++) {
+    const cluster = rng() < 0.5 ? 0 : 1;
+    const cx = cluster ? 0.3 : 0.7;
+    const cy = cluster ? 0.35 : 0.65;
+    // Box-muller-ish
+    const u1 = Math.max(1e-6, rng()), u2 = rng();
+    const r = Math.sqrt(-2 * Math.log(u1)) * 0.13;
+    const theta = 2 * Math.PI * u2;
+    rawPts.push([
+      Math.max(0.02, Math.min(0.98, cx + r * Math.cos(theta))),
+      Math.max(0.02, Math.min(0.98, cy + r * Math.sin(theta))),
+    ]);
+  }
+
+  let bits = 8;
+  let k = 5;
+  let showGrid = true;
+  let query = [0.5, 0.5];
+
+  function quantize(p, bits) {
+    if (bits >= 32) return p.slice();
+    const levels = Math.max(2, Math.pow(2, bits));
+    const step = 1 / (levels - 1);
+    return [
+      Math.round(p[0] / step) * step,
+      Math.round(p[1] / step) * step,
+    ];
+  }
+
+  const svg = d3.select(svgEl);
+
+  function layout() {
+    W = container.clientWidth - 48;
+    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svgEl.setAttribute("width", W);
+    svgEl.setAttribute("height", H);
+  }
+
+  const pad = 20;
+  function toX(p) { return pad + p[0] * (W - 2 * pad); }
+  function toY(p) { return pad + p[1] * (H - 2 * pad - 30); }
+
+  function draw() {
+    svg.selectAll("*").remove();
+    svg.append("rect").attr("x", 10).attr("y", 10)
+      .attr("width", W - 20).attr("height", H - 20)
+      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
+
+    // Grid lines at quantization levels
+    if (showGrid && bits < 32) {
+      const levels = Math.max(2, Math.pow(2, bits));
+      const step = 1 / (levels - 1);
+      for (let i = 0; i < levels; i++) {
+        const xv = i * step, yv = i * step;
+        svg.append("line")
+          .attr("x1", toX([xv, 0])).attr("x2", toX([xv, 0]))
+          .attr("y1", toY([0, 0])).attr("y2", toY([0, 1]))
+          .attr("stroke", "var(--c-compress)").attr("stroke-width", 0.5)
+          .attr("opacity", 0.18).attr("stroke-dasharray", "2 3");
+        svg.append("line")
+          .attr("x1", toX([0, 0])).attr("x2", toX([1, 0]))
+          .attr("y1", toY([0, yv])).attr("y2", toY([0, yv]))
+          .attr("stroke", "var(--c-compress)").attr("stroke-width", 0.5)
+          .attr("opacity", 0.18).attr("stroke-dasharray", "2 3");
+      }
+    }
+
+    // Quantize database
+    const qPts = rawPts.map(p => quantize(p, bits));
+
+    // True neighbors by original
+    const trueD = rawPts.map((p, i) => ({
+      i, d: Math.hypot(p[0] - query[0], p[1] - query[1])
+    })).sort((a, b) => a.d - b.d);
+    const trueNN = new Set(trueD.slice(0, k).map(x => x.i));
+
+    // Compressed neighbors by quantized
+    const compD = qPts.map((p, i) => ({
+      i, d: Math.hypot(p[0] - query[0], p[1] - query[1])
+    })).sort((a, b) => a.d - b.d);
+    const compNN = new Set(compD.slice(0, k).map(x => x.i));
+
+    // Recall
+    let hits = 0;
+    compNN.forEach(i => { if (trueNN.has(i)) hits++; });
+    const recall = hits / k;
+
+    // Draw raw points (faded gray)
+    svg.selectAll(".raw").data(rawPts).join("circle")
+      .attr("class", "raw")
+      .attr("cx", p => toX(p)).attr("cy", p => toY(p))
+      .attr("r", 2.2)
+      .attr("fill", "var(--c-db)")
+      .attr("opacity", 0.25);
+
+    // Quantized points (displayed positions)
+    svg.selectAll(".qpt").data(qPts).join("circle")
+      .attr("class", "qpt")
+      .attr("cx", p => toX(p)).attr("cy", p => toY(p))
+      .attr("r", (p, i) => trueNN.has(i) ? 4 : 2.5)
+      .attr("fill", (p, i) => trueNN.has(i) ? "var(--c-neighbor)" : "var(--c-db)")
+      .attr("opacity", (p, i) => trueNN.has(i) ? 1 : 0.75);
+
+    // Ring around compressed-top-k
+    svg.selectAll(".comp-ring").data([...compNN]).join("circle")
+      .attr("class", "comp-ring")
+      .attr("cx", i => toX(qPts[i])).attr("cy", i => toY(qPts[i]))
+      .attr("r", 7)
+      .attr("fill", "none")
+      .attr("stroke", "var(--c-compress)").attr("stroke-width", 1.5)
+      .attr("opacity", 0.85);
+
+    // Lines from raw to quantized position (shows distortion) for true NN only
+    svg.selectAll(".distort").data([...trueNN]).join("line")
+      .attr("class", "distort")
+      .attr("x1", i => toX(rawPts[i])).attr("y1", i => toY(rawPts[i]))
+      .attr("x2", i => toX(qPts[i])).attr("y2", i => toY(qPts[i]))
+      .attr("stroke", "var(--c-neighbor)").attr("stroke-width", 0.8).attr("opacity", 0.5);
+
+    // Query
+    svg.append("circle")
+      .attr("cx", toX(query)).attr("cy", toY(query)).attr("r", 6)
+      .attr("fill", "var(--c-query)").attr("stroke", "white").attr("stroke-width", 1.5);
+
+    // Stats strip at bottom
+    const levels = bits >= 32 ? "∞" : Math.pow(2, bits);
+    const ratio = bits >= 32 ? "1x" : (32 / bits).toFixed(0) + "x";
+    svg.append("text")
+      .attr("x", 14).attr("y", H - 12)
+      .attr("font-size", 11).attr("fill", "var(--text-2)")
+      .text(`${bits} bits/dim  ·  ${levels} levels per axis  ·  ${ratio} smaller than float32`);
+    svg.append("text")
+      .attr("x", W - 14).attr("y", H - 12).attr("text-anchor", "end")
+      .attr("font-size", 11).attr("fill", "var(--text)").attr("font-weight", 600)
+      .text(`recall@${k} = ${recall.toFixed(2)} (${hits}/${k})`);
+  }
+
+  function setQueryFromEvent(event) {
+    const pt = svgEl.getBoundingClientRect();
+    const mx = (event.clientX - pt.left) * (W / pt.width);
+    const my = (event.clientY - pt.top) * (H / pt.height);
+    query = [
+      Math.max(0, Math.min(1, (mx - pad) / (W - 2 * pad))),
+      Math.max(0, Math.min(1, (my - pad) / (H - 2 * pad - 30))),
+    ];
+    draw();
+  }
+
+  svgEl.addEventListener("pointermove", setQueryFromEvent);
+  svgEl.addEventListener("pointerdown", setQueryFromEvent);
+
+  document.getElementById("sq-bits").addEventListener("change", e => {
+    bits = +e.target.value; draw();
+  });
+  document.getElementById("sq-k").addEventListener("input", e => {
+    k = +e.target.value;
+    document.getElementById("sq-k-val").textContent = k;
+    draw();
+  });
+  document.getElementById("sq-grid").addEventListener("change", e => {
+    showGrid = e.target.checked; draw();
+  });
+
+  const ro = new ResizeObserver(() => { layout(); draw(); });
+  ro.observe(container);
+  layout();
+  draw();
+})();
+
+// ============================================================
+// Figure 3: Product Quantization decomposition
+// ============================================================
+(function() {
+  const svgEl = document.getElementById("pq-svg");
+  const container = svgEl.parentElement;
+  const slidersEl = document.getElementById("pq-sliders");
+  let W = 0, H = 440;
+
+  const D = 8, M = 4, SUB = D / M; // 8-dim split into 4 subspaces of 2 dims
+  const K = 16; // 16 centroids per subspace (4-bit)
+
+  // Generate K centroids per subspace, distributed in [0, 1]^2
+  const codebooks = [];
+  for (let s = 0; s < M; s++) {
+    const rng = mulberry32(101 + s * 7);
+    const cents = [];
+    for (let i = 0; i < K; i++) cents.push([rng(), rng()]);
+    codebooks.push(cents);
+  }
+
+  // Vector state (8 values in [0, 1])
+  let vec = [0.7, 0.45, 0.3, 0.55, 0.85, 0.2, 0.35, 0.7];
+
+  // Build sliders
+  slidersEl.innerHTML = "";
+  for (let i = 0; i < D; i++) {
+    const col = document.createElement("div");
+    col.style.display = "flex";
+    col.style.flexDirection = "column";
+    col.style.alignItems = "center";
+    col.style.gap = "0.15rem";
+    col.innerHTML = `
+      <div style="font-family: var(--mono-font); font-size: 0.7rem; color: var(--text-2);">x${i}</div>
+      <input type="range" min="0" max="1" step="0.01" value="${vec[i]}" data-idx="${i}"
+        style="writing-mode: vertical-lr; -webkit-appearance: slider-vertical; width: 16px; height: 50px; accent-color: var(--c-compress);">
+      <div style="font-family: var(--mono-font); font-size: 0.7rem; color: var(--text);" data-idx-val="${i}">${vec[i].toFixed(2)}</div>
+    `;
+    slidersEl.appendChild(col);
+  }
+  slidersEl.querySelectorAll('input[type="range"]').forEach(input => {
+    input.addEventListener("input", e => {
+      const idx = +e.target.dataset.idx;
+      vec[idx] = +e.target.value;
+      slidersEl.querySelector(`[data-idx-val="${idx}"]`).textContent = vec[idx].toFixed(2);
+      draw();
+    });
+  });
+
+  document.getElementById("pq-random").addEventListener("click", () => {
+    for (let i = 0; i < D; i++) vec[i] = Math.random();
+    slidersEl.querySelectorAll('input[type="range"]').forEach(input => {
+      const idx = +input.dataset.idx;
+      input.value = vec[idx];
+      slidersEl.querySelector(`[data-idx-val="${idx}"]`).textContent = vec[idx].toFixed(2);
+    });
+    draw();
+  });
+
+  const svg = d3.select(svgEl);
+
+  function layout() {
+    W = container.clientWidth - 48;
+    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svgEl.setAttribute("width", W);
+    svgEl.setAttribute("height", H);
+  }
+
+  function draw() {
+    svg.selectAll("*").remove();
+
+    const colGap = 10;
+    const colW = (W - colGap * (M + 1)) / M;
+    const topY = 16, topH = 46;
+
+    // -------- Row 1: full vector as colored cells --------
+    svg.append("text")
+      .attr("x", 12).attr("y", topY + 12)
+      .attr("font-size", 11).attr("fill", "var(--text-2)").attr("font-weight", 600)
+      .text("vector (8 dims)");
+    const cellW = (W - 24) / D;
+    for (let i = 0; i < D; i++) {
+      const x = 12 + i * cellW;
+      // fill intensity by value
+      const v = vec[i];
+      svg.append("rect")
+        .attr("x", x).attr("y", topY + 18)
+        .attr("width", cellW - 2).attr("height", topH - 18)
+        .attr("fill", "var(--c-compress)").attr("opacity", 0.15 + v * 0.7)
+        .attr("rx", 2);
+      svg.append("text")
+        .attr("x", x + cellW / 2 - 1).attr("y", topY + 40)
+        .attr("text-anchor", "middle").attr("font-size", 10)
+        .attr("fill", v > 0.55 ? "white" : "var(--text)")
+        .text(v.toFixed(2));
+    }
+    // Subvector group brackets
+    for (let s = 0; s < M; s++) {
+      const x0 = 12 + s * SUB * cellW;
+      const x1 = 12 + (s + 1) * SUB * cellW - 2;
+      svg.append("line")
+        .attr("x1", x0).attr("x2", x1).attr("y1", topY + 66).attr("y2", topY + 66)
+        .attr("stroke", "var(--c-compress)").attr("stroke-width", 1.5);
+      svg.append("text")
+        .attr("x", (x0 + x1) / 2).attr("y", topY + 78)
+        .attr("text-anchor", "middle").attr("font-size", 10)
+        .attr("fill", "var(--c-compress)").attr("font-weight", 600)
+        .text(`subvector ${s}`);
+    }
+
+    // -------- Row 2: small 2D scatter for each subspace with codebook --------
+    const midY = topY + 92, midH = 200;
+    const plotSize = Math.min(colW, midH);
+
+    for (let s = 0; s < M; s++) {
+      const x0 = colGap + s * (colW + colGap);
+      const y0 = midY;
+      const w = colW, h = midH;
+      const g = svg.append("g").attr("transform", `translate(${x0},${y0})`);
+
+      // Frame
+      g.append("rect")
+        .attr("width", w).attr("height", h)
+        .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
+
+      const subvec = [vec[s * SUB], vec[s * SUB + 1]];
+      const cents = codebooks[s];
+
+      // Find closest centroid
+      let bestC = 0, bestD = Infinity;
+      cents.forEach((c, i) => {
+        const d = Math.hypot(c[0] - subvec[0], c[1] - subvec[1]);
+        if (d < bestD) { bestD = d; bestC = i; }
+      });
+
+      const px = p => 12 + p[0] * (w - 24);
+      const py = p => 12 + (1 - p[1]) * (h - 30);
+
+      // Axis labels
+      g.append("text").attr("x", w / 2).attr("y", h - 6).attr("text-anchor", "middle")
+        .attr("font-size", 10).attr("fill", "var(--text-2)")
+        .text(`subspace ${s}  (x${s*SUB}, x${s*SUB+1})`);
+
+      // Connections to closest centroid
+      g.append("line")
+        .attr("x1", px(subvec)).attr("y1", py(subvec))
+        .attr("x2", px(cents[bestC])).attr("y2", py(cents[bestC]))
+        .attr("stroke", "var(--c-compress)").attr("stroke-width", 1.2).attr("opacity", 0.6);
+
+      // Centroids
+      g.selectAll(".cent").data(cents).join("circle")
+        .attr("class", "cent")
+        .attr("cx", p => px(p)).attr("cy", p => py(p))
+        .attr("r", (p, i) => i === bestC ? 5 : 3)
+        .attr("fill", (p, i) => i === bestC ? "var(--c-compress)" : "#cbd5e1")
+        .attr("stroke", (p, i) => i === bestC ? "white" : "none")
+        .attr("stroke-width", 1.2);
+
+      // Subvector
+      g.append("circle")
+        .attr("cx", px(subvec)).attr("cy", py(subvec)).attr("r", 4)
+        .attr("fill", "var(--c-query)").attr("stroke", "white").attr("stroke-width", 1.2);
+
+      // Centroid index label
+      g.append("text")
+        .attr("x", px(cents[bestC]) + 9).attr("y", py(cents[bestC]) + 3)
+        .attr("font-size", 10).attr("fill", "var(--c-compress)").attr("font-weight", 600)
+        .attr("font-family", "var(--mono-font)")
+        .text(`c=${bestC}`);
+    }
+
+    // -------- Row 3: resulting code --------
+    const codeY = midY + midH + 22, codeH = 40;
+    svg.append("text")
+      .attr("x", 12).attr("y", codeY + 12)
+      .attr("font-size", 11).attr("fill", "var(--text-2)").attr("font-weight", 600)
+      .text("PQ code (4 integers, one per subspace)");
+    const codeBoxW = (W - 24 - (M - 1) * 12) / M;
+    for (let s = 0; s < M; s++) {
+      const subvec = [vec[s * SUB], vec[s * SUB + 1]];
+      const cents = codebooks[s];
+      let bestC = 0, bestD = Infinity;
+      cents.forEach((c, i) => {
+        const d = Math.hypot(c[0] - subvec[0], c[1] - subvec[1]);
+        if (d < bestD) { bestD = d; bestC = i; }
+      });
+      const x = 12 + s * (codeBoxW + 12);
+      svg.append("rect")
+        .attr("x", x).attr("y", codeY + 18)
+        .attr("width", codeBoxW).attr("height", codeH - 4)
+        .attr("fill", "var(--c-compress)").attr("rx", 4);
+      svg.append("text")
+        .attr("x", x + codeBoxW / 2).attr("y", codeY + 18 + (codeH - 4) / 2 + 5)
+        .attr("text-anchor", "middle").attr("font-family", "var(--mono-font)")
+        .attr("font-size", 16).attr("font-weight", 600).attr("fill", "white")
+        .text(bestC);
+    }
+  }
+
+  const ro = new ResizeObserver(() => { layout(); draw(); });
+  ro.observe(container);
+  layout();
+  draw();
+})();
+
+// ============================================================
+// Figure 4: Asymmetric Distance Computation
+// ============================================================
+(function() {
+  const svgEl = document.getElementById("adc-svg");
+  const container = svgEl.parentElement;
+  let W = 0, H = 360;
+
+  const M = 4, K = 8;
+  const N_DB = 5;
+  let seed = 11;
+
+  // Per-subspace codebooks: K centroids in 2D
+  let codebooks = [];
+  let query = []; // M subvectors
+  let dbVecs = []; // N_DB codes, each is array of M indices
+  let lut = []; // M x K
+
+  function regen() {
+    codebooks = [];
+    const rngC = mulberry32(seed);
+    for (let s = 0; s < M; s++) {
+      const cents = [];
+      for (let i = 0; i < K; i++) cents.push([rngC(), rngC()]);
+      codebooks.push(cents);
+    }
+    query = [];
+    const rngQ = mulberry32(seed + 100);
+    for (let s = 0; s < M; s++) query.push([rngQ(), rngQ()]);
+    // Database codes
+    dbVecs = [];
+    const rngD = mulberry32(seed + 200);
+    for (let n = 0; n < N_DB; n++) {
+      const code = [];
+      for (let s = 0; s < M; s++) code.push(Math.floor(rngD() * K));
+      dbVecs.push(code);
+    }
+    // Build LUT
+    lut = [];
+    for (let s = 0; s < M; s++) {
+      const row = [];
+      for (let i = 0; i < K; i++) {
+        const c = codebooks[s][i];
+        row.push(Math.hypot(c[0] - query[s][0], c[1] - query[s][1]));
+      }
+      lut.push(row);
+    }
+  }
+
+  let picked = 0;
+
+  const svg = d3.select(svgEl);
+
+  function layout() {
+    W = container.clientWidth - 48;
+    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svgEl.setAttribute("width", W);
+    svgEl.setAttribute("height", H);
+  }
+
+  function draw() {
+    svg.selectAll("*").remove();
+
+    // LUT heatmap
+    const margin = { top: 30, right: 40, bottom: 20, left: 130 };
+    const heatH = 150;
+    const heatW = W - margin.left - margin.right;
+    const cellH = heatH / M;
+    const cellW = heatW / K;
+
+    // Find max distance for color scale
+    const maxD = Math.max(...lut.flat());
+    const color = d3.scaleSequential(t => d3.interpolate("#312e81", "#fff")(t))
+      .domain([0, maxD]);
+
+    svg.append("text")
+      .attr("x", margin.left).attr("y", 16)
+      .attr("font-size", 12).attr("font-weight", 600).attr("fill", "var(--text)")
+      .text("Lookup table: distance(query subvector, centroid)");
+    svg.append("text")
+      .attr("x", margin.left).attr("y", 30)
+      .attr("font-size", 10).attr("fill", "var(--text-2)")
+      .text(`${M} subspaces × ${K} centroids = ${M*K} entries, computed once per query`);
+
+    const hg = svg.append("g").attr("transform", `translate(${margin.left},${margin.top + 14})`);
+
+    // Column headers (centroid index)
+    for (let i = 0; i < K; i++) {
+      hg.append("text")
+        .attr("x", i * cellW + cellW / 2).attr("y", -6)
+        .attr("text-anchor", "middle").attr("font-size", 10)
+        .attr("fill", "var(--text-2)").attr("font-family", "var(--mono-font)")
+        .text(i);
+    }
+    // Row headers (subspace)
+    for (let s = 0; s < M; s++) {
+      hg.append("text")
+        .attr("x", -8).attr("y", s * cellH + cellH / 2 + 4)
+        .attr("text-anchor", "end").attr("font-size", 10.5)
+        .attr("fill", "var(--text-2)")
+        .text(`sub ${s}`);
+    }
+
+    // Cells
+    for (let s = 0; s < M; s++) {
+      for (let i = 0; i < K; i++) {
+        const v = lut[s][i];
+        hg.append("rect")
+          .attr("x", i * cellW).attr("y", s * cellH)
+          .attr("width", cellW - 1).attr("height", cellH - 1)
+          .attr("fill", color(v))
+          .attr("stroke", "none");
+        hg.append("text")
+          .attr("x", i * cellW + cellW / 2).attr("y", s * cellH + cellH / 2 + 4)
+          .attr("text-anchor", "middle").attr("font-size", 10)
+          .attr("fill", v / maxD > 0.5 ? "#312e81" : "white")
+          .attr("font-family", "var(--mono-font)")
+          .text(v.toFixed(2));
+      }
+    }
+
+    // Highlight the cells used by the picked database vector
+    const pickedCode = dbVecs[picked];
+    let total = 0;
+    pickedCode.forEach((ci, s) => {
+      total += lut[s][ci];
+      hg.append("rect")
+        .attr("x", ci * cellW).attr("y", s * cellH)
+        .attr("width", cellW - 1).attr("height", cellH - 1)
+        .attr("fill", "none")
+        .attr("stroke", "var(--c-neighbor)").attr("stroke-width", 2.5);
+    });
+
+    // Database vectors panel
+    const dbY = margin.top + 14 + heatH + 30;
+    svg.append("text")
+      .attr("x", margin.left).attr("y", dbY - 10)
+      .attr("font-size", 12).attr("font-weight", 600).attr("fill", "var(--text)")
+      .text("Database vectors (as PQ codes)");
+
+    const dbRowH = 30;
+    const dbCellW = heatW / M;
+    for (let n = 0; n < N_DB; n++) {
+      const y = dbY + n * dbRowH;
+      const isPicked = n === picked;
+
+      // Row label
+      svg.append("text")
+        .attr("x", margin.left - 8).attr("y", y + dbRowH / 2 + 4)
+        .attr("text-anchor", "end").attr("font-size", 10.5)
+        .attr("font-weight", isPicked ? 600 : 400)
+        .attr("fill", isPicked ? "var(--c-neighbor)" : "var(--text-2)")
+        .text(String.fromCharCode(65 + n));
+
+      // Background strip
+      if (isPicked) {
+        svg.append("rect")
+          .attr("x", margin.left - 4).attr("y", y)
+          .attr("width", heatW + 8).attr("height", dbRowH - 4)
+          .attr("fill", "var(--c-neighbor)").attr("opacity", 0.08).attr("rx", 2);
+      }
+
+      // Code boxes
+      dbVecs[n].forEach((ci, s) => {
+        const bx = margin.left + s * dbCellW;
+        svg.append("rect")
+          .attr("x", bx).attr("y", y + 3)
+          .attr("width", dbCellW - 6).attr("height", dbRowH - 10)
+          .attr("fill", isPicked ? "var(--c-compress)" : "#cbd5e1")
+          .attr("opacity", isPicked ? 0.85 : 0.55)
+          .attr("rx", 3);
+        svg.append("text")
+          .attr("x", bx + (dbCellW - 6) / 2).attr("y", y + dbRowH / 2 + 3)
+          .attr("text-anchor", "middle").attr("font-size", 11).attr("font-weight", 600)
+          .attr("fill", "white").attr("font-family", "var(--mono-font)")
+          .text(ci);
+      });
+
+      // Distance on right (approx, showing only for picked + others dimmed)
+      let rowSum = 0;
+      dbVecs[n].forEach((ci, s) => rowSum += lut[s][ci]);
+      svg.append("text")
+        .attr("x", margin.left + heatW + 6).attr("y", y + dbRowH / 2 + 4)
+        .attr("font-size", 11).attr("font-weight", isPicked ? 700 : 400)
+        .attr("fill", isPicked ? "var(--text)" : "var(--text-2)")
+        .attr("font-family", "var(--mono-font)")
+        .text(rowSum.toFixed(2));
+    }
+
+    // Sum equation for picked
+    const eqY = dbY + N_DB * dbRowH + 14;
+    const parts = pickedCode.map((ci, s) => lut[s][ci].toFixed(2));
+    const eqText = `dist(q, ${String.fromCharCode(65 + picked)}) ≈ ${parts.join(" + ")} = ${total.toFixed(2)}`;
+    svg.append("text")
+      .attr("x", margin.left).attr("y", eqY)
+      .attr("font-size", 11).attr("fill", "var(--c-neighbor)").attr("font-weight", 600)
+      .attr("font-family", "var(--mono-font)")
+      .text(eqText);
+  }
+
+  document.getElementById("adc-newq").addEventListener("click", () => {
+    seed = Math.floor(Math.random() * 10000); regen(); draw();
+  });
+  document.getElementById("adc-pick").addEventListener("input", e => {
+    picked = +e.target.value;
+    document.getElementById("adc-pick-val").textContent = String.fromCharCode(65 + picked);
+    draw();
+  });
+
+  regen();
+  const ro = new ResizeObserver(() => { layout(); draw(); });
+  ro.observe(container);
+  layout();
+  draw();
+})();
+
+// ============================================================
+// Figure 5: Reranking
+// ============================================================
+(function() {
+  const svg1El = document.getElementById("rr-svg-1");
+  const svg2El = document.getElementById("rr-svg-2");
+  const container = document.getElementById("rr-panels");
+  let W = 0, H = 440;
+
+  const N = 200;
+  let seed = 3;
+  let shortList = 50;
+  let k = 10;
+
+  // Each item has a "true distance" and a "PQ estimate" (true + noise)
+  let items = [];
+  function regen() {
+    const rng = mulberry32(seed);
+    items = [];
+    for (let i = 0; i < N; i++) {
+      const trueD = rng();
+      const noise = (rng() - 0.5) * 0.35;
+      items.push({ i, trueD, pqD: Math.max(0, trueD + noise) });
+    }
+    // Assign true ranks
+    const byTrue = [...items].sort((a, b) => a.trueD - b.trueD);
+    byTrue.forEach((it, r) => { it.trueRank = r; });
+  }
+
+  const svg1 = d3.select(svg1El);
+  const svg2 = d3.select(svg2El);
+
+  function layout() {
+    const colW = (container.clientWidth - 16) / 2;
+    W = colW - 2;
+    [svg1El, svg2El].forEach(el => {
+      el.setAttribute("viewBox", `0 0 ${W} ${H}`);
+      el.setAttribute("width", W);
+      el.setAttribute("height", H);
+    });
+  }
+
+  function drawPanel(svg, title, orderedItems, highlightRule, subtitle) {
+    svg.selectAll("*").remove();
+    // Title
+    svg.append("text")
+      .attr("x", 12).attr("y", 18)
+      .attr("font-size", 12).attr("font-weight", 600).attr("fill", "var(--text)")
+      .text(title);
+    svg.append("text")
+      .attr("x", 12).attr("y", 34)
+      .attr("font-size", 10.5).attr("fill", "var(--text-2)")
+      .text(subtitle);
+
+    const visible = orderedItems.slice(0, Math.min(30, orderedItems.length));
+    const rowH = 10;
+    const startY = 48;
+    const barLeft = 42;
+    const barW = W - barLeft - 14;
+
+    // Bar scale based on full range of visible distances
+    const maxD = Math.max(...visible.map(it => Math.max(it.trueD, it.pqD)));
+    const xS = d3.scaleLinear().domain([0, maxD * 1.02]).range([0, barW]);
+
+    visible.forEach((it, rank) => {
+      const y = startY + rank * rowH;
+      const isHit = highlightRule(it, rank);
+      // Rank number
+      svg.append("text")
+        .attr("x", 8).attr("y", y + 8)
+        .attr("font-size", 9).attr("font-family", "var(--mono-font)")
+        .attr("fill", "var(--text-2)")
+        .text((rank + 1).toString().padStart(2, "0"));
+      // True distance bar (light)
+      svg.append("rect")
+        .attr("x", barLeft).attr("y", y + 1)
+        .attr("width", xS(it.trueD)).attr("height", rowH - 3)
+        .attr("fill", isHit ? "var(--c-neighbor)" : "var(--c-db)")
+        .attr("opacity", isHit ? 0.85 : 0.45)
+        .attr("rx", 1);
+      // Small indicator if it's a true top-k
+      if (it.trueRank < k) {
+        svg.append("circle")
+          .attr("cx", barLeft - 8).attr("cy", y + 5)
+          .attr("r", 2.5).attr("fill", "var(--c-neighbor)");
+      }
+    });
+
+    // Footer note
+    svg.append("text")
+      .attr("x", 12).attr("y", H - 14)
+      .attr("font-size", 10).attr("fill", "var(--text-2)")
+      .text("• amber dot: true top-k member");
+  }
+
+  function draw() {
+    // Panel 1: PQ-ordered shortlist, top-k-at-PQ highlighted
+    const byPQ = [...items].sort((a, b) => a.pqD - b.pqD);
+    const shortlistItems = byPQ.slice(0, shortList);
+    // How many of the final k PQ-ranked are actually true top-k?
+    const pqTopK = new Set(byPQ.slice(0, k).map(it => it.i));
+    let pqHits = 0;
+    shortlistItems.slice(0, k).forEach(it => { if (it.trueRank < k) pqHits++; });
+    const pqRecall = pqHits / k;
+
+    drawPanel(svg1, "Step 1: PQ shortlist (fast)",
+      byPQ,
+      (it, rank) => rank < k,
+      `Top ${k} by PQ  ·  recall@${k} = ${pqRecall.toFixed(2)}`);
+
+    // Panel 2: Rerank the shortlist by true distance
+    const reranked = [...shortlistItems].sort((a, b) => a.trueD - b.trueD);
+    let reHits = 0;
+    reranked.slice(0, k).forEach(it => { if (it.trueRank < k) reHits++; });
+    const reRecall = reHits / k;
+
+    drawPanel(svg2, "Step 2: exact rerank of the shortlist",
+      reranked,
+      (it, rank) => rank < k,
+      `Shortlist = ${shortList}  ·  recall@${k} = ${reRecall.toFixed(2)}`);
+  }
+
+  document.getElementById("rr-short").addEventListener("input", e => {
+    shortList = +e.target.value;
+    document.getElementById("rr-short-val").textContent = shortList;
+    draw();
+  });
+  document.getElementById("rr-k").addEventListener("input", e => {
+    k = +e.target.value;
+    document.getElementById("rr-k-val").textContent = k;
+    draw();
+  });
+  document.getElementById("rr-new").addEventListener("click", () => {
+    seed = Math.floor(Math.random() * 10000); regen(); draw();
+  });
+
+  regen();
+  const ro = new ResizeObserver(() => { layout(); draw(); });
+  ro.observe(container);
+  layout();
+  draw();
+})();
+
+// ============================================================
+// Figure 6: IVF-PQ animated pipeline
+// ============================================================
+(function() {
+  const svgEl = document.getElementById("ivfpq-svg");
+  const container = svgEl.parentElement;
+  let W = 0, H = 420;
+
+  const rng = mulberry32(41);
+  // Voronoi centroids
+  const C = 7;
+  const centroids = [];
+  for (let i = 0; i < C; i++) {
+    centroids.push([0.1 + rng() * 0.8, 0.1 + rng() * 0.8]);
+  }
+  // Database points, assigned to nearest centroid
+  const N = 180;
+  const pts = [];
+  for (let i = 0; i < N; i++) {
+    const p = [rng(), rng()];
+    let best = 0, bestD = 1e9;
+    for (let c = 0; c < C; c++) {
+      const d = Math.hypot(p[0] - centroids[c][0], p[1] - centroids[c][1]);
+      if (d < bestD) { bestD = d; best = c; }
+    }
+    // PQ code: 3 subspaces, values 0..7 (just for display)
+    const code = [Math.floor(rng() * 8), Math.floor(rng() * 8), Math.floor(rng() * 8)];
+    pts.push({ p, cell: best, code });
+  }
+
+  let query = [0.5, 0.55];
+  let nprobe = 2;
+  let playing = true;
+  let stage = 0; // 0 = arrive, 1 = pick cells, 2 = PQ table, 3 = score, 4 = rerank, 5 = result
+  const stageNames = ["query arrives", "pick nprobe cells", "PQ lookup", "score candidates", "rerank top", "final top-k"];
+  let timer = null;
+
+  const svg = d3.select(svgEl);
+
+  function layout() {
+    W = container.clientWidth - 48;
+    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svgEl.setAttribute("width", W);
+    svgEl.setAttribute("height", H);
+  }
+
+  function pickCells() {
+    const dists = centroids.map((c, i) => ({ i, d: Math.hypot(c[0] - query[0], c[1] - query[1]) }));
+    dists.sort((a, b) => a.d - b.d);
+    return new Set(dists.slice(0, nprobe).map(x => x.i));
+  }
+
+  function candidateList(selCells) {
+    const cand = pts.filter(pt => selCells.has(pt.cell));
+    // Approx PQ dist (hashed sum of code entries, for demo)
+    cand.forEach(c => {
+      c._pq = c.code[0] * 0.1 + c.code[1] * 0.12 + c.code[2] * 0.09
+        + Math.abs(c.p[0] - query[0]) * 0.4 + Math.abs(c.p[1] - query[1]) * 0.4;
+      c._exact = Math.hypot(c.p[0] - query[0], c.p[1] - query[1]);
+    });
+    return cand;
+  }
+
+  const pad = 20;
+  function toX(p, X0, X1) { return X0 + p[0] * (X1 - X0); }
+  function toY(p, Y0, Y1) { return Y0 + p[1] * (Y1 - Y0); }
+
+  function draw() {
+    svg.selectAll("*").remove();
+
+    // Layout: left = map (65%), right = sidebar
+    const mapW = W * 0.62;
+    const sideX = mapW + 12;
+    const sideW = W - sideX - 10;
+
+    // Background for map
+    svg.append("rect").attr("x", 10).attr("y", 10)
+      .attr("width", mapW - 20).attr("height", H - 20)
+      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
+
+    const selCells = pickCells();
+
+    // Voronoi tint (nearest-centroid fill)
+    // Pixel-based rendering would be heavy; use sampled grid of small rects
+    const gridS = 22;
+    const colors = ["#d1fae5", "#fef3c7", "#ddd6fe", "#fce7f3", "#dbeafe", "#fed7aa", "#cffafe"];
+    for (let gx = 0; gx < gridS; gx++) {
+      for (let gy = 0; gy < gridS; gy++) {
+        const px = (gx + 0.5) / gridS, py = (gy + 0.5) / gridS;
+        let best = 0, bestD = 1e9;
+        for (let c = 0; c < C; c++) {
+          const d = Math.hypot(px - centroids[c][0], py - centroids[c][1]);
+          if (d < bestD) { bestD = d; best = c; }
+        }
+        const X0 = 10 + pad, X1 = mapW - 10 - pad;
+        const Y0 = 10 + pad, Y1 = H - 10 - pad;
+        const cellBg = colors[best];
+        svg.append("rect")
+          .attr("x", toX([gx / gridS, 0], X0, X1))
+          .attr("y", toY([0, gy / gridS], Y0, Y1))
+          .attr("width", (X1 - X0) / gridS + 0.5)
+          .attr("height", (Y1 - Y0) / gridS + 0.5)
+          .attr("fill", cellBg)
+          .attr("opacity", selCells.has(best) && stage >= 1 ? 0.85 : 0.25);
+      }
+    }
+
+    const X0 = 10 + pad, X1 = mapW - 10 - pad;
+    const Y0 = 10 + pad, Y1 = H - 10 - pad;
+
+    // Cell outlines (stroke around selected cells for emphasis)
+    if (stage >= 1) {
+      centroids.forEach((c, i) => {
+        if (!selCells.has(i)) return;
+        svg.append("circle")
+          .attr("cx", toX(c, X0, X1)).attr("cy", toY(c, Y0, Y1))
+          .attr("r", 8)
+          .attr("fill", "none")
+          .attr("stroke", "var(--c-partition)").attr("stroke-width", 2);
+      });
+    }
+
+    // Centroid markers
+    centroids.forEach((c, i) => {
+      svg.append("circle")
+        .attr("cx", toX(c, X0, X1)).attr("cy", toY(c, Y0, Y1))
+        .attr("r", 4)
+        .attr("fill", "var(--c-partition)").attr("stroke", "white").attr("stroke-width", 1.5);
+    });
+
+    // Database points as small PQ-code stacks (tiny colored squares)
+    pts.forEach(pt => {
+      const sx = toX(pt.p, X0, X1), sy = toY(pt.p, Y0, Y1);
+      const active = selCells.has(pt.cell) && stage >= 1;
+      // Code as 3 small vertical squares
+      if (active) {
+        for (let s = 0; s < 3; s++) {
+          svg.append("rect")
+            .attr("x", sx - 3).attr("y", sy - 6 + s * 4)
+            .attr("width", 6).attr("height", 3)
+            .attr("fill", "var(--c-compress)")
+            .attr("opacity", 0.25 + pt.code[s] / 8 * 0.7);
+        }
+      } else {
+        svg.append("circle")
+          .attr("cx", sx).attr("cy", sy).attr("r", 1.7)
+          .attr("fill", "var(--c-db)").attr("opacity", 0.5);
+      }
+    });
+
+    // Candidates
+    const cands = stage >= 2 ? candidateList(selCells) : [];
+    cands.sort((a, b) => a._pq - b._pq);
+    const pqTopK = cands.slice(0, 8);
+    const rerankTopK = [...pqTopK].sort((a, b) => a._exact - b._exact).slice(0, 4);
+
+    // Highlight PQ scored
+    if (stage >= 3) {
+      pqTopK.forEach(pt => {
+        svg.append("circle")
+          .attr("cx", toX(pt.p, X0, X1)).attr("cy", toY(pt.p, Y0, Y1))
+          .attr("r", 6)
+          .attr("fill", "none")
+          .attr("stroke", "var(--c-compress)").attr("stroke-width", 1.5).attr("opacity", 0.7);
+      });
+    }
+    if (stage >= 4) {
+      rerankTopK.forEach(pt => {
+        svg.append("circle")
+          .attr("cx", toX(pt.p, X0, X1)).attr("cy", toY(pt.p, Y0, Y1))
+          .attr("r", 4)
+          .attr("fill", "var(--c-neighbor)").attr("stroke", "white").attr("stroke-width", 1);
+      });
+    }
+
+    // Connection lines from query to final top-k
+    if (stage >= 5) {
+      rerankTopK.forEach(pt => {
+        svg.append("line")
+          .attr("x1", toX(query, X0, X1)).attr("y1", toY(query, Y0, Y1))
+          .attr("x2", toX(pt.p, X0, X1)).attr("y2", toY(pt.p, Y0, Y1))
+          .attr("stroke", "var(--c-neighbor)").attr("stroke-width", 1).attr("opacity", 0.8);
+      });
+    }
+
+    // Query point (always)
+    svg.append("circle")
+      .attr("cx", toX(query, X0, X1)).attr("cy", toY(query, Y0, Y1))
+      .attr("r", 6)
+      .attr("fill", "var(--c-query)").attr("stroke", "white").attr("stroke-width", 1.5);
+    // Pulse
+    svg.append("circle")
+      .attr("cx", toX(query, X0, X1)).attr("cy", toY(query, Y0, Y1))
+      .attr("r", 8 + (stage === 0 ? 4 : 0))
+      .attr("fill", "none").attr("stroke", "var(--c-query)").attr("stroke-width", 1).attr("opacity", 0.4);
+
+    // Sidebar: pipeline stages
+    const sideY = 24;
+    svg.append("text")
+      .attr("x", sideX).attr("y", sideY)
+      .attr("font-size", 12).attr("font-weight", 600).attr("fill", "var(--text)")
+      .text("Pipeline");
+
+    stageNames.forEach((name, i) => {
+      const y = sideY + 18 + i * 26;
+      const active = i === stage;
+      const done = i < stage;
+      svg.append("circle")
+        .attr("cx", sideX + 8).attr("cy", y - 4).attr("r", 5)
+        .attr("fill", active ? "var(--c-compress)" : done ? "var(--c-partition)" : "#cbd5e1");
+      svg.append("text")
+        .attr("x", sideX + 20).attr("y", y)
+        .attr("font-size", 11)
+        .attr("font-weight", active ? 600 : 400)
+        .attr("fill", active ? "var(--text)" : "var(--text-2)")
+        .text(`${i + 1}. ${name}`);
+    });
+
+    // Sidebar: LUT preview in a compact form
+    if (stage >= 2) {
+      const lutY = sideY + 18 + stageNames.length * 26 + 18;
+      svg.append("text")
+        .attr("x", sideX).attr("y", lutY)
+        .attr("font-size", 11).attr("font-weight", 600).attr("fill", "var(--text-2)")
+        .text("LUT (built once)");
+      // 3 x 8 mini heatmap
+      const mw = Math.min(sideW - 16, 140);
+      const cw = mw / 8, ch = 14;
+      for (let s = 0; s < 3; s++) {
+        for (let i = 0; i < 8; i++) {
+          const v = ((s * 3 + i * 7) % 11) / 10;
+          svg.append("rect")
+            .attr("x", sideX + i * cw).attr("y", lutY + 6 + s * ch)
+            .attr("width", cw - 1).attr("height", ch - 1)
+            .attr("fill", d3.interpolate("#312e81", "#fff")(v));
+        }
+      }
+    }
+
+    // Sidebar: candidate list
+    if (stage >= 3 && cands.length) {
+      const listY = sideY + 18 + stageNames.length * 26 + 18 + (stage >= 2 ? 70 : 0);
+      svg.append("text")
+        .attr("x", sideX).attr("y", listY)
+        .attr("font-size", 11).attr("font-weight", 600).attr("fill", "var(--text-2)")
+        .text(`${cands.length} candidates →`);
+      const show = stage >= 4 ? rerankTopK : pqTopK;
+      const listTitle = stage >= 4 ? "exact top-k" : "PQ top-k";
+      svg.append("text")
+        .attr("x", sideX + 100).attr("y", listY)
+        .attr("font-size", 11).attr("font-weight", 600).attr("fill", "var(--c-neighbor)")
+        .text(listTitle);
+      show.slice(0, 5).forEach((c, i) => {
+        const y = listY + 14 + i * 14;
+        svg.append("rect")
+          .attr("x", sideX).attr("y", y - 8)
+          .attr("width", sideW - 16).attr("height", 11)
+          .attr("fill", "var(--c-neighbor)").attr("opacity", 0.08 + i * 0.02).attr("rx", 2);
+        svg.append("text")
+          .attr("x", sideX + 4).attr("y", y)
+          .attr("font-size", 10).attr("font-family", "var(--mono-font)")
+          .attr("fill", "var(--text-2)")
+          .text(`#${i + 1}  code[${c.code.join(",")}]`);
+      });
+    }
+
+    // Stage caption
+    svg.append("text")
+      .attr("x", 18).attr("y", H - 14)
+      .attr("font-size", 11).attr("font-weight", 600)
+      .attr("fill", "var(--c-compress)")
+      .text(`Stage ${stage + 1}/${stageNames.length}: ${stageNames[stage]}`);
+  }
+
+  function advance() {
+    stage = (stage + 1) % stageNames.length;
+    draw();
+  }
+
+  function startTimer() {
+    if (timer) clearInterval(timer);
+    timer = setInterval(() => {
+      if (!playing) return;
+      advance();
+    }, 1600);
+  }
+
+  document.getElementById("ivfpq-play").addEventListener("click", e => {
+    playing = !playing;
+    e.target.textContent = playing ? "pause" : "play";
+  });
+  document.getElementById("ivfpq-step").addEventListener("click", () => {
+    playing = false;
+    document.getElementById("ivfpq-play").textContent = "play";
+    advance();
+  });
+  document.getElementById("ivfpq-np").addEventListener("input", e => {
+    nprobe = +e.target.value;
+    document.getElementById("ivfpq-np-val").textContent = nprobe;
+    draw();
+  });
+
+  svgEl.addEventListener("pointerdown", event => {
+    const rect = svgEl.getBoundingClientRect();
+    const mx = (event.clientX - rect.left) * (W / rect.width);
+    const my = (event.clientY - rect.top) * (H / rect.height);
+    const mapW = W * 0.62;
+    if (mx > mapW) return; // clicks on sidebar don't move the query
+    const X0 = 10 + pad, X1 = mapW - 10 - pad;
+    const Y0 = 10 + pad, Y1 = H - 10 - pad;
+    query = [
+      Math.max(0, Math.min(1, (mx - X0) / (X1 - X0))),
+      Math.max(0, Math.min(1, (my - Y0) / (Y1 - Y0))),
+    ];
+    stage = 0;
+    draw();
+  });
+
+  const ro = new ResizeObserver(() => { layout(); draw(); });
+  ro.observe(container);
+  layout();
+  draw();
+  startTimer();
+})();
+</script>
+</body>
+</html>

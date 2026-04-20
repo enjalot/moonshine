@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Self-Organizing Maps</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem; --line-height: 1.6;
+  --text: #1a1a2e; --text-2: #4a4a6a; --text-3: #8a8a9e;
+  --accent: #2563eb; --accent-light: #dbeafe;
+  --warm: #ea580c; --warm-light: #ffedd5;
+  --green: #059669; --purple: #7c3aed;
+  --bg: #fafafa; --fig-bg: #ffffff;
+  --border: #e2e2e8; --border-2: #c5c5d1; --muted: #e8e8ee;
+  --c0: #2563eb; --c1: #ea580c; --c2: #059669; --c3: #7c3aed;
+}
+body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
+h1 { font-size: 2.4rem; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.4rem; margin: 3rem 0 1rem; }
+h3 { font-family: var(--heading-font); font-size: 1.1rem; font-weight: 700; margin: 2rem 0 0.75rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+em { font-style: italic; } strong { font-weight: 600; }
+.subtitle { font-family: var(--heading-font); font-size: 1.1rem; color: var(--text-2); line-height: 1.45; margin-bottom: 1rem; font-weight: 400; }
+.series-tag { font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+.figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.5; }
+.figure-label { font-weight: 600; color: var(--text); }
+.controls { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.controls input[type="range"] { width: 140px; accent-color: var(--accent); vertical-align: middle; }
+.controls label { display: inline-flex; align-items: center; gap: 0.5rem; }
+.controls .value { font-family: var(--mono-font); color: var(--text); min-width: 2ch; display: inline-block; }
+.controls button { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.35rem 0.8rem; background: var(--fig-bg); color: var(--text-2); border: 1px solid var(--border-2); border-radius: 4px; cursor: pointer; }
+.controls button:hover { background: var(--muted); }
+.controls button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+svg text { font-family: var(--heading-font); }
+svg .axis text { font-size: 11px; fill: var(--text-2); }
+svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crispEdges; }
+.margin-note { font-size: 0.875rem; color: var(--text-2); line-height: 1.5; border-left: 2px solid var(--border-2); padding-left: 0.9rem; margin: 1.25rem 0; }
+@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure { padding: 1rem; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+</style>
+</head>
+<body>
+<div class="article">
+
+<header>
+  <div class="series-tag">Part 7 of 10 · Preserves an ordered grid layout</div>
+  <h1>Self-Organizing Maps</h1>
+  <p class="subtitle">
+    Every other method in this series produces a scatter plot of floating points. Self-Organizing Maps ask a different question: what if the output had to be a grid? The answer is a method that turns out to be useful when the grid itself is the feature.
+  </p>
+</header>
+
+<p>
+  By now we have seen a range of dimensionality reduction methods, and they all share a shape: input is a high-dimensional dataset; output is a cloud of points in two or three dimensions, each point free to land wherever the optimization puts it. Self-Organizing Maps break that mold. The output is a regular grid (rectangular or hexagonal), and the algorithm's job is to decide which grid cell each data point belongs to. The points do not get their own individual low-dimensional coordinates; they get assigned to fixed cells.
+</p>
+
+<p>
+  At first glance this sounds restrictive, and it is. But the restriction buys something real. A grid is a simpler object than a scatter plot: easy to read, easy to tile, easy to use as a coordinate system for something else. When what you want is not "a picture of the data" but a map-like substrate onto which data can be indexed, sorted, compared, or displayed, a SOM is the right tool. When you do want a picture of the data, you probably want UMAP or t-SNE instead.
+</p>
+
+<h2>The algorithm</h2>
+
+<p>
+  SOMs, introduced by Teuvo Kohonen in 1982 and polished over the following decade, use a simple but effective training procedure called competitive learning. The ingredients:
+</p>
+
+<p>
+  First, a grid of <em>prototype vectors</em>. For a 20-by-20 grid, that is 400 prototypes, each with the same dimension as the input data. They can be initialized randomly or more cleverly (e.g., along the top principal components). Importantly, each prototype has a fixed position on the 2D grid; only its high-dimensional values will change during training.
+</p>
+
+<p>
+  Second, the training loop. For each training step, pick a random data point. Find the prototype closest to it in the high-dimensional space; this is the <em>best matching unit</em> or BMU. Move the BMU slightly toward the data point. Also move the BMU's neighbors on the grid, but by a smaller amount that falls off with grid distance. Over time, decay the learning rate and shrink the neighborhood radius so that updates become smaller and more local.
+</p>
+
+<p>
+  The neighborhood update is the key move. Because nearby prototypes on the grid all move together (slightly) when one is chosen as BMU, they end up similar in high-dimensional space. Cells that are close on the 2D grid become close in high-D, and cells that are far on the grid become different. This is how topology gets preserved: the 2D layout of the grid ends up reflecting the similarity structure of the data.
+</p>
+
+<div class="figure" id="fig-som">
+  <div class="controls">
+    <button id="som-play" class="primary">play</button>
+    <button id="som-step">step</button>
+    <button id="som-reset">reset</button>
+    <label>
+      grid size <span class="value" id="som-size-val">14</span>
+      <input type="range" id="som-size" min="6" max="20" value="14" step="1">
+    </label>
+    <label>
+      iterations <span class="value" id="som-iter">0</span>
+    </label>
+  </div>
+  <svg id="som-svg" width="100%" height="380" viewBox="0 0 680 380" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="figure-caption">
+    <span class="figure-label">Figure 1.</span>
+    A SOM training on a 2D dataset, chosen to be 2D so the prototypes can be drawn on top of the data. At initialization the grid is a straight rectangle. As training proceeds, each prototype migrates toward the data while its grid neighbors drag along behind it. The grid deforms to cover the data's shape.
+  </div>
+</div>
+
+<p>
+  In two dimensions the story is unusually vivid: the grid visibly bends and stretches to fit the data. In high dimensions the same thing is happening, but we cannot see it directly. What we can see is the arrangement of prototype vectors on the 2D grid, because that is part of the output by design.
+</p>
+
+<h2>The U-matrix</h2>
+
+<p>
+  A trained SOM does not itself look like a scatter plot. It is a grid of prototypes, and the prototypes live in the original high-dimensional space. To turn the SOM into a useful visualization, we plot the <em>U-matrix</em>: color each grid cell by the distance between its prototype and the average of its grid neighbors' prototypes.
+</p>
+
+<p>
+  Regions of the grid where neighboring prototypes are very similar (low U-values) represent tight clusters in the original data. Regions where neighbors are dissimilar (high U-values) represent boundaries between clusters. A U-matrix looks like a topographic map: dark "walls" separate bright "valleys," each valley corresponding to a coherent group in the data. This is how you read a SOM for cluster structure.
+</p>
+
+<div class="figure" id="fig-umatrix">
+  <svg id="umat-svg" width="100%" height="340" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="figure-caption">
+    <span class="figure-label">Figure 2.</span>
+    Left: a SOM trained on three overlapping gaussian clusters in 20-dimensional space. Each cell shows its grid position; the color of each cell is how similar its prototype is to those of its grid neighbors (the U-matrix). Right: the data points, colored by their cluster, placed into their BMU cells. Cluster boundaries show up as dark "walls" on the U-matrix, and clusters occupy coherent regions of the grid.
+  </div>
+</div>
+
+<h2>What SOMs are good for</h2>
+
+<p>
+  SOMs are unusual enough that it is worth being specific about when they are the right tool. The grid-as-output property is the main driver.
+</p>
+
+<p>
+  First, when you need to lay out a dataset onto a fixed substrate that can be tiled or printed. Map-making (mapping documents into a grid for navigation), hexagonal tree maps, small-multiple dashboards: any time the output has to be a rectangle, a SOM gives you a coherent mapping.
+</p>
+
+<p>
+  Second, when you want a quantization of the data into a fixed number of representative vectors that are arranged smoothly in a low-dimensional grid. This is useful for coarse-graining a large dataset (each prototype represents a neighborhood of data points), or for downstream methods that need a dictionary of vector representatives.
+</p>
+
+<p>
+  Third, as a different kind of exploratory view. SOMs tend to spread clusters across the grid in a way that makes adjacencies visible, which is sometimes useful when you want to see not just "are there clusters" but "which clusters are similar to which."
+</p>
+
+<p>
+  The famous application, WEBSOM in the late 1990s, organized tens of thousands of Usenet articles on a SOM grid that users could browse spatially. A similar idea shows up in modern tools for organizing latent-space embeddings of documents or images into tiled browsable maps, sometimes called "atlases."
+</p>
+
+<h2>What they are not good for</h2>
+
+<p>
+  SOMs do not give you a position for every data point; they give you a cell assignment. If you care about the fine-grained layout <em>within</em> a cluster, a SOM will not show it. If you care about preserving pairwise distances or detailed topology, a SOM is too coarse. If you want to do out-of-sample projection, SOMs support it (find the BMU for the new point), but the mapping is quantized to the grid resolution.
+</p>
+
+<p>
+  The method also has some numerical gotchas. Initialization matters (random can be slow; PCA initialization is much more reliable). Training is sensitive to the learning rate and neighborhood-decay schedules. Extensions like Growing SOM and Growing Neural Gas, which adaptively grow the grid, address some of these issues but add complexity.
+</p>
+
+<div class="margin-note">
+  The "growing" variants of SOMs trade the fixed grid topology for more flexibility, at the cost of losing the very property (fixed grid) that makes SOMs distinctive. If what you need is a flexible layout with adaptive structure, you are better off with UMAP or a method from an earlier article; the SOM's value is precisely the rigidity.
+</div>
+
+<h2>A method with a narrow purpose</h2>
+
+<p>
+  SOMs are not a modern default for exploratory dimensionality reduction. If someone hands you a new high-dimensional dataset and asks for a visualization, UMAP or PCA is what you would reach for first. But SOMs carve out a specific niche, the niche of "I want the output to be a grid," and in that niche they are hard to beat. When you see one in the wild, it is usually because someone needed a grid, not because they thought it would produce a better scatter plot than UMAP.
+</p>
+
+<p>
+  The next article covers a method family that also constrains the geometry of the output, but in a much more radical way. Instead of a 2D grid, it uses the Poincaré disk, a piece of non-Euclidean geometry where volume grows exponentially with distance. When the data is tree-shaped, that geometry is exactly what you want.
+</p>
+
+<footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
+  <p>Part of <a href="index.html" style="color: var(--text-2);">What Dimensionality Reduction Preserves</a>. Previous: <a href="06-density.html" style="color: var(--accent);">Preserving Density</a>. Next: <a href="08-hierarchy.html" style="color: var(--accent);">Hyperbolic Embeddings</a>.</p>
+  <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+</footer>
+
+</div>
+
+<script>
+function mulberry32(seed) {
+  return function() {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function gaussian(rng) {
+  const u = 1 - rng(), v = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// ---------- Figure 1: SOM training on 2D data ----------
+(function() {
+  const svg = d3.select("#som-svg");
+  const W = 680, H = 380;
+  const paneW = W / 2;
+
+  // Data: a curved "C" shape — 3 gaussian blobs along a curve
+  const rng = mulberry32(5);
+  const dataPts = [];
+  const nData = 250;
+  for (let i = 0; i < nData; i++) {
+    // parametric curve: a C shape
+    const t = rng();
+    const a = Math.PI * (0.2 + t * 1.2);
+    const r = 2.0;
+    const cx = r * Math.cos(a);
+    const cy = r * Math.sin(a);
+    dataPts.push([cx + gaussian(rng) * 0.22, cy + gaussian(rng) * 0.22]);
+  }
+
+  const leftG = svg.append("g").attr("transform", `translate(20, 16)`);
+  const rightG = svg.append("g").attr("transform", `translate(${paneW + 20}, 16)`);
+  const lW = paneW - 40, lH = H - 40;
+
+  leftG.append("text").attr("y", -4).style("font-size", "11px").attr("fill", "var(--text-3)")
+    .style("letter-spacing", "0.04em").text("DATA SPACE WITH SOM GRID");
+  rightG.append("text").attr("y", -4).style("font-size", "11px").attr("fill", "var(--text-3)")
+    .style("letter-spacing", "0.04em").text("GRID VIEW");
+
+  const dExt = d3.extent(dataPts.flatMap(d => [d[0], d[1]]));
+  const xsc = d3.scaleLinear().domain([-3, 3]).range([8, lW - 8]);
+  const ysc = d3.scaleLinear().domain([-3, 3]).range([lH - 8, 8]);
+
+  const dataG = leftG.append("g");
+  const gridLineG = leftG.append("g");
+  const protoG = leftG.append("g");
+  const markerG = leftG.append("g");
+
+  dataG.selectAll("circle").data(dataPts).join("circle")
+    .attr("cx", d => xsc(d[0])).attr("cy", d => ysc(d[1]))
+    .attr("r", 2.2).attr("fill", "var(--text-3)").attr("opacity", 0.5);
+
+  // SOM state
+  let G = 14; // grid size
+  let protos = []; // flat array length G*G, each is [x, y] prototype
+  let iter = 0;
+  let running = false;
+  let animFrame = null;
+
+  const sizeInput = document.getElementById("som-size");
+  const sizeVal = document.getElementById("som-size-val");
+  const iterVal = document.getElementById("som-iter");
+  const playBtn = document.getElementById("som-play");
+  const stepBtn = document.getElementById("som-step");
+  const resetBtn = document.getElementById("som-reset");
+
+  const gridXScale = d3.scaleLinear().domain([0, 1]).range([8, lW - 8]);
+  const gridYScale = d3.scaleLinear().domain([0, 1]).range([lH - 8, 8]);
+
+  function reset() {
+    iter = 0;
+    iterVal.textContent = 0;
+    G = +sizeInput.value;
+    sizeVal.textContent = G;
+    protos = [];
+    // Initialize: spread in a small central rectangle
+    for (let r = 0; r < G; r++) {
+      for (let c = 0; c < G; c++) {
+        const px = -0.5 + c / (G - 1) * 1.0;
+        const py = -0.3 + r / (G - 1) * 0.6;
+        protos.push([px + gaussian(mulberry32(r * G + c + 1))() * 0.02, py + gaussian(mulberry32(r * G + c + 2))() * 0.02]);
+      }
+    }
+    render();
+  }
+
+  function trainStep(steps = 50) {
+    const maxIter = 1500;
+    const lr0 = 0.4, sigma0 = G * 0.6;
+    for (let s = 0; s < steps; s++) {
+      const progress = iter / maxIter;
+      const lr = lr0 * Math.exp(-progress * 3);
+      const sigma = sigma0 * Math.exp(-progress * 3);
+      const sample = dataPts[Math.floor(Math.random() * dataPts.length)];
+      // find BMU
+      let bmu = 0, bd = Infinity;
+      for (let i = 0; i < protos.length; i++) {
+        const d = (protos[i][0] - sample[0]) ** 2 + (protos[i][1] - sample[1]) ** 2;
+        if (d < bd) { bd = d; bmu = i; }
+      }
+      const bmuR = Math.floor(bmu / G), bmuC = bmu % G;
+      for (let i = 0; i < protos.length; i++) {
+        const r = Math.floor(i / G), c = i % G;
+        const gd = Math.hypot(r - bmuR, c - bmuC);
+        const h = Math.exp(-gd * gd / (2 * sigma * sigma + 1e-6));
+        protos[i][0] += lr * h * (sample[0] - protos[i][0]);
+        protos[i][1] += lr * h * (sample[1] - protos[i][1]);
+      }
+      iter++;
+    }
+    iterVal.textContent = iter;
+  }
+
+  function render() {
+    // Grid lines connecting prototype neighbors
+    const lines = [];
+    for (let r = 0; r < G; r++) for (let c = 0; c < G; c++) {
+      if (c < G - 1) lines.push([r * G + c, r * G + c + 1]);
+      if (r < G - 1) lines.push([r * G + c, (r + 1) * G + c]);
+    }
+    gridLineG.selectAll("line").data(lines).join("line")
+      .attr("x1", e => xsc(protos[e[0]][0])).attr("y1", e => ysc(protos[e[0]][1]))
+      .attr("x2", e => xsc(protos[e[1]][0])).attr("y2", e => ysc(protos[e[1]][1]))
+      .attr("stroke", "var(--accent)").attr("stroke-width", 1).attr("stroke-opacity", 0.55);
+
+    protoG.selectAll("circle").data(protos).join("circle")
+      .attr("cx", p => xsc(p[0])).attr("cy", p => ysc(p[1]))
+      .attr("r", 2.5).attr("fill", "var(--accent)").attr("opacity", 0.9);
+
+    // Right: show grid with cell color = average local density of data mapped to that BMU
+    const counts = new Array(protos.length).fill(0);
+    for (const pt of dataPts) {
+      let bmu = 0, bd = Infinity;
+      for (let i = 0; i < protos.length; i++) {
+        const d = (protos[i][0] - pt[0]) ** 2 + (protos[i][1] - pt[1]) ** 2;
+        if (d < bd) { bd = d; bmu = i; }
+      }
+      counts[bmu]++;
+    }
+    const maxC = Math.max(1, d3.max(counts));
+    rightG.selectAll("rect").data(protos).join("rect")
+      .attr("x", (_, i) => gridXScale((i % G) / G))
+      .attr("y", (_, i) => gridYScale((Math.floor(i / G) + 1) / G))
+      .attr("width", (lW - 16) / G - 1)
+      .attr("height", (lH - 16) / G - 1)
+      .attr("fill", (_, i) => d3.interpolateBlues(0.15 + 0.75 * counts[i] / maxC))
+      .attr("stroke", "white").attr("stroke-width", 0.5);
+  }
+
+  function tick() {
+    if (!running) return;
+    trainStep(30);
+    render();
+    if (iter < 1500) animFrame = requestAnimationFrame(tick);
+    else { running = false; playBtn.textContent = "play"; }
+  }
+
+  playBtn.addEventListener("click", () => {
+    running = !running;
+    playBtn.textContent = running ? "pause" : "play";
+    if (running) tick();
+    else if (animFrame) cancelAnimationFrame(animFrame);
+  });
+  stepBtn.addEventListener("click", () => {
+    trainStep(50); render();
+  });
+  resetBtn.addEventListener("click", () => {
+    running = false; if (animFrame) cancelAnimationFrame(animFrame);
+    playBtn.textContent = "play"; reset();
+  });
+  sizeInput.addEventListener("input", () => {
+    running = false; if (animFrame) cancelAnimationFrame(animFrame);
+    playBtn.textContent = "play"; reset();
+  });
+
+  reset();
+})();
+
+// ---------- Figure 2: U-matrix on 20D data ----------
+(function() {
+  const svg = d3.select("#umat-svg");
+  const W = 680, H = 340;
+  const paneW = W / 2;
+
+  // Generate three gaussian clusters in 20D
+  const rng = mulberry32(29);
+  const dim = 20;
+  const centers = [
+    new Array(dim).fill(0).map((_, d) => d < 5 ? 3 : 0),
+    new Array(dim).fill(0).map((_, d) => d >= 5 && d < 10 ? 3 : 0),
+    new Array(dim).fill(0).map((_, d) => d >= 10 && d < 15 ? 3 : 0),
+  ];
+  const nClusters = 3;
+  const nPer = 60;
+  const data = [];
+  for (let c = 0; c < nClusters; c++) {
+    for (let i = 0; i < nPer; i++) {
+      const p = new Array(dim);
+      for (let d = 0; d < dim; d++) p[d] = centers[c][d] + gaussian(rng) * 0.8;
+      data.push({ v: p, c });
+    }
+  }
+
+  // Train SOM on 20D data
+  const G = 12;
+  let protos = [];
+  for (let r = 0; r < G; r++) for (let c = 0; c < G; c++) {
+    const v = new Array(dim);
+    for (let d = 0; d < dim; d++) v[d] = gaussian(rng) * 0.5;
+    protos.push(v);
+  }
+
+  function distV(a, b) { let s = 0; for (let i = 0; i < a.length; i++) s += (a[i] - b[i]) ** 2; return s; }
+  const maxIter = 3000;
+  const lr0 = 0.4, sigma0 = G * 0.6;
+  for (let it = 0; it < maxIter; it++) {
+    const progress = it / maxIter;
+    const lr = lr0 * Math.exp(-progress * 3);
+    const sigma = sigma0 * Math.exp(-progress * 3);
+    const sample = data[Math.floor(Math.random() * data.length)].v;
+    let bmu = 0, bd = Infinity;
+    for (let i = 0; i < protos.length; i++) {
+      const d = distV(protos[i], sample);
+      if (d < bd) { bd = d; bmu = i; }
+    }
+    const bmuR = Math.floor(bmu / G), bmuC = bmu % G;
+    for (let i = 0; i < protos.length; i++) {
+      const r = Math.floor(i / G), c = i % G;
+      const gd = Math.hypot(r - bmuR, c - bmuC);
+      const h = Math.exp(-gd * gd / (2 * sigma * sigma + 1e-6));
+      for (let d = 0; d < dim; d++) protos[i][d] += lr * h * (sample[d] - protos[i][d]);
+    }
+  }
+
+  // Compute U-matrix: for each cell, average distance to grid neighbors
+  const uvals = new Array(protos.length).fill(0);
+  for (let r = 0; r < G; r++) for (let c = 0; c < G; c++) {
+    const i = r * G + c;
+    let s = 0, n = 0;
+    for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+      const nr = r + dr, nc = c + dc;
+      if (nr < 0 || nr >= G || nc < 0 || nc >= G) continue;
+      s += Math.sqrt(distV(protos[i], protos[nr * G + nc]));
+      n++;
+    }
+    uvals[i] = n ? s / n : 0;
+  }
+  const uMax = d3.max(uvals);
+
+  // Map each data point to BMU
+  const bmuByPt = data.map(d => {
+    let bmu = 0, bd = Infinity;
+    for (let i = 0; i < protos.length; i++) {
+      const dd = distV(protos[i], d.v);
+      if (dd < bd) { bd = dd; bmu = i; }
+    }
+    return bmu;
+  });
+
+  const leftG = svg.append("g").attr("transform", `translate(20, 16)`);
+  const rightG = svg.append("g").attr("transform", `translate(${paneW + 20}, 16)`);
+  const lW = paneW - 40, lH = H - 40;
+
+  leftG.append("text").attr("y", -4).style("font-size", "11px").attr("fill", "var(--text-3)")
+    .style("letter-spacing", "0.04em").text("U-MATRIX (cell-to-neighbor distance)");
+  rightG.append("text").attr("y", -4).style("font-size", "11px").attr("fill", "var(--text-3)")
+    .style("letter-spacing", "0.04em").text("DATA PLACED IN BMU CELLS");
+
+  const cellW = (lW - 10) / G;
+  const cellH = (lH - 10) / G;
+
+  // Left: U-matrix
+  leftG.selectAll("rect").data(d3.range(protos.length)).join("rect")
+    .attr("x", i => (i % G) * cellW + 5)
+    .attr("y", i => Math.floor(i / G) * cellH + 5)
+    .attr("width", cellW - 1).attr("height", cellH - 1)
+    .attr("fill", i => d3.interpolateGreys(0.1 + 0.85 * uvals[i] / uMax))
+    .attr("stroke", "white").attr("stroke-width", 0.5);
+
+  // Right: same grid, colored by majority cluster of data that lands in each cell
+  const colors = ["var(--c0)", "var(--c1)", "var(--c2)"];
+  const cellClass = new Array(protos.length).fill(-1);
+  const cellCounts = new Array(protos.length).fill(0).map(() => [0, 0, 0]);
+  for (let k = 0; k < data.length; k++) cellCounts[bmuByPt[k]][data[k].c]++;
+  for (let i = 0; i < protos.length; i++) {
+    const cc = cellCounts[i];
+    if (cc[0] + cc[1] + cc[2] === 0) cellClass[i] = -1;
+    else cellClass[i] = cc.indexOf(Math.max(...cc));
+  }
+  rightG.selectAll("rect").data(d3.range(protos.length)).join("rect")
+    .attr("x", i => (i % G) * cellW + 5)
+    .attr("y", i => Math.floor(i / G) * cellH + 5)
+    .attr("width", cellW - 1).attr("height", cellH - 1)
+    .attr("fill", i => cellClass[i] === -1 ? "var(--muted)" : colors[cellClass[i]])
+    .attr("opacity", i => cellClass[i] === -1 ? 0.3 : 0.6)
+    .attr("stroke", "white").attr("stroke-width", 0.5);
+  // overlay jittered data points in their BMU cells
+  rightG.selectAll("circle").data(data).join("circle")
+    .attr("cx", (_, i) => (bmuByPt[i] % G) * cellW + 5 + cellW / 2 + (Math.random() - 0.5) * cellW * 0.6)
+    .attr("cy", (_, i) => Math.floor(bmuByPt[i] / G) * cellH + 5 + cellH / 2 + (Math.random() - 0.5) * cellH * 0.6)
+    .attr("r", 1.8).attr("fill", d => colors[d.c]).attr("opacity", 0.9)
+    .attr("stroke", "white").attr("stroke-width", 0.3);
+})();
+</script>
+</body>
+</html>

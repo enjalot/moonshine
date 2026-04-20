@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Approximate Nearest Neighbors</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+
+  /* ANN series palette */
+  --c-query: #db2777;       /* query point */
+  --c-db: #64748b;          /* database vector */
+  --c-neighbor: #f59e0b;    /* found neighbor */
+  --c-partition: #0d9488;   /* Idea 1: partition */
+  --c-compress: #7c3aed;    /* Idea 2: compress */
+  --c-hardware: #ea580c;    /* Idea 3: hardware */
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
+h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
+h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+.header-viz { margin: 1.5rem 0 2rem; }
+
+.three-ideas {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+  margin: 2rem 0;
+  font-family: var(--heading-font);
+}
+.idea {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--fig-bg);
+}
+.idea-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 0.4rem; }
+.idea-title { font-size: 1rem; font-weight: 700; margin-bottom: 0.3rem; }
+.idea-body { font-size: 0.85rem; color: var(--text-2); line-height: 1.45; }
+.idea.partition { border-top: 3px solid var(--c-partition); }
+.idea.compress { border-top: 3px solid var(--c-compress); }
+.idea.hardware { border-top: 3px solid var(--c-hardware); }
+.idea.partition .idea-title { color: var(--c-partition); }
+.idea.compress .idea-title { color: var(--c-compress); }
+.idea.hardware .idea-title { color: var(--c-hardware); }
+
+.card-list { display: flex; flex-direction: column; gap: 1rem; margin: 2rem 0; }
+.card {
+  display: flex; align-items: flex-start; gap: 1.25rem;
+  background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px;
+  padding: 1.25rem 1.5rem; text-decoration: none; transition: border-color 0.15s, transform 0.15s;
+}
+.card:hover { border-color: var(--accent); }
+.card-number { font-family: var(--mono-font); font-size: 0.8rem; color: var(--text-2); }
+.card-title { font-family: var(--heading-font); font-weight: 700; font-size: 1.2rem; color: var(--text); margin-bottom: 0.4rem; }
+.card-desc { font-size: 0.95rem; color: var(--text-2); margin: 0; }
+.card-tags { font-family: var(--heading-font); font-size: 0.75rem; color: var(--accent); margin-top: 0.6rem; }
+
+.card-thumb {
+  width: 110px; height: 110px; flex-shrink: 0; border-radius: 4px;
+  background: var(--bg); display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .three-ideas { grid-template-columns: 1fr; }
+  .card { flex-direction: column; gap: 0.75rem; }
+  .card-thumb { width: 100%; height: 80px; }
+}
+</style>
+</head>
+<body>
+<div class="article">
+  <header>
+    <h1>Approximate Nearest Neighbors</h1>
+    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
+      A series on finding neighbors in high-dimensional vector spaces, the algorithms behind
+      modern retrieval systems, and what UMAP and semantic search have in common.
+    </p>
+  </header>
+
+  <div class="header-viz" id="header-viz"></div>
+
+  <p>
+    Almost every modern AI application depends on nearest-neighbor search over high-dimensional
+    vectors. A semantic search query turns into an embedding and asks the index "what's near me?"
+    A recommender asks the same question about a user's latent vector. A dimensionality-reduction
+    method like UMAP builds its whole output from a graph of nearest neighbors. The
+    primitive is everywhere.
+  </p>
+
+  <p>
+    But when you try to do this at scale, every naive approach breaks. Exact search becomes
+    too slow. Distances stop being informative. Data stops fitting in memory. The state of
+    the art is a tower of clever workarounds, and the fact that it works at all is a small
+    miracle.
+  </p>
+
+  <p>
+    This series builds intuition for how modern ANN systems work. Not through code listings
+    or pseudocode proofs, but through figures you can play with until the tradeoffs feel
+    obvious. The through-line is that modern ANN is three ideas stacked on top of each other:
+  </p>
+
+  <div class="three-ideas">
+    <div class="idea partition">
+      <div class="idea-label">Idea 1</div>
+      <div class="idea-title">Partition</div>
+      <div class="idea-body">Don't look everywhere. Cut the space into regions and only search the ones near the query.</div>
+    </div>
+    <div class="idea compress">
+      <div class="idea-label">Idea 2</div>
+      <div class="idea-title">Compress</div>
+      <div class="idea-body">Don't store full vectors. Replace them with small codes that are cheap to compare.</div>
+    </div>
+    <div class="idea hardware">
+      <div class="idea-label">Idea 3</div>
+      <div class="idea-title">Hardware</div>
+      <div class="idea-body">Design for where the data lives. RAM, SSD, and GPU each reward different layouts.</div>
+    </div>
+  </div>
+
+  <p>
+    Production systems like FAISS and lancedb stack all three. We will build up to that
+    stack one layer at a time, starting in two dimensions where everything is still visible.
+    Then we follow the primitives into two very different destinations: UMAP, which uses
+    them to build a skeleton of local structure for dimensionality reduction, and semantic
+    search, which uses them to retrieve documents at query time.
+  </p>
+
+  <h2>The Series</h2>
+
+  <div class="card-list">
+    <a class="card" href="01-curse-of-dimensionality.html">
+      <div class="card-thumb" id="thumb-01"></div>
+      <div>
+        <div class="card-number">01</div>
+        <div class="card-title">The Curse of Dimensionality</div>
+        <p class="card-desc">Why exact nearest-neighbor search breaks in high dimensions, and why approximation is the
+        only way forward.</p>
+        <div class="card-tags">exact NN &middot; kd-trees &middot; volume concentration &middot; distance concentration</div>
+      </div>
+    </a>
+
+    <a class="card" href="02-partition-the-space.html">
+      <div class="card-thumb" id="thumb-02"></div>
+      <div>
+        <div class="card-number">02</div>
+        <div class="card-title">Partition the Space</div>
+        <p class="card-desc">The first idea: cut the vector space into regions so every query only looks at the regions
+        that could possibly contain neighbors.</p>
+        <div class="card-tags">IVF &middot; LSH &middot; HNSW &middot; recall/speed tradeoff</div>
+      </div>
+    </a>
+
+    <a class="card" href="03-compress-the-vectors.html">
+      <div class="card-thumb" id="thumb-03"></div>
+      <div>
+        <div class="card-number">03</div>
+        <div class="card-title">Compress the Vectors</div>
+        <p class="card-desc">The second idea: replace full-precision vectors with small codes that are dozens of times
+        smaller and still let you estimate distance.</p>
+        <div class="card-tags">scalar &middot; binary &middot; product quantization &middot; IVF-PQ</div>
+      </div>
+    </a>
+
+    <a class="card" href="04-hardware-aware-design.html">
+      <div class="card-thumb" id="thumb-04"></div>
+      <div>
+        <div class="card-number">04</div>
+        <div class="card-title">Hardware-Aware Design</div>
+        <p class="card-desc">The third idea: the winning index depends on where the data lives. RAM, SSD, and GPU
+        reward very different layouts.</p>
+        <div class="card-tags">memory hierarchy &middot; DiskANN &middot; GPU batching &middot; lancedb</div>
+      </div>
+    </a>
+
+    <a class="card" href="05-umap-vs-semantic-search.html">
+      <div class="card-thumb" id="thumb-05"></div>
+      <div>
+        <div class="card-number">05</div>
+        <div class="card-title">UMAP vs Semantic Search</div>
+        <p class="card-desc">Two destinations for the same primitive. UMAP uses nearest neighbors to build structure;
+        semantic search uses them to retrieve answers.</p>
+        <div class="card-tags">kNN graph &middot; retrieval &middot; embeddings &middot; synthesis</div>
+      </div>
+    </a>
+  </div>
+
+  <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
+    <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+  </footer>
+</div>
+
+<script>
+// ============================================================
+// Header: a stylized ANN query
+// Database points (gray), query point (pink), true neighbors (amber).
+// A ring around the query shows the neighborhood.
+// ============================================================
+(function() {
+  const container = d3.select("#header-viz");
+  const W = 740, H = 140;
+  const svg = container.append("svg")
+    .attr("viewBox", `0 0 ${W} ${H}`)
+    .attr("width", "100%").style("display", "block");
+
+  // Seeded pseudo-random (so the layout is reproducible)
+  let seed = 42;
+  const rand = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+
+  const N = 140;
+  const pts = [];
+  for (let i = 0; i < N; i++) {
+    pts.push({
+      x: 30 + rand() * (W - 60),
+      y: 15 + rand() * (H - 30),
+    });
+  }
+  const query = { x: W / 2, y: H / 2 };
+
+  // Compute distances, find k nearest
+  pts.forEach(p => p.d = Math.hypot(p.x - query.x, p.y - query.y));
+  const sorted = [...pts].sort((a, b) => a.d - b.d);
+  const k = 6;
+  const neighbors = new Set(sorted.slice(0, k));
+  const radius = sorted[k - 1].d + 6;
+
+  // Neighborhood ring
+  svg.append("circle")
+    .attr("cx", query.x).attr("cy", query.y).attr("r", radius)
+    .attr("fill", "none").attr("stroke", "var(--c-query)")
+    .attr("stroke-width", 1).attr("stroke-dasharray", "3 3").attr("opacity", 0.4);
+
+  // Database points
+  svg.selectAll(".db").data(pts).join("circle")
+    .attr("class", "db")
+    .attr("cx", d => d.x).attr("cy", d => d.y)
+    .attr("r", 2.5)
+    .attr("fill", d => neighbors.has(d) ? "var(--c-neighbor)" : "var(--c-db)")
+    .attr("opacity", d => neighbors.has(d) ? 1 : 0.45);
+
+  // Connection lines to neighbors
+  svg.selectAll(".conn").data([...neighbors]).join("line")
+    .attr("class", "conn")
+    .attr("x1", query.x).attr("y1", query.y)
+    .attr("x2", d => d.x).attr("y2", d => d.y)
+    .attr("stroke", "var(--c-neighbor)").attr("stroke-width", 0.8).attr("opacity", 0.55);
+
+  // Query point
+  svg.append("circle")
+    .attr("cx", query.x).attr("cy", query.y).attr("r", 5)
+    .attr("fill", "var(--c-query)");
+  svg.append("circle")
+    .attr("cx", query.x).attr("cy", query.y).attr("r", 5)
+    .attr("fill", "none").attr("stroke", "var(--c-query)").attr("stroke-width", 1)
+    .attr("opacity", 0.4)
+    .append("animate")
+    .attr("attributeName", "r").attr("from", "5").attr("to", "18")
+    .attr("dur", "2s").attr("repeatCount", "indefinite");
+  svg.select("circle[fill='none']").append("animate")
+    .attr("attributeName", "opacity").attr("from", "0.5").attr("to", "0")
+    .attr("dur", "2s").attr("repeatCount", "indefinite");
+
+  // Legend
+  const legend = svg.append("g")
+    .attr("font-family", "var(--heading-font)").attr("font-size", 11)
+    .attr("fill", "var(--text-2)");
+  const legItems = [
+    { label: "query", color: "var(--c-query)", x: 30 },
+    { label: "database", color: "var(--c-db)", x: 100 },
+    { label: "nearest neighbors", color: "var(--c-neighbor)", x: 180 },
+  ];
+  legItems.forEach(it => {
+    legend.append("circle").attr("cx", it.x).attr("cy", H - 10).attr("r", 3).attr("fill", it.color);
+    legend.append("text").attr("x", it.x + 8).attr("y", H - 7).text(it.label);
+  });
+})();
+
+// ============================================================
+// Thumbnails
+// ============================================================
+
+// Thumb 01: Curse of dimensionality — shrinking ball in a cube
+(function() {
+  const el = document.getElementById("thumb-01");
+  const canvas = document.createElement("canvas");
+  const s = 110, dpr = window.devicePixelRatio || 1;
+  canvas.width = s * dpr; canvas.height = s * dpr;
+  canvas.style.width = s + 'px'; canvas.style.height = s + 'px';
+  el.appendChild(canvas);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  let t = 0;
+  function draw() {
+    t += 0.01;
+    ctx.clearRect(0, 0, s, s);
+    const dim = 2 + (Math.sin(t) + 1) * 8;  // 2 to 18
+    // Ratio = (pi^(d/2) / gamma(d/2+1)) / 2^d  for unit ball in unit cube, normalize
+    // Use precomputed approx: ratio collapses fast
+    const ratio = Math.pow(0.82, dim - 2);
+    // Cube
+    ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 1.5;
+    ctx.strokeRect(15, 15, 80, 80);
+    // Inscribed ball
+    ctx.fillStyle = "rgba(219, 39, 119, 0.2)";
+    ctx.strokeStyle = "#db2777";
+    ctx.beginPath();
+    ctx.arc(55, 55, 38 * Math.sqrt(ratio), 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // Label
+    ctx.fillStyle = "#64748b"; ctx.font = "500 10px 'Source Sans 3', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("d = " + Math.round(dim), 55, 106);
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// Thumb 02: Partition — Voronoi regions with query point
+(function() {
+  const el = document.getElementById("thumb-02");
+  const canvas = document.createElement("canvas");
+  const s = 110, dpr = window.devicePixelRatio || 1;
+  canvas.width = s * dpr; canvas.height = s * dpr;
+  canvas.style.width = s + 'px'; canvas.style.height = s + 'px';
+  el.appendChild(canvas);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const centroids = [[25, 28], [80, 30], [55, 55], [28, 82], [85, 80]];
+  const palette = ["#d1fae5", "#fef3c7", "#ddd6fe", "#fce7f3", "#dbeafe"];
+  let t = 0;
+
+  function draw() {
+    t += 0.015;
+    ctx.clearRect(0, 0, s, s);
+    // Paint Voronoi via nearest centroid
+    const img = ctx.getImageData(0, 0, s, s);
+    for (let y = 0; y < s; y++) {
+      for (let x = 0; x < s; x++) {
+        let best = 0, bestD = 1e9;
+        for (let i = 0; i < centroids.length; i++) {
+          const dx = x - centroids[i][0], dy = y - centroids[i][1];
+          const d = dx * dx + dy * dy;
+          if (d < bestD) { bestD = d; best = i; }
+        }
+        const c = palette[best];
+        const idx = (y * s + x) * 4;
+        img.data[idx] = parseInt(c.slice(1, 3), 16);
+        img.data[idx + 1] = parseInt(c.slice(3, 5), 16);
+        img.data[idx + 2] = parseInt(c.slice(5, 7), 16);
+        img.data[idx + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    // Centroids
+    centroids.forEach(c => {
+      ctx.beginPath(); ctx.arc(c[0], c[1], 3, 0, Math.PI * 2);
+      ctx.fillStyle = "#64748b"; ctx.fill();
+    });
+    // Moving query
+    const qx = 55 + Math.cos(t) * 25;
+    const qy = 55 + Math.sin(t * 0.8) * 20;
+    // Highlight its cell's centroid
+    let best = 0, bestD = 1e9;
+    for (let i = 0; i < centroids.length; i++) {
+      const dx = qx - centroids[i][0], dy = qy - centroids[i][1];
+      const d = dx * dx + dy * dy;
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    ctx.beginPath();
+    ctx.moveTo(qx, qy); ctx.lineTo(centroids[best][0], centroids[best][1]);
+    ctx.strokeStyle = "#0d9488"; ctx.lineWidth = 1; ctx.setLineDash([3, 2]); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(qx, qy, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#db2777"; ctx.fill();
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// Thumb 03: Compress — vector subdivided into subvectors each mapped to a code
+(function() {
+  const el = document.getElementById("thumb-03");
+  const canvas = document.createElement("canvas");
+  const s = 110, dpr = window.devicePixelRatio || 1;
+  canvas.width = s * dpr; canvas.height = s * dpr;
+  canvas.style.width = s + 'px'; canvas.style.height = s + 'px';
+  el.appendChild(canvas);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const nDims = 12, nSubs = 4;
+  let t = 0;
+  const vals = Array.from({length: nDims}, () => Math.random());
+  const codes = [0, 0, 0, 0];
+
+  function draw() {
+    t += 0.02;
+    ctx.clearRect(0, 0, s, s);
+    // Vector cells
+    const cellW = 8, cellH = 22, startX = 7, startY = 20;
+    for (let i = 0; i < nDims; i++) {
+      const v = 0.5 + Math.sin(t + i * 0.5) * 0.4;
+      const subIdx = Math.floor(i / (nDims / nSubs));
+      const colors = ["#a78bfa", "#c4b5fd", "#a78bfa", "#c4b5fd"];
+      ctx.fillStyle = colors[subIdx];
+      ctx.globalAlpha = 0.3 + v * 0.6;
+      ctx.fillRect(startX + i * cellW, startY, cellW - 1, cellH);
+    }
+    ctx.globalAlpha = 1;
+    // Dividers between subvectors
+    ctx.strokeStyle = "#7c3aed"; ctx.lineWidth = 1.5;
+    for (let s2 = 0; s2 <= nSubs; s2++) {
+      const x = startX + s2 * (nDims / nSubs) * cellW - 0.5;
+      ctx.beginPath(); ctx.moveTo(x, startY - 2); ctx.lineTo(x, startY + cellH + 2); ctx.stroke();
+    }
+    // Arrows down
+    ctx.strokeStyle = "#7c3aed"; ctx.globalAlpha = 0.6;
+    for (let s2 = 0; s2 < nSubs; s2++) {
+      const cx = startX + (s2 + 0.5) * (nDims / nSubs) * cellW;
+      ctx.beginPath(); ctx.moveTo(cx, startY + cellH + 4); ctx.lineTo(cx, startY + cellH + 16); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    // Code boxes
+    const codeY = startY + cellH + 18, codeW = 18, codeH = 18;
+    for (let s2 = 0; s2 < nSubs; s2++) {
+      const cx = startX + (s2 + 0.5) * (nDims / nSubs) * cellW - codeW / 2;
+      ctx.fillStyle = "#7c3aed"; ctx.fillRect(cx, codeY, codeW, codeH);
+      ctx.fillStyle = "#fff"; ctx.font = "500 11px 'Source Code Pro', monospace";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(Math.floor((Math.sin(t * 0.5 + s2) + 1) * 128), cx + codeW / 2, codeY + codeH / 2);
+    }
+    ctx.textBaseline = "alphabetic";
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// Thumb 04: Hardware — memory hierarchy bars
+(function() {
+  const el = document.getElementById("thumb-04");
+  const canvas = document.createElement("canvas");
+  const s = 110, dpr = window.devicePixelRatio || 1;
+  canvas.width = s * dpr; canvas.height = s * dpr;
+  canvas.style.width = s + 'px'; canvas.style.height = s + 'px';
+  el.appendChild(canvas);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const levels = [
+    { label: "L1", val: 1, color: "#fed7aa" },
+    { label: "RAM", val: 10, color: "#fb923c" },
+    { label: "SSD", val: 40, color: "#ea580c" },
+    { label: "NET", val: 80, color: "#9a3412" },
+  ];
+  let t = 0, pulse = 0;
+
+  function draw() {
+    t += 0.015;
+    pulse = (pulse + 0.02) % 1;
+    ctx.clearRect(0, 0, s, s);
+    const maxV = 80;
+    const barH = 14, gap = 4, left = 32, right = 102;
+    levels.forEach((L, i) => {
+      const y = 22 + i * (barH + gap);
+      const w = (L.val / maxV) * (right - left);
+      // Track
+      ctx.fillStyle = "#f1f5f9";
+      ctx.fillRect(left, y, right - left, barH);
+      // Bar
+      ctx.fillStyle = L.color;
+      ctx.fillRect(left, y, w, barH);
+      // Pulse dot traveling
+      const pos = left + w * pulse;
+      ctx.beginPath(); ctx.arc(pos, y + barH / 2, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = "#fff"; ctx.fill();
+      // Label
+      ctx.fillStyle = "#1a1a2e"; ctx.font = "600 9px 'Source Sans 3', sans-serif";
+      ctx.textAlign = "right"; ctx.textBaseline = "middle";
+      ctx.fillText(L.label, left - 4, y + barH / 2);
+    });
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// Thumb 05: UMAP vs semantic search — split showing a 2D projection and a ranked list
+(function() {
+  const el = document.getElementById("thumb-05");
+  const canvas = document.createElement("canvas");
+  const s = 110, dpr = window.devicePixelRatio || 1;
+  canvas.width = s * dpr; canvas.height = s * dpr;
+  canvas.style.width = s + 'px'; canvas.style.height = s + 'px';
+  el.appendChild(canvas);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // Left: UMAP-like clusters. Right: ranked list.
+  const clusters = [
+    { cx: 20, cy: 30, col: "#db2777" },
+    { cx: 38, cy: 55, col: "#0d9488" },
+    { cx: 22, cy: 82, col: "#7c3aed" },
+  ];
+  const pts = [];
+  clusters.forEach(c => {
+    for (let i = 0; i < 16; i++) {
+      pts.push({ x: c.cx + (Math.random() - 0.5) * 18, y: c.cy + (Math.random() - 0.5) * 18, col: c.col });
+    }
+  });
+
+  let t = 0;
+  function draw() {
+    t += 0.015;
+    ctx.clearRect(0, 0, s, s);
+    // Left panel: clusters
+    pts.forEach(p => {
+      ctx.beginPath(); ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
+      ctx.fillStyle = p.col; ctx.globalAlpha = 0.7; ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    // Divider
+    ctx.strokeStyle = "#e2e2e8"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(55, 10); ctx.lineTo(55, 100); ctx.stroke();
+    // Right panel: ranked result list
+    const rows = [0.95, 0.88, 0.74, 0.61, 0.52];
+    const cycle = Math.floor(t) % 3;
+    rows.forEach((r, i) => {
+      const y = 22 + i * 14;
+      const w = 38 * r;
+      ctx.fillStyle = "#f1f5f9"; ctx.fillRect(62, y - 5, 40, 8);
+      ctx.fillStyle = i === cycle ? "#db2777" : "#64748b";
+      ctx.fillRect(62, y - 5, w, 8);
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

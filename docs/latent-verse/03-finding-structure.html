@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finding Structure — Latent Verse</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem; --line-height: 1.6;
+  --text: #1a1a2e; --text-2: #4a4a6a;
+  --accent: #2563eb; --accent-light: #dbeafe;
+  --bg: #fafafa; --fig-bg: #ffffff; --border: #e2e2e8;
+}
+body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
+h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
+h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+code { font-family: var(--mono-font); font-size: 0.9em; background: #f0f0f5; padding: 0.15em 0.35em; border-radius: 3px; }
+.figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.figure-wide { margin-left: -2rem; margin-right: -2rem; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
+.figure-label { font-weight: 600; color: var(--text); }
+.insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
+.insight p { margin: 0; }
+.margin-note { font-size: 0.8125rem; color: var(--text-2); line-height: 1.4; border-left: 2px solid var(--border); padding-left: 0.75rem; margin: 1rem 0; }
+.controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+svg text { font-family: var(--heading-font); }
+.tip { position: fixed; pointer-events: none; background: rgba(26,26,46,0.92); color: #fff; font-family: var(--heading-font); font-size: 0.8rem; padding: 0.5rem 0.75rem; border-radius: 4px; max-width: 320px; line-height: 1.4; z-index: 100; }
+.cluster-legend-item { display: inline-flex; align-items: center; gap: 0.3rem; margin-right: 0.75rem; margin-bottom: 0.4rem; font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-2); cursor: pointer; }
+.cluster-legend-item:hover { color: var(--text); }
+.cluster-swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.cluster-joke-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; margin-top: 0.75rem; }
+.cluster-joke { padding: 0.3rem 0; border-bottom: 1px solid #f0f0f5; font-size: 0.9rem; }
+.cluster-joke:last-child { border-bottom: none; }
+@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+</style>
+</head>
+<body>
+<div class="article">
+  <header>
+    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.25rem;">
+      <a href="index.html" style="color: var(--text-2); text-decoration: none;">Latent Verse</a> / Part 3
+    </p>
+    <h1>Finding Structure</h1>
+    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
+      Clustering algorithms find groups in the data. Labels give those groups names. Both are choices, not facts.
+    </p>
+    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">By Ian Johnson</p>
+  </header>
+
+  <h2>Your eye already clusters</h2>
+
+  <p>
+    Looking at the <a href="02-the-projector.html">UMAP scatter plot</a>, your eye naturally groups
+    the dots into clumps. Some areas are dense, others sparse. You can already see structure.
+    Clustering algorithms do this systematically: they assign every point to a group (or mark it
+    as noise that doesn't belong to any group).
+  </p>
+
+  <p>
+    Here are the same 1,000 jokes, now colored by cluster. The algorithm we use is HDBSCAN,
+    which finds clusters of varying density and size. Gray points are "noise": jokes that don't
+    fit neatly into any group.
+  </p>
+
+  <div class="figure figure-wide" id="fig-clusters">
+    <div id="cluster-container" style="width: 100%; height: 500px; position: relative;"></div>
+    <div id="cluster-legend" style="margin-top: 0.75rem; line-height: 2;"></div>
+    <div id="cluster-detail" style="display: none;">
+      <div id="cluster-detail-title" style="font-family: var(--heading-font); font-weight: 600; margin-top: 0.75rem;"></div>
+      <div id="cluster-detail-list" class="cluster-joke-list"></div>
+    </div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 1.</span>
+      HDBSCAN clustering with min_cluster_size=5. Click a colored cluster in the legend to see its jokes. Gray dots are noise points.
+    </div>
+  </div>
+
+  <h2>Resolution is a choice</h2>
+
+  <p>
+    How many clusters should there be? This isn't a question with one right answer. Clustering
+    algorithms have parameters that control the granularity. With HDBSCAN, the key parameter is
+    <code>min_cluster_size</code>: the minimum number of points required to form a cluster.
+  </p>
+
+  <p>
+    A small value finds many fine-grained groups. A large value merges them into fewer,
+    broader categories. Adjust the slider below and watch the clusters reorganize:
+  </p>
+
+  <div class="figure figure-wide" id="fig-resolution">
+    <div class="controls">
+      <label>min_cluster_size:
+        <select id="mcs-select" style="font-family: var(--mono-font); padding: 0.2rem 0.4rem;">
+          <option value="5" selected>5 (fine)</option>
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50 (coarse)</option>
+        </select>
+      </label>
+      <span id="mcs-info" style="font-family: var(--mono-font);"></span>
+    </div>
+    <div id="resolution-container" style="width: 100%; height: 500px; position: relative;"></div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 2.</span>
+      The same jokes clustered at different resolutions. Fine settings find many small groups. Coarse settings find a few large ones. Both are valid ways to look at the data.
+    </div>
+  </div>
+
+  <p>
+    At the finest setting, you might find a cluster of just 5 jokes about bicycles. At the coarsest,
+    those jokes get absorbed into a broader "transportation" group or dissolved into noise. Neither
+    view is more correct. They answer different questions. Fine clustering helps you find specific
+    themes. Coarse clustering gives you a high-level map of the territory.
+  </p>
+
+  <h2>Naming what you find</h2>
+
+  <p>
+    A cluster is just a set of indices until someone gives it a name. One approach is to sample
+    a few items from each cluster and ask a language model to summarize what they have in common.
+    The model reads 10-20 jokes from a cluster and proposes a label like "animal puns" or
+    "jokes about family meals."
+  </p>
+
+  <p>
+    These labels are helpful but imperfect. A cluster might contain jokes that share a structural
+    pattern (question-answer format) rather than a topic. The label the model generates depends on
+    which samples it sees and how it interprets them. Different models produce different labels for
+    the same cluster.
+  </p>
+
+  <div class="insight">
+    <p>
+      Clustering and labeling are tools for organizing your view of the data, not for discovering
+      ground truth. The question isn't "what are the real groups?" but "what grouping is useful
+      for what I'm trying to understand?"
+    </p>
+  </div>
+
+  <h2>Many valid decompositions</h2>
+
+  <p>
+    Everything in this pipeline is interchangeable. You can swap the embedding model (a different
+    lens), the dimensionality reduction algorithm, the clustering method, the labeling approach.
+    Each combination produces a different view of the same data.
+  </p>
+
+  <p>
+    This isn't a weakness. It reflects a genuine property of data: there are many valid ways to
+    organize it. A library can be sorted by author, subject, date, or reading level. None is the
+    "true" order. The same principle applies here. The value is in being able to try different
+    decompositions quickly and see what each reveals.
+  </p>
+
+  <p>
+    So far, every tool we've used has been <strong>local</strong> to this dataset. The UMAP
+    projection reshuffles when the data changes. The clusters depend on the projection. In the
+    next two articles, we'll build <strong>global</strong> tools: a set of features and a map
+    that work the same way on any text, because they're trained to match the lens itself.
+  </p>
+
+  <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
+    <p>Part of <a href="index.html" style="color: var(--text-2);">Latent Verse</a>. Previous: <a href="02-the-projector.html" style="color: var(--accent);">The Projector</a>. Next: <a href="04-the-filter.html" style="color: var(--accent);">The Filter</a>.</p>
+    <p style="margin-top: 0.5rem;">Clustering by <a href="https://hdbscan.readthedocs.io/" style="color: var(--text-2);">HDBSCAN</a>.</p>
+  </footer>
+</div>
+
+<script>
+const tip = d3.select("body").append("div").attr("class", "tip").style("opacity", 0);
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// Color palette for clusters
+const clusterColors = d3.schemeTableau10.concat(d3.schemePastel1).concat(d3.schemeSet3);
+function clusterColor(i) {
+  if (i < 0) return '#d0d0d8';
+  return clusterColors[i % clusterColors.length];
+}
+
+function drawClusterScatter(containerId, x, y, labels, texts, opts = {}) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  const rect = el.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+
+  const canvas = document.createElement('canvas');
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  el.appendChild(canvas);
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const pad = 0.05;
+  const xExt = d3.extent(x), yExt = d3.extent(y);
+  const xR = (xExt[1] - xExt[0]) || 1, yR = (yExt[1] - yExt[0]) || 1;
+  const paddedX = xR * (1 + pad * 2);
+  const paddedY = yR * (1 + pad * 2);
+  const m = 10;
+  const availW = W - m*2, availH = H - m*2;
+  const s = Math.min(availW / paddedX, availH / paddedY);
+  const dataW = paddedX * s, dataH = paddedY * s;
+  const offX = m + (availW - dataW) / 2;
+  const offY = m + (availH - dataH) / 2;
+  const xScale = d3.scaleLinear().domain([xExt[0] - xR*pad, xExt[1] + xR*pad]).range([offX, offX + dataW]);
+  const yScale = d3.scaleLinear().domain([yExt[0] - yR*pad, yExt[1] + yR*pad]).range([offY + dataH, offY]);
+
+  const n = x.length;
+  const r = 3;
+  const highlight = opts.highlight;
+
+  // Draw noise first, then clusters on top
+  ctx.globalAlpha = 0.25;
+  for (let i = 0; i < n; i++) {
+    if (labels[i] !== -1) continue;
+    ctx.fillStyle = '#d0d0d8';
+    ctx.beginPath();
+    ctx.arc(xScale(x[i]), yScale(y[i]), r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 0.7;
+  for (let i = 0; i < n; i++) {
+    if (labels[i] === -1) continue;
+    const isHighlighted = highlight == null || labels[i] === highlight;
+    ctx.globalAlpha = isHighlighted ? 0.8 : 0.15;
+    ctx.fillStyle = clusterColor(labels[i]);
+    ctx.beginPath();
+    ctx.arc(xScale(x[i]), yScale(y[i]), isHighlighted ? r + 0.5 : r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Hover
+  if (texts) {
+    canvas.addEventListener('pointermove', (event) => {
+      const crect = canvas.getBoundingClientRect();
+      const mx = event.clientX - crect.left, my = event.clientY - crect.top;
+      let bestI = -1, bestD = Infinity;
+      for (let i = 0; i < n; i++) {
+        const d = (xScale(x[i]) - mx)**2 + (yScale(y[i]) - my)**2;
+        if (d < bestD) { bestD = d; bestI = i; }
+      }
+      if (bestD < 400 && bestI >= 0) {
+        const clabel = labels[bestI] === -1 ? 'noise' : `cluster ${labels[bestI]}`;
+        tip.html(`<strong>${clabel}</strong><br>${escapeHtml(texts[bestI])}`)
+          .style('opacity', 1);
+        const tw = tip.node().offsetWidth;
+        tip.style('left', Math.min(event.clientX + 12, window.innerWidth - tw - 8) + 'px')
+           .style('top', Math.max(event.clientY - 40, 8) + 'px');
+      } else {
+        tip.style('opacity', 0);
+      }
+    });
+    canvas.addEventListener('pointerleave', () => tip.style('opacity', 0));
+  }
+}
+
+async function init() {
+  const [projData, clusterData, labelData, jokesData] = await Promise.all([
+    fetch('data/umap-projections.json').then(r => r.json()),
+    fetch('data/clusters.json').then(r => r.json()),
+    fetch('data/cluster-labels.json').then(r => r.json()),
+    fetch('data/jokes-1k.json').then(r => r.json()),
+  ]);
+
+  const texts = jokesData.texts;
+  const proj = projData.projections[1]; // nn=15, md=0.1
+  const x = proj.x, y = proj.y;
+
+  // Figure 1: Cluster scatter with legend
+  const mcs5 = clusterData.clusterings.find(c => c.min_cluster_size === 5);
+  const labels5 = mcs5.labels;
+
+  // Count clusters
+  const clusterCounts = {};
+  labels5.forEach(l => { if (l >= 0) clusterCounts[l] = (clusterCounts[l] || 0) + 1; });
+  const sortedClusters = Object.entries(clusterCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([id, count]) => ({ id: +id, count }));
+
+  drawClusterScatter('cluster-container', x, y, labels5, texts);
+
+  // Build legend
+  const legend = document.getElementById('cluster-legend');
+  const clusterLabels5 = labelData["5"] || {};
+
+  sortedClusters.slice(0, 20).forEach(({ id, count }) => {
+    const label = clusterLabels5[String(id)] || `cluster ${id}`;
+    const item = document.createElement('span');
+    item.className = 'cluster-legend-item';
+    item.innerHTML = `<span class="cluster-swatch" style="background: ${clusterColor(id)}"></span>${label} (${count})`;
+    item.addEventListener('click', () => {
+      drawClusterScatter('cluster-container', x, y, labels5, texts, { highlight: id });
+      // Show jokes in this cluster
+      const detail = document.getElementById('cluster-detail');
+      detail.style.display = 'block';
+      document.getElementById('cluster-detail-title').textContent = `${label} (${count} jokes)`;
+      const jokesList = labels5.reduce((acc, l, i) => {
+        if (l === id) acc.push(texts[i]);
+        return acc;
+      }, []);
+      document.getElementById('cluster-detail-list').innerHTML =
+        jokesList.slice(0, 20).map(j => `<div class="cluster-joke">${escapeHtml(j)}</div>`).join('');
+    });
+    legend.appendChild(item);
+  });
+
+  // Add "show all" link
+  const showAll = document.createElement('span');
+  showAll.className = 'cluster-legend-item';
+  showAll.style.color = 'var(--accent)';
+  showAll.textContent = '[show all]';
+  showAll.addEventListener('click', () => {
+    drawClusterScatter('cluster-container', x, y, labels5, texts);
+    document.getElementById('cluster-detail').style.display = 'none';
+  });
+  legend.appendChild(showAll);
+
+  // Figure 2: Resolution slider
+  const clusterMap = {};
+  clusterData.clusterings.forEach(c => {
+    clusterMap[c.min_cluster_size] = c;
+  });
+
+  function updateResolution() {
+    const mcs = +document.getElementById('mcs-select').value;
+    const clustering = clusterMap[mcs];
+    if (!clustering) return;
+    document.getElementById('mcs-info').textContent =
+      `${clustering.n_clusters} clusters, ${clustering.n_noise} noise`;
+    drawClusterScatter('resolution-container', x, y, clustering.labels, texts);
+  }
+
+  document.getElementById('mcs-select').addEventListener('change', updateResolution);
+  updateResolution();
+}
+
+init();
+</script>
+</body>
+</html>

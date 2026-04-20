@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Partition the Space — Approximate Nearest Neighbors</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+
+  --c-query: #db2777;
+  --c-db: #64748b;
+  --c-neighbor: #f59e0b;
+  --c-partition: #0d9488;
+  --c-compress: #7c3aed;
+  --c-hardware: #ea580c;
+}
+
+body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
+h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
+h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+h3 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+.figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.figure-wide { margin-left: -2rem; margin-right: -2rem; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.45; }
+.figure-label { font-weight: 600; color: var(--text); }
+
+.controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.controls input[type="range"] { width: 160px; accent-color: var(--accent); }
+.controls label { display: flex; align-items: center; gap: 0.5rem; }
+.controls .val { font-family: var(--mono-font); color: var(--text); min-width: 2.5em; display: inline-block; text-align: right; }
+.controls button { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.25rem 0.7rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text-2); cursor: pointer; }
+.controls button:hover { background: var(--bg); color: var(--text); }
+
+.readout { display: flex; gap: 1.25rem; flex-wrap: wrap; font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-2); margin-top: 0.5rem; }
+.readout b { font-family: var(--mono-font); font-weight: 500; color: var(--text); }
+
+svg text { font-family: var(--heading-font); }
+
+.t-query { color: var(--c-query); font-weight: 600; }
+.t-db { color: var(--c-db); font-weight: 600; }
+.t-neighbor { color: var(--c-neighbor); font-weight: 600; }
+.t-partition { color: var(--c-partition); font-weight: 600; }
+
+@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+</style>
+</head>
+<body>
+<div class="article">
+  <header>
+    <h1>Partition the Space</h1>
+    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
+      The first of three ideas behind modern ANN: cut the vector space into regions so every
+      query only searches the regions that could possibly contain its neighbors.
+    </p>
+    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">
+      Part 2 of <a href="index.html">Approximate Nearest Neighbors</a>
+    </p>
+  </header>
+
+  <h2>Exploit the Clustering That Real Data Has</h2>
+  <p>
+    The previous article left us in an awkward place. In high dimensions, a kd-tree's pruning
+    test almost always fails, and the naive linear scan is the only algorithm that still
+    works. Distances concentrate, corners swallow the volume, and the geometry pushes back
+    against anything clever.
+  </p>
+  <p>
+    But there is an important asterisk on that story. The experiments in Article 1 used
+    points sampled <em>uniformly at random</em> in the unit cube. That is a worst case.
+    Real embeddings never look like that. A sentence embedding from a language model sits in
+    768 or 1536 dimensions, but the vectors a real corpus actually produces cluster heavily:
+    by topic, by language, by style, by whatever the model learned to care about. The
+    ambient space is high-dimensional, but the data lives on a much lower-dimensional
+    manifold inside it.
+  </p>
+  <p>
+    This is the opening that partitioning exploits. If the data clumps, we can group those
+    clumps into regions and store the grouping. At query time we find the few regions near
+    the query and scan only those. The <span class="t-partition">partitioning</span> idea
+    shows up in three main forms, each answering the same question differently: IVF draws
+    its regions around learned centroids, LSH draws them with random hyperplanes, and graph
+    methods like HNSW trade explicit regions for a navigable mesh of local neighborhoods.
+  </p>
+
+  <h2>IVF: Cluster the Database, Only Scan One Cell</h2>
+  <p>
+    The most intuitive partition is the one you would invent on a napkin. Run k-means on the
+    database. You get k <span class="t-partition">centroids</span>. Assign every vector to
+    its closest centroid. That builds an <em>inverted file</em>, one posting list per
+    centroid, hence the name <strong>IVF</strong>. At query time you compare the query to
+    the k centroids (cheap, because k is small) and scan the posting list attached to the
+    nearest one.
+  </p>
+
+  <div class="figure figure-wide" id="fig-ivf">
+    <div class="controls">
+      <label>clusters k = <input type="range" id="ivf-k" min="2" max="20" value="8" step="1"><span class="val" id="ivf-k-val">8</span></label>
+      <button id="ivf-regen">new dataset</button>
+      <span style="margin-left: auto; font-size: 0.8rem;">move the cursor to place the query</span>
+    </div>
+    <svg id="ivf-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="readout">
+      <span>scanning cell <b id="ivf-cell">3</b></span>
+      <span>points in cell: <b id="ivf-scanned">0</b> / <b id="ivf-total">0</b></span>
+      <span>best in cell: <b id="ivf-best">0.00</b></span>
+      <span>true NN: <b id="ivf-true">0.00</b></span>
+    </div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 1.</span>
+      A synthetic 2D database laid out in a few soft clusters. K-means carves it into
+      <span class="t-partition">Voronoi cells</span>. The query's cell lights up teal,
+      the closest point inside it lights up amber. Sometimes the true nearest neighbor
+      sits in a different cell, just across the boundary. That is the weak spot of
+      single-cell search.
+    </div>
+  </div>
+
+  <p>
+    This is fast. The query does a distance computation to k centroids plus a scan of one
+    posting list, not the whole database. If the centroids carve the data into roughly equal
+    cells of size N/k, each query inspects about 1/k of the points. For k = 100 and
+    N = 1 million, that is 10,000 distance checks instead of a million.
+  </p>
+  <p>
+    IVF also inherits a nice property from k-means: the centroids themselves describe where
+    the data concentrates. A centroid with a big posting list sits in a dense region. An
+    empty cell means no vector fell closer to that centroid than to any other. This is why
+    the first thing any production IVF index does is train on a representative sample of
+    the data rather than picking random centroids.
+  </p>
+
+  <h2>The Boundary Problem, and <code>nprobe</code></h2>
+  <p>
+    Single-cell search has an obvious failure mode. If the query lands near a cell boundary,
+    the true nearest neighbor may be just on the other side. Voronoi cells are convex and
+    sharp; a single point of displacement can land the query in the wrong cell entirely.
+    The fix is to scan not just the closest cell but the
+    <code style="font-family: var(--mono-font);">nprobe</code> closest cells. This trades
+    speed for recall in a knob the user controls.
+  </p>
+  <p>
+    As <code>nprobe</code> grows from 1 toward k, recall climbs toward exact and speed
+    degrades toward a linear scan. In between there is a sweet spot where you catch nearly
+    all the true neighbors while still inspecting a small fraction of the database. This
+    tradeoff is so fundamental that every partition-based ANN method has some version of it,
+    even when the "cells" are not literal Voronoi regions.
+  </p>
+
+  <div class="figure figure-wide" id="fig-nprobe">
+    <div class="controls">
+      <label>nprobe = <input type="range" id="np-slider" min="1" max="16" value="1" step="1"><span class="val" id="np-val">1</span></label>
+      <label>query radius (recall@k) k = <input type="range" id="np-k" min="1" max="20" value="10" step="1"><span class="val" id="np-k-val">10</span></label>
+    </div>
+    <div style="display:grid; grid-template-columns: 1.4fr 1fr; gap: 1rem; align-items: stretch;">
+      <div>
+        <svg id="np-scatter" style="width:100%; display:block; border-radius:4px;"></svg>
+      </div>
+      <div>
+        <svg id="np-chart" style="width:100%; display:block; border-radius:4px;"></svg>
+      </div>
+    </div>
+    <div class="readout">
+      <span>scanning <b id="np-frac">12%</b> of points</span>
+      <span>recall@<span id="np-k-out">10</span>: <b id="np-recall">0.70</b></span>
+    </div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 2.</span>
+      Drag the <code style="font-family: var(--mono-font);">nprobe</code> slider. On the
+      left, each additional probed cell joins the scanned region in teal. On the right,
+      the curve plots recall against the fraction of points actually scanned. The dot marks
+      the current position. Low <code style="font-family: var(--mono-font);">nprobe</code>
+      is fast but sometimes misses neighbors near a boundary; high
+      <code style="font-family: var(--mono-font);">nprobe</code> approaches exact search.
+      This tradeoff shape is the core of every partition-based ANN method.
+    </div>
+  </div>
+
+  <p>
+    There is a simple mental model for when boundary mistakes happen. A neighbor gets missed
+    when it is closer to the query than the query's own chosen centroid is, but closer to a
+    different centroid than to the query's chosen centroid. Geometrically, the bad points
+    live in thin slivers along cell boundaries. More clusters means more boundaries, which
+    means more slivers, which means you need a higher <code>nprobe</code> to sweep them up.
+    Fewer, bigger clusters hide fewer neighbors but each scan is larger. That is the tuning
+    problem.
+  </p>
+
+  <h2>LSH: Let Randomness Do the Partitioning</h2>
+  <p>
+    IVF works because k-means finds centroids where the data concentrates. That requires
+    training, and the resulting cells only make sense for the dataset they were fit to.
+    A different approach gives up trying to know where clusters are and just partitions with
+    random hyperplanes. This is the core idea of <strong>locality-sensitive hashing</strong>,
+    or LSH.
+  </p>
+  <p>
+    A single random hyperplane through the origin splits space into two halves. Every vector
+    falls on one side or the other, so you can assign it a single bit. Stack h independent
+    random hyperplanes and each vector becomes an h-bit hash code. The hash function has a
+    useful property: two points that are close together are likely to land on the same side
+    of any random hyperplane, so they are likely to share their hash code. Two points that
+    are far apart are likely to be split.
+  </p>
+
+  <div class="figure figure-wide" id="fig-lsh">
+    <div class="controls">
+      <label>hyperplanes h = <span class="val" id="lsh-h-val">3</span>
+        <button id="lsh-minus">−</button>
+        <button id="lsh-plus">+</button>
+      </label>
+      <button id="lsh-regen">new hyperplanes</button>
+      <span style="margin-left: auto; font-size: 0.8rem;">hover a point to highlight its hash bucket</span>
+    </div>
+    <svg id="lsh-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="readout">
+      <span>buckets in use: <b id="lsh-buckets">0</b> / <b id="lsh-max">8</b></span>
+      <span>avg bucket size: <b id="lsh-avg">0</b></span>
+      <span>collision rate among top-10 true neighbors: <b id="lsh-coll">0%</b></span>
+    </div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 3.</span>
+      Random hyperplanes split the plane into binary-coded regions. Each point is colored
+      by its hash bucket. Hover to see which other points share a bucket. With few
+      hyperplanes the buckets are huge and easy to share; with many, buckets fracture
+      and even close neighbors fall apart. The collision rate is the fraction of a point's
+      top-10 true neighbors that land in its bucket, averaged over the dataset.
+    </div>
+  </div>
+
+  <p>
+    LSH is elegant because it needs no training. The hash function is picked once, at random,
+    and works for any dataset. It also has provable guarantees: you can bound the probability
+    that near points collide and far points do not, given the number of hyperplanes and the
+    distance threshold. In practice a single hash table is too noisy, so real LSH uses
+    multiple independent tables and takes the union of the buckets each returns. More tables
+    means more candidates, which means better recall at the cost of more work.
+  </p>
+  <p>
+    The weakness of LSH is the same as its strength. Because the hyperplanes ignore the
+    data, they waste capacity on empty regions and overfill dense ones. Data-aware methods
+    use the structure of the dataset and reach higher recall for the same work. In the last
+    decade LSH has been quietly losing ground to graph methods on the standard benchmarks.
+    It remains useful for theoretical analysis and for settings where the dataset changes
+    too fast to retrain centroids.
+  </p>
+
+  <h2>Graph-Based: HNSW as a Highway System</h2>
+  <p>
+    The method that currently dominates production ANN is neither centroids nor hyperplanes
+    but a <em>graph</em>. The idea is to precompute a structure where every vector is a
+    vertex connected to some of its nearest neighbors, and then to answer a query by
+    walking that graph. Start at some entry node. Look at its neighbors. Move to whichever
+    is closest to the query. Repeat. When no neighbor is closer, you have found a local
+    minimum, which is almost always a true nearest neighbor if the graph was built well.
+  </p>
+  <p>
+    A plain k-NN graph gets you most of the way but struggles when the query is far from
+    the entry node: the greedy walk has to cross the whole dataset one short hop at a time.
+    <strong>HNSW</strong> (Hierarchical Navigable Small World) fixes this by building
+    multiple layers. The top layer has very few nodes, connected by long edges. The bottom
+    layer has every node, connected to its near neighbors. The query descends layer by
+    layer: a few long jumps at the top put it in the right neighborhood, then progressively
+    shorter hops zoom in. It is the same trick an airline uses. Hubs plus spokes beats a
+    mesh.
+  </p>
+
+  <div class="figure figure-wide" id="fig-hnsw">
+    <div class="controls">
+      <label><input type="checkbox" id="hnsw-l2" checked> top layer</label>
+      <label><input type="checkbox" id="hnsw-l1" checked> middle layer</label>
+      <label><input type="checkbox" id="hnsw-l0" checked> bottom layer</label>
+      <button id="hnsw-replay">replay walk</button>
+      <span style="margin-left: auto; font-size: 0.8rem;">move the cursor to place the query</span>
+    </div>
+    <svg id="hnsw-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="readout">
+      <span>layers visited: <b id="hnsw-layers">3</b></span>
+      <span>hops: <b id="hnsw-hops">0</b></span>
+      <span>distance comparisons: <b id="hnsw-comps">0</b></span>
+    </div>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 4.</span>
+      A three-layer HNSW graph. The top layer is sparse with long edges; the bottom layer
+      is dense with short edges. The query (your cursor) enters at the top and greedily
+      walks toward itself. When no neighbor on this layer is closer, the search drops a
+      layer and continues. The full walk traverses far fewer vertices than the database
+      has. Toggle layers on and off to see the highway system without the local roads, or
+      vice versa.
+    </div>
+  </div>
+
+  <p>
+    HNSW's build cost is high. Every vector has to be inserted, which involves running a
+    query-like walk to find the neighbors to connect to. For a million vectors in 768
+    dimensions, this can take hours on a single machine. Its memory footprint is also
+    substantial, because each vector stores its edge list on top of the vector itself.
+    In exchange it gives the best recall-per-query-time among open-source indexes and
+    scales gracefully to tens of millions of vectors. Almost every vector database,
+    lancedb and Weaviate and pgvector included, ships HNSW as a default choice.
+  </p>
+
+  <h2>Tradeoffs</h2>
+  <p>
+    Every partition method is navigating the same recall-versus-speed plane. What differs is
+    the slope of the curve and the shape of the knobs. Here is a stylized picture of where
+    the three methods sit. The curves are representative, not taken from any specific
+    benchmark, but their ordering matches what ann-benchmarks.com has shown on most
+    datasets for years.
+  </p>
+
+  <div class="figure figure-wide" id="fig-tradeoff">
+    <svg id="tradeoff-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="figure-caption">
+      <span class="figure-label">Figure 5.</span>
+      Queries-per-second against recall at 10, both on log-ish axes. Up and to the right
+      is better: high recall, high throughput. Exact search is the vertical wall on the
+      right, offering perfect recall at a speed ceiling set by the dataset size. HNSW
+      sits above the others across most of the plane. IVF is close behind and competitive
+      at lower recall targets. LSH lags, especially at high recall.
+    </div>
+  </div>
+
+  <p>
+    A short summary of the practical character of each method:
+  </p>
+
+  <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0; font-family: var(--heading-font); font-size: 0.88rem;">
+    <div style="padding: 1rem 1.1rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-partition);">
+      <div style="font-weight: 700; color: var(--c-partition); margin-bottom: 0.4rem;">IVF</div>
+      <div style="color: var(--text-2); line-height: 1.45;">Fast build. Strong baseline. Tuning reduces to one knob (<code style="font-family: var(--mono-font);">nprobe</code>). Quality depends on k-means capturing the data's structure.</div>
+    </div>
+    <div style="padding: 1rem 1.1rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-partition);">
+      <div style="font-weight: 700; color: var(--c-partition); margin-bottom: 0.4rem;">LSH</div>
+      <div style="color: var(--text-2); line-height: 1.45;">No training. Theoretical guarantees. Needs many hash tables in practice. Losing ground to data-aware methods on empirical benchmarks.</div>
+    </div>
+    <div style="padding: 1rem 1.1rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-partition);">
+      <div style="font-weight: 700; color: var(--c-partition); margin-bottom: 0.4rem;">HNSW</div>
+      <div style="color: var(--text-2); line-height: 1.45;">Best recall-per-QPS. Heavy on memory. Slow to build. The default in most production vector databases today.</div>
+    </div>
+  </div>
+
+  <p>
+    There is one more thing to say before moving on. All three methods reduce the number of
+    full-vector distance computations a query has to perform, but they do not make any
+    single distance computation faster. Each comparison still touches every dimension of
+    two vectors. If the vectors are 1536-dimensional floats, that is 6 KB per vector and a
+    few thousand multiply-adds to compare them. When the database grows into the hundreds
+    of millions of vectors, even a tiny fraction of "let me look at this one" becomes a lot
+    of arithmetic.
+  </p>
+
+  <h2>Next: Compress the Vectors</h2>
+  <p>
+    Partitioning decides <em>which</em> vectors to look at. The next article asks what if we
+    made each vector itself cheaper to look at? Product quantization, binary codes, and
+    their friends trade a little accuracy in the distance computation for an order-of-magnitude
+    drop in memory and CPU per comparison. Stacked on top of IVF or HNSW, compression is
+    what lets a billion-vector index run on a single machine.
+  </p>
+
+  <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0; font-family: var(--heading-font);">
+    <div style="padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-partition); opacity: 0.55;">
+      <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 0.4rem;">Just read</div>
+      <div style="font-size: 1rem; font-weight: 700; color: var(--c-partition);">Partition</div>
+      <div style="font-size: 0.85rem; color: var(--text-2); line-height: 1.45;">Cut the space into regions and only search the ones near the query.</div>
+    </div>
+    <div style="padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-compress);">
+      <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 0.4rem;">Next</div>
+      <div style="font-size: 1rem; font-weight: 700; color: var(--c-compress);"><a href="03-compress-the-vectors.html" style="color: var(--c-compress); text-decoration: none;">Compress</a></div>
+      <div style="font-size: 0.85rem; color: var(--text-2); line-height: 1.45;">Replace full vectors with small codes that are cheap to compare.</div>
+    </div>
+    <div style="padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-hardware);">
+      <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 0.4rem;">Then</div>
+      <div style="font-size: 1rem; font-weight: 700; color: var(--c-hardware);"><a href="04-hardware-aware-design.html" style="color: var(--c-hardware); text-decoration: none;">Hardware</a></div>
+      <div style="font-size: 0.85rem; color: var(--text-2); line-height: 1.45;">Design for where the data lives: RAM, SSD, or GPU.</div>
+    </div>
+  </div>
+
+  <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
+    <p>Part of <a href="index.html" style="color: var(--text-2);">Approximate Nearest Neighbors</a>. Previous: <a href="01-curse-of-dimensionality.html" style="color: var(--accent);">The Curse of Dimensionality</a>. Next: <a href="03-compress-the-vectors.html" style="color: var(--accent);">Compress the Vectors</a>.</p>
+    <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+  </footer>
+</div>
+
+<script>
+// ============================================================
+// Shared utilities
+// ============================================================
+function mulberry32(seed) {
+  return function() {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Generate a clustered 2D dataset (for several figures)
+function makeClusteredData(seed, N, nClusters) {
+  const rng = mulberry32(seed);
+  const centers = [];
+  for (let i = 0; i < nClusters; i++) {
+    centers.push([0.15 + rng() * 0.7, 0.15 + rng() * 0.7]);
+  }
+  const pts = [];
+  for (let i = 0; i < N; i++) {
+    const c = centers[Math.floor(rng() * nClusters)];
+    // Gaussian-ish around center via box-muller
+    const u1 = Math.max(1e-6, rng()), u2 = rng();
+    const r = 0.07 * Math.sqrt(-2 * Math.log(u1));
+    const theta = 2 * Math.PI * u2;
+    const x = c[0] + r * Math.cos(theta);
+    const y = c[1] + r * Math.sin(theta);
+    pts.push([Math.max(0.02, Math.min(0.98, x)), Math.max(0.02, Math.min(0.98, y))]);
+  }
+  return pts;
+}
+
+// K-means with kmeans++ init
+function kmeans(points, k, iters = 25, seed = 1) {
+  const rng = mulberry32(seed);
+  const N = points.length;
+  // kmeans++ init
+  const centroids = [points[Math.floor(rng() * N)].slice()];
+  while (centroids.length < k) {
+    const dists = points.map(p => {
+      let dm = Infinity;
+      for (const c of centroids) {
+        const dx = p[0] - c[0], dy = p[1] - c[1];
+        const d = dx * dx + dy * dy;
+        if (d < dm) dm = d;
+      }
+      return dm;
+    });
+    const sum = dists.reduce((a, b) => a + b, 0);
+    let r = rng() * sum, pick = 0;
+    for (let i = 0; i < N; i++) { r -= dists[i]; if (r <= 0) { pick = i; break; } }
+    centroids.push(points[pick].slice());
+  }
+  // Lloyd iterations
+  const assign = new Int32Array(N);
+  for (let it = 0; it < iters; it++) {
+    for (let i = 0; i < N; i++) {
+      let bd = Infinity, bi = 0;
+      for (let c = 0; c < k; c++) {
+        const dx = points[i][0] - centroids[c][0];
+        const dy = points[i][1] - centroids[c][1];
+        const d = dx * dx + dy * dy;
+        if (d < bd) { bd = d; bi = c; }
+      }
+      assign[i] = bi;
+    }
+    const sums = Array.from({length: k}, () => [0, 0, 0]);
+    for (let i = 0; i < N; i++) {
+      sums[assign[i]][0] += points[i][0];
+      sums[assign[i]][1] += points[i][1];
+      sums[assign[i]][2] += 1;
+    }
+    for (let c = 0; c < k; c++) {
+      if (sums[c][2] > 0) {
+        centroids[c][0] = sums[c][0] / sums[c][2];
+        centroids[c][1] = sums[c][1] / sums[c][2];
+      }
+    }
+  }
+  return { centroids, assign };
+}
+
+function nearestCentroid(q, centroids) {
+  let bd = Infinity, bi = 0;
+  for (let c = 0; c < centroids.length; c++) {
+    const dx = q[0] - centroids[c][0], dy = q[1] - centroids[c][1];
+    const d = dx * dx + dy * dy;
+    if (d < bd) { bd = d; bi = c; }
+  }
+  return bi;
+}
+
+function rankCentroids(q, centroids) {
+  const arr = centroids.map((c, i) => {
+    const dx = q[0] - c[0], dy = q[1] - c[1];
+    return { i, d: dx * dx + dy * dy };
+  });
+  arr.sort((a, b) => a.d - b.d);
+  return arr.map(o => o.i);
+}
+
+// ============================================================
+// Figure 1: IVF — Voronoi regions, one scanned cell
+// ============================================================
+(function() {
+  const svgEl = document.getElementById("ivf-svg");
+  const container = svgEl.parentElement;
+  let W = 0, H = 380;
+
+  let k = 8;
+  let seed = 3;
+  let query = [0.5, 0.5];
+  const N = 220;
+  let points = [];
+  let result = null;
+
+  function regen() {
+    points = makeClusteredData(seed, N, 6);
+    result = kmeans(points, k, 30, seed + 1);
+  }
+
+  const svg = d3.select(svgEl);
+
+  function layout() {
+    W = Math.max(320, container.clientWidth - 48);
+    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svgEl.setAttribute("width", W);
+    svgEl.setAttribute("height", H);
+  }
+
+  function toX(p) { return 20 + p[0] * (W - 40); }
+  function toY(p) { return 20 + p[1] * (H - 40); }
+
+  function draw() {
+    svg.selectAll("*").remove();
+    // Frame
+    svg.append("rect").attr("x", 10).attr("y", 10)
+      .attr("width", W - 20).attr("height", H - 20)
+      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
+
+    const { centroids, assign } = result;
+    // Voronoi via d3.Delaunay on centroids in pixel space
+    const cpx = centroids.map(c => [toX(c), toY(c)]);
+    const delaunay = d3.Delaunay.from(cpx);
+    const voronoi = delaunay.voronoi([10, 10, W - 10, H - 10]);
+
+    const queryCell = nearestCentroid(query, centroids);
+
+    // Voronoi cells
+    svg.append("g").selectAll("path").data(centroids).join("path")
+      .attr("d", (c, i) => voronoi.renderCell(i))
+      .attr("fill", (c, i) => i === queryCell ? "rgba(13, 148, 136, 0.12)" : "none")
+      .attr("stroke", "var(--border)").attr("stroke-width", 1);
+
+    // Boundaries with a slightly stronger teal for the query cell
+    svg.append("path")
+      .attr("d", voronoi.renderCell(queryCell))
+      .attr("fill", "none")
+      .attr("stroke", "var(--c-partition)").attr("stroke-width", 1.3);
+
+    // True nearest neighbor (global)
+    let trueNN = 0, trueD = Infinity;
+    for (let i = 0; i < N; i++) {
+      const dx = points[i][0] - query[0], dy = points[i][1] - query[1];
+      const d = dx * dx + dy * dy;
+      if (d < trueD) { trueD = d; trueNN = i; }
+    }
+
+    // Best point inside query cell
+    let bestIn = -1, bestInD = Infinity, cellCount = 0;
+    for (let i = 0; i < N; i++) {
+      if (assign[i] === queryCell) {
+        cellCount++;
+        const dx = points[i][0] - query[0], dy = points[i][1] - query[1];
+        const d = dx * dx + dy * dy;
+        if (d < bestInD) { bestInD = d; bestIn = i; }
+      }
+    }
+
+    // Database points
+    svg.selectAll(".pt").data(points).join("circle")
+      .attr("class", "pt")
+      .attr("cx", p => toX(p)).attr("cy", p => toY(p))
+      .attr("r", (p, i) => i === trueNN ? 5 : (assign[i] === queryCell ? 3.5 : 2.7))
+      .attr("fill", (p, i) => {
+        if (i === trueNN) return "var(--c-neighbor)";
+        if (assign[i] === queryCell) return "var(--c-partition)";
+        return "var(--c-db)";
+      })
+      .attr("opacity", (p, i) => {
+        if (i === trueNN) return 1;
+        if (assign[i] === queryCell) return 0.95;
+        return 0.3;
+      });
+
+    // Centroids
+    svg.selectAll(".cent").data(centroids).join("rect")
+      .attr("class", "cent")
+      .attr("x", c => toX(c) - 3).attr("y", c => toY(c) - 3)
+      .attr("width", 6).attr("height", 6)
+      .attr("fill", (c, i) => i === queryCell ? "var(--c-partition)" : "var(--text-2)")
+      .attr("stroke", "white").attr("stroke-width", 1);
+
+    // Line from query to best-in-cell
+    if (bestIn >= 0) {
+      svg.append("line")
+        .attr("x1", toX(query)).attr("y1", toY(query))
+        .attr("x2", toX(points[bestIn])).attr("y2", toY(points[bestIn]))
+        .attr("stroke", "var(--c-partition)").attr("stroke-width", 1.2).attr("opacity", 0.8);
+    }
+    // Line from query to true NN (faint, for contrast)
+    if (trueNN !== bestIn) {
+      svg.append("line")
+        .attr("x1", toX(query)).attr("y1", toY(query))
+        .attr("x2", toX(points[trueNN])).attr("y2", toY(points[trueNN]))
+        .attr("stroke", "var(--c-neighbor)").attr("stroke-width", 1)
+        .attr("stroke-dasharray", "3 3").attr("opacity", 0.7);
+    }
+
+    // Query
+    svg.append("circle")
+      .attr("cx", toX(query)).attr("cy", toY(query)).attr("r", 6)
+      .attr("fill", "var(--c-query)").attr("stroke", "white").attr("stroke-width", 1.5);
+
+    // Legend
+    const leg = svg.append("g").attr("font-size", 11).attr("fill", "var(--text-2)")
+      .attr("transform", `translate(${W - 180}, 22)`);
+    const L = [
+      { c: "var(--c-query)", t: "query", sh: "c" },
+      { c: "var(--c-partition)", t: "scanned cell", sh: "c" },
+      { c: "var(--c-neighbor)", t: "true NN (may lie outside)", sh: "c" },
+    ];
+    L.forEach((o, i) => {
+      if (o.sh === "c") {
+        leg.append("circle").attr("cx", 4).attr("cy", i * 16).attr("r", 3.5).attr("fill", o.c);
+      }
+      leg.append("text").attr("x", 14).attr("y", i * 16 + 4).text(o.t);
+    });
+
+    // Readout
+    document.getElementById("ivf-cell").textContent = queryCell;
+    document.getElementById("ivf-scanned").textContent = cellCount;
+    document.getElementById("ivf-total").textContent = N;
+    document.getElementById("ivf-best").textContent = bestIn >= 0 ? Math.sqrt(bestInD).toFixed(3) : "—";
+    document.getElementById("ivf-true").textContent = Math.sqrt(trueD).toFixed(3);
+  }
+
+  function setQueryFromEvent(event) {
+    const r = svgEl.getBoundingClientRect();
+    const mx = (event.clientX - r.left) * (W / r.width);
+    const my = (event.clientY - r.top) * (H / r.height);
+    query = [
+      Math.max(0, Math.min(1, (mx - 20) / (W - 40))),
+      Math.max(0, Math.min(1, (my - 20) / (H - 40))),
+    ];
+    draw();
+  }
+
+  svgEl.addEventListener("pointermove", setQueryFromEvent);
+  svgEl.addEventListener("pointerdown", setQueryFromEvent);
+
+  document.getElementById("ivf-k").addEventListener("input", e => {
+    k = +e.target.value;
+    document.getElementById("ivf-k-val").textContent = k;
+    result = kmeans(points, k, 30, seed + 1);
+    draw();
+  });
+  document.getElementById("ivf-regen").addEventListener("click", () => {
+    seed = Math.floor(Math.random() * 999) + 1;
+    regen();
+    draw();
+  });
+
+  regen();
+  const ro = new ResizeObserver(() => { layout(); draw(); });
+  ro.observe(container);
+  layout();
+  draw();
+})();
+
+// ============================================================
+// Figure 2: nprobe tradeoff
+// ============================================================
+(function() {
+  const scatterEl = document.getElementById("np-scatter");
+  const chartEl = document.getElementById("np-chart");
+  const container = scatterEl.parentElement.parentElement;
+
+  const K_CLUSTERS = 16;
+  let nprobe = 1;
+  let topK = 10;
+  const seed = 11;
+  const N = 320;
+
+  const points = makeClusteredData(seed, N, 7);
+  const { centroids, assign } = kmeans(points, K_CLUSTERS, 30, seed + 1);
+  const npSlider = document.getElementById("np-slider");
+  npSlider.max = K_CLUSTERS;
+
+  // Use a fixed query for the curve computation, but also the live query from cursor for the visual
+  let query = [0.5, 0.5];
+
+  let Wsc = 0, Hsc = 360;
+  let Wch = 0, Hch = 360;
+
+  function layout() {
+    Wsc = Math.max(260, scatterEl.clientWidth);
+    scatterEl.setAttribute("viewBox", `0 0 ${Wsc} ${Hsc}`);
+    scatterEl.setAttribute("width", Wsc); scatterEl.setAttribute("height", Hsc);
+    Wch = Math.max(220, chartEl.clientWidth);
+    chartEl.setAttribute("viewBox", `0 0 ${Wch} ${Hch}`);
+    chartEl.setAttribute("width", Wch); chartEl.setAttribute("height", Hch);
+  }
+
+  function toXsc(p) { return 14 + p[0] * (Wsc - 28); }
+  function toYsc(p) { return 14 + p[1] * (Hsc - 28); }
+
+  // Precompute a representative "recall vs fraction-scanned" curve by averaging across many sample queries
+  function computeCurve() {
+    const rng = mulberry32(91);
+    const samples = [];
+    for (let i = 0; i < 80; i++) samples.push([rng(), rng()]);
+    const curve = [];
+    for (let np = 1; np <= K_CLUSTERS; np++) {
+      let sumRecall = 0, sumFrac = 0;
+      for (const q of samples) {
+        // True top-K
+        const dists = points.map((p, i) => {
+          const dx = p[0] - q[0], dy = p[1] - q[1];
+          return { i, d: dx * dx + dy * dy };
+        });
+        dists.sort((a, b) => a.d - b.d);
+        const trueTop = new Set(dists.slice(0, topK).map(o => o.i));
+        // Probed cells
+        const ranked = rankCentroids(q, centroids).slice(0, np);
+        const cells = new Set(ranked);
+        let scanned = 0, hit = 0;
+        for (let i = 0; i < N; i++) {
+          if (cells.has(assign[i])) {
+            scanned++;
+            if (trueTop.has(i)) hit++;
+          }
+        }
+        sumRecall += hit / topK;
+        sumFrac += scanned / N;
+      }
+      curve.push({ np, recall: sumRecall / samples.length, frac: sumFrac / samples.length });
+    }
+    return curve;
+  }
+  let curve = computeCurve();
+
+  const scatter = d3.select(scatterEl);
+  const chart = d3.select(chartEl);
+
+  function drawScatter() {
+    scatter.selectAll("*").remove();
+    scatter.append("rect").attr("x", 6).attr("y", 6)
+      .attr("width", Wsc - 12).attr("height", Hsc - 12)
+      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
+
+    // Voronoi
+    const cpx = centroids.map(c => [toXsc(c), toYsc(c)]);
+    const del = d3.Delaunay.from(cpx);
+    const vor = del.voronoi([6, 6, Wsc - 6, Hsc - 6]);
+
+    const ranked = rankCentroids(query, centroids).slice(0, nprobe);
+    const probeSet = new Set(ranked);
+
+    // True top-K
+    const dists = points.map((p, i) => {
+      const dx = p[0] - query[0], dy = p[1] - query[1];
+      return { i, d: dx * dx + dy * dy };
+    });
+    dists.sort((a, b) => a.d - b.d);
+    const trueTop = new Set(dists.slice(0, topK).map(o => o.i));
+
+    // Count stats
+    let scanned = 0, hit = 0;
+    for (let i = 0; i < N; i++) {
+      if (probeSet.has(assign[i])) {
+        scanned++;
+        if (trueTop.has(i)) hit++;
+      }
+    }
+
+    // Cells
+    scatter.append("g").selectAll("path").data(centroids).join("path")
+      .attr("d", (c, i) => vor.renderCell(i))
+      .attr("fill", (c, i) => probeSet.has(i) ? "rgba(13, 148, 136, 0.14)" : "none")
+      .attr("stroke", "var(--border)").attr("stroke-width", 0.8);
+    // Emphasize boundaries of scanned cells
+    scatter.append("g").selectAll("path").data(ranked).join("path")
+      .attr("d", i => vor.renderCell(i))
+      .attr("fill", "none").attr("stroke", "var(--c-partition)").attr("stroke-width", 1.2)
+      .attr("opacity", 0.7);
+
+    // Points
+    scatter.selectAll(".p").data(points).join("circle")
+      .attr("class", "p")
+      .attr("cx", p => toXsc(p)).attr("cy", p => toYsc(p))
+      .attr("r", (p, i) => trueTop.has(i) ? 3.5 : 2.4)
+      .attr("fill", (p, i) => {
+        if (trueTop.has(i) && probeSet.has(assign[i])) return "var(--c-neighbor)";
+        if (trueTop.has(i)) return "var(--c-query)";
+        if (probeSet.has(assign[i])) return "var(--c-partition)";
+        return "var(--c-db)";
+      })
+      .attr("opacity", (p, i) => probeSet.has(assign[i]) || trueTop.has(i) ? 0.95 : 0.3);
+
+    // Centroids
+    scatter.selectAll(".cent").data(centroids).join("rect")
+      .attr("class", "cent")
+      .attr("x", c => toXsc(c) - 2.5).attr("y", c => toYsc(c) - 2.5)
+      .attr("width", 5).attr("height", 5)
+      .attr("fill", "var(--text-2)").attr("stroke", "white").attr("stroke-width", 0.8);
+
+    // Query
+    scatter.append("circle")
+      .attr("cx", toXsc(query)).attr("cy", toYsc(query)).attr("r", 6)
+      .attr("fill", "var(--c-query)").attr("stroke", "white").attr("stroke-width", 1.5);
+
+    // Legend (compact)
+    const leg = scatter.append("g").attr("font-size", 10).attr("fill", "var(--text-2)")
+      .attr("transform", `translate(10, ${Hsc - 38})`);
+    [
+      { c: "var(--c-neighbor)", t: "true NN in scanned cell" },
+      { c: "var(--c-query)", t: "true NN missed" },
+      { c: "var(--c-partition)", t: "scanned" },
+    ].forEach((o, i) => {
+      leg.append("circle").attr("cx", 4).attr("cy", i * 11).attr("r", 3).attr("fill", o.c);
+      leg.append("text").attr("x", 12).attr("y", i * 11 + 3).text(o.t);
+    });
+
+    // Update the live readout
+    document.getElementById("np-frac").textContent = `${Math.round(100 * scanned / N)}%`;
+    document.getElementById("np-recall").textContent = (hit / topK).toFixed(2);
+    document.getElementById("np-k-out").textContent = topK;
+  }
+
+  function drawChart() {
+    chart.selectAll("*").remove();
+    const margin = { top: 28, right: 18, bottom: 40, left: 48 };
+    const iw = Wch - margin.left - margin.right;
+    const ih = Hch - margin.top - margin.bottom;
+    const g = chart.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const xS = d3.scaleLinear().domain([0, 1]).range([0, iw]);
+    const yS = d3.scaleLinear().domain([0, 1]).range([ih, 0]);
+
+    // Grid
+    g.append("g").attr("transform", `translate(0,${ih})`)
+      .call(d3.axisBottom(xS).ticks(5).tickFormat(d3.format(".0%")).tickSize(-ih))
+      .call(g => g.selectAll(".tick line").attr("stroke", "#eee"))
+      .call(g => g.selectAll(".domain").attr("stroke", "var(--border)"))
+      .call(g => g.selectAll(".tick text").attr("fill", "var(--text-2)").attr("font-size", 10));
+    g.append("g")
+      .call(d3.axisLeft(yS).ticks(5).tickFormat(d3.format(".0%")).tickSize(-iw))
+      .call(g => g.selectAll(".tick line").attr("stroke", "#eee"))
+      .call(g => g.selectAll(".domain").attr("stroke", "var(--border)"))
+      .call(g => g.selectAll(".tick text").attr("fill", "var(--text-2)").attr("font-size", 10));
+
+    g.append("text").attr("x", iw / 2).attr("y", ih + 30).attr("text-anchor", "middle")
+      .attr("font-size", 11).attr("fill", "var(--text-2)").text("fraction of points scanned");
+    g.append("text").attr("transform", `translate(-36,${ih/2}) rotate(-90)`)
+      .attr("text-anchor", "middle").attr("font-size", 11).attr("fill", "var(--text-2)")
+      .text(`recall@${topK}`);
+
+    chart.append("text").attr("x", margin.left).attr("y", 18)
+      .attr("font-size", 12).attr("font-weight", 600).attr("fill", "var(--text)")
+      .text("Recall climbs as nprobe grows");
+
+    // Reference: y = x (random guessing)
+    g.append("line").attr("x1", 0).attr("y1", ih).attr("x2", iw).attr("y2", 0)
+      .attr("stroke", "var(--border)").attr("stroke-dasharray", "3 3");
+    g.append("text").attr("x", iw - 4).attr("y", 12).attr("text-anchor", "end")
+      .attr("font-size", 10).attr("fill", "var(--text-2)").text("random");
+
+    // The curve
+    const line = d3.line().x(d => xS(d.frac)).y(d => yS(d.recall)).curve(d3.curveMonotoneX);
+    g.append("path").datum(curve).attr("fill", "none")
+      .attr("stroke", "var(--c-partition)").attr("stroke-width", 2).attr("d", line);
+    g.selectAll(".dot").data(curve).join("circle").attr("class", "dot")
+      .attr("cx", d => xS(d.frac)).attr("cy", d => yS(d.recall))
+      .attr("r", 2.5).attr("fill", "var(--c-partition)").attr("opacity", 0.7);
+
+    // Current position dot
+    const cur = curve[nprobe - 1];
+    g.append("circle").attr("cx", xS(cur.frac)).attr("cy", yS(cur.recall))
+      .attr("r", 6).attr("fill", "var(--c-query)").attr("stroke", "white").attr("stroke-width", 2);
+    g.append("text").attr("x", xS(cur.frac) + 10).attr("y", yS(cur.recall) - 6)
+      .attr("font-size", 11).attr("fill", "var(--c-query)").attr("font-weight", 600)
+      .text(`nprobe = ${nprobe}`);
+  }
+
+  function setQueryFromEvent(event) {
+    const r = scatterEl.getBoundingClientRect();
+    const mx = (event.clientX - r.left) * (Wsc / r.width);
+    const my = (event.clientY - r.top) * (Hsc / r.height);
+    query = [
+      Math.max(0, Math.min(1, (mx - 14) / (Wsc - 28))),
+      Math.max(0, Math.min(1, (my - 14) / (Hsc - 28))),
+    ];
+    drawScatter();
+  }
+
+  scatterEl.addEventListener("pointermove", setQueryFromEvent);
+  scatterEl.addEventListener("pointerdown", setQueryFromEvent);
+
+  npSlider.addEventListener("input", e => {
+    nprobe = +e.target.value;
+    document.getElementById("np-val").textContent = nprobe;
+    drawScatter();
+    drawChart();
+  });
+  document.getElementById("np-k").addEventListener("input", e => {
+    topK = +e.target.value;
+    document.getElementById("np-k-val").textContent = topK;
+    curve = computeCurve();
+    drawScatter();
+    drawChart();
+  });
+
+  const ro = new ResizeObserver(() => { layout(); drawScatter(); drawChart(); });
+  ro.observe(container);
+  layout();
+  drawScatter();
+  drawChart();
+})();
+
+// ============================================================
+// Figure 3: LSH random hyperplanes
+// ============================================================
+(function() {
+  const svgEl = document.getElementById("lsh-svg");
+  const container = svgEl.parentElement;
+  let W = 0, H = 380;
+
+  let h = 3;
+  let seed = 5;
+  const N = 180;
+  let points = makeClusteredData(seed, N, 5);
+
+  // Hyperplanes are lines through a center point (we use 0.5, 0.5) with a normal direction.
+  // For each plane, a point's bit is sign((p - center) . normal).
+  let planes = [];
+  function genPlanes() {
+    const rng = mulberry32(seed + 100);
+    planes = [];
+    for (let i = 0; i < 12; i++) {
+      const theta = rng() * Math.PI;
+      planes.push([Math.cos(theta), Math.sin(theta)]);
+    }
+  }
+  genPlanes();
+
+  function hashOf(p, hCount) {
+    let code = 0;
+    for (let i = 0; i < hCount; i++) {
+      const dx = p[0] - 0.5, dy = p[1] - 0.5;
+      const dot = dx * planes[i][0] + dy * planes[i][1];
+      code = (code << 1) | (dot >= 0 ? 1 : 0);
+    }
+    return code;
+  }
+
+  const svg = d3.select(svgEl);
+  let hovered = -1;
+
+  function layout() {
+    W = Math.max(320, container.clientWidth - 48);
+    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svgEl.setAttribute("width", W);
+    svgEl.setAttribute("height", H);
+  }
+
+  function toX(p) { return 20 + p[0] * (W - 40); }
+  function toY(p) { return 20 + p[1] * (H - 40); }
+
+  // Pick a qualitative palette big enough for 2^h up to 2^7
+  const palette = d3.schemeSet3.concat(d3.schemeTableau10).concat(d3.schemePaired);
+
+  function draw() {
+    svg.selectAll("*").remove();
+    svg.append("rect").attr("x", 10).attr("y", 10)
+      .attr("width", W - 20).attr("height", H - 20)
+      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
+
+    const hashes = points.map(p => hashOf(p, h));
+    const bucketsSet = new Set(hashes);
+    const bucketSizes = {};
+    hashes.forEach(c => { bucketSizes[c] = (bucketSizes[c] || 0) + 1; });
+
+    // Draw hyperplanes as line segments across the field
+    const cx = 0.5, cy = 0.5;
+    const diag = Math.hypot(W, H);
+    for (let i = 0; i < h; i++) {
+      // normal = planes[i] = (a, b). Line: perpendicular to normal, through (cx, cy)
+      const a = planes[i][0], b = planes[i][1];
+      // Tangent direction = (-b, a)
+      const tx = -b, ty = a;
+      const x0 = toX([cx, cy]) + tx * diag;
+      const y0 = toY([cx, cy]) + ty * diag;
+      const x1 = toX([cx, cy]) - tx * diag;
+      const y1 = toY([cx, cy]) - ty * diag;
+      svg.append("line")
+        .attr("x1", x0).attr("y1", y0).attr("x2", x1).attr("y2", y1)
+        .attr("stroke", "var(--c-compress)").attr("stroke-width", 1).attr("opacity", 0.55);
+    }
+
+    // Collision highlight: if hovered, darken non-matching, highlight matching
+    let hoverHash = hovered >= 0 ? hashes[hovered] : null;
+
+    // Points colored by hash
+    svg.selectAll(".pt").data(points).join("circle")
+      .attr("class", "pt")
+      .attr("cx", p => toX(p)).attr("cy", p => toY(p))
+      .attr("r", (p, i) => hoverHash !== null && hashes[i] === hoverHash ? 5 : 3.5)
+      .attr("fill", (p, i) => palette[hashes[i] % palette.length])
+      .attr("stroke", (p, i) => hoverHash !== null && hashes[i] === hoverHash ? "var(--c-compress)" : "white")
+      .attr("stroke-width", (p, i) => hoverHash !== null && hashes[i] === hoverHash ? 1.5 : 0.8)
+      .attr("opacity", (p, i) => {
+        if (hoverHash === null) return 0.92;
+        return hashes[i] === hoverHash ? 1 : 0.25;
+      })
+      .on("pointerenter", function(e, d) {
+        const idx = points.indexOf(d);
+        hovered = idx;
+        draw();
+      })
+      .on("pointerleave", function() { hovered = -1; draw(); });
+
+    // Hyperplane label
+    svg.append("text").attr("x", 14).attr("y", 24)
+      .attr("font-size", 11).attr("fill", "var(--c-compress)").attr("font-weight", 600)
+      .text(`h = ${h} hyperplanes, up to ${Math.pow(2, h)} buckets`);
+
+    // Compute collision rate: for each point, among its top-10 true neighbors,
+    // what fraction share its hash?
+    const topK = 10;
+    let collision = 0;
+    for (let i = 0; i < N; i++) {
+      const dists = [];
+      for (let j = 0; j < N; j++) {
+        if (j === i) continue;
+        const dx = points[i][0] - points[j][0], dy = points[i][1] - points[j][1];
+        dists.push({ j, d: dx * dx + dy * dy });
+      }
+      dists.sort((a, b) => a.d - b.d);
+      const myHash = hashes[i];
+      let hit = 0;
+      for (let t = 0; t < topK; t++) if (hashes[dists[t].j] === myHash) hit++;
+      collision += hit / topK;
+    }
+    collision /= N;
+
+    document.getElementById("lsh-buckets").textContent = bucketsSet.size;
+    document.getElementById("lsh-max").textContent = Math.pow(2, h);
+    const avg = (N / bucketsSet.size).toFixed(1);
+    document.getElementById("lsh-avg").textContent = avg;
+    document.getElementById("lsh-coll").textContent = `${Math.round(collision * 100)}%`;
+  }
+
+  document.getElementById("lsh-plus").addEventListener("click", () => {
+    if (h < 7) { h++; document.getElementById("lsh-h-val").textContent = h; draw(); }
+  });
+  document.getElementById("lsh-minus").addEventListener("click", () => {
+    if (h > 1) { h--; document.getElementById("lsh-h-val").textContent = h; draw(); }
+  });
+  document.getElementById("lsh-regen").addEventListener("click", () => {
+    seed = Math.floor(Math.random() * 999) + 1;
+    points = makeClusteredData(seed, N, 5);
+    genPlanes();
+    draw();
+  });
+
+  const ro = new ResizeObserver(() => { layout(); draw(); });
+  ro.observe(container);
+  layout();
+  draw();
+})();
+
+// ============================================================
+// Figure 4: HNSW greedy walk
+// ============================================================
+(function() {
+  const svgEl = document.getElementById("hnsw-svg");
+  const container = svgEl.parentElement;
+  let W = 0, H = 420;
+
+  const seed = 7;
+  const N = 140;
+  const points = makeClusteredData(seed, N, 4);
+
+  // Build a k-NN graph on all points (bottom layer)
+  const kNN = 6;
+  function buildKNN(pts) {
+    const graph = pts.map(() => []);
+    for (let i = 0; i < pts.length; i++) {
+      const d = [];
+      for (let j = 0; j < pts.length; j++) {
+        if (j === i) continue;
+        const dx = pts[i][0] - pts[j][0], dy = pts[i][1] - pts[j][1];
+        d.push({ j, d: dx * dx + dy * dy });
+      }
+      d.sort((a, b) => a.d - b.d);
+      for (let t = 0; t < kNN; t++) graph[i].push(d[t].j);
+    }
+    // Symmetric
+    for (let i = 0; i < graph.length; i++) {
+      for (const j of graph[i]) if (!graph[j].includes(i)) graph[j].push(i);
+    }
+    return graph;
+  }
+
+  // Sample subsets for upper layers (HNSW uses exponential decay)
+  const rng = mulberry32(seed + 3);
+  const layer1 = []; // middle
+  const layer2 = []; // top
+  for (let i = 0; i < N; i++) {
+    if (rng() < 0.22) {
+      layer1.push(i);
+      if (rng() < 0.25) layer2.push(i);
+    }
+  }
+  if (layer2.length < 3) {
+    // ensure at least a few
+    layer2.push(layer1[0], layer1[1] || layer1[0], layer1[2] || layer1[0]);
+  }
+
+  // k-NN for each subset (larger k on sparser layers)
+  function buildSubgraph(ids, k) {
+    const graph = {};
+    for (const i of ids) {
+      const d = [];
+      for (const j of ids) {
+        if (j === i) continue;
+        const dx = points[i][0] - points[j][0], dy = points[i][1] - points[j][1];
+        d.push({ j, d: dx * dx + dy * dy });
+      }
+      d.sort((a, b) => a.d - b.d);
+      graph[i] = d.slice(0, Math.min(k, d.length)).map(o => o.j);
+    }
+    return graph;
+  }
+
+  const graph0 = buildKNN(points);
+  const graph1 = buildSubgraph(layer1, 5);
+  const graph2 = buildSubgraph(layer2, 4);
+
+  // Layer descriptors
+  const layers = [
+    { ids: layer2, graph: graph2, name: "L2 (top)", col: "#0891b2" },
+    { ids: layer1, graph: graph1, name: "L1 (middle)", col: "#14b8a6" },
+    { ids: d3.range(N), graph: graph0, name: "L0 (bottom)", col: "#0d9488" },
+  ];
+
+  let showL2 = true, showL1 = true, showL0 = true;
+  let query = [0.6, 0.4];
+  let replayKey = 0;
+
+  const svg = d3.select(svgEl);
+
+  function layout() {
+    W = Math.max(320, container.clientWidth - 48);
+    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svgEl.setAttribute("width", W);
+    svgEl.setAttribute("height", H);
+  }
+
+  function toX(p) { return 20 + p[0] * (W - 40); }
+  function toY(p) { return 20 + p[1] * (H - 40); }
+
+  function d2(i, q) {
+    const dx = points[i][0] - q[0], dy = points[i][1] - q[1];
+    return dx * dx + dy * dy;
+  }
+
+  // Greedy search: start at entry on top, find local min, drop to next layer at that node, repeat
+  function greedy(q) {
+    const path = []; // array of { layer, nodes: [id, id, ...], final: id }
+    let entry = layer2[0];
+    // pick entry = first vertex in layer2 furthest from centroid, or first for determinism
+    for (const i of layer2) {
+      if (d2(i, q) < d2(entry, q)) entry = i;
+    }
+    let comps = 0;
+    let hops = 0;
+    for (const L of layers) {
+      if (!L.ids.includes(entry)) {
+        // Need to map: entry should exist in this layer's ids
+        // If we are on bottom, everything exists; on others, we start from the previous layer's final node
+      }
+      const trail = [entry];
+      let cur = entry;
+      while (true) {
+        const neighbors = L.graph[cur] || [];
+        let bestJ = cur, bestD = d2(cur, q);
+        for (const j of neighbors) {
+          comps++;
+          const d = d2(j, q);
+          if (d < bestD) { bestD = d; bestJ = j; }
+        }
+        if (bestJ === cur) break;
+        cur = bestJ;
+        trail.push(cur);
+        hops++;
+      }
+      path.push({ layer: L.name, col: L.col, ids: L.ids, graph: L.graph, trail, final: cur });
+      entry = cur;
+    }
+    return { path, comps, hops };
+  }
+
+  let walk = null;
+
+  function draw(animated) {
+    svg.selectAll("*").remove();
+    svg.append("rect").attr("x", 10).attr("y", 10)
+      .attr("width", W - 20).attr("height", H - 20)
+      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
+
+    walk = greedy(query);
+
+    // Draw edges by layer
+    const visible = [showL2, showL1, showL0];
+    layers.forEach((L, idx) => {
+      if (!visible[idx]) return;
+      const edges = [];
+      for (const i of L.ids) {
+        for (const j of L.graph[i] || []) {
+          if (i < j) edges.push([i, j]);
+        }
+      }
+      svg.append("g").selectAll("line").data(edges).join("line")
+        .attr("x1", e => toX(points[e[0]])).attr("y1", e => toY(points[e[0]]))
+        .attr("x2", e => toX(points[e[1]])).attr("y2", e => toY(points[e[1]]))
+        .attr("stroke", L.col)
+        .attr("stroke-width", idx === 0 ? 1.3 : idx === 1 ? 1 : 0.6)
+        .attr("opacity", idx === 0 ? 0.55 : idx === 1 ? 0.35 : 0.16);
+    });
+
+    // Draw nodes by layer (stacked)
+    layers.forEach((L, idx) => {
+      if (!visible[idx]) return;
+      const size = idx === 0 ? 5 : idx === 1 ? 4 : 2.6;
+      svg.append("g").selectAll("circle").data(L.ids).join("circle")
+        .attr("cx", i => toX(points[i])).attr("cy", i => toY(points[i]))
+        .attr("r", size)
+        .attr("fill", idx === 2 ? "var(--c-db)" : L.col)
+        .attr("stroke", idx < 2 ? "white" : "none")
+        .attr("stroke-width", 0.8)
+        .attr("opacity", idx === 2 ? 0.55 : 0.9);
+    });
+
+    // Draw walk path (one overlay per visible layer)
+    const pathG = svg.append("g");
+    walk.path.forEach((seg, idx) => {
+      if (!visible[idx]) return;
+      for (let i = 0; i < seg.trail.length - 1; i++) {
+        const a = seg.trail[i], b = seg.trail[i + 1];
+        pathG.append("line")
+          .attr("x1", toX(points[a])).attr("y1", toY(points[a]))
+          .attr("x2", toX(points[b])).attr("y2", toY(points[b]))
+          .attr("stroke", "var(--c-neighbor)").attr("stroke-width", 2.2)
+          .attr("opacity", 0.9)
+          .attr("marker-end", "url(#arrowhead)");
+      }
+      // Mark nodes on the trail
+      pathG.selectAll(null).data(seg.trail).enter().append("circle")
+        .attr("cx", i => toX(points[i])).attr("cy", i => toY(points[i]))
+        .attr("r", 4.5).attr("fill", "var(--c-neighbor)")
+        .attr("stroke", "white").attr("stroke-width", 1.3);
+    });
+
+    // Arrowhead marker
+    const defs = svg.append("defs");
+    defs.append("marker").attr("id", "arrowhead")
+      .attr("viewBox", "0 -4 8 8").attr("refX", 6).attr("refY", 0)
+      .attr("markerWidth", 6).attr("markerHeight", 6).attr("orient", "auto")
+      .append("path").attr("d", "M0,-4 L8,0 L0,4 Z").attr("fill", "var(--c-neighbor)");
+
+    // Final result marker on bottom layer
+    if (showL0) {
+      const finalId = walk.path[walk.path.length - 1].final;
+      svg.append("circle")
+        .attr("cx", toX(points[finalId])).attr("cy", toY(points[finalId])).attr("r", 7)
+        .attr("fill", "none").attr("stroke", "var(--c-neighbor)")
+        .attr("stroke-width", 2.5);
+    }
+
+    // Query
+    svg.append("circle")
+      .attr("cx", toX(query)).attr("cy", toY(query)).attr("r", 6)
+      .attr("fill", "var(--c-query)").attr("stroke", "white").attr("stroke-width", 1.5);
+
+    // Layer legend
+    const leg = svg.append("g").attr("font-size", 11).attr("fill", "var(--text-2)")
+      .attr("transform", `translate(${W - 150}, 22)`);
+    layers.forEach((L, idx) => {
+      leg.append("circle").attr("cx", 4).attr("cy", idx * 16).attr("r", 4)
+        .attr("fill", idx === 2 ? "var(--c-db)" : L.col).attr("opacity", visible[idx] ? 1 : 0.2);
+      leg.append("text").attr("x", 14).attr("y", idx * 16 + 4).text(`${L.name} (${L.ids.length})`)
+        .attr("opacity", visible[idx] ? 1 : 0.3);
+    });
+
+    // Walk label
+    svg.append("text").attr("x", 14).attr("y", 24)
+      .attr("font-size", 11).attr("fill", "var(--c-neighbor)").attr("font-weight", 600)
+      .text("greedy walk: top → bottom");
+
+    // Readout
+    document.getElementById("hnsw-layers").textContent = walk.path.filter((_, i) => visible[i]).length;
+    document.getElementById("hnsw-hops").textContent = walk.hops;
+    document.getElementById("hnsw-comps").textContent = walk.comps;
+  }
+
+  function setQueryFromEvent(event) {
+    const r = svgEl.getBoundingClientRect();
+    const mx = (event.clientX - r.left) * (W / r.width);
+    const my = (event.clientY - r.top) * (H / r.height);
+    query = [
+      Math.max(0, Math.min(1, (mx - 20) / (W - 40))),
+      Math.max(0, Math.min(1, (my - 20) / (H - 40))),
+    ];
+    draw();
+  }
+
+  svgEl.addEventListener("pointermove", setQueryFromEvent);
+  svgEl.addEventListener("pointerdown", setQueryFromEvent);
+
+  document.getElementById("hnsw-l2").addEventListener("change", e => { showL2 = e.target.checked; draw(); });
+  document.getElementById("hnsw-l1").addEventListener("change", e => { showL1 = e.target.checked; draw(); });
+  document.getElementById("hnsw-l0").addEventListener("change", e => { showL0 = e.target.checked; draw(); });
+  document.getElementById("hnsw-replay").addEventListener("click", () => { replayKey++; draw(true); });
+
+  const ro = new ResizeObserver(() => { layout(); draw(); });
+  ro.observe(container);
+  layout();
+  draw();
+})();
+
+// ============================================================
+// Figure 5: Recall vs QPS tradeoff
+// ============================================================
+(function() {
+  const svgEl = document.getElementById("tradeoff-svg");
+  const container = svgEl.parentElement;
+  let W = 0, H = 340;
+
+  const svg = d3.select(svgEl);
+
+  function layout() {
+    W = Math.max(320, container.clientWidth - 48);
+    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svgEl.setAttribute("width", W);
+    svgEl.setAttribute("height", H);
+  }
+
+  // Stylized curves. x = QPS (log), y = recall@10.
+  // Each method: as you push for higher recall, QPS drops.
+  // HNSW is best, IVF next, LSH worst at high recall.
+  function curveFor(method) {
+    const pts = [];
+    const recalls = d3.range(0.5, 1.005, 0.025);
+    for (const r of recalls) {
+      let qps;
+      if (method === "hnsw") {
+        // HNSW: dominant curve. At recall 0.5: ~20000; 0.99: ~1200
+        qps = Math.pow(10, 4.5 - 2.1 * Math.pow((r - 0.5) / 0.5, 1.8));
+      } else if (method === "ivf") {
+        // IVF: slightly lower than HNSW, steeper late decline
+        qps = Math.pow(10, 4.2 - 2.3 * Math.pow((r - 0.5) / 0.5, 1.6));
+      } else if (method === "lsh") {
+        // LSH: below both, steep drop near top
+        qps = Math.pow(10, 3.9 - 2.8 * Math.pow((r - 0.5) / 0.5, 1.4));
+      } else if (method === "exact") {
+        // Exact: always recall = 1.0, QPS limited by N.
+        qps = 150; // just a vertical wall
+      }
+      pts.push({ r, qps });
+    }
+    return pts;
+  }
+
+  function draw() {
+    svg.selectAll("*").remove();
+    svg.append("rect").attr("x", 10).attr("y", 10)
+      .attr("width", W - 20).attr("height", H - 20)
+      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
+
+    const margin = { top: 48, right: 150, bottom: 44, left: 60 };
+    const iw = W - margin.left - margin.right;
+    const ih = H - margin.top - margin.bottom;
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const xS = d3.scaleLog().domain([100, 40000]).range([0, iw]);
+    const yS = d3.scaleLinear().domain([0.5, 1.0]).range([ih, 0]);
+
+    // Axes
+    g.append("g").attr("transform", `translate(0,${ih})`)
+      .call(d3.axisBottom(xS).ticks(5, "~s").tickSize(-ih))
+      .call(g => g.selectAll(".tick line").attr("stroke", "#eee"))
+      .call(g => g.selectAll(".domain").attr("stroke", "var(--border)"))
+      .call(g => g.selectAll(".tick text").attr("fill", "var(--text-2)").attr("font-size", 10));
+    g.append("g")
+      .call(d3.axisLeft(yS).ticks(5).tickFormat(d3.format(".0%")).tickSize(-iw))
+      .call(g => g.selectAll(".tick line").attr("stroke", "#eee"))
+      .call(g => g.selectAll(".domain").attr("stroke", "var(--border)"))
+      .call(g => g.selectAll(".tick text").attr("fill", "var(--text-2)").attr("font-size", 10));
+
+    g.append("text").attr("x", iw / 2).attr("y", ih + 32)
+      .attr("text-anchor", "middle").attr("font-size", 11).attr("fill", "var(--text-2)")
+      .text("queries per second (log scale)");
+    g.append("text").attr("transform", `translate(-42,${ih/2}) rotate(-90)`)
+      .attr("text-anchor", "middle").attr("font-size", 11).attr("fill", "var(--text-2)")
+      .text("recall@10");
+
+    // Better zone label
+    g.append("text").attr("x", iw - 8).attr("y", 16)
+      .attr("text-anchor", "end").attr("font-size", 10).attr("fill", "var(--text-2)")
+      .attr("font-style", "italic").text("↑ better: higher recall, higher QPS");
+
+    // Draw the three curves
+    const methods = [
+      { key: "hnsw", label: "HNSW", color: "var(--c-partition)" },
+      { key: "ivf", label: "IVF", color: "#0ea5e9" },
+      { key: "lsh", label: "LSH", color: "var(--c-compress)" },
+    ];
+    const line = d3.line()
+      .x(d => xS(Math.max(100, Math.min(40000, d.qps))))
+      .y(d => yS(d.r)).curve(d3.curveMonotoneX);
+
+    methods.forEach(m => {
+      const data = curveFor(m.key).filter(d => d.qps >= 100 && d.qps <= 40000);
+      g.append("path").datum(data).attr("fill", "none")
+        .attr("stroke", m.color).attr("stroke-width", 2.5).attr("d", line);
+      // End-of-line dot and label at rightmost visible point
+      const last = data[0];
+      g.append("circle").attr("cx", xS(last.qps)).attr("cy", yS(last.r))
+        .attr("r", 4).attr("fill", m.color);
+    });
+
+    // Exact: vertical wall at QPS = ~150
+    const exactX = xS(150);
+    g.append("line").attr("x1", exactX).attr("x2", exactX)
+      .attr("y1", yS(1)).attr("y2", yS(0.5))
+      .attr("stroke", "var(--c-db)").attr("stroke-width", 2.5).attr("stroke-dasharray", "5 4");
+    g.append("circle").attr("cx", exactX).attr("cy", yS(1))
+      .attr("r", 5).attr("fill", "var(--c-db)");
+
+    // Side legend with descriptions
+    const side = svg.append("g")
+      .attr("transform", `translate(${margin.left + iw + 16},${margin.top + 6})`)
+      .attr("font-size", 11).attr("fill", "var(--text-2)");
+    const legItems = [
+      { color: "var(--c-partition)", label: "HNSW", desc: "graph, best overall" },
+      { color: "#0ea5e9", label: "IVF", desc: "centroid cells" },
+      { color: "var(--c-compress)", label: "LSH", desc: "random hashes" },
+      { color: "var(--c-db)", label: "Exact", desc: "perfect recall, slow" },
+    ];
+    legItems.forEach((o, i) => {
+      const y = i * 32;
+      side.append("line").attr("x1", 0).attr("x2", 18)
+        .attr("y1", y).attr("y2", y)
+        .attr("stroke", o.color).attr("stroke-width", 2.5)
+        .attr("stroke-dasharray", o.label === "Exact" ? "4 3" : "none");
+      side.append("text").attr("x", 22).attr("y", y + 4)
+        .attr("font-size", 12).attr("font-weight", 700).attr("fill", "var(--text)")
+        .text(o.label);
+      side.append("text").attr("x", 22).attr("y", y + 18)
+        .attr("font-size", 10).attr("fill", "var(--text-2)")
+        .text(o.desc);
+    });
+
+    // Note
+    svg.append("text").attr("x", margin.left).attr("y", 20)
+      .attr("font-size", 12).attr("font-weight", 600).attr("fill", "var(--text)")
+      .text("Recall vs speed across methods");
+    svg.append("text").attr("x", margin.left).attr("y", 36)
+      .attr("font-size", 10).attr("fill", "var(--text-2)")
+      .attr("font-style", "italic")
+      .text("representative curves, not from a specific benchmark");
+  }
+
+  const ro = new ResizeObserver(() => { layout(); draw(); });
+  ro.observe(container);
+  layout();
+  draw();
+})();
+</script>
+</body>
+</html>

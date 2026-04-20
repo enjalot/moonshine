@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What Dimensionality Reduction Preserves</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --article-width: 740px;
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --text-3: #8a8a9e;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --warm: #ea580c;
+  --green: #059669;
+  --purple: #7c3aed;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+  --border-2: #c5c5d1;
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
+h1 { font-size: 2.5rem; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.4rem; margin: 3rem 0 1rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+em { font-style: italic; }
+
+.subtitle {
+  font-family: var(--heading-font);
+  font-size: 1.15rem;
+  color: var(--text-2);
+  line-height: 1.45;
+  margin-bottom: 1.5rem;
+  font-weight: 400;
+}
+
+.header-visual {
+  margin: 1rem 0 2rem;
+}
+
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+}
+
+.card {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 1.25rem;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.1rem 1.25rem;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, transform 0.15s;
+  align-items: center;
+}
+.card:hover { border-color: var(--accent); }
+.card-thumb {
+  width: 100px;
+  height: 60px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.card-num {
+  font-family: var(--mono-font);
+  font-size: 0.78rem;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
+}
+.card-title {
+  font-family: var(--heading-font);
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--text);
+  margin: 0.15rem 0 0.35rem;
+}
+.card-desc {
+  font-family: var(--body-font);
+  font-size: 0.95rem;
+  color: var(--text-2);
+  line-height: 1.45;
+  margin: 0;
+}
+.card-tags {
+  font-family: var(--heading-font);
+  font-size: 0.72rem;
+  color: var(--text-3);
+  margin-top: 0.45rem;
+  letter-spacing: 0.04em;
+}
+.card.capstone {
+  border-top: 3px solid var(--purple);
+}
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.85rem; }
+  .card { grid-template-columns: 1fr; }
+  .card-thumb { width: 100%; height: 50px; }
+}
+</style>
+</head>
+<body>
+<div class="article">
+
+<header>
+  <div style="font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem;">A ten-part series</div>
+  <h1>What Dimensionality Reduction Preserves</h1>
+  <p class="subtitle">
+    A field guide to the families of methods that turn high-dimensional data into something we can look at, organized by the kind of structure each one protects.
+  </p>
+</header>
+
+<div class="header-visual">
+  <svg id="header-svg" width="100%" height="120" viewBox="0 0 680 120" preserveAspectRatio="xMidYMid meet"></svg>
+</div>
+
+<p>
+  Every dimensionality reduction algorithm is a decision about what matters. PCA says variance matters. t-SNE says who-is-near-whom matters. Mapper says shape matters. Poincaré embeddings say hierarchy matters. When you pick a method, you are picking a definition of structure.
+</p>
+
+<p>
+  The literature usually organizes these methods by how they are computed: eigendecompositions here, gradient descent there, neural networks in a third bucket. That works for implementers. For practitioners choosing a tool, a better axis is what the method is <em>trying</em> to preserve, because that is what tells you whether your data and your question match.
+</p>
+
+<p>
+  This series walks through the landscape that way. Each article takes a family of methods organized around a single notion of "structure," builds up intuition for what each preserves and what it discards, and shows where the tradeoffs show up in practice. The audience is machine-learning practitioners who work with high-dimensional data every day but want a sharper toolkit for understanding latent spaces, embeddings, and learned representations.
+</p>
+
+<h2>Articles</h2>
+
+<div class="card-list">
+
+  <a class="card" href="01-framing.html">
+    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(50,30)"><circle r="22" fill="none" stroke="#c5c5d1" stroke-width="1"/><circle r="14" fill="none" stroke="#c5c5d1" stroke-width="1"/><circle r="6" fill="#2563eb"/></g></svg></div>
+    <div>
+      <div class="card-num">01 · framing</div>
+      <div class="card-title">The Geometry of High-Dimensional Data</div>
+      <p class="card-desc">Why high-dimensional space is strange, what "structure" can mean, and how we tell whether a projection is honest.</p>
+      <div class="card-tags">curse of dimensionality · evaluation · taxonomy</div>
+    </div>
+  </a>
+
+  <a class="card" href="02-linear.html">
+    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(12,10)"><line x1="0" y1="40" x2="80" y2="0" stroke="#2563eb" stroke-width="2"/><line x1="0" y1="0" x2="80" y2="40" stroke="#ea580c" stroke-width="1.5" stroke-dasharray="2 2"/><g fill="#8a8a9e"><circle cx="18" cy="28" r="2"/><circle cx="28" cy="22" r="2"/><circle cx="40" cy="18" r="2"/><circle cx="52" cy="16" r="2"/><circle cx="62" cy="10" r="2"/><circle cx="72" cy="8" r="2"/></g></g></svg></div>
+    <div>
+      <div class="card-num">02 · linear</div>
+      <div class="card-title">The Linear Family</div>
+      <p class="card-desc">PCA, ICA, NMF, Kernel PCA, random projection. Variance, independence, parts, and why old methods still matter.</p>
+      <div class="card-tags">PCA · ICA · NMF · Kernel PCA · random projection</div>
+    </div>
+  </a>
+
+  <a class="card" href="03-global-distances.html">
+    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(10,10)"><path d="M 5 20 Q 25 5 45 20 T 80 30" fill="none" stroke="#2563eb" stroke-width="2"/><g fill="#1a1a2e"><circle cx="5" cy="20" r="3"/><circle cx="25" cy="10" r="3"/><circle cx="45" cy="20" r="3"/><circle cx="65" cy="25" r="3"/><circle cx="80" cy="30" r="3"/></g></g></svg></div>
+    <div>
+      <div class="card-num">03 · global distances</div>
+      <div class="card-title">Preserving Global Distances</div>
+      <p class="card-desc">Classical MDS, Sammon mapping, Isomap, diffusion maps. From Euclidean to geodesic to diffusion distance.</p>
+      <div class="card-tags">MDS · Sammon · Isomap · diffusion maps</div>
+    </div>
+  </a>
+
+  <a class="card" href="04-local-neighborhoods.html">
+    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(10,8)"><g stroke="#c5c5d1" stroke-width="0.6" fill="none"><line x1="15" y1="15" x2="25" y2="22"/><line x1="25" y1="22" x2="20" y2="35"/><line x1="20" y1="35" x2="14" y2="28"/><line x1="14" y1="28" x2="15" y2="15"/><line x1="55" y1="20" x2="65" y2="12"/><line x1="65" y1="12" x2="72" y2="22"/><line x1="72" y1="22" x2="60" y2="32"/><line x1="60" y1="32" x2="55" y2="20"/></g><g fill="#2563eb"><circle cx="15" cy="15" r="2.5"/><circle cx="25" cy="22" r="2.5"/><circle cx="20" cy="35" r="2.5"/><circle cx="14" cy="28" r="2.5"/></g><g fill="#ea580c"><circle cx="55" cy="20" r="2.5"/><circle cx="65" cy="12" r="2.5"/><circle cx="72" cy="22" r="2.5"/><circle cx="60" cy="32" r="2.5"/></g></g></svg></div>
+    <div>
+      <div class="card-num">04 · local neighborhoods</div>
+      <div class="card-title">Preserving Local Neighborhoods</div>
+      <p class="card-desc">t-SNE, UMAP, and the neighbor-graph family. How "who is near whom" became the dominant paradigm.</p>
+      <div class="card-tags">LLE · Laplacian eigenmaps · t-SNE · UMAP · PaCMAP · TriMap</div>
+    </div>
+  </a>
+
+  <a class="card" href="05-topology.html">
+    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(10,10)" fill="none" stroke="#7c3aed" stroke-width="1.5"><circle cx="20" cy="20" r="10"/><circle cx="55" cy="15" r="7"/><circle cx="70" cy="30" r="10"/><line x1="30" y1="20" x2="48" y2="15"/><line x1="62" y1="15" x2="68" y2="22"/></g></svg></div>
+    <div>
+      <div class="card-num">05 · topology</div>
+      <div class="card-title">Preserving Topology</div>
+      <p class="card-desc">Mapper, Reeb graphs, topological autoencoders. When shape matters more than position.</p>
+      <div class="card-tags">Mapper · Reeb graphs · topological autoencoders</div>
+    </div>
+  </a>
+
+  <a class="card" href="06-density.html">
+    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(10,8)"><g><circle cx="25" cy="25" r="18" fill="#dbeafe"/><circle cx="25" cy="25" r="12" fill="#bfdbfe"/><circle cx="25" cy="25" r="6" fill="#2563eb"/></g><g><circle cx="65" cy="25" r="14" fill="#ffedd5" opacity="0.7"/><circle cx="65" cy="25" r="4" fill="#ea580c"/></g></g></svg></div>
+    <div>
+      <div class="card-num">06 · density</div>
+      <div class="card-title">Preserving Density</div>
+      <p class="card-desc">densMAP and PHATE. Why most methods flatten density, and what the exceptions buy you.</p>
+      <div class="card-tags">densMAP · PHATE · potential distance</div>
+    </div>
+  </a>
+
+  <a class="card" href="07-discrete-grids.html">
+    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(15,8)" fill="#dbeafe" stroke="#2563eb" stroke-width="1"><rect x="0" y="0" width="12" height="12"/><rect x="14" y="0" width="12" height="12"/><rect x="28" y="0" width="12" height="12"/><rect x="42" y="0" width="12" height="12"/><rect x="56" y="0" width="12" height="12"/><rect x="0" y="14" width="12" height="12" fill="#bfdbfe"/><rect x="14" y="14" width="12" height="12" fill="#93c5fd"/><rect x="28" y="14" width="12" height="12" fill="#60a5fa"/><rect x="42" y="14" width="12" height="12" fill="#bfdbfe"/><rect x="56" y="14" width="12" height="12"/><rect x="0" y="28" width="12" height="12"/><rect x="14" y="28" width="12" height="12" fill="#60a5fa"/><rect x="28" y="28" width="12" height="12" fill="#2563eb"/><rect x="42" y="28" width="12" height="12" fill="#93c5fd"/><rect x="56" y="28" width="12" height="12"/></g></svg></div>
+    <div>
+      <div class="card-num">07 · discrete grids</div>
+      <div class="card-title">Self-Organizing Maps</div>
+      <p class="card-desc">When you want the output to be a grid, not a cloud. Competitive learning, neighborhood functions, U-matrices.</p>
+      <div class="card-tags">SOM · Kohonen · U-matrix · GNG</div>
+    </div>
+  </a>
+
+  <a class="card" href="08-hierarchy.html">
+    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(50,30)"><circle r="26" fill="none" stroke="#c5c5d1" stroke-width="1"/><g fill="none" stroke="#7c3aed" stroke-width="1.2"><path d="M 0 0 Q -6 -5 -12 -12"/><path d="M 0 0 Q 6 -5 12 -12"/><path d="M 0 0 Q -2 10 -8 18"/><path d="M 0 0 Q 2 10 8 18"/><path d="M 0 0 Q -12 -4 -20 -5"/><path d="M 0 0 Q 12 -4 20 -5"/></g><g fill="#7c3aed"><circle r="2.5"/><circle cx="-12" cy="-12" r="2"/><circle cx="12" cy="-12" r="2"/><circle cx="-8" cy="18" r="2"/><circle cx="8" cy="18" r="2"/><circle cx="-20" cy="-5" r="2"/><circle cx="20" cy="-5" r="2"/></g></g></svg></div>
+    <div>
+      <div class="card-num">08 · hierarchy</div>
+      <div class="card-title">Hyperbolic Embeddings</div>
+      <p class="card-desc">When your data is tree-shaped, Euclidean space cramps it. Hyperbolic geometry does not.</p>
+      <div class="card-tags">Poincaré · Lorentz · hyperbolic</div>
+    </div>
+  </a>
+
+  <a class="card" href="09-learned.html">
+    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(10,10)"><g stroke="#c5c5d1" stroke-width="0.6" fill="none"><line x1="0" y1="5" x2="25" y2="20"/><line x1="0" y1="15" x2="25" y2="20"/><line x1="0" y1="25" x2="25" y2="20"/><line x1="0" y1="35" x2="25" y2="20"/><line x1="25" y1="20" x2="55" y2="20"/><line x1="55" y1="20" x2="80" y2="5"/><line x1="55" y1="20" x2="80" y2="15"/><line x1="55" y1="20" x2="80" y2="25"/><line x1="55" y1="20" x2="80" y2="35"/></g><g fill="#2563eb"><circle cx="25" cy="20" r="3"/><circle cx="55" cy="20" r="3"/></g><g fill="#8a8a9e"><circle cx="0" cy="5" r="2"/><circle cx="0" cy="15" r="2"/><circle cx="0" cy="25" r="2"/><circle cx="0" cy="35" r="2"/><circle cx="80" cy="5" r="2"/><circle cx="80" cy="15" r="2"/><circle cx="80" cy="25" r="2"/><circle cx="80" cy="35" r="2"/></g></g></svg></div>
+    <div>
+      <div class="card-num">09 · learned</div>
+      <div class="card-title">Learned Representations</div>
+      <p class="card-desc">Autoencoders, VAE, scVI, parametric UMAP. When the dimensionality reduction is itself a trained neural function.</p>
+      <div class="card-tags">autoencoder · VAE · scVI · parametric UMAP · IVIS</div>
+    </div>
+  </a>
+
+  <a class="card capstone" href="10-capstone.html">
+    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(50,30)" fill="none" stroke="#7c3aed" stroke-width="1.2"><path d="M -25 0 Q -15 -20 0 -15 Q 15 -10 25 5 Q 15 20 -5 18 Q -20 15 -25 0 Z"/><g stroke-dasharray="2 2"><line x1="-30" y1="-25" x2="30" y2="25"/><line x1="30" y1="-25" x2="-30" y2="25"/></g></g></svg></div>
+    <div>
+      <div class="card-num">10 · capstone</div>
+      <div class="card-title">Opportunities &amp; Open Problems</div>
+      <p class="card-desc">Where current methods fail for understanding ML latent spaces, and directions the families in this series suggest but have not yet taken.</p>
+      <div class="card-tags">evaluation · composition · domain-specific priors</div>
+    </div>
+  </a>
+
+</div>
+
+<h2>How to read</h2>
+
+<p>
+  Articles are self-contained and can be read in any order, but the progression does matter. Each family tends to fix something that the previous family struggled with, and the framing article sets up the shared vocabulary. If you are new to this territory, read in sequence. If you are here for one method, jump directly to its article and let the prose pull in what it needs.
+</p>
+
+<p>
+  The literature backing these articles lives at <span style="font-family: var(--mono-font); font-size: 0.9em;">latent-verse/research</span>, 108 paper summaries across the methods covered here and the surrounding areas (clustering, evaluation, topological data analysis, embedding tools). The articles treat that as the grounding rather than reproducing it.
+</p>
+
+<footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
+  <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+</footer>
+
+</div>
+
+<script>
+// Header visual: a static silhouette of a projection transforming across the series
+(function() {
+  const svg = d3.select("#header-svg");
+  const W = 680, H = 120;
+  const g = svg.append("g").attr("transform", `translate(0, 10)`);
+
+  // Generate points that morph: from a linear 1D arrangement (left) through a curve (middle) to scattered clusters (right)
+  // Just show three frames.
+  const rng = (seed => { let s = seed; return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; }; })(13);
+
+  const frames = [
+    // Linear line (PCA-like)
+    { x: 60, label: "linear", pts: d3.range(30).map(i => ({ x: i * 3.5 - 50, y: (rng() - 0.5) * 6 })) },
+    // Curved manifold (manifold methods)
+    { x: 230, label: "manifold", pts: d3.range(30).map(i => {
+        const t = i / 29; const a = (t - 0.5) * 2.8;
+        return { x: a * 40, y: -Math.sin(a) * 20 };
+      }) },
+    // Two clusters (local neighborhoods)
+    { x: 400, label: "neighborhoods", pts: d3.range(30).map(i => {
+        const c = i < 15 ? -1 : 1;
+        return { x: c * 25 + (rng() - 0.5) * 20, y: (rng() - 0.5) * 35 };
+      }) },
+    // Tree-ish (hierarchy)
+    { x: 570, label: "hierarchy", pts: [] },
+  ];
+  // Build a simple tree for the last frame
+  const treePts = [];
+  function tree(x, y, depth, angle, spread) {
+    treePts.push({ x, y });
+    if (depth === 0) return;
+    const len = 10 + depth * 3;
+    const a1 = angle - spread, a2 = angle + spread;
+    const x1 = x + Math.cos(a1) * len, y1 = y + Math.sin(a1) * len;
+    const x2 = x + Math.cos(a2) * len, y2 = y + Math.sin(a2) * len;
+    tree(x1, y1, depth - 1, a1, spread * 0.7);
+    tree(x2, y2, depth - 1, a2, spread * 0.7);
+  }
+  tree(0, -24, 3, Math.PI / 2, 0.7);
+  frames[3].pts = treePts;
+
+  frames.forEach(f => {
+    const gg = g.append("g").attr("transform", `translate(${f.x}, 45)`);
+    gg.selectAll("circle").data(f.pts).join("circle")
+      .attr("cx", d => d.x).attr("cy", d => d.y).attr("r", 2.2)
+      .attr("fill", "var(--accent)").attr("opacity", 0.7);
+    gg.append("text").attr("y", 52).attr("text-anchor", "middle")
+      .attr("fill", "var(--text-3)")
+      .style("font-family", "var(--heading-font)")
+      .style("font-size", "11px")
+      .style("letter-spacing", "0.04em")
+      .text(f.label);
+  });
+
+  // Arrows between frames
+  for (let i = 0; i < frames.length - 1; i++) {
+    const x1 = frames[i].x + 50, x2 = frames[i + 1].x - 50;
+    g.append("line").attr("x1", x1).attr("x2", x2).attr("y1", 45).attr("y2", 45)
+      .attr("stroke", "var(--border-2)").attr("stroke-width", 1)
+      .attr("stroke-dasharray", "3 3");
+  }
+})();
+</script>
+</body>
+</html>
