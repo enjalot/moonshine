@@ -249,7 +249,10 @@ function gaussian(rng) {
       // kernel density estimate at each point
       return pts.map(p => {
         let s = 0;
-        for (const q of pts) s += Math.exp(-Math.hypot(p.x - q.x, p.y - q.y) ** 2 / 0.02);
+        for (const q of pts) {
+          const dx = p.x - q.x, dy = p.y - q.y;
+          s += Math.exp(-(dx * dx + dy * dy) / 0.02);
+        }
         return s;
       });
     }
@@ -378,17 +381,63 @@ function gaussian(rng) {
     rightG.append("text").attr("y", -6).style("font-size", "11px").attr("fill", "var(--text-3)")
       .style("letter-spacing", "0.04em").text("MAPPER GRAPH");
 
-    // Use force simulation on right panel
-    nodes.forEach(n => { n.x = rW / 2; n.y = rH / 2; });
+    // Layered layout: when the filter has a spatial axis, pin each node to the filter axis
+    // (interval center) so the graph reads as "topology along the filter". The orthogonal
+    // axis resolves via a soft forceY/forceX toward mean member position + collide for spacing.
+    // For the density filter, fall back to pure force-directed since density has no axis.
+    const layoutRng = mulberry32(17);
+    nodes.forEach(n => {
+      const mems = [...n.members];
+      n.avgFilt = mems.reduce((s, i) => s + filt[i], 0) / mems.length;
+      n.avgX = mems.reduce((s, i) => s + pts[i].x, 0) / mems.length;
+      n.avgY = mems.reduce((s, i) => s + pts[i].y, 0) / mems.length;
+      n.fx = null; n.fy = null;
+    });
+
+    const filtToX = v => 20 + ((v - fExt[0]) / (fExt[1] - fExt[0])) * (rW - 40);
+    const filtToY = v => 20 + (1 - (v - fExt[0]) / (fExt[1] - fExt[0])) * (rH - 40);
+    const dataYToY = v => 20 + (1 - (v - yExt[0]) / (yExt[1] - yExt[0])) * (rH - 40);
+    const dataXToX = v => 20 + ((v - xExt[0]) / (xExt[1] - xExt[0])) * (rW - 40);
+
     const sim = d3.forceSimulation(nodes)
-      .force("link", d3.forceLink(edges).distance(40).strength(0.5))
-      .force("charge", d3.forceManyBody().strength(-60))
-      .force("center", d3.forceCenter(rW / 2, rH / 2).strength(0.1))
-      .force("collide", d3.forceCollide(18))
-      .alpha(1).alphaDecay(0.05).stop();
-    for (let i = 0; i < 200; i++) sim.tick();
-    // Clamp inside
-    for (const n of nodes) { n.x = Math.max(20, Math.min(rW - 20, n.x)); n.y = Math.max(20, Math.min(rH - 20, n.y)); }
+      .force("link", d3.forceLink(edges).distance(28).strength(0.3))
+      .force("collide", d3.forceCollide(14));
+
+    if (currentFilter === "x") {
+      nodes.forEach(n => {
+        const iv = intervals[n.interval];
+        n.fx = filtToX((iv[0] + iv[1]) / 2);
+        n.y = dataYToY(n.avgY);
+        n.vx = 0; n.vy = 0;
+      });
+      sim.force("y", d3.forceY(n => dataYToY(n.avgY)).strength(0.25));
+    } else if (currentFilter === "y") {
+      nodes.forEach(n => {
+        const iv = intervals[n.interval];
+        n.fy = filtToY((iv[0] + iv[1]) / 2);
+        n.x = dataXToX(n.avgX);
+        n.vx = 0; n.vy = 0;
+      });
+      sim.force("x", d3.forceX(n => dataXToX(n.avgX)).strength(0.25));
+    } else {
+      // density filter: no spatial axis, use force-directed
+      nodes.forEach(n => {
+        n.x = rW / 2 + (layoutRng() - 0.5) * rW * 0.6;
+        n.y = rH / 2 + (layoutRng() - 0.5) * rH * 0.6;
+        n.vx = 0; n.vy = 0;
+      });
+      sim.force("charge", d3.forceManyBody().strength(-60).distanceMax(90))
+         .force("center", d3.forceCenter(rW / 2, rH / 2).strength(0.15));
+    }
+
+    sim.alpha(1).alphaDecay(0.02).stop();
+    for (let i = 0; i < 400; i++) sim.tick();
+
+    // Safety-net clamp
+    for (const n of nodes) {
+      n.x = Math.max(20, Math.min(rW - 20, n.x));
+      n.y = Math.max(20, Math.min(rH - 20, n.y));
+    }
 
     rightG.selectAll(".edge").data(edges).enter().append("line")
       .attr("class", "edge")

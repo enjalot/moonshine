@@ -286,14 +286,40 @@ function kNN(pts, k) {
   const linkG = g.append("g");
   const nodeG = g.append("g");
 
-  let sim;
   const kInput = document.getElementById("f-k");
   const repInput = document.getElementById("f-rep");
   const kVal = document.getElementById("f-k-val");
   const repVal = document.getElementById("f-rep-val");
   const resetBtn = document.getElementById("f-reset");
 
-  function start() {
+  function seedPositions() {
+    const r = mulberry32(7);
+    pts.forEach((p, i) => {
+      p.x = W / 2 + (r() - 0.5) * 60;
+      p.y = H / 2 + (r() - 0.5) * 60;
+      p.vx = 0; p.vy = 0;
+      p.index = i;
+    });
+  }
+
+  seedPositions();
+
+  const sim = d3.forceSimulation(pts)
+    .force("link", d3.forceLink([]).id(d => d.id).distance(30).strength(0.6))
+    .force("charge", d3.forceManyBody().strength(+repInput.value).distanceMax(140))
+    .force("center", d3.forceCenter(W / 2, H / 2).strength(0.08))
+    .force("collide", d3.forceCollide(4))
+    .alphaDecay(0.02);
+
+  sim.on("tick", () => {
+    linkG.selectAll("line")
+      .attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+      .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+    nodeG.selectAll("circle")
+      .attr("cx", d => d.x).attr("cy", d => d.y);
+  });
+
+  function update(alpha) {
     const k = +kInput.value;
     const rep = +repInput.value;
     kVal.textContent = k;
@@ -303,19 +329,8 @@ function kNN(pts, k) {
     const links = [];
     for (let i = 0; i < N; i++) for (const j of adj[i]) if (i < j) links.push({ source: i, target: j });
 
-    pts.forEach((p, i) => {
-      p.x = W / 2 + (Math.random() - 0.5) * 60;
-      p.y = H / 2 + (Math.random() - 0.5) * 60;
-      p.index = i;
-    });
-
-    if (sim) sim.stop();
-    sim = d3.forceSimulation(pts)
-      .force("link", d3.forceLink(links).id(d => d.id).distance(30).strength(0.6))
-      .force("charge", d3.forceManyBody().strength(rep))
-      .force("center", d3.forceCenter(W / 2, H / 2).strength(0.05))
-      .force("collide", d3.forceCollide(4))
-      .alpha(1).alphaDecay(0.02);
+    sim.force("link").links(links);
+    sim.force("charge").strength(rep);
 
     linkG.selectAll("line").data(links).join("line")
       .attr("stroke", "var(--border-2)").attr("stroke-opacity", 0.4).attr("stroke-width", 0.6);
@@ -324,19 +339,13 @@ function kNN(pts, k) {
       .attr("r", 4).attr("fill", d => colors[d.c]).attr("opacity", 0.85)
       .attr("stroke", "white").attr("stroke-width", 0.6);
 
-    sim.on("tick", () => {
-      linkG.selectAll("line")
-        .attr("x1", d => d.source.x).attr("y1", d => d.source.y)
-        .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
-      nodeG.selectAll("circle")
-        .attr("cx", d => d.x).attr("cy", d => d.y);
-    });
+    sim.alpha(alpha).restart();
   }
 
-  kInput.addEventListener("input", start);
-  repInput.addEventListener("input", start);
-  resetBtn.addEventListener("click", start);
-  start();
+  kInput.addEventListener("input", () => update(0.5));
+  repInput.addEventListener("input", () => update(0.3));
+  resetBtn.addEventListener("click", () => { seedPositions(); update(1); });
+  update(1);
 })();
 
 // ---------- Figure 2: perplexity / n_neighbors ----------
@@ -369,30 +378,43 @@ function kNN(pts, k) {
   const linkG = g.append("g");
   const nodeG = g.append("g");
 
-  let sim;
   const kInput = document.getElementById("p-k");
   const kVal = document.getElementById("p-k-val");
 
-  function start() {
+  function seedPositions() {
+    const r = mulberry32(11);
+    pts.forEach((p, i) => {
+      p.x = W / 2 + (r() - 0.5) * 60;
+      p.y = H / 2 + (r() - 0.5) * 60;
+      p.vx = 0; p.vy = 0;
+      p.index = i;
+    });
+  }
+
+  seedPositions();
+
+  const sim = d3.forceSimulation(pts)
+    .force("link", d3.forceLink([]).id(d => d.id).distance(25).strength(0.8))
+    .force("charge", d3.forceManyBody().strength(-28).distanceMax(120))
+    .force("center", d3.forceCenter(W / 2, H / 2).strength(0.08))
+    .force("collide", d3.forceCollide(3.5))
+    .alphaDecay(0.025);
+
+  sim.on("tick", () => {
+    linkG.selectAll("line")
+      .attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+      .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+    nodeG.selectAll("circle").attr("cx", d => d.x).attr("cy", d => d.y);
+  });
+
+  function update(alpha) {
     const k = +kInput.value;
     kVal.textContent = k;
     const adj = kNN(pts, k);
     const links = [];
     for (let i = 0; i < N; i++) for (const j of adj[i]) if (i < j) links.push({ source: i, target: j });
 
-    pts.forEach((p, i) => {
-      p.x = W / 2 + (Math.random() - 0.5) * 60;
-      p.y = H / 2 + (Math.random() - 0.5) * 60;
-      p.index = i;
-    });
-
-    if (sim) sim.stop();
-    sim = d3.forceSimulation(pts)
-      .force("link", d3.forceLink(links).id(d => d.id).distance(25).strength(0.8))
-      .force("charge", d3.forceManyBody().strength(-28))
-      .force("center", d3.forceCenter(W / 2, H / 2).strength(0.05))
-      .force("collide", d3.forceCollide(3.5))
-      .alpha(1).alphaDecay(0.025);
+    sim.force("link").links(links);
 
     linkG.selectAll("line").data(links).join("line")
       .attr("stroke", "var(--border-2)").attr("stroke-opacity", 0.3).attr("stroke-width", 0.5);
@@ -400,16 +422,11 @@ function kNN(pts, k) {
       .attr("r", 3.5).attr("fill", d => superColors[d.super])
       .attr("stroke", "white").attr("stroke-width", 0.5).attr("opacity", 0.9);
 
-    sim.on("tick", () => {
-      linkG.selectAll("line")
-        .attr("x1", d => d.source.x).attr("y1", d => d.source.y)
-        .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
-      nodeG.selectAll("circle").attr("cx", d => d.x).attr("cy", d => d.y);
-    });
+    sim.alpha(alpha).restart();
   }
 
-  kInput.addEventListener("input", start);
-  start();
+  kInput.addEventListener("input", () => update(0.5));
+  update(1);
 })();
 
 // ---------- Figure 3: method comparison ----------
@@ -469,8 +486,8 @@ function kNN(pts, k) {
     }
     const sim = d3.forceSimulation(data)
       .force("link", d3.forceLink(links).id(d => d.id).distance(6).strength(0.8))
-      .force("charge", d3.forceManyBody().strength(charge))
-      .force("center", d3.forceCenter(0, 0).strength(0.01))
+      .force("charge", d3.forceManyBody().strength(charge).distanceMax(45))
+      .force("center", d3.forceCenter(0, 0).strength(0.05))
       .force("collide", d3.forceCollide(2))
       .alpha(1).alphaDecay(0.015).stop();
     for (let i = 0; i < iters; i++) sim.tick();
