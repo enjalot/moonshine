@@ -4,6 +4,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
+### 🌕 [See examples at enjalot.github.io/moonshine](https://enjalot.github.io/moonshine/)
+
 AI tools generate complexity faster than people can consume it. Inspired by [Distill.pub](https://distill.pub), moonshine helps apply distillation to the flood of technical output, turning complex ideas into explorable, visual, interactive articles.
 
 Each explanation is a self-contained HTML file with vanilla JS and D3 v7. No build tools, no frameworks. Open the file in a browser and it works.
@@ -75,6 +77,7 @@ plugins/
 - [Distill.pub, "Research Debt"](https://distill.pub/2017/research-debt/) — Why distillation matters
 - [Mike Bostock](https://bost.ocks.org/mike/) — D3.js and interactive articles
 - [Bret Victor](http://worrydream.com/ExplorableExplanations/) — Explorable explanations
+- [Red Blob Games](https://www.redblobgames.com/) — Interactive algorithm and game-dev explainers
 - [Nicky Case](https://ncase.me/) — Playful interactive explanations
 - [Bartosz Ciechanowski](https://ciechanow.ski/) — Long-form interactive explanations
 - [The Pudding](https://pudding.cool/) — Data-driven visual essays
