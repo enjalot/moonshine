@@ -1,0 +1,64 @@
+/* Inherits the moonshine type stack and palette from ARTICLE.md so that
+   `still` and `shine` articles share visual DNA. Change here, not in
+   individual figure files. */
+
+:root {
+  --article-width: 740px;
+
+  --body-font: 'Source Serif 4', Georgia, serif;
+  --heading-font: 'Source Sans 3', system-ui, sans-serif;
+  --mono-font: 'Source Code Pro', monospace;
+
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e6dd;
+    --text-2: #a0a0b4;
+    --accent: #60a5fa;
+    --accent-light: #1e3a5f;
+    --bg: #1a1a2e;
+    --fig-bg: #22223a;
+    --border: #3a3a52;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

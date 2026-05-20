@@ -1,0 +1,40 @@
+{
+  "name": "moonshine-still",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n velite,vite -c blue,green \"velite --watch\" \"vite\"",
+    "build": "velite && tsc -p tsconfig.json && tsc -p tsconfig.node.json && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "d3": "7.9.0",
+    "katex": "0.16.47",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-markdown": "9.1.0",
+    "react-router-dom": "6.30.3",
+    "reactflow": "11.11.4",
+    "remark-directive": "3.0.1",
+    "remark-gfm": "4.0.1",
+    "unified": "11.0.5",
+    "unist-util-visit": "5.1.0",
+    "zustand": "4.5.7"
+  },
+  "devDependencies": {
+    "@types/d3": "7.4.3",
+    "@types/node": "20.19.41",
+    "@types/react": "18.3.29",
+    "@types/react-dom": "18.3.7",
+    "@vitejs/plugin-react": "4.7.0",
+    "concurrently": "9.2.1",
+    "typescript": "5.9.3",
+    "velite": "0.2.4",
+    "vite": "5.4.21"
+  }
+}

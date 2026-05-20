@@ -1,0 +1,269 @@
+/* Article-shaped layout: a 740px column of prose with figures that can
+   break out wider via .figure-wide. Mirrors the look in
+   plugins/moonshine/ARTICLE.md so a reader can't tell which command
+   produced an article from the chrome alone. */
+
+.article {
+  max-width: var(--article-width);
+  margin: 0 auto;
+  padding: 2rem 1.25rem 6rem;
+}
+
+.article h1,
+.article h2,
+.article h3 {
+  font-family: var(--heading-font);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.article h1 {
+  font-size: 2.5rem;
+  margin: 0 0 0.5rem;
+}
+.article h2 {
+  font-size: 1.5rem;
+  margin: 3rem 0 1rem;
+}
+.article h3 {
+  font-size: 1.15rem;
+  margin: 2rem 0 0.75rem;
+}
+
+.article p {
+  margin: 0 0 1rem;
+}
+
+.article a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.article code {
+  font-family: var(--mono-font);
+  font-size: 0.9em;
+  background: var(--accent-light);
+  padding: 0 0.3em;
+  border-radius: 3px;
+}
+
+.article pre {
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1rem;
+  overflow-x: auto;
+  font-family: var(--mono-font);
+  font-size: 0.9rem;
+}
+.article pre code {
+  background: none;
+  padding: 0;
+}
+
+.article blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: var(--text-2);
+}
+
+.lede {
+  font-family: var(--heading-font);
+  font-size: 1.15rem;
+  color: var(--text-2);
+  margin: 0 0 2rem;
+}
+
+/* Figures ------------------------------------------------------------ */
+
+.figure {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+
+.figure-wide {
+  margin-left: -2rem;
+  margin-right: -2rem;
+}
+
+.figure-hovered {
+  border-color: var(--accent);
+}
+
+.figure-pinned {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+.figure-caption {
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  color: var(--text-2);
+  margin-top: 0.75rem;
+}
+.figure-caption p {
+  margin: 0;
+}
+
+.figure-missing {
+  background: rgba(255, 200, 200, 0.2);
+  border-color: #d99;
+  color: #883030;
+}
+
+/* Inline term button ------------------------------------------------- */
+
+.term {
+  font: inherit;
+  color: var(--accent);
+  background: transparent;
+  border: none;
+  border-bottom: 1px dotted var(--accent);
+  padding: 0 1px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  border-radius: 2px;
+}
+.term:hover,
+.term-hovered {
+  background: var(--accent-light);
+}
+.term-pinned {
+  background: var(--accent-light);
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+}
+.term-static {
+  color: var(--text);
+  border-bottom: 1px dotted var(--text-2);
+  cursor: default;
+}
+.term:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Inline visualization ----------------------------------------------- */
+
+.inline-viz {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 0.2rem;
+  line-height: 0;
+}
+
+.inline-viz-missing {
+  color: #882020;
+  background: rgba(255, 200, 200, 0.3);
+  border: 1px solid #d99;
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 0.85em;
+  line-height: normal;
+}
+
+/* Series index cards ------------------------------------------------- */
+
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.article a.card,
+.article a.card:hover {
+  text-decoration: none;
+  color: inherit;
+}
+
+.card {
+  display: block;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.25rem 1.5rem;
+  transition: border-color 0.15s;
+}
+.card:hover {
+  border-color: var(--accent);
+}
+
+.card-number {
+  font-family: var(--mono-font);
+  font-size: 0.8rem;
+  color: var(--text-2);
+}
+.card-title {
+  font-family: var(--heading-font);
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+}
+.card-desc {
+  font-size: 0.95rem;
+  color: var(--text-2);
+  margin: 0;
+}
+.card-tags {
+  font-family: var(--heading-font);
+  font-size: 0.75rem;
+  color: var(--accent);
+  margin-top: 0.6rem;
+}
+
+/* Footer ------------------------------------------------------------- */
+
+.article-footer {
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.article-footer a {
+  color: var(--text-2);
+}
+.article-footer p {
+  margin: 0 0 0.5rem;
+}
+
+/* Moonshine attribution -------------------------------------------- */
+
+.moonshine-footer {
+  margin-top: 4rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  font-family: var(--heading-font);
+  font-size: 0.8rem;
+  color: var(--text-2);
+}
+.moonshine-footer p {
+  margin: 0;
+}
+.article .moonshine-footer a {
+  color: var(--text-2);
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+}
+.article .moonshine-footer a:hover {
+  text-decoration-color: var(--text-2);
+}
+
+@media (max-width: 640px) {
+  .article h1 {
+    font-size: 1.75rem;
+  }
+  .figure-wide {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
