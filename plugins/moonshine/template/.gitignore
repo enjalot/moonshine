@@ -1,0 +1,13 @@
+node_modules
+dist
+.velite
+.DS_Store
+*.log
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Runtime-compiled mirrors of the .ts config files
+velite.config.js
+vite.config.js
+vite.config.d.ts
