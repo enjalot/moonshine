@@ -1,0 +1,20 @@
+{
+  "name": "moonshine-marketplace",
+  "interface": {
+    "displayName": "Moonshine"
+  },
+  "plugins": [
+    {
+      "name": "moonshine",
+      "source": {
+        "source": "local",
+        "path": "./plugins/moonshine"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Writing"
+    }
+  ]
+}
