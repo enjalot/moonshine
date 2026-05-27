@@ -247,6 +247,47 @@ Two independent pipelines run during `npm run dev`:
 Edits on either side don't disturb the other. This is why we don't use
 MDX — MDX would re-bundle the whole article on any prose change.
 
+## In-Place Prose Editing (dev only)
+
+During `npm run dev` the author can edit prose directly in the rendered
+page — no jumping back to the `.md` file for small wording changes.
+
+- **Hold Cmd/Ctrl** to reveal editable block boundaries (a left rule
+  appears on hover).
+- **Cmd/Ctrl+click a block** (paragraph, heading, list, blockquote, or
+  the title/lede) to open it. The rendered block is swapped for a
+  textarea showing its *raw markdown* — directives like
+  `:term[word]{to=fig}` and `:inline-viz{kind=…}` appear as source, so
+  you edit exactly what's on disk.
+- **Cmd/Ctrl+Enter** (or the floating **Done** button) writes the change
+  back to the `.md` file; **Esc** cancels.
+
+How it holds together:
+
+- **Offsets, not DOM.** react-markdown hands each block component a hast
+  `node` carrying `position.start.offset`/`end.offset` into the body
+  string. Editing is a pure splice — `body.slice(0,start) + edited +
+  body.slice(end)` — so a directive's source survives a round-trip
+  untouched. We never serialize rendered HTML back to markdown.
+- **Body vs frontmatter.** Body blocks splice into the markdown body;
+  the title and lede patch the `title:`/`description:` frontmatter keys
+  in place, leaving the rest of the frontmatter alone.
+- **The write path.** `vite-plugin-moonshine-edit.ts` adds a
+  `POST /__moonshine/save` middleware (`apply: 'serve'`) that preserves
+  frontmatter and writes the file; Velite re-emits and the page
+  hot-reloads. Velite's schema exposes a `path` field so the endpoint
+  knows which file a block came from.
+- **Static builds are inert.** Every affordance is gated on
+  `import.meta.env.DEV`, which is `false` in `vite build`: no edit UI
+  renders, and the `fetch` to the save endpoint is dead-code-eliminated
+  from the bundle. The middleware never ships either. A static export is
+  plain, read-only prose.
+
+The pieces live in `src/lib/EditContext.tsx`, `src/components/
+EditableBlock.tsx`, `EditableField.tsx`, and `SourceEditor.tsx`, wired up
+in `Article.tsx`. Figures are not editable in place — change those in
+their component files as usual.
+
 ## Workflow When Building an Article With This Skill
 
 Follow the moonshine process from `SKILL.md` — story discovery first,

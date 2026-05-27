@@ -35,12 +35,14 @@ export default defineConfig({
           // runtime, but the shape isn't exported from its public types.
           // Cast to access the source file path the article came from.
           const meta = (ctx as unknown as { meta: { path: string } }).meta
+          // `path` is the file location relative to the content root, kept
+          // so the dev-only save endpoint knows which file a block came
+          // from. `slug` flattens that same path into a route segment.
+          const rel = meta.path.replace(/^.*content[\\/]/, '')
           return {
             ...data,
-            slug: meta.path
-              .replace(/^.*content[\\/]/, '')
-              .replace(/\.md$/, '')
-              .replace(/[\\/]/g, '-'),
+            path: rel,
+            slug: rel.replace(/\.md$/, '').replace(/[\\/]/g, '-'),
           }
         }),
     },

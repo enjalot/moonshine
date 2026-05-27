@@ -267,3 +267,85 @@
     margin-right: 0;
   }
 }
+
+/* In-place markdown editor (dev only) ------------------------------------
+   These styles only ever apply when the EditContext is enabled, i.e. under
+   `npm run dev`. A production build never adds the `mn-block`/`mn-edit`
+   classes, so this block is inert in static exports. */
+
+/* Reveal block boundaries only while Cmd/Ctrl is held ("armed"), so the
+   page reads as normal prose until the author signals intent to edit. */
+.mn-block-armed {
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.12s, box-shadow 0.12s;
+}
+.mn-block-armed:hover {
+  background: var(--accent-light);
+  /* A left rule marks where this editable block begins and ends. */
+  box-shadow: -0.6rem 0 0 0 var(--accent), inset 0.15rem 0 0 0 var(--accent);
+}
+
+.mn-edit {
+  display: block;
+  position: relative;
+  margin: 0 0 1rem;
+}
+
+.mn-edit-textarea {
+  display: block;
+  width: 100%;
+  margin: 0;
+  font-family: var(--mono-font);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--fig-bg);
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  padding: 0.7rem 0.85rem;
+  resize: none;
+  overflow: hidden;
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+.mn-edit-textarea:focus {
+  outline: none;
+}
+
+/* Field editor (title/lede from frontmatter) borrows the heading font so
+   the edit surface echoes what it replaces. */
+.mn-edit-field .mn-edit-textarea {
+  font-family: var(--heading-font);
+  font-size: 1.25rem;
+}
+
+.mn-edit-bar {
+  position: absolute;
+  top: -1.7rem;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.mn-edit-done {
+  font-family: var(--heading-font);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 4px;
+  padding: 0.2rem 0.7rem;
+  cursor: pointer;
+}
+.mn-edit-done:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.mn-edit-hint {
+  font-family: var(--mono-font);
+  font-size: 0.72rem;
+  color: var(--text-2);
+}
