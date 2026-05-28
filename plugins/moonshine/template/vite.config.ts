@@ -1,9 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'node:path'
+import moonshineEditPlugin from './vite-plugin-moonshine-edit'
 
 export default defineConfig({
-  plugins: [react()],
+  // moonshineEditPlugin self-restricts to `apply: 'serve'`, so the
+  // write-back endpoint exists only during `npm run dev`, never in a
+  // production `vite build`.
+  plugins: [react(), moonshineEditPlugin()],
   resolve: {
     alias: {
       '#content': path.resolve(__dirname, './.velite'),

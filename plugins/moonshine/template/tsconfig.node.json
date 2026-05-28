@@ -11,5 +11,5 @@
     "strict": true,
     "noEmit": true
   },
-  "include": ["vite.config.ts", "velite.config.ts"]
+  "include": ["vite.config.ts", "velite.config.ts", "vite-plugin-moonshine-edit.ts"]
 }
