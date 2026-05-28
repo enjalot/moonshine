@@ -49,7 +49,7 @@ git clone --depth 1 https://github.com/enjalot/moonshine.git /tmp/moonshine
 ln -s /tmp/moonshine/plugins/moonshine/skills/moonshine ~/.codex/skills/moonshine
 ln -s /tmp/moonshine/plugins/moonshine/skills/shine     ~/.codex/skills/shine
 ln -s /tmp/moonshine/plugins/moonshine/skills/still     ~/.codex/skills/still
-# (use `cp -r` instead of `ln -s` if you don't want to keep the clone around)
+# (use `cp -rL` instead of `ln -s` if you don't want to keep the clone around)
 ```
 
 > **Windows note:** this repo uses git symlinks for shared skill assets. If you're on Windows, run `git config --global core.symlinks true` before cloning.
