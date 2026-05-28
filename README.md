@@ -1,6 +1,6 @@
 # moonshine
 
-**A skill for distilling interactive technical explanations from AI generated complexity.**
+**Claude Code and Codex support for distilling interactive technical explanations from AI generated complexity.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
@@ -10,10 +10,15 @@ AI tools generate complexity faster than people can consume it. Inspired by [Dis
 
 Each explanation is a self-contained HTML file with vanilla JS and D3 v7. No build tools, no frameworks. Open the file in a browser and it works.
 
+```shell
+# Claude Code
+/moonshine:shine how gradient descent finds minima
+
+# Codex
+$shine how gradient descent finds minima
 ```
-> /moonshine:shine how gradient descent finds minima
-What is the key insight you want the reader to walk away with?
-```
+
+Moonshine will ask what the reader should understand before it writes code.
 
 ## Install
 
