@@ -1,14 +1,22 @@
 import { useMemo } from 'react'
 import * as d3 from 'd3'
 
-// A small D3 example: a 60-point seeded random walk. Re-renders only when
-// the component is mounted because the data is computed in `useMemo` with
-// no deps — so HMR on this file gives a fresh curve on reload, which is
-// useful when iterating on visual encoding.
+// A small D3 example: a 60-point seeded random walk. The walk is seeded
+// so every visitor (and every re-render) sees the same curve — an
+// article's figures should be deterministic. Change SEED to get a
+// different walk while iterating on visual encoding.
+const SEED = 0.42
+
 export default function Sparkline() {
   const { line, points, w, h } = useMemo(() => buildPath(), [])
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} width="100%" style={{ maxHeight: 120 }}>
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      width="100%"
+      role="img"
+      aria-label="Sparkline of a random walk wandering between 0 and 1."
+      style={{ maxHeight: 120 }}
+    >
       <path d={line} fill="none" stroke="var(--accent)" strokeWidth={2} />
       <circle
         cx={points[points.length - 1][0]}
@@ -24,9 +32,10 @@ function buildPath() {
   const w = 600
   const h = 120
   const n = 60
+  const random = d3.randomLcg(SEED)
   let v = 0.5
   const data = Array.from({ length: n }, (_, i) => {
-    v += (Math.random() - 0.5) * 0.1
+    v += (random() - 0.5) * 0.1
     v = Math.max(0, Math.min(1, v))
     return [i, v] as [number, number]
   })

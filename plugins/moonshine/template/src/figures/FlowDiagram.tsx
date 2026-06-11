@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import ReactFlow, {
   Background,
-  Controls,
   type Node,
   type Edge,
 } from 'reactflow'
@@ -66,13 +65,21 @@ export default function FlowDiagram() {
         edges={edges}
         fitView
         proOptions={{ hideAttribution: true }}
+        // Editorial figure: the reader looks at it, terms highlight nodes
+        // in it, but it is not a canvas to rearrange. Lock everything down
+        // and let wheel events scroll the page (preventScrolling would
+        // swallow them and create a dead band in the article's scroll).
         nodesDraggable={false}
         nodesConnectable={false}
+        elementsSelectable={false}
         zoomOnScroll={false}
-        panOnDrag
+        zoomOnPinch={false}
+        zoomOnDoubleClick={false}
+        panOnDrag={false}
+        panOnScroll={false}
+        preventScrolling={false}
       >
         <Background gap={20} color="var(--border)" />
-        <Controls showInteractive={false} />
       </ReactFlow>
     </div>
   )

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { figures } from '../figures/registry'
-import { useFigureHighlight } from '../store'
+import { useArticleStore, useFigureHighlight } from '../store'
 import LazyIsland from './LazyIsland'
 
 type Props = {
@@ -11,6 +11,10 @@ type Props = {
 
 export default function Figure({ id, caption, children }: Props) {
   const { hovered, pinned } = useFigureHighlight(id)
+  // Depend on the raw pinned ref, not the boolean: pinning a different
+  // part of the same figure should re-scroll, and a boolean wouldn't
+  // change between `fig.a` and `fig.b`.
+  const pinnedRef = useArticleStore((s) => s.pinnedTermRef)
   const ref = useRef<HTMLElement>(null)
   const Component = id ? figures[id] : null
 
@@ -19,9 +23,13 @@ export default function Figure({ id, caption, children }: Props) {
   // confirm by click.
   useEffect(() => {
     if (pinned && ref.current) {
-      ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ref.current.scrollIntoView({
+        behavior: reduce ? 'auto' : 'smooth',
+        block: 'center',
+      })
     }
-  }, [pinned])
+  }, [pinned, pinnedRef])
 
   if (!id) {
     return (

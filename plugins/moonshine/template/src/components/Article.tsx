@@ -1,8 +1,12 @@
+import { useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkDirective from 'remark-directive'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
 import { Link } from 'react-router-dom'
 import directiveHandler from '../lib/directive-handler'
+import { useArticleStore } from '../store'
 import Figure from './Figure'
 import Term from './Term'
 import InlineViz from './InlineViz'
@@ -29,6 +33,22 @@ const editableComponents = Object.fromEntries(
 )
 
 export default function Article({ article, all }: Props) {
+  const clearPinned = useArticleStore((s) => s.clearPinned)
+
+  useEffect(() => {
+    document.title = article.title
+  }, [article.title])
+
+  // Escape releases a pinned term highlight, matching the
+  // "click again to unpin" affordance with a keyboard path.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') clearPinned()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [clearPinned])
+
   // Sibling navigation: if this article is part of a series, surface
   // prev/next links in the footer. Computed from the typed Velite index,
   // so renames or reorders propagate automatically.
@@ -57,7 +77,8 @@ export default function Article({ article, all }: Props) {
         </header>
 
         <ReactMarkdown
-          remarkPlugins={[remarkGfm, remarkDirective, directiveHandler]}
+          remarkPlugins={[remarkGfm, remarkMath, remarkDirective, directiveHandler]}
+          rehypePlugins={[rehypeKatex]}
           // react-markdown's Components type only enumerates known HTML
           // tag names; our directive handler emits dashed custom tag
           // names (mn-figure, mn-term, mn-inline-viz) that react-markdown

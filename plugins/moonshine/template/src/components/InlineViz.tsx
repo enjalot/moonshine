@@ -10,8 +10,15 @@ type Props = {
 // (single-colon text directive, no [label]):
 //   :inline-viz{kind=mini-spark value=0.8}
 // `kind` selects the component from the inline registry. All other
-// attributes pass through as props.
-export default function InlineViz({ kind, children: _children, ...rest }: Props) {
+// attributes pass through as props — except react-markdown's hast `node`,
+// which is plumbing, not a prop a figure should receive (spreading it
+// onto a DOM element would throw unknown-prop warnings).
+export default function InlineViz({
+  kind,
+  children: _children,
+  node: _node,
+  ...rest
+}: Props) {
   if (!kind) {
     return <span className="inline-viz inline-viz-missing">?</span>
   }
