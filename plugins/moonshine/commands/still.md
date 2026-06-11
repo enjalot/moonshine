@@ -9,11 +9,11 @@ Follow the moonshine `SKILL.md` workflow — story discovery first, no skipping 
 
 1. Pick a kebab-case project name from the user's topic. Resolve the project root to `~/.agent/moonshine/<project-name>/`. If it already exists, ask the user whether to reuse, rename, or wipe before continuing.
 
-2. Copy the entire `template/` directory from the moonshine plugin into the project root. Preserve directory structure including `content/`, `src/`, configs, `.gitignore`.
+2. Copy the `template/` directory from the moonshine plugin into the project root, **excluding build artifacts** — the template may have been run in place as the skill's dev harness, leaving `node_modules/`, `.velite/`, `dist/`, and `*.tsbuildinfo` behind. Use `rsync -a --exclude node_modules --exclude .velite --exclude dist --exclude '*.tsbuildinfo' template/ <project-root>/` (or `cp -r` followed by removing those paths). Preserve directory structure including `content/`, `src/`, configs, `.gitignore`.
 
 3. Run `npm install` in the project root. Run it in the background — the install takes a minute and you can keep talking to the user while it goes.
 
-4. Once install completes, start `npm run dev` in the background. This runs Velite watch + Vite concurrently. The Vite dev server is configured with `strictPort: true` and a default port of 5173 — if that port is occupied, Vite will fail loudly rather than silently pick another one.
+4. Once install completes, start `npm run dev` in the background. This runs Velite watch + Vite concurrently. The Vite dev server is configured with `strictPort: true` and a default port of 5173 — if that port is occupied, Vite will fail loudly rather than silently pick another one. Set `MOONSHINE_PORT=<port>` in the environment to run on a different port. If the user is working on a headless or remote machine (they'll browse from another device), use `npm run dev:lan` instead — it binds `0.0.0.0`, and mDNS hostnames like `http://<hostname>.local:5173` are allowed.
 
 5. **Read the actual URL from Vite's stdout** — do not assume `localhost:5173`. Vite logs a line like `➜  Local:   http://localhost:5173/` once it's ready. Tail the dev-server task output, extract that URL, and report it to the user. If Vite failed (port collision under strictPort), surface the error and ask the user how to resolve it (kill the conflicting process, or change `server.port` in `vite.config.ts`). Do NOT use `open http://...` — the user keeps the page open and refreshes manually.
 

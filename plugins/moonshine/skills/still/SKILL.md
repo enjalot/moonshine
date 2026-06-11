@@ -19,9 +19,9 @@ Use this skill to bootstrap a structured moonshine project. The user invokes it 
 
 3. **Project bootstrap (after the story converges).**
    - Pick a kebab-case project name from the user's topic. Resolve the project root to `~/.agent/moonshine/<project-name>/`. If it exists, ask the user whether to reuse, rename, or wipe before continuing.
-   - Copy the entire `../moonshine/template/` directory into the project root (preserve structure: `content/`, `src/`, configs, `.gitignore`).
+   - Copy the `../moonshine/template/` directory into the project root, excluding build artifacts the in-repo dev harness may have left behind: `rsync -a --exclude node_modules --exclude .velite --exclude dist --exclude '*.tsbuildinfo' template/ <project-root>/` (preserve structure: `content/`, `src/`, configs, `.gitignore`).
    - Run `npm install` in the background — it takes about a minute and you can keep talking to the user while it runs.
-   - Once install completes, run `npm run dev` in the background (Velite watch + Vite concurrently). The Vite dev server uses `strictPort: true` with default port 5173.
+   - Once install completes, run `npm run dev` in the background (Velite watch + Vite concurrently). The Vite dev server uses `strictPort: true` with default port 5173 (override with `MOONSHINE_PORT=<port>`). On a headless/remote machine where the user browses from another device, use `npm run dev:lan` (binds `0.0.0.0`; mDNS hostnames like `http://<hostname>.local:5173` are allowed).
    - **Read the actual URL from Vite's stdout** — do not assume `localhost:5173`. Tail the dev-server task output, extract the `➜  Local:` URL, and report it to the user. If Vite failed (port collision under strictPort), surface the error and ask the user how to resolve it. Do NOT auto-open the URL — the user keeps the page open and refreshes manually.
 
 4. **Iteration loop.** Edit `content/*.md` for prose and `src/figures/*.tsx` for figures (both hot-reload independently). Add new figures by (a) creating the component file, (b) registering it in `src/figures/registry.ts`, (c) referencing it in markdown via `:::figure{id=...}`.
