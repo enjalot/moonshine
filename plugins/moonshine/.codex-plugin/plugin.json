@@ -1,0 +1,38 @@
+{
+  "name": "moonshine",
+  "version": "0.5.0",
+  "description": "Create interactive technical explanations inspired by Distill.pub",
+  "author": {
+    "name": "enjalot",
+    "url": "https://github.com/enjalot"
+  },
+  "homepage": "https://enjalot.github.io/moonshine/",
+  "repository": "https://github.com/enjalot/moonshine",
+  "license": "MIT",
+  "keywords": [
+    "interactive",
+    "explanations",
+    "distill",
+    "d3",
+    "visualization"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Moonshine",
+    "shortDescription": "Distill complex ideas into interactive articles",
+    "longDescription": "Moonshine guides you through writing self-contained, Distill-style interactive technical explanations. It includes editorial process guidance, a D3 v7 visualization reference, an HTML scaffold for single-file articles, and an optional Vite + React template for structured projects.",
+    "developerName": "enjalot",
+    "category": "Writing",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://enjalot.github.io/moonshine/",
+    "defaultPrompt": [
+      "Help me write an interactive explanation of a concept",
+      "Distill this idea into a Distill-style article",
+      "Scaffold a moonshine article with React figures"
+    ],
+    "brandColor": "#F5E9C9"
+  }
+}

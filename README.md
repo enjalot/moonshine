@@ -1,6 +1,6 @@
 # moonshine
 
-**A skill for distilling interactive technical explanations from AI generated complexity.**
+**Claude Code and Codex support for distilling interactive technical explanations from AI generated complexity.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
@@ -10,10 +10,15 @@ AI tools generate complexity faster than people can consume it. Inspired by [Dis
 
 Each explanation is a self-contained HTML file with vanilla JS and D3 v7. No build tools, no frameworks. Open the file in a browser and it works.
 
+```shell
+# Claude Code
+/moonshine:shine how gradient descent finds minima
+
+# Codex
+$shine how gradient descent finds minima
 ```
-> /moonshine:shine how gradient descent finds minima
-What is the key insight you want the reader to walk away with?
-```
+
+Moonshine will ask what the reader should understand before it writes code.
 
 ## Install
 
@@ -23,21 +28,47 @@ What is the key insight you want the reader to walk away with?
 /plugin install moonshine@moonshine-marketplace
 ```
 
-**Manual install:**
+**Codex (marketplace):**
+```shell
+/plugin marketplace add enjalot/moonshine
+/plugin install moonshine@moonshine-marketplace
+```
+
+Then restart Codex. Invoke with `$shine <topic>` or `$still <topic>` (or just describe the article you want to write).
+
+**Manual install (Claude Code):**
 ```bash
 git clone --depth 1 https://github.com/enjalot/moonshine.git /tmp/moonshine
 cp -r /tmp/moonshine/plugins/moonshine ~/.claude/skills/moonshine
 rm -rf /tmp/moonshine
 ```
 
+**Manual install (Codex):**
+```bash
+git clone --depth 1 https://github.com/enjalot/moonshine.git /tmp/moonshine
+ln -s /tmp/moonshine/plugins/moonshine/skills/moonshine ~/.codex/skills/moonshine
+ln -s /tmp/moonshine/plugins/moonshine/skills/shine     ~/.codex/skills/shine
+ln -s /tmp/moonshine/plugins/moonshine/skills/still     ~/.codex/skills/still
+# (use `cp -rL` instead of `ln -s` if you don't want to keep the clone around)
+```
+
+> **Windows note:** this repo uses git symlinks for shared skill assets. If you're on Windows, run `git config --global core.symlinks true` before cloning.
+
 ## Usage
 
-Run `/moonshine:shine` to start a new explanation. Moonshine will ask you questions about the concept, audience, and key insight before writing any code.
+Start a new explanation and moonshine will ask about the concept, audience, and key insight before writing any code.
 
 ```
+# Claude Code
 /moonshine:shine                              # start from scratch
 /moonshine:shine fourier transforms           # start with a topic
+
+# Codex
+$shine                                        # start from scratch
+$shine fourier transforms                     # start with a topic
 ```
+
+For the structured Vite + React project flavor, use `/moonshine:still` (Claude Code) or `$still` (Codex).
 
 ## What It Does
 
@@ -63,13 +94,23 @@ Each explanation lives in `~/.agent/moonshine/project-name/`:
 ## Project Structure
 
 ```
+.agents/plugins/marketplace.json   Codex marketplace entry
 plugins/
 └── moonshine/
-    ├── SKILL.md          editorial process, story discovery, anti-slop rules
-    ├── ARTICLE.md        HTML scaffold, CSS foundation, layout patterns, series structure
-    ├── VISUALS.md        D3 visualization patterns, interaction, rendering, iteration
-    └── commands/
-        └── shine.md      /moonshine:shine command definition
+    ├── .claude-plugin/plugin.json Claude Code manifest
+    ├── .codex-plugin/plugin.json  Codex manifest
+    ├── SKILL.md                   editorial process, story discovery, anti-slop rules
+    ├── ARTICLE.md                 HTML scaffold, CSS foundation, layout patterns, series structure
+    ├── VISUALS.md                 D3 visualization patterns, interaction, rendering, iteration
+    ├── STILL.md                   structured Vite + React project guidance
+    ├── commands/                  Claude Code slash commands
+    │   ├── shine.md               /moonshine:shine
+    │   └── still.md               /moonshine:still
+    ├── skills/                    Codex skills (symlinks to canonical root files)
+    │   ├── moonshine/             main skill
+    │   ├── shine/                 $shine
+    │   └── still/                 $still
+    └── template/                  Vite + React + Velite starter
 ```
 
 ## Inspirations
