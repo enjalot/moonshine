@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n velite,vite -c blue,green \"velite --watch\" \"vite\"",
+    "dev:lan": "concurrently -k -n velite,vite -c blue,green \"velite --watch\" \"vite --host 0.0.0.0\"",
     "build": "velite && tsc -p tsconfig.json && tsc -p tsconfig.node.json && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json"
+    "typecheck": "velite && tsc -p tsconfig.json && tsc -p tsconfig.node.json"
   },
   "engines": {
     "node": ">=20.0.0"

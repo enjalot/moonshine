@@ -113,6 +113,13 @@ plugins/
     └── template/                  Vite + React + Velite starter
 ```
 
+## Developing
+
+To work on the skill itself — run the `still` template in-repo as a live dev
+harness, install the skill from your checkout via symlink, and extend the
+built-in figures, directives, or edit pipeline — see
+[DEVELOPING.md](DEVELOPING.md).
+
 ## Inspirations
 
 - [Distill.pub, "Research Debt"](https://distill.pub/2017/research-debt/) — Why distillation matters
