@@ -12,6 +12,7 @@ import Term from './Term'
 import InlineViz from './InlineViz'
 import EditableBlock from './EditableBlock'
 import EditableField from './EditableField'
+import EditChrome from './EditChrome'
 import MoonshineFooter from './MoonshineFooter'
 import { EditProvider } from '../lib/EditContext'
 import type { ArticleData } from '../lib/types'
@@ -26,10 +27,9 @@ type Props = {
 // are left alone — editing is always block-granular. Every tag points at
 // the same EditableBlock, which reads the real tag from the hast node.
 const editableComponents = Object.fromEntries(
-  ['p', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'blockquote', 'pre'].map((tag) => [
-    tag,
-    EditableBlock,
-  ]),
+  ['p', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'blockquote', 'pre', 'table'].map(
+    (tag) => [tag, EditableBlock],
+  ),
 )
 
 export default function Article({ article, all }: Props) {
@@ -120,6 +120,7 @@ export default function Article({ article, all }: Props) {
         )}
 
         <MoonshineFooter />
+        <EditChrome />
       </article>
     </EditProvider>
   )

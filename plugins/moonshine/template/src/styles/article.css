@@ -289,7 +289,10 @@
   border-radius: 4px;
   transition: background 0.12s, box-shadow 0.12s;
 }
-.mn-block-armed:hover {
+/* Highlight only the innermost armed block under the cursor — :hover also
+   matches ancestors (the ul around a hovered li), but the click opens the
+   innermost block, so the outline should agree with what will happen. */
+.mn-block-armed:hover:not(:has(.mn-block-armed:hover)) {
   background: var(--accent-light);
   /* A left rule marks where this editable block begins and ends. */
   box-shadow: -0.6rem 0 0 0 var(--accent), inset 0.15rem 0 0 0 var(--accent);
@@ -357,4 +360,110 @@
   font-family: var(--mono-font);
   font-size: 0.72rem;
   color: var(--text-2);
+}
+
+/* Dev-only edit chrome: hint pill, undo toast, draft recovery -------- */
+
+.mn-chrome {
+  font-family: var(--heading-font);
+  font-size: 0.8rem;
+  color: var(--text-2);
+}
+
+.mn-hint-pill,
+.mn-undo-toast {
+  position: fixed;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  z-index: 40;
+}
+
+.mn-hint-pill {
+  bottom: 1rem;
+}
+
+.mn-hint-pill kbd {
+  font-family: var(--mono-font);
+  font-size: 0.75em;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 0.25em;
+  background: var(--bg);
+}
+
+.mn-hint-pill button {
+  font: inherit;
+  border: none;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+  padding: 0 0.1rem;
+  line-height: 1;
+}
+
+.mn-undo-toast {
+  bottom: 3.4rem;
+}
+
+.mn-undo-toast button {
+  font: inherit;
+  font-weight: 600;
+  border: none;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+}
+
+.mn-draft-recovery {
+  position: fixed;
+  right: 1rem;
+  bottom: 6rem;
+  width: min(26rem, calc(100vw - 2rem));
+  background: var(--fig-bg);
+  border: 1px solid var(--error-border);
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  z-index: 41;
+}
+
+.mn-draft-recovery p {
+  margin: 0 0 0.5rem;
+  color: var(--error);
+}
+
+.mn-draft-recovery textarea {
+  width: 100%;
+  font-family: var(--mono-font);
+  font-size: 0.8rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.4rem;
+  resize: vertical;
+}
+
+.mn-draft-recovery-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.mn-draft-recovery-actions button {
+  font: inherit;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0.15rem 0.7rem;
+  cursor: pointer;
 }

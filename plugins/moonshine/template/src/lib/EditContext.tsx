@@ -34,6 +34,20 @@ type EditContextValue = {
   cancelEdit: () => void
   commitBody: (start: number, end: number, text: string) => Promise<void>
   commitFrontmatter: (key: string, value: string) => Promise<void>
+  // In-progress textarea content, reported by SourceEditor so the draft
+  // survives a remount when the body shifts under the editor (HMR after
+  // an agent edit) and we re-anchor the range.
+  updateDraft: (text: string) => void
+  getDraft: () => string | null
+  // Set when the open editor's block could not be re-anchored after the
+  // body changed — the draft text is parked here (and in sessionStorage)
+  // for the author to recover instead of silently vanishing.
+  stashedDraft: string | null
+  clearStashedDraft: () => void
+  // Previous body kept after each successful save so the author can
+  // undo a just-committed change.
+  canUndo: boolean
+  undoLastSave: () => Promise<void>
 }
 
 const EditContext = createContext<EditContextValue | null>(null)
@@ -83,6 +97,8 @@ type ProviderProps = {
   children: ReactNode
 }
 
+const draftStorageKey = (path: string) => `moonshine-draft:${path}`
+
 export function EditProvider({ body, path, children }: ProviderProps) {
   const [activeRange, setActiveRange] = useState<[number, number] | null>(null)
   const [armed, setArmed] = useState(false)
@@ -92,6 +108,48 @@ export function EditProvider({ body, path, children }: ProviderProps) {
   // text, otherwise the offsets are stale and the splice would corrupt
   // unrelated prose.
   const activeSliceRef = useRef<string | null>(null)
+  // Latest textarea content for the open editor (see updateDraft).
+  const draftRef = useRef<string | null>(null)
+  const [stashedDraft, setStashedDraft] = useState<string | null>(() => {
+    if (!EDIT_ENABLED) return null
+    try {
+      return sessionStorage.getItem(draftStorageKey(path))
+    } catch {
+      return null
+    }
+  })
+  const [lastSavedBody, setLastSavedBody] = useState<string | null>(null)
+
+  // When the body changes while an editor is open, its offsets may be
+  // stale. If the original slice still occurs exactly once, re-anchor the
+  // range to its new position (the editor remounts there, seeded with the
+  // in-progress draft). If it can't be found unambiguously, park the
+  // draft for recovery instead of letting it vanish.
+  useEffect(() => {
+    if (!EDIT_ENABLED || !activeRange) return
+    const slice = activeSliceRef.current
+    if (slice == null) return
+    const [start, end] = activeRange
+    if (body.slice(start, end) === slice) return
+    const first = body.indexOf(slice)
+    if (first !== -1 && body.indexOf(slice, first + slice.length) === -1) {
+      setActiveRange([first, first + slice.length])
+      return
+    }
+    const draft = draftRef.current
+    if (draft != null && draft !== slice) {
+      setStashedDraft(draft)
+      try {
+        sessionStorage.setItem(draftStorageKey(path), draft)
+      } catch {
+        // storage unavailable — the in-memory banner still shows it
+      }
+    }
+    activeSliceRef.current = null
+    draftRef.current = null
+    setActiveRange(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [body])
 
   // Track the Cmd/Ctrl modifier globally so blocks can reveal their edit
   // boundaries only while it's held — the page reads as normal prose
@@ -123,10 +181,12 @@ export function EditProvider({ body, path, children }: ProviderProps) {
     armed,
     beginEdit: (start, end) => {
       activeSliceRef.current = body.slice(start, end)
+      draftRef.current = body.slice(start, end)
       setActiveRange([start, end])
     },
     cancelEdit: () => {
       activeSliceRef.current = null
+      draftRef.current = null
       setActiveRange(null)
     },
     commitBody: async (start, end, text) => {
@@ -147,11 +207,35 @@ export function EditProvider({ body, path, children }: ProviderProps) {
       // body.
       const next = body.slice(0, start) + text + body.slice(end)
       await postSave({ path, body: next, baseHash: fnv1a(body) })
+      setLastSavedBody(body)
       activeSliceRef.current = null
+      draftRef.current = null
       setActiveRange(null)
     },
     commitFrontmatter: async (key, val) => {
       await postSave({ path, frontmatter: { [key]: val } })
+    },
+    updateDraft: (text) => {
+      draftRef.current = text
+    },
+    getDraft: () => draftRef.current,
+    stashedDraft,
+    clearStashedDraft: () => {
+      setStashedDraft(null)
+      try {
+        sessionStorage.removeItem(draftStorageKey(path))
+      } catch {
+        // ignore
+      }
+    },
+    canUndo: lastSavedBody !== null,
+    undoLastSave: async () => {
+      if (lastSavedBody === null) return
+      // Restore the pre-save body. baseHash is the hash of what we believe
+      // is on disk now (the current body), so an intervening agent edit
+      // still 409s instead of being clobbered by the undo.
+      await postSave({ path, body: lastSavedBody, baseHash: fnv1a(body) })
+      setLastSavedBody(null)
     },
   }
 

@@ -4,9 +4,14 @@ type Props = {
   initialValue: string
   onCommit: (text: string) => void | Promise<void>
   onCancel: () => void
+  // Reports every keystroke so the provider can preserve the draft if
+  // this editor gets remounted (body shifted under it).
+  onChangeValue?: (text: string) => void
   // `block` grows to fill the prose column; `field` is a single-line-ish
   // inline editor for frontmatter (title/lede). Both auto-size to content.
   variant?: 'block' | 'field'
+  // Rendered wrapper element. Editing an li must keep an li in the list.
+  wrapperTag?: 'span' | 'li'
 }
 
 // Auto-sizing textarea seeded with raw markdown source. Cmd/Ctrl+Enter or
@@ -16,7 +21,9 @@ export default function SourceEditor({
   initialValue,
   onCommit,
   onCancel,
+  onChangeValue,
   variant = 'block',
+  wrapperTag = 'span',
 }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const [value, setValue] = useState(initialValue)
@@ -62,15 +69,19 @@ export default function SourceEditor({
     }
   }
 
+  const Wrapper = wrapperTag
   return (
-    <span className={`mn-edit mn-edit-${variant}`}>
+    <Wrapper className={`mn-edit mn-edit-${variant}`}>
       <textarea
         ref={ref}
         className="mn-edit-textarea"
         value={value}
         spellCheck={false}
         disabled={saving}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => {
+          setValue(e.target.value)
+          onChangeValue?.(e.target.value)
+        }}
         onKeyDown={onKeyDown}
       />
       <span className="mn-edit-bar" contentEditable={false}>
@@ -79,6 +90,6 @@ export default function SourceEditor({
         </button>
         <span className="mn-edit-hint">⌘↵ save · esc cancel</span>
       </span>
-    </span>
+    </Wrapper>
   )
 }
