@@ -224,6 +224,21 @@ shapes what the reader sees, it belongs in `DEFAULTS`. Constants shared
 by several figures (like the loss surface both example figures depict)
 go in `src/figures/lib/` so the figures can't drift apart.
 
+### The knob panel (dev only)
+
+Register the `DEFAULTS` const in the figure's registry entry
+(`defaults: lossLandscapeDefaults`) and the author gets a third tweak
+surface for free: **Cmd/Ctrl+click the figure** during `npm run dev`
+opens a panel of controls generated from the DEFAULTS types — slider +
+number input for numbers, checkbox for booleans, text for strings.
+Changes apply to the live figure immediately; **Save to markdown**
+rewrites the directive's attributes in the `.md` (through the same
+conflict-checked, auto-committing save path as prose edits), writing
+only values that differ from the defaults. The author dials in `lr` by
+feel; the result lands in markdown where you can read it. Clicks on
+the caption still open the prose editor; figures without registered
+defaults explain how to opt in.
+
 ## Recommended Visualization Libraries
 
 The figure layer is open. But there are real choices to make per figure:
