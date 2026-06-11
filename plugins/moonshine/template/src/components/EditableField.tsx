@@ -1,4 +1,4 @@
-import { createElement, useState } from 'react'
+import { createElement, useEffect, useState } from 'react'
 import { useEdit } from '../lib/EditContext'
 import SourceEditor from './SourceEditor'
 
@@ -17,14 +17,23 @@ type Props = {
 export default function EditableField({ fieldKey, value, as, className }: Props) {
   const { enabled, armed, commitFrontmatter } = useEdit()
   const [editing, setEditing] = useState(false)
+  // Optimistic value: show the committed text immediately instead of
+  // flashing the stale prop for the few hundred ms until velite re-emits
+  // and HMR delivers the new frontmatter.
+  const [optimistic, setOptimistic] = useState<string | null>(null)
+  useEffect(() => {
+    if (optimistic !== null && optimistic === value) setOptimistic(null)
+  }, [value, optimistic])
+  const shown = optimistic ?? value
 
   if (enabled && editing) {
     return (
       <SourceEditor
         variant="field"
-        initialValue={value}
+        initialValue={shown}
         onCommit={async (text) => {
           await commitFrontmatter(fieldKey, text)
+          setOptimistic(text)
           setEditing(false)
         }}
         onCancel={() => setEditing(false)}

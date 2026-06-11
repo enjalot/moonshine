@@ -26,19 +26,34 @@ type Props = {
 // edit affordance. In a static build `enabled` is false and this collapses
 // to a plain element with zero overhead.
 export default function EditableBlock({ node, children, className, ...rest }: Props) {
-  const { enabled, body, armed, activeRange, beginEdit, cancelEdit, commitBody } = useEdit()
+  const {
+    enabled,
+    body,
+    armed,
+    activeRange,
+    beginEdit,
+    cancelEdit,
+    commitBody,
+    updateDraft,
+    getDraft,
+  } = useEdit()
   const tag = node?.tagName || 'p'
   const start = node?.position?.start?.offset
   const end = node?.position?.end?.offset
   const haveRange = enabled && typeof start === 'number' && typeof end === 'number'
 
   // This block is the one currently open for editing → render the raw
-  // source slice in a textarea instead of the formatted block.
+  // source slice in a textarea instead of the formatted block. Seed with
+  // the in-progress draft (not the slice) so the editor survives a
+  // remount when the body shifts and the range gets re-anchored.
   if (haveRange && activeRange && activeRange[0] === start && activeRange[1] === end) {
     return (
       <SourceEditor
         variant="block"
-        initialValue={body.slice(start as number, end as number)}
+        // <span> is invalid as a direct child of a list; keep the slot an li.
+        wrapperTag={tag === 'li' ? 'li' : 'span'}
+        initialValue={getDraft() ?? body.slice(start as number, end as number)}
+        onChangeValue={updateDraft}
         onCommit={(text) => commitBody(start as number, end as number, text)}
         onCancel={cancelEdit}
       />

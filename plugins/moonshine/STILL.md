@@ -311,6 +311,13 @@ page — no jumping back to the `.md` file for small wording changes.
   you edit exactly what's on disk.
 - **Cmd/Ctrl+Enter** (or the floating **Done** button) writes the change
   back to the `.md` file; **Esc** cancels.
+- A dismissable pill in the corner teaches the gesture; after each save
+  a transient **Undo** toast can restore the previous text (through the
+  same conflict-checked save path).
+- Edits are safe against concurrent changes: if the agent edits the file
+  while a block is open in the browser, the editor re-anchors when it
+  can, parks the draft in a recovery banner when it can't, and the save
+  endpoint rejects stale writes (409) rather than overwriting.
 
 How it holds together:
 
