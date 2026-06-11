@@ -10,9 +10,11 @@ The loss landscape has hills and valleys. Most learning algorithms find
 their way downhill not by searching everywhere, but by following the
 local slope.
 
-:::figure{id=loss-landscape}
+:::figure{id=loss-landscape lr=0.12}
 A two-well loss surface. Drag or click to set a starting point and
-watch the descent path settle into the nearest minimum.
+watch the descent path settle into the nearest minimum. The step size
+here is set right in the markdown (`lr=0.12`) — every figure attribute
+becomes a prop.
 :::
 
 Random search is inefficient because the parameter space is too large.

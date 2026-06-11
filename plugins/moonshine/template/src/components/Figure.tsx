@@ -7,16 +7,21 @@ type Props = {
   id?: string
   caption?: string
   children?: React.ReactNode
+  // react-markdown's hast node — plumbing, not a prop figures receive.
+  node?: unknown
+  // Everything else came from the directive's attributes and passes
+  // through to the figure component as props (as strings).
+  [key: string]: unknown
 }
 
-export default function Figure({ id, caption, children }: Props) {
+export default function Figure({ id, caption, children, node: _node, ...rest }: Props) {
   const { hovered, pinned } = useFigureHighlight(id)
   // Depend on the raw pinned ref, not the boolean: pinning a different
   // part of the same figure should re-scroll, and a boolean wouldn't
   // change between `fig.a` and `fig.b`.
   const pinnedRef = useArticleStore((s) => s.pinnedTermRef)
   const ref = useRef<HTMLElement>(null)
-  const Component = id ? figures[id] : null
+  const entry = id ? figures[id] : null
 
   // When a term is clicked (pinned) and points at this figure (whole or
   // any part), scroll it into view. Hovered terms don't scroll — only
@@ -43,7 +48,7 @@ export default function Figure({ id, caption, children }: Props) {
     )
   }
 
-  if (!Component) {
+  if (!entry) {
     return (
       <figure id={id} className="figure figure-missing">
         <p>
@@ -55,16 +60,19 @@ export default function Figure({ id, caption, children }: Props) {
     )
   }
 
-  const stateClass = pinned
-    ? 'figure-pinned'
-    : hovered
-      ? 'figure-hovered'
-      : ''
+  const Component = entry.component
+  const cls = [
+    'figure',
+    entry.wide && 'figure-wide',
+    pinned ? 'figure-pinned' : hovered ? 'figure-hovered' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
-    <figure ref={ref} id={id} className={`figure ${stateClass}`.trim()}>
-      <LazyIsland>
-        <Component />
+    <figure ref={ref} id={id} className={cls}>
+      <LazyIsland height={entry.height}>
+        <Component figureId={id} {...rest} />
       </LazyIsland>
       {(caption || children) && (
         <figcaption className="figure-caption">

@@ -8,8 +8,8 @@ type Props = {
 // short horizontal track. Sized to sit inline with body text.
 export default function MiniSpark({ value = 0.5, width = 48, height = 14 }: Props) {
   const v = clamp01(typeof value === 'string' ? parseFloat(value) : value)
-  const w = typeof width === 'string' ? parseFloat(width) : width
-  const h = typeof height === 'string' ? parseFloat(height) : height
+  const w = finiteOr(typeof width === 'string' ? parseFloat(width) : width, 48)
+  const h = finiteOr(typeof height === 'string' ? parseFloat(height) : height, 14)
   return (
     <svg
       viewBox={`0 0 ${w} ${h}`}
@@ -35,4 +35,8 @@ export default function MiniSpark({ value = 0.5, width = 48, height = 14 }: Prop
 function clamp01(x: number) {
   if (!Number.isFinite(x)) return 0
   return Math.max(0, Math.min(1, x))
+}
+
+function finiteOr(x: number, fallback: number) {
+  return Number.isFinite(x) && x > 0 ? x : fallback
 }

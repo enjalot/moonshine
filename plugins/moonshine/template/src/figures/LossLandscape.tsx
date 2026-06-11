@@ -1,4 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
+import type { FigureProps } from './registry'
+import { loss, grad } from './lib/lossSurface'
+import { num } from './lib/params'
 
 // A heatmap of a synthetic two-well loss surface with a draggable
 // starting point that traces a gradient-descent path.
@@ -7,12 +10,27 @@ import { useMemo, useRef, useState } from 'react'
 // — which renders nothing because each M is a move-to with no draw.
 // A coarse heatmap of rect cells is both simpler and clearer: dark
 // cells are low loss (valleys), light cells are high loss (peaks).
-export default function LossLandscape() {
-  const [start, setStart] = useState<[number, number]>([0.7, 0.45])
+
+// Tweakable surface. Override per-instance from markdown:
+//   :::figure{id=loss-landscape lr=0.15 startX=-0.2}
+export const DEFAULTS = {
+  lr: 0.08, // gradient-descent step size (η)
+  steps: 80, // max iterations before the path gives up
+  startX: 0.7, // initial point, surface coords in [-1, 1]
+  startY: 0.45,
+}
+
+export default function LossLandscape(props: FigureProps) {
+  const lr = num(props.lr, DEFAULTS.lr)
+  const steps = num(props.steps, DEFAULTS.steps)
+  const [start, setStart] = useState<[number, number]>([
+    num(props.startX, DEFAULTS.startX),
+    num(props.startY, DEFAULTS.startY),
+  ])
   const [dragging, setDragging] = useState(false)
   const svgRef = useRef<SVGSVGElement>(null)
   const cells = useMemo(() => buildHeatmap(), [])
-  const path = useMemo(() => descend(start), [start])
+  const path = useMemo(() => descend(start, lr, steps), [start, lr, steps])
 
   const w = 480
   const h = 320
@@ -98,27 +116,14 @@ export default function LossLandscape() {
   )
 }
 
-function loss(x: number, y: number) {
-  return (
-    1 -
-    Math.exp(-((x + 0.6) ** 2 + y ** 2)) * 0.6 -
-    Math.exp(-((x - 0.5) ** 2 + (y + 0.2) ** 2)) * 0.8
-  )
-}
-
-function grad(x: number, y: number): [number, number] {
-  const e = 0.001
-  return [
-    (loss(x + e, y) - loss(x - e, y)) / (2 * e),
-    (loss(x, y + e) - loss(x, y - e)) / (2 * e),
-  ]
-}
-
-function descend(initial: [number, number]): [number, number][] {
+function descend(
+  initial: [number, number],
+  lr: number,
+  steps: number,
+): [number, number][] {
   let [x, y] = initial
   const path: [number, number][] = [[x, y]]
-  const lr = 0.08
-  for (let i = 0; i < 80; i++) {
+  for (let i = 0; i < steps; i++) {
     const [gx, gy] = grad(x, y)
     x -= lr * gx
     y -= lr * gy

@@ -6,6 +6,7 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { useFigureHighlight } from '../store'
+import type { FigureProps } from './registry'
 
 // React Flow is the recommended path for node-link diagrams. Each node
 // is a real React component, so a `:term[step size]{to=flow-diagram.update}`
@@ -14,8 +15,8 @@ import { useFigureHighlight } from '../store'
 //
 // Keep diagrams editorial: ~3–8 nodes, no scroll. If you're approaching
 // dozens, you're building a tool, not an article.
-export default function FlowDiagram() {
-  const { activePart } = useFigureHighlight('flow-diagram')
+export default function FlowDiagram({ figureId }: FigureProps) {
+  const { activePart } = useFigureHighlight(figureId)
 
   const nodes = useMemo<Node[]>(
     () => [
