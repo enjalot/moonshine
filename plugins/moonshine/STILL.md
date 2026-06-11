@@ -80,7 +80,8 @@ renders those as React components.
 - **Hover or focus** sets `hoveredTermRef` in the Zustand store. Linked
   figure gets a soft outline. No scrolling. The reader is just glancing.
 - **Click** sets `pinnedTermRef`. Linked figure gets a strong outline
-  and auto-scrolls into view. Click again to unpin.
+  and auto-scrolls into view. Clicking the same term again unpins;
+  clicking a different term moves the pin.
 
 This two-tier model lets a reader skim with hover and commit with
 click. It mirrors how Distill's `<dt-fn>` footnote chips work, and how
@@ -116,6 +117,9 @@ in the template.
 When designing a figure, pick part-ids that read naturally in prose:
 `flow-diagram.update`, not `flow-diagram.node3`.
 
+One constraint: figure ids must not contain `.` — the first dot in a
+`to=` reference separates the figure id from the part id.
+
 ## File Layout
 
 ```
@@ -135,7 +139,7 @@ template/
       SeriesIndex.tsx        ← renders the cards list
       Figure.tsx             ← container-directive handler
       Term.tsx               ← text-directive handler
-      InlineViz.tsx          ← leaf-directive handler
+      InlineViz.tsx          ← unlabeled text-directive handler
       LazyIsland.tsx         ← visibility-gated hydration wrapper
     lib/
       directive-handler.ts   ← remark plugin: maps directives to tags
@@ -285,17 +289,45 @@ How it holds together:
 
 The pieces live in `src/lib/EditContext.tsx`, `src/components/
 EditableBlock.tsx`, `EditableField.tsx`, and `SourceEditor.tsx`, wired up
-in `Article.tsx`. Figures are not editable in place — change those in
-their component files as usual.
+in `Article.tsx`.
+
+What's editable in place: paragraphs, headings, lists, blockquotes, the
+title/lede — and **figure captions**, because caption text written as the
+directive's inner content renders as an ordinary paragraph whose source
+offsets point into the markdown. The directive line itself
+(`:::figure{id=…}` and its attributes) and figure component code are not
+editable in the browser — change those in the `.md` source or the
+component files as usual.
 
 ## Workflow When Building an Article With This Skill
 
-Follow the moonshine process from `SKILL.md` — story discovery first,
-no skipping to code. Once the outline is agreed:
+This section is canonical — the `/moonshine:still` command and the Codex
+`$still` skill are thin wrappers that point here. Follow the moonshine
+process from `SKILL.md` — story discovery first, no skipping to code.
+Once the outline is agreed:
 
-1. **Bootstrap the project.** Copy `template/` to
-   `~/.agent/moonshine/<project-name>/`, `npm install`, and start
-   `npm run dev` in the background. Print the localhost URL.
+1. **Bootstrap the project.**
+   - Pick a kebab-case project name from the user's topic. Resolve the
+     project root to `~/.agent/moonshine/<project-name>/`. If it already
+     exists, ask the user whether to reuse, rename, or wipe before
+     continuing.
+   - Copy `template/` from the plugin into the project root, excluding
+     build artifacts the in-repo dev harness may have left behind:
+     `rsync -a --exclude node_modules --exclude .velite --exclude dist
+     --exclude '*.tsbuildinfo' template/ <project-root>/`
+   - Run `npm install` in the background — it takes about a minute and
+     you can keep talking to the user while it goes.
+   - Start the dev server in the background: `npm run dev`, or
+     `npm run dev:lan` when the user browses from another device (binds
+     `0.0.0.0`; mDNS hostnames like `http://<hostname>.local:5173` are
+     allowed through Vite's host check). The server uses
+     `strictPort: true` with default port 5173; set
+     `MOONSHINE_PORT=<port>` in the environment to use another.
+   - **Read the actual URL from Vite's stdout** — do not assume
+     `localhost:5173`. Vite logs `➜  Local: http://...` once ready.
+     If Vite failed (port collision under strictPort), surface the
+     error and ask the user how to resolve it. Do NOT auto-open the
+     URL — the user keeps the page open and refreshes manually.
 
 2. **Open in browser.** The reader sees the example content. Don't
    delete it yet — it's the demonstration that everything works.
@@ -313,9 +345,13 @@ no skipping to code. Once the outline is agreed:
    change, edit the figure file, watch HMR. Don't move to the next
    figure until this one teaches.
 
-6. **Series, if planned.** Create `content/series/index.md` and one
-   `.md` per article in `content/series/`. The series index page
-   appears automatically once there are multiple articles.
+6. **Series, if planned.** The template ships with both modes wired up;
+   there is no config switch. Single article → work in
+   `content/example.md` (or your renamed file) and delete the
+   `content/series/` folder. Series → create `content/series/index.md`
+   and one `.md` per article in `content/series/`, and delete
+   `content/example.md`. The root URL renders a series index when more
+   than one article exists, and a single article when only one does.
 
 ## What Not to Do
 
