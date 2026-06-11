@@ -1,14 +1,30 @@
 import { useId, useMemo } from 'react'
 import { useFigureHighlight } from '../store'
+import type { FigureProps } from './registry'
+import { grad, DEEP_WELL } from './lib/lossSurface'
+import { num } from './lib/params'
 
-// Vector field on a 14×10 grid. Arrows point in the negative-gradient
-// direction (downhill) of a synthetic two-well loss surface. Arrows
-// inside the basin of the deeper well are tagged `partId: 'well'`, so
-// a `:term[gradient]{to=gradient-field.well}` markdown link can light
+// Vector field of arrows pointing in the negative-gradient direction
+// (downhill) of the shared two-well loss surface (lib/lossSurface.ts —
+// same surface LossLandscape draws). Arrows inside the basin of the
+// deeper well are tagged `partId: 'well'`, so a
+// `:term[gradient]{to=gradient-field.well}` markdown link can light
 // up just that cluster instead of outlining the whole figure.
-export default function GradientField() {
-  const arrows = useMemo(() => buildArrows(), [])
-  const { activePart } = useFigureHighlight('gradient-field')
+
+// Tweakable surface. Override per-instance from markdown:
+//   :::figure{id=gradient-field cols=20 rows=14}
+export const DEFAULTS = {
+  cols: 14, // grid density
+  rows: 10,
+  len: 18, // arrow length in viewBox px
+}
+
+export default function GradientField(props: FigureProps) {
+  const cols = num(props.cols, DEFAULTS.cols)
+  const rows = num(props.rows, DEFAULTS.rows)
+  const len = num(props.len, DEFAULTS.len)
+  const arrows = useMemo(() => buildArrows(cols, rows, len), [cols, rows, len])
+  const { activePart } = useFigureHighlight(props.figureId)
   // Marker ids are document-global in SVG; scope them per instance so two
   // copies of this figure on one page don't fight over the same defs.
   const uid = useId()
@@ -80,11 +96,9 @@ export default function GradientField() {
   )
 }
 
-function buildArrows() {
+function buildArrows(cols: number, rows: number, len: number) {
   const w = 480
   const h = 320
-  const cols = 14
-  const rows = 10
   const arrows: {
     x: number
     y: number
@@ -93,13 +107,6 @@ function buildArrows() {
     mag: number
     partId: string | null
   }[] = []
-  const len = 18
-  // The deeper well of the synthetic surface sits near (0.5, -0.2)
-  // in [-1, 1] normalized coordinates; arrows inside this basin get
-  // tagged so a term can highlight them specifically.
-  const wellX = 0.5
-  const wellY = -0.2
-  const wellRadius = 0.55
 
   for (let j = 0; j < rows; j++) {
     for (let i = 0; i < cols; i++) {
@@ -108,19 +115,15 @@ function buildArrows() {
       const nx = (i / (cols - 1)) * 2 - 1
       const ny = (j / (rows - 1)) * 2 - 1
 
-      // Negative gradient of the two-well surface used in LossLandscape.
-      const gx =
-        2 * (nx + 0.6) * Math.exp(-((nx + 0.6) ** 2 + ny ** 2)) * 0.6 +
-        2 * (nx - 0.5) * Math.exp(-((nx - 0.5) ** 2 + (ny + 0.2) ** 2)) * 0.8
-      const gy =
-        2 * ny * Math.exp(-((nx + 0.6) ** 2 + ny ** 2)) * 0.6 +
-        2 * (ny + 0.2) * Math.exp(-((nx - 0.5) ** 2 + (ny + 0.2) ** 2)) * 0.8
-
+      // Downhill direction: negative gradient of the shared surface.
+      const [gx, gy] = grad(nx, ny)
       const norm = Math.hypot(gx, gy) || 1
       const ux = -gx / norm
       const uy = -gy / norm
 
-      const distToWell = Math.hypot(nx - wellX, ny - wellY)
+      // Arrows inside the deeper well's basin get tagged so a term can
+      // highlight them specifically.
+      const distToWell = Math.hypot(nx - DEEP_WELL.x, ny - DEEP_WELL.y)
 
       arrows.push({
         x,
@@ -128,7 +131,7 @@ function buildArrows() {
         x2: x + ux * len,
         y2: y + uy * len,
         mag: Math.min(1, norm),
-        partId: distToWell < wellRadius ? 'well' : null,
+        partId: distToWell < DEEP_WELL.radius ? 'well' : null,
       })
     }
   }

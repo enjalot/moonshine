@@ -1,14 +1,23 @@
 import { useMemo } from 'react'
 import * as d3 from 'd3'
+import type { FigureProps } from './registry'
+import { num } from './lib/params'
 
-// A small D3 example: a 60-point seeded random walk. The walk is seeded
-// so every visitor (and every re-render) sees the same curve — an
-// article's figures should be deterministic. Change SEED to get a
-// different walk while iterating on visual encoding.
-const SEED = 0.42
+// A small D3 example: a seeded random walk. The walk is seeded so every
+// visitor (and every re-render) sees the same curve — an article's
+// figures should be deterministic.
 
-export default function Sparkline() {
-  const { line, points, w, h } = useMemo(() => buildPath(), [])
+// Tweakable surface. Override per-instance from markdown:
+//   :::figure{id=sparkline seed=7 n=120}
+export const DEFAULTS = {
+  seed: 0.42, // d3.randomLcg seed in [0, 1) — change for a different walk
+  n: 60, // number of points
+}
+
+export default function Sparkline(props: FigureProps) {
+  const seed = num(props.seed, DEFAULTS.seed)
+  const n = num(props.n, DEFAULTS.n)
+  const { line, points, w, h } = useMemo(() => buildPath(seed, n), [seed, n])
   return (
     <svg
       viewBox={`0 0 ${w} ${h}`}
@@ -28,11 +37,10 @@ export default function Sparkline() {
   )
 }
 
-function buildPath() {
+function buildPath(seed: number, n: number) {
   const w = 600
   const h = 120
-  const n = 60
-  const random = d3.randomLcg(SEED)
+  const random = d3.randomLcg(seed)
   let v = 0.5
   const data = Array.from({ length: n }, (_, i) => {
     v += (random() - 0.5) * 0.1

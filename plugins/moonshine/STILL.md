@@ -148,11 +148,14 @@ template/
     lib/
       directive-handler.ts   ← remark plugin: maps directives to tags
     figures/
-      registry.ts            ← id → component map
+      registry.ts            ← id → {component, height, wide} map
       Sparkline.tsx          ← D3 example
       GradientField.tsx      ← plain SVG example
       LossLandscape.tsx      ← interactive React state example
       FlowDiagram.tsx        ← React Flow example
+      lib/
+        params.ts            ← attr→number/bool/string coercers
+        lossSurface.ts       ← constants shared between figures
       inline/
         MiniSpark.tsx        ← inline visual example
     styles/
@@ -170,10 +173,17 @@ Three steps, in this order:
 
 1. Drop a React component file in `src/figures/`. It can use D3,
    React Flow, react-three-fiber, plain SVG, Canvas, WebGL — anything
-   that fits in a React component. Default export.
+   that fits in a React component. Default export, typed
+   `(props: FigureProps)`.
 
-2. Register it in `src/figures/registry.ts` under a stable id. Block
-   figures go in `figures`, inline figures in `inlineFigures`.
+2. Register it in `src/figures/registry.ts` under a stable id (no dots).
+   Block figures go in `figures` as a metadata record:
+   ```ts
+   'your-new-figure': { component: YourFigure, height: 320, wide: true }
+   ```
+   `height` reserves vertical space before the figure lazily mounts (no
+   layout shift, term-pin scroll lands correctly); `wide` breaks it out
+   of the article column. Inline figures go in `inlineFigures`.
 
 3. Reference the id in markdown:
    ```md
@@ -181,6 +191,38 @@ Three steps, in this order:
    ```
 
 The writer never sees step 1 or 2.
+
+### Parameters: DEFAULTS + markdown attributes
+
+Every directive attribute passes to the component as a prop (always a
+string), plus an injected `figureId` — use `useFigureHighlight(figureId)`
+rather than hardcoding the id, so highlighting can't fall out of sync
+with the registry key.
+
+Expose each figure's tunable values as an exported `DEFAULTS` const at
+the top of the file, and parse incoming attributes against it with the
+helpers in `src/figures/lib/params.ts`:
+
+```ts
+export const DEFAULTS = {
+  lr: 0.08,  // gradient-descent step size (η)
+  steps: 80, // max iterations
+}
+
+export default function LossLandscape(props: FigureProps) {
+  const lr = num(props.lr, DEFAULTS.lr)
+  const steps = num(props.steps, DEFAULTS.steps)
+  ...
+}
+```
+
+This gives the author two tweak surfaces that both stay visible to the
+agent: override per-instance in markdown
+(`:::figure{id=loss-landscape lr=0.15}`), or edit the `DEFAULTS` block
+in code. Never bury a tunable as a magic number in render logic — if it
+shapes what the reader sees, it belongs in `DEFAULTS`. Constants shared
+by several figures (like the loss surface both example figures depict)
+go in `src/figures/lib/` so the figures can't drift apart.
 
 ## Recommended Visualization Libraries
 
