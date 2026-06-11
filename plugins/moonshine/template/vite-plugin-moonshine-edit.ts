@@ -1,7 +1,11 @@
 import type { Plugin } from 'vite'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import YAML from 'yaml'
+
+const exec = promisify(execFile)
 
 // Dev-only write-back endpoint for the in-place markdown editor.
 //
@@ -98,7 +102,48 @@ export default function moonshineEditPlugin(): Plugin {
     name: 'moonshine-inline-edit',
     apply: 'serve',
     configureServer(server) {
-      const contentRoot = path.resolve(server.config.root, 'content')
+      const projectRoot = path.resolve(server.config.root)
+      const contentRoot = path.resolve(projectRoot, 'content')
+
+      // Auto-commit browser saves so (a) the author has real history to
+      // revert to and (b) a coding agent working in the same project can
+      // see exactly what the author changed (`git log` for moonshine-edit
+      // commits) — the shared memory between the two editing surfaces.
+      //
+      // Only when the project is its own repository: if the toplevel
+      // differs from the project root (e.g. the template running in-repo
+      // as the skill's dev harness), committing would write into an
+      // enclosing checkout the author didn't intend to touch.
+      let gitReady: Promise<boolean> | null = null
+      let warnedGit = false
+      const isOwnRepo = () => {
+        gitReady ??= exec('git', ['rev-parse', '--show-toplevel'], { cwd: projectRoot })
+          .then(({ stdout }) => path.resolve(stdout.trim()) === projectRoot)
+          .catch(() => false)
+        return gitReady
+      }
+
+      async function commitSave(target: string, summary: string) {
+        if (!(await isOwnRepo())) return
+        try {
+          await exec('git', ['add', '--', target], { cwd: projectRoot })
+          await exec(
+            'git',
+            ['commit', '-m', `moonshine-edit: ${summary}`, '--', target],
+            { cwd: projectRoot },
+          )
+        } catch (err) {
+          const msg = String((err as { stderr?: string }).stderr ?? err)
+          // An identical write produces "nothing to commit" — not a problem.
+          if (/nothing (added )?to commit/i.test(msg)) return
+          if (!warnedGit) {
+            warnedGit = true
+            server.config.logger.warn(
+              `[moonshine] auto-commit failed (saves still work, history won't accrue): ${msg.trim()}`,
+            )
+          }
+        }
+      }
 
       // Serialize saves per file so two near-simultaneous POSTs (author +
       // agent tooling) can't interleave their read-modify-write cycles.
@@ -189,6 +234,12 @@ export default function moonshineEditPlugin(): Plugin {
             const tmp = `${target}.moonshine-tmp`
             await fs.writeFile(tmp, out, 'utf8')
             await fs.rename(tmp, target)
+
+            const summary =
+              typeof payload.body === 'string'
+                ? `${payload.path} (prose)`
+                : `${payload.path} (${Object.keys(payload.frontmatter ?? {}).join(', ')})`
+            await commitSave(target, summary)
           })
 
           res.statusCode = 200
