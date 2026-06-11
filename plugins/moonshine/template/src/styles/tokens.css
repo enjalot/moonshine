@@ -19,6 +19,10 @@
   --bg: #fafafa;
   --fig-bg: #ffffff;
   --border: #e2e2e8;
+  /* Error states (missing figure / unknown inline kind) */
+  --error: #883030;
+  --error-bg: rgba(255, 200, 200, 0.2);
+  --error-border: #dd9999;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -30,6 +34,9 @@
     --bg: #1a1a2e;
     --fig-bg: #22223a;
     --border: #3a3a52;
+    --error: #f3a5a5;
+    --error-bg: rgba(180, 60, 60, 0.18);
+    --error-border: #8a4444;
   }
 }
 

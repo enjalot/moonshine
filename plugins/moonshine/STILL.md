@@ -51,6 +51,10 @@ and you stall.
 figures that take their own paragraph. The id matches an entry in the
 figure registry. Inner content becomes the caption.
 
+Math also works out of the box: `$\eta$` inline and `$$...$$` display
+blocks render through remark-math + KaTeX (styles bundled from npm, no
+CDN). It's standard markdown-math syntax, not a directive.
+
 **Text directive — labeled** (`:name[label]{}`) — inline. Wraps a word
 or phrase in prose. The most common use is `:term[word]{to=figure-id}`,
 which makes the word a clickable button that highlights the linked
@@ -81,7 +85,7 @@ renders those as React components.
   figure gets a soft outline. No scrolling. The reader is just glancing.
 - **Click** sets `pinnedTermRef`. Linked figure gets a strong outline
   and auto-scrolls into view. Clicking the same term again unpins;
-  clicking a different term moves the pin.
+  clicking a different term moves the pin; Escape clears it.
 
 This two-tier model lets a reader skim with hover and commit with
 click. It mirrors how Distill's `<dt-fn>` footnote chips work, and how

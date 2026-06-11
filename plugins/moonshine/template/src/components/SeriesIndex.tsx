@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import MoonshineFooter from './MoonshineFooter'
 import type { ArticleData } from '../lib/types'
@@ -7,14 +8,18 @@ type Props = {
 }
 
 // Series landing page. Renders one card per article, ordered by `order`
-// in the article's frontmatter. The article whose `order` is 0 (or
-// missing) and whose `slug` is `index` is treated as the series intro:
-// its description becomes the page lede.
+// in the article's frontmatter. The article whose slug is `series-index`
+// (velite flattens `series/index.md` to that) is treated as the series
+// intro: its description becomes the page lede. Without one, the
+// lowest-order article stands in.
 export default function SeriesIndex({ articles }: Props) {
-  const intro = articles.find((a) => a.slug === 'series-index') ?? articles[0]
-  const cards = articles
-    .filter((a) => a.slug !== intro.slug)
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  const sorted = [...articles].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  const intro = articles.find((a) => a.slug === 'series-index') ?? sorted[0]
+  const cards = sorted.filter((a) => a.slug !== intro.slug)
+
+  useEffect(() => {
+    document.title = intro.title
+  }, [intro.title])
 
   return (
     <article className="article">

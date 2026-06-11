@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useId, useMemo } from 'react'
 import { useFigureHighlight } from '../store'
 
 // Vector field on a 14×10 grid. Arrows point in the negative-gradient
@@ -9,12 +9,21 @@ import { useFigureHighlight } from '../store'
 export default function GradientField() {
   const arrows = useMemo(() => buildArrows(), [])
   const { activePart } = useFigureHighlight('gradient-field')
+  // Marker ids are document-global in SVG; scope them per instance so two
+  // copies of this figure on one page don't fight over the same defs.
+  const uid = useId()
 
   return (
-    <svg viewBox="0 0 480 320" width="100%" style={{ maxHeight: 320 }}>
+    <svg
+      viewBox="0 0 480 320"
+      width="100%"
+      role="img"
+      aria-label="Grid of arrows showing the negative gradient of a loss surface; arrows point downhill toward two valleys."
+      style={{ maxHeight: 320 }}
+    >
       <defs>
         <marker
-          id="gf-arrowhead-dim"
+          id={`${uid}-arrowhead-dim`}
           viewBox="0 0 10 10"
           refX="8"
           refY="5"
@@ -25,7 +34,7 @@ export default function GradientField() {
           <path d="M0,0 L10,5 L0,10 z" fill="var(--text-2)" />
         </marker>
         <marker
-          id="gf-arrowhead-active"
+          id={`${uid}-arrowhead-active`}
           viewBox="0 0 10 10"
           refX="8"
           refY="5"
@@ -53,8 +62,8 @@ export default function GradientField() {
             strokeWidth={isActiveCluster ? 2 : 1.5}
             markerEnd={
               isActiveCluster
-                ? 'url(#gf-arrowhead-active)'
-                : 'url(#gf-arrowhead-dim)'
+                ? `url(#${uid}-arrowhead-active)`
+                : `url(#${uid}-arrowhead-dim)`
             }
             opacity={
               isActiveCluster
