@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -37,6 +38,20 @@ type EditContextValue = {
 
 const EditContext = createContext<EditContextValue | null>(null)
 
+// Same function exists server-side in vite-plugin-moonshine-edit.ts — keep
+// the two in sync. 32-bit FNV-1a over UTF-16 code units, hex string. Used
+// to tell the save endpoint which version of the body an edit was spliced
+// from, so concurrent changes (e.g. a coding agent editing the same file)
+// get a 409 instead of being silently overwritten.
+function fnv1a(str: string): string {
+  let h = 0x811c9dc5
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return (h >>> 0).toString(16)
+}
+
 async function postSave(payload: Record<string, unknown>): Promise<void> {
   // Hard guard on the build-time constant. esbuild folds EDIT_ENABLED to
   // `false` in a production build, turning this into an early `return` and
@@ -49,8 +64,16 @@ async function postSave(payload: Record<string, unknown>): Promise<void> {
     body: JSON.stringify(payload),
   })
   if (!res.ok) {
-    const detail = await res.text().catch(() => '')
-    throw new Error(`save failed (${res.status}): ${detail}`)
+    const raw = await res.text().catch(() => '')
+    let detail = raw
+    try {
+      detail = (JSON.parse(raw) as { error?: string }).error ?? raw
+    } catch {
+      // not JSON — use the raw text
+    }
+    throw new Error(
+      res.status === 409 ? detail : `save failed (${res.status}): ${detail}`,
+    )
   }
 }
 
@@ -63,6 +86,12 @@ type ProviderProps = {
 export function EditProvider({ body, path, children }: ProviderProps) {
   const [activeRange, setActiveRange] = useState<[number, number] | null>(null)
   const [armed, setArmed] = useState(false)
+  // Snapshot of the block's source taken when the editor opened. The body
+  // prop can change underneath an open editor (HMR after an agent edits the
+  // file); before splicing we verify the target range still holds the same
+  // text, otherwise the offsets are stale and the splice would corrupt
+  // unrelated prose.
+  const activeSliceRef = useRef<string | null>(null)
 
   // Track the Cmd/Ctrl modifier globally so blocks can reveal their edit
   // boundaries only while it's held — the page reads as normal prose
@@ -92,15 +121,33 @@ export function EditProvider({ body, path, children }: ProviderProps) {
     path,
     activeRange,
     armed,
-    beginEdit: (start, end) => setActiveRange([start, end]),
-    cancelEdit: () => setActiveRange(null),
+    beginEdit: (start, end) => {
+      activeSliceRef.current = body.slice(start, end)
+      setActiveRange([start, end])
+    },
+    cancelEdit: () => {
+      activeSliceRef.current = null
+      setActiveRange(null)
+    },
     commitBody: async (start, end, text) => {
       // Splice the edited block back into the body at its exact source
       // range. Offsets came from parsing this same string, so the result
-      // is guaranteed consistent. Velite's watcher re-emits after the
-      // write and the page hot-reloads with the new body.
+      // is guaranteed consistent — unless the body changed while the
+      // editor was open. Guard on the snapshot taken at beginEdit.
+      const current = body.slice(start, end)
+      if (activeSliceRef.current !== null && current !== activeSliceRef.current) {
+        throw new Error(
+          'this block changed on disk while the editor was open — copy your text, close the editor, and re-apply it after the page refreshes',
+        )
+      }
+      // `baseHash` lets the server reject the write if the file changed
+      // after our last HMR update (the window between a concurrent edit
+      // landing on disk and velite re-emitting it). Velite's watcher
+      // re-emits after the write and the page hot-reloads with the new
+      // body.
       const next = body.slice(0, start) + text + body.slice(end)
-      await postSave({ path, body: next })
+      await postSave({ path, body: next, baseHash: fnv1a(body) })
+      activeSliceRef.current = null
       setActiveRange(null)
     },
     commitFrontmatter: async (key, val) => {

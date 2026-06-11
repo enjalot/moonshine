@@ -5,16 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-
 import { articles } from '#content'
 import Article from './components/Article'
 import SeriesIndex from './components/SeriesIndex'
-
-type ArticleData = {
-  title: string
-  description?: string
-  series?: string
-  order?: number
-  tags?: string[]
-  body: string
-  slug: string
-}
+import type { ArticleData } from './lib/types'
 
 const all: ArticleData[] = articles
 

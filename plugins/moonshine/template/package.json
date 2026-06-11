@@ -36,6 +36,7 @@
     "concurrently": "9.2.1",
     "typescript": "5.9.3",
     "velite": "0.2.4",
-    "vite": "5.4.21"
+    "vite": "5.4.21",
+    "yaml": "2.9.0"
   }
 }

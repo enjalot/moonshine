@@ -10,18 +10,7 @@ import EditableBlock from './EditableBlock'
 import EditableField from './EditableField'
 import MoonshineFooter from './MoonshineFooter'
 import { EditProvider } from '../lib/EditContext'
-
-type ArticleData = {
-  title: string
-  description?: string
-  series?: string
-  order?: number
-  body: string
-  slug: string
-  // Content-relative source path, emitted by Velite. Present in dev; used
-  // by the in-place editor to know which file to write back to.
-  path?: string
-}
+import type { ArticleData } from '../lib/types'
 
 type Props = {
   article: ArticleData
@@ -53,7 +42,7 @@ export default function Article({ article, all }: Props) {
   const next = idx >= 0 && idx < siblings.length - 1 ? siblings[idx + 1] : null
 
   return (
-    <EditProvider body={article.body} path={article.path ?? `${article.slug}.md`}>
+    <EditProvider body={article.body} path={article.path}>
       <article className="article">
         <header>
           <EditableField as="h1" fieldKey="title" value={article.title} />
