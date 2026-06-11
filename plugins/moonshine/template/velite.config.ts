@@ -19,6 +19,38 @@ export default defineConfig({
     clean: true,
   },
   collections: {
+    // Author-owned figure state, baked into the build. Written by the
+    // dev-only arrange/knob affordances (e.g. DiagramFigure's "arrange"
+    // mode serializes node positions + viewport here); read back via
+    // src/lib/bakedFigures.ts. JSON instead of frontmatter because the
+    // same figure can appear in several articles, and JSON round-trips
+    // machine writes cleanly. The schema splits author-owned layout
+    // (positions, viewport) from machine-owned semantics (node ids,
+    // edges live in the figure's code) — merged by node id at render,
+    // so regenerated diagram code never clobbers the author's
+    // arrangement.
+    figureData: {
+      name: 'FigureData',
+      pattern: 'figures/**/*.json',
+      schema: s
+        .object({
+          figure: s.string(),
+          layout: s
+            .record(s.string(), s.object({ x: s.number(), y: s.number() }))
+            .optional(),
+          viewport: s
+            .object({ x: s.number(), y: s.number(), zoom: s.number() })
+            .optional(),
+        })
+        .transform((data, ctx) => {
+          const meta = (ctx as unknown as { meta: { path: string } }).meta
+          const rel = path
+            .relative(path.resolve('content'), meta.path)
+            .split(path.sep)
+            .join('/')
+          return { ...data, path: rel }
+        }),
+    },
     articles: {
       name: 'Article',
       pattern: '**/*.md',
