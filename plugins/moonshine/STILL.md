@@ -352,6 +352,29 @@ offsets point into the markdown. The directive line itself
 editable in the browser — change those in the `.md` source or the
 component files as usual.
 
+## Git: the Shared Memory Between Author and Agent
+
+The author edits prose in the browser; you (the agent) edit the same
+files directly. Git is how the two surfaces stay aware of each other
+without explicit handoffs:
+
+- Every successful browser save **auto-commits** with a
+  `moonshine-edit: <file> (<what>)` message (only when the project is
+  its own git repository — the dev-only save endpoint checks).
+- **Before you edit anything under `content/`**, check what the author
+  changed since your last commit: `git log --oneline -- content/` and
+  look for `moonshine-edit:` commits, then `git diff <your-last-commit>
+  -- content/` to see their actual wording. **Author edits are
+  authoritative.** Never regenerate or paraphrase a block the author
+  touched; build around their words. If your planned change conflicts
+  with theirs, show the conflict and ask.
+- Commit your own changes as you work, with messages that aren't
+  prefixed `moonshine-edit:`, so the boundary between surfaces stays
+  legible in the log.
+- The author's in-browser Undo only covers the most recent save; the
+  commit history is the real undo. If the author asks to restore older
+  wording, use git.
+
 ## Workflow When Building an Article With This Skill
 
 This section is canonical — the `/moonshine:still` command and the Codex
@@ -368,6 +391,11 @@ Once the outline is agreed:
      build artifacts the in-repo dev harness may have left behind:
      `rsync -a --exclude node_modules --exclude .velite --exclude dist
      --exclude '*.tsbuildinfo' template/ <project-root>/`
+   - `git init` the project and make an initial commit ("moonshine still
+     scaffold"). The template ships a `.gitignore`. This powers the
+     author/agent shared history described in "Git: the Shared Memory"
+     below; if git isn't available, continue without it — everything
+     still works, history just won't accrue.
    - Run `npm install` in the background — it takes about a minute and
      you can keep talking to the user while it goes.
    - Start the dev server in the background: `npm run dev`, or
