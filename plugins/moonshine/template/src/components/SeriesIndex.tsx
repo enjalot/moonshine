@@ -1,14 +1,6 @@
 import { Link } from 'react-router-dom'
 import MoonshineFooter from './MoonshineFooter'
-
-type ArticleData = {
-  title: string
-  description?: string
-  series?: string
-  order?: number
-  tags?: string[]
-  slug: string
-}
+import type { ArticleData } from '../lib/types'
 
 type Props = {
   articles: ArticleData[]
