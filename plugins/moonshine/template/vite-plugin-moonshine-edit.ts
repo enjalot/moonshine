@@ -198,7 +198,23 @@ export default function moonshineEditPlugin(): Plugin {
           }
 
           await enqueue(target, async () => {
-            const original = await fs.readFile(target, 'utf8')
+            // Existing files only — with one exception: baked figure
+            // state under content/figures/ may be created on first save
+            // (that's how a diagram's first "Save layout" lands).
+            const rel = path.relative(contentRoot, target).split(path.sep).join('/')
+            let original = ''
+            try {
+              original = await fs.readFile(target, 'utf8')
+            } catch (err) {
+              const creatable =
+                (err as NodeJS.ErrnoException).code === 'ENOENT' &&
+                /^figures\/[\w./-]+\.json$/.test(rel)
+              if (!creatable) throw err
+              await fs.mkdir(path.dirname(target), { recursive: true })
+            }
+            if (payload.frontmatter && !target.endsWith('.md')) {
+              throw new Error('frontmatter patches only apply to markdown files')
+            }
             const { fmInner, fmRaw, body: diskBody } = splitMatter(original)
 
             let body = diskBody

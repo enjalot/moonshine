@@ -152,7 +152,8 @@ template/
       Sparkline.tsx          ← D3 example
       GradientField.tsx      ← plain SVG example
       LossLandscape.tsx      ← interactive React state example
-      FlowDiagram.tsx        ← React Flow example
+      DiagramFigure.tsx      ← generic React Flow diagram + arrange/bake
+      FlowDiagram.tsx        ← example diagram semantics on DiagramFigure
       lib/
         params.ts            ← attr→number/bool/string coercers
         lossSurface.ts       ← constants shared between figures
@@ -243,12 +244,15 @@ defaults explain how to opt in.
 
 The figure layer is open. But there are real choices to make per figure:
 
-- **React Flow** is the preferred choice for node-link diagrams.
-  Unlike Mermaid (which renders to opaque SVG you can't reach into),
-  every React Flow node is a real React component. That means a clicked
-  `:term[word]{to=diagram-id}` can subscribe to the same store and
-  highlight a specific node *inside* the diagram. Choose React Flow
-  whenever you'd reach for Mermaid.
+- **React Flow** (`@xyflow/react`) is the preferred choice for
+  node-link diagrams — but don't use it directly: build on the
+  template's `DiagramFigure` (see "Diagrams and Baked Layouts" below),
+  which handles reader lockdown, term highlighting, and author
+  arranging. Unlike Mermaid (which renders to opaque SVG you can't
+  reach into), every React Flow node is a real React component. That
+  means a clicked `:term[word]{to=diagram-id}` can subscribe to the
+  same store and highlight a specific node *inside* the diagram.
+  Choose React Flow whenever you'd reach for Mermaid.
 
 - **D3 v7** for custom data visualization — scales, axes, force
   layouts, contours, anything where the existing `VISUALS.md`
@@ -267,6 +271,35 @@ The figure layer is open. But there are real choices to make per figure:
 - **Avoid Mermaid.** It's tempting because of the declarative syntax,
   but the output is opaque to your interaction model. Use React Flow
   instead.
+
+## Diagrams and Baked Layouts
+
+Node positions and the viewport framing are exactly the kind of
+many-small-tweaks design work humans are good at and generated code is
+bad at. The template splits the two cleanly:
+
+- **Machine-owned semantics** live in the figure's code: node ids,
+  labels, edges, and fallback positions. See `FlowDiagram.tsx` — it
+  declares `NODES`/`EDGES` and delegates everything else to
+  `DiagramFigure`. Regenerate this file freely.
+- **Author-owned arrangement** lives in
+  `content/figures/<figure-id>.json` (a Velite collection): dragged
+  node positions and the exact viewport. Merged by node id at render
+  time, so a regenerated diagram never clobbers the author's layout,
+  and new nodes fall back to their code positions until arranged.
+
+The author's loop, during `npm run dev`: click **arrange** under the
+diagram → drag nodes, scroll-zoom, pan to the framing readers should
+get → **Save layout**. The JSON is written through the same
+conflict-checked, auto-committed save path as prose. In the built
+article the diagram is locked (no dragging or panning; wheel scrolls
+the page) and renders the author's exact arrangement — baking isn't a
+separate publish step, it's just what saving means.
+
+When you (the agent) build a new diagram: define semantics in a figure
+file on `DiagramFigure`, never edit `content/figures/*.json` yourself
+(that's the author's surface; treat it like author prose), and pick
+node ids that read naturally in `:term[...]{to=fig.node-id}` references.
 
 ## Velite and Typed Metadata
 
