@@ -1,8 +1,8 @@
 import type { ComponentType } from 'react'
-import GradientField from './GradientField'
-import LossLandscape from './LossLandscape'
+import GradientField, { DEFAULTS as gradientFieldDefaults } from './GradientField'
+import LossLandscape, { DEFAULTS as lossLandscapeDefaults } from './LossLandscape'
 import FlowDiagram from './FlowDiagram'
-import Sparkline from './Sparkline'
+import Sparkline, { DEFAULTS as sparklineDefaults } from './Sparkline'
 import MiniSpark from './inline/MiniSpark'
 
 // The registry is the seam between writers and developers. Authors
@@ -35,13 +35,27 @@ export type FigureEntry = {
   height?: number
   // Break out of the article column (maps to the .figure-wide class).
   wide?: boolean
+  // The figure's exported DEFAULTS. Registering them here powers the
+  // dev-only knob panel (Cmd/Ctrl+click the figure): controls are
+  // generated from these values' types, and tweaks write back into the
+  // directive's attributes in the markdown.
+  defaults?: Record<string, number | boolean | string>
 }
 
 export const figures: Record<string, FigureEntry> = {
-  'gradient-field': { component: GradientField, height: 320, wide: true },
-  'loss-landscape': { component: LossLandscape, height: 350 },
+  'gradient-field': {
+    component: GradientField,
+    height: 320,
+    wide: true,
+    defaults: gradientFieldDefaults,
+  },
+  'loss-landscape': {
+    component: LossLandscape,
+    height: 350,
+    defaults: lossLandscapeDefaults,
+  },
   'flow-diagram': { component: FlowDiagram, height: 280 },
-  sparkline: { component: Sparkline, height: 120 },
+  sparkline: { component: Sparkline, height: 120, defaults: sparklineDefaults },
 }
 
 export const inlineFigures: Record<string, ComponentType<Record<string, unknown>>> = {

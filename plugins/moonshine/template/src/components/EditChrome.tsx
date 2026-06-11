@@ -35,8 +35,8 @@ function EditHint() {
   return (
     <div className="mn-chrome mn-hint-pill" role="note">
       <span>
-        ✎ hold <kbd>⌘/Ctrl</kbd> and click any block to edit · <kbd>esc</kbd>{' '}
-        unpins highlights
+        ✎ hold <kbd>⌘/Ctrl</kbd> and click: blocks to edit prose, figures
+        for parameters · <kbd>esc</kbd> unpins
       </span>
       <button
         type="button"

@@ -467,3 +467,93 @@
   padding: 0.15rem 0.7rem;
   cursor: pointer;
 }
+
+/* Dev-only figure knob panel ------------------------------------------ */
+
+.mn-knobs {
+  font-family: var(--heading-font);
+  font-size: 0.8rem;
+  color: var(--text-2);
+  border-top: 1px dashed var(--border);
+  margin-top: 0.75rem;
+  padding-top: 0.6rem;
+}
+
+.mn-knobs-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+
+.mn-knobs-title code {
+  background: none;
+  padding: 0;
+}
+
+.mn-knobs-title button {
+  font: inherit;
+  border: none;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.mn-knob {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.25rem 0;
+}
+
+.mn-knob-name {
+  font-family: var(--mono-font);
+  font-size: 0.75rem;
+  min-width: 5.5rem;
+}
+
+.mn-knob input[type='range'] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.mn-knob input[type='number'],
+.mn-knob input[type='text'] {
+  font-family: var(--mono-font);
+  font-size: 0.75rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.15rem 0.35rem;
+}
+
+.mn-knob input[type='number'] {
+  width: 5.5rem;
+}
+
+.mn-knobs-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.mn-knobs-actions button {
+  font: inherit;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0.15rem 0.7rem;
+  cursor: pointer;
+}
+
+.mn-knobs-actions button:first-child {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.mn-knobs-empty {
+  margin: 0;
+}

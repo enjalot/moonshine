@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FigureProps } from './registry'
 import { loss, grad } from './lib/lossSurface'
 import { num } from './lib/params'
@@ -23,10 +23,14 @@ export const DEFAULTS = {
 export default function LossLandscape(props: FigureProps) {
   const lr = num(props.lr, DEFAULTS.lr)
   const steps = num(props.steps, DEFAULTS.steps)
-  const [start, setStart] = useState<[number, number]>([
-    num(props.startX, DEFAULTS.startX),
-    num(props.startY, DEFAULTS.startY),
-  ])
+  const startX = num(props.startX, DEFAULTS.startX)
+  const startY = num(props.startY, DEFAULTS.startY)
+  const [start, setStart] = useState<[number, number]>([startX, startY])
+  // Follow live param changes (knob panel, markdown edit) — the reader's
+  // own drags still win until the params change again.
+  useEffect(() => {
+    setStart([startX, startY])
+  }, [startX, startY])
   const [dragging, setDragging] = useState(false)
   const svgRef = useRef<SVGSVGElement>(null)
   const cells = useMemo(() => buildHeatmap(), [])
