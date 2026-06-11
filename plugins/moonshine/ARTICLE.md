@@ -84,9 +84,6 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
 .figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
 .figure-label { font-weight: 600; color: var(--text); }
 
-.insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
-.insight p { margin: 0; }
-
 .margin-note { font-size: 0.8125rem; color: var(--text-2); line-height: 1.4; border-left: 2px solid var(--border); padding-left: 0.75rem; margin: 1rem 0; }
 
 .controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
@@ -144,7 +141,7 @@ The template uses CSS custom properties throughout. Reference them in D3 code vi
 
 **Color palette:**
 - `--text` / `--text-2`: primary and secondary text
-- `--accent` / `--accent-light`: interactive elements, highlights, insight boxes
+- `--accent` / `--accent-light`: interactive elements and highlights
 - `--bg` / `--fig-bg` / `--border`: backgrounds and structure
 
 **Dark mode** (add when appropriate):

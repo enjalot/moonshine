@@ -13,6 +13,7 @@ AI tools generate complexity faster than people can consume it. Moonshine is for
 **Reference files:**
 - `ARTICLE.md` HTML scaffold, CSS foundation, layout patterns, series structure
 - `VISUALS.md` D3 visualization patterns, interaction, rendering technology, iteration
+- `STILL.md` the structured Vite + React project flavor: markdown directives, figure registry, in-place editing
 
 ## Articles, Not Dashboards
 
@@ -27,6 +28,15 @@ Moonshine makes explanatory articles where prose drives understanding and intera
 When in doubt about a design choice, ask: "Would this feel at home in a Distill.pub article, or in a Grafana dashboard?" If the answer is dashboard, reconsider.
 
 We are also not making coding tutorials. Equations and their connection to behavior should be shown through interactive visualizations, not code listings. If pseudocode helps connect math to implementation, keep it minimal and pair it with the equation. Never show implementation code (framework boilerplate, shader code, API calls) unless the article is specifically about programming.
+
+## Two Substrates: shine and still
+
+Moonshine renders articles on one of two substrates. Decide early, during story discovery, and confirm the choice at the Phase 1 checkpoint:
+
+- **shine** — a single self-contained HTML file (vanilla JS + D3 from CDN). Choose when drafting fast, when the user wants one file they can email or host anywhere, or when the article is one-shot.
+- **still** — a Vite + React + Velite project where prose lives in pristine markdown and figures are React components. Choose when the article will keep being edited after first publication, when figures need React state or component libraries (React Flow, react-three-fiber), when people will edit the prose without touching figure code, or when the work is a series or could become one.
+
+If the user invoked a specific command (`/moonshine:shine` or `/moonshine:still`), the choice is made. If they invoked moonshine generically, default to shine for one-shot explainers and suggest still when any of its criteria apply. Everything still-specific lives in `STILL.md`.
 
 ## The Process
 
@@ -94,13 +104,16 @@ Iterate on this section until it works before building the rest.
 
 Build the remaining sections, following the structure from Phase 2. After each major section, open in the browser to verify. Prose should be written alongside the figures, not after, because the prose frames what the reader should notice in each figure.
 
-**Checkpoint:** Before delivering, review the complete article against the Anti-Slop checklist below.
+**Checkpoint:** Before delivering, verify the article:
+
+1. Walk the Anti-Slop list below item by item against the actual output, as a literal checklist pass, not from memory. Fix what you find.
+2. If a browser or screenshot tool is available, screenshot each figure and check it against the Pedagogy principles: something interesting is visible before any interaction, defaults make the phenomenon dramatically visible, nothing is blank or waiting for a click.
 
 ### Output
 
-Create projects in `~/.agent/moonshine/project-name/`. Each explanation is a self-contained HTML file. See `ARTICLE.md` for the scaffold template, layout patterns, and series structure.
+Create projects in `~/.agent/moonshine/project-name/`. On the **shine** substrate each explanation is a self-contained HTML file; see `ARTICLE.md` for the scaffold template, layout patterns, and series structure. On the **still** substrate the project is a Vite + React app; see `STILL.md` for the bootstrap procedure and project structure.
 
-After building, open the result in the browser.
+After building, open the result in the browser (shine) or report the dev server URL to the user (still).
 
 ## Editorial Tone
 
@@ -180,7 +193,3 @@ These principles come from building real moonshine articles and noticing what ge
 **Consistent conventions across figures.** If you show a radius as a dotted circle in one figure, show it the same way in every figure. If you color-code a variable blue in an equation, use that same blue everywhere it appears. Inconsistency forces the reader to re-learn the visual language in each figure.
 
 **Looping animations reset cleanly.** If a demonstration loops, it should reset to its initial state, not carry over physics or accumulated values from the previous iteration.
-
-## Reference Skills
-
-- **grill-me** Approach to guided question-asking to help users clarify their thinking.
