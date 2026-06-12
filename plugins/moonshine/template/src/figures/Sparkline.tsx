@@ -14,6 +14,11 @@ export const DEFAULTS = {
   n: 60, // number of points
 }
 
+// d3.randomLcg seeds live in [0, 1); n is integer-stepped by inference.
+export const PARAM_HINTS = {
+  seed: { min: 0, max: 0.99, step: 0.01 },
+}
+
 export default function Sparkline(props: FigureProps) {
   const seed = num(props.seed, DEFAULTS.seed)
   const n = num(props.n, DEFAULTS.n)

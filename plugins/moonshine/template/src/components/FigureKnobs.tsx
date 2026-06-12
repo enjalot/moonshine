@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useEdit } from '../lib/EditContext'
+import type { ParamHint } from '../figures/registry'
 
 // Dev-only parameter panel for a figure — the figure-side mirror of
 // in-place prose editing. Controls are generated from the figure's
@@ -15,6 +16,8 @@ import { useEdit } from '../lib/EditContext'
 type Props = {
   figureId: string
   defaults: Record<string, number | boolean | string>
+  // Optional explicit slider bounds per parameter (figure's PARAM_HINTS).
+  paramHints?: Record<string, ParamHint>
   // Attributes as currently written in the markdown directive (strings).
   attrs: Record<string, string>
   // Live override values keyed by param name (strings).
@@ -29,6 +32,7 @@ type Props = {
 export default function FigureKnobs({
   figureId,
   defaults,
+  paramHints,
   attrs,
   overrides,
   onChange,
@@ -97,6 +101,7 @@ export default function FigureKnobs({
           key={key}
           name={key}
           def={def}
+          hint={paramHints?.[key]}
           value={currentValue(key)}
           onChange={(v) => onChange(key, v)}
         />
@@ -121,11 +126,13 @@ export default function FigureKnobs({
 function Knob({
   name,
   def,
+  hint,
   value,
   onChange,
 }: {
   name: string
   def: number | boolean | string
+  hint?: ParamHint
   value: string
   onChange: (v: string) => void
 }) {
@@ -143,7 +150,7 @@ function Knob({
   }
   if (typeof def === 'number') {
     const cur = Number(value)
-    const { min, max, step } = sliderSpec(def)
+    const { min, max, step } = sliderSpec(def, hint)
     return (
       <label className="mn-knob">
         <span className="mn-knob-name">{name}</span>
@@ -173,17 +180,25 @@ function Knob({
   )
 }
 
-// Slider bounds from the DEFAULT's order of magnitude only: lr=0.08 →
-// [0, 0.5] step 0.001; steps=80 → [0, 500] step 1. Bounds must not
-// depend on the current value — rescaling the track mid-drag moves the
-// thumb under the pointer and feeds back until the value explodes. The
-// number input alongside is unconstrained for values past the slider.
-function sliderSpec(def: number) {
+// Slider bounds. Explicit PARAM_HINTS win field by field; otherwise the
+// DEFAULT's order of magnitude decides: lr=0.08 → [0, 0.5] step 0.001;
+// steps=80 → [0, 500] step 1. An integer default infers an integer step
+// (rows=10 should slide 9, 10, 11 — not 10.3). Bounds must not depend on
+// the current value — rescaling the track mid-drag moves the thumb under
+// the pointer and feeds back until the value explodes. The number input
+// alongside is unconstrained for values past the slider.
+function sliderSpec(def: number, hint?: ParamHint) {
   const ref = Math.max(Math.abs(def), 1e-6)
   const mag = Math.pow(10, Math.ceil(Math.log10(ref)))
+  let step = mag / 100
+  if (Number.isInteger(def)) step = Math.max(1, step)
   const max = 5 * mag
   const min = def < 0 ? -max : 0
-  return { min, max, step: mag / 100 }
+  return {
+    min: hint?.min ?? min,
+    max: hint?.max ?? max,
+    step: hint?.step ?? step,
+  }
 }
 
 // Replace (or insert) the attribute braces on the directive's first line,

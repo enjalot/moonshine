@@ -240,6 +240,23 @@ feel; the result lands in markdown where you can read it. Clicks on
 the caption still open the prose editor; figures without registered
 defaults explain how to opt in.
 
+Slider bounds come from the default's order of magnitude, and an
+**integer default infers an integer step** (`rows: 10` slides 9, 10,
+11 — never 10.3). When the heuristic guesses a range wrong, export
+`PARAM_HINTS` next to `DEFAULTS` and register it as `paramHints`:
+
+```ts
+export const PARAM_HINTS = {
+  lr: { min: 0.005, max: 0.5, step: 0.005 },
+  startX: { min: -1, max: 1, step: 0.05 },
+}
+```
+
+Hints win field by field over the heuristic. Use them for bounded
+coordinates, parameters with a meaningful ceiling, or any place the
+slider's feel matters — the paired number input stays unconstrained
+either way.
+
 ## Recommended Visualization Libraries
 
 The figure layer is open. But there are real choices to make per figure:
