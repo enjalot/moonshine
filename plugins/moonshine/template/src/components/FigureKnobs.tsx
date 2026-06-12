@@ -78,8 +78,12 @@ export default function FigureKnobs({
     return parts.join(' ')
   }
 
+  // No stopPropagation here: the figure's own capture handler already
+  // ignores clicks inside .mn-knobs, and a capture-phase stop at this
+  // wrapper would prevent the click from ever reaching the panel's own
+  // buttons (it stops the descent, not just the bubble).
   return (
-    <div className="mn-knobs" onClickCapture={(e) => e.stopPropagation()}>
+    <div className="mn-knobs">
       <div className="mn-knobs-title">
         <span>
           <code>{figureId}</code> parameters
@@ -139,7 +143,7 @@ function Knob({
   }
   if (typeof def === 'number') {
     const cur = Number(value)
-    const { min, max, step } = sliderSpec(def, Number.isFinite(cur) ? cur : def)
+    const { min, max, step } = sliderSpec(def)
     return (
       <label className="mn-knob">
         <span className="mn-knob-name">{name}</span>
@@ -148,7 +152,7 @@ function Knob({
           min={min}
           max={max}
           step={step}
-          value={Number.isFinite(cur) ? cur : def}
+          value={Number.isFinite(cur) ? Math.max(min, Math.min(max, cur)) : def}
           onChange={(e) => onChange(e.target.value)}
         />
         <input
@@ -169,14 +173,16 @@ function Knob({
   )
 }
 
-// Slider bounds from the default's order of magnitude: lr=0.08 → [0, 0.5]
-// step 0.005; steps=80 → [0, 500] step 5. The number input alongside is
-// unconstrained for values past the slider.
-function sliderSpec(def: number, cur: number) {
-  const ref = Math.max(Math.abs(def), Math.abs(cur), 1e-6)
+// Slider bounds from the DEFAULT's order of magnitude only: lr=0.08 →
+// [0, 0.5] step 0.001; steps=80 → [0, 500] step 1. Bounds must not
+// depend on the current value — rescaling the track mid-drag moves the
+// thumb under the pointer and feeds back until the value explodes. The
+// number input alongside is unconstrained for values past the slider.
+function sliderSpec(def: number) {
+  const ref = Math.max(Math.abs(def), 1e-6)
   const mag = Math.pow(10, Math.ceil(Math.log10(ref)))
   const max = 5 * mag
-  const min = def < 0 || cur < 0 ? -max : 0
+  const min = def < 0 ? -max : 0
   return { min, max, step: mag / 100 }
 }
 

@@ -282,12 +282,22 @@
    `npm run dev`. A production build never adds the `mn-block`/`mn-edit`
    classes, so this block is inert in static exports. */
 
+/* A whisper of an affordance on plain hover (dev only — the mn-block
+   class is never added in static builds): a faint left rule says "this
+   block can be edited" without suggesting a click does anything yet.
+   Innermost block only, mirroring the armed rule below. */
+.mn-block {
+  border-radius: 4px;
+  transition: background 0.12s, box-shadow 0.12s;
+}
+.mn-block:hover:not(:has(.mn-block:hover)) {
+  box-shadow: -0.6rem 0 0 0 var(--border);
+}
+
 /* Reveal block boundaries only while Cmd/Ctrl is held ("armed"), so the
    page reads as normal prose until the author signals intent to edit. */
 .mn-block-armed {
   cursor: pointer;
-  border-radius: 4px;
-  transition: background 0.12s, box-shadow 0.12s;
 }
 /* Highlight only the innermost armed block under the cursor — :hover also
    matches ancestors (the ul around a hovered li), but the click opens the
@@ -470,13 +480,18 @@
 
 /* Dev-only figure knob panel ------------------------------------------ */
 
+/* Visually a tool, not content: tinted background + dashed border set
+   the panel apart from the figure canvas above and the caption below,
+   so it can't read as part of the article. */
 .mn-knobs {
   font-family: var(--heading-font);
   font-size: 0.8rem;
   color: var(--text-2);
-  border-top: 1px dashed var(--border);
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
   margin-top: 0.75rem;
-  padding-top: 0.6rem;
+  padding: 0.6rem 0.8rem;
 }
 
 .mn-knobs-title {
@@ -567,7 +582,11 @@
   font-family: var(--heading-font);
   font-size: 0.75rem;
   color: var(--text-2);
-  margin-top: 0.4rem;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.6rem;
 }
 
 .mn-diagram-bar button {
@@ -583,4 +602,26 @@
 .mn-diagram-bar button:first-of-type {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* Dev-only hint that a figure has an edit affordance: a faint pencil
+   fades in on hover, top-right. Distinct from the term-highlight states
+   (.figure-hovered/.figure-pinned), which color the border instead. */
+.mn-editable-figure {
+  position: relative;
+}
+.mn-editable-figure::after {
+  content: '✎';
+  position: absolute;
+  top: 0.4rem;
+  right: 0.6rem;
+  font-family: var(--heading-font);
+  font-size: 0.8rem;
+  color: var(--text-2);
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+.mn-editable-figure:hover::after {
+  opacity: 0.45;
 }
