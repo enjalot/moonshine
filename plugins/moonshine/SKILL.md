@@ -106,8 +106,9 @@ Build the remaining sections, following the structure from Phase 2. After each m
 
 **Checkpoint:** Before delivering, verify the article:
 
-1. Walk the Anti-Slop list below item by item against the actual output, as a literal checklist pass, not from memory. Fix what you find.
-2. If a browser or screenshot tool is available, screenshot each figure and check it against the Pedagogy principles: something interesting is visible before any interaction, defaults make the phenomenon dramatically visible, nothing is blank or waiting for a click.
+1. Run the Editing Pass (see Editorial Tone) over the prose, section by section.
+2. Walk the Anti-Slop list below item by item against the actual output, as a literal checklist pass, not from memory. Fix what you find.
+3. If a browser or screenshot tool is available, screenshot each figure and check it against the Pedagogy principles: something interesting is visible before any interaction, defaults make the phenomenon dramatically visible, nothing is blank or waiting for a click.
 
 ### Output
 
@@ -117,15 +118,52 @@ After building, open the result in the browser (shine) or report the dev server 
 
 ## Editorial Tone
 
-Moonshine articles should have clear and humble prose. We are helping people digest, not force-feeding them.
+Moonshine articles should have clear and humble prose. We are helping people digest, not force-feeding them. The writing should feel like a knowledgeable colleague explaining something at a whiteboard, not a keynote presentation.
+
+The one-line rule: **remove the performance, keep the explanation.** Authorial performance is anything that draws attention to the writing instead of the thing being explained — the dramatic reveal, the quotable maxim, the teaser heading, the clever construction. The patterns below were extracted from a human author's line edits of drafted moonshine prose; each shows the move with a real before/after.
+
+**Flatten the two-sentence reveal.** A punchy short sentence that "lands" a point reads as written, not spoken. Merge it into the prior sentence unless the punch is doing real work.
+- Drafted: "The problem is not styling. It is that the page has no idea what it is showing."
+- Edited: "The problem is not just a matter of styling, the page has no way of knowing what is important."
+
+**Cut the maxim.** Delete any sentence that restates the point as a quotable principle or design slogan ("That is the property a good design should lean on: build for the shape, let the specifics be data." / "That is one word per field, not new machinery."). State the concrete fact and trust the reader to extract the lesson; don't hand them the moral.
+
+**Headings describe or ask; they never tease.** Two reliable shapes: a gerund naming the activity, or the reader's literal question.
+- "Every review has the same shape" → "Making review structure explicit"
+- "What the author writes" → "Annotating the actions"
+- "Marking fields: quick view versus detail" → "What should we show in quick view?"
+
+**Ground in the real artifact.** Link or point to the concrete thing — the page, the file, the running demo — and start there. Cut abstract scene-setting that delays arrival; start at the point, not one sentence before it. "The reviews page shows all the reviews with minimal context and a quick approve button, how do we determine what to show in that list?" beats two sentences of conceptual framing about what the system can and cannot infer.
+
+**Hedge the absolutes.** Final-sounding claims become partial and forward-looking: "not just a matter of styling" over "not styling"; "percent is a reasonable starting point" over "the cheapest way"; "in the future we can explore min/max hints" over closing the question.
+
+**Plain subjects, plain verbs.** Make "we" (or the system) the subject instead of a nominalized abstraction. "We can't group into context, proposal, and evidence via inference alone" beats "The grouping into context, proposal, and evidence is the other thing inference cannot do."
+
+**Asides must earn their length.** A vivid illustrative example survives only if it teaches faster than the literal mechanism stated plainly ("extending the format hint in the schema by introducing percent" needed no inventory of temperatures and row counts).
+
+And the standing rules:
 
 - Avoid em dashes. Use commas, periods, or restructure the sentence.
 - Don't oversell. Say "this can help" not "this is a game-changer." Say "an appropriate metaphor" not "a precise metaphor."
 - State what things do, not how important they are. Let the reader decide the importance.
-- Prefer short, direct sentences. If a paragraph feels like it's building to a dramatic reveal, flatten it.
+- Prefer short, direct sentences, but never use the sentence break itself for drama (see the reveal pattern above).
 - Use "tries to", "can", "helps" instead of absolute claims.
 
-The writing should feel like a knowledgeable colleague explaining something at a whiteboard, not a keynote presentation.
+The target register is deliberately relaxed — conversational comma-joins, "Let's", "Currently" are on-voice. Relaxed is not unproofed: this register invites comma splices that don't scan and dropped words ("what it is important"), so proofreading is its own pass.
+
+### The Editing Pass
+
+After drafting prose, and again before delivering, walk each section against this checklist. It is the patterns above in executable order:
+
+1. Find every punchy short sentence that "lands" a point. Merge it into the prior sentence unless the punch is doing real work.
+2. Delete takeaway/maxim sentences. State the fact; cut the moral.
+3. Rewrite headings to describe ("Annotating the actions") or ask ("What should we show in quick view?"). No teasers.
+4. Link or point to the real thing. Replace abstract framing with the concrete artifact the reader can see.
+5. Hedge the absolutes.
+6. Make "we" or the system the subject with a plain verb; kill nominalized "The X is the thing that…".
+7. Question each vivid aside: does it earn its length, or does the plain statement already carry it?
+8. Cut the lead-in. Start at the point, not one sentence before it.
+9. Proofread last — the relaxed register invites comma splices and dropped words.
 
 ## Anti-Slop
 
@@ -155,6 +193,8 @@ The test is simple: does this look like an article, or does it look like a dashb
 - Bold claims stated as universal truth ("This fundamentally changes...").
 - Numbered lists where prose would flow better. Not everything is a "3-step process."
 - Ending with a grand summary that restates everything just said.
+- Teaser headings that withhold the topic to manufacture curiosity (covered in Editorial Tone: describe or ask).
+- Maxim sentences that package the point as a quotable principle (covered in Editorial Tone: cut the maxim).
 
 **The check:** Before delivering, scan the output. If you swapped the content for a different topic and nothing else needed to change, the design is too generic. The visual choices should relate to what's being explained.
 
