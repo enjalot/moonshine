@@ -87,6 +87,9 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
   const cls = [
     'figure',
     entry.wide && 'figure-wide',
+    // Dev-only marker for the subtle hover hint that this figure has an
+    // edit affordance (the knob panel). Never present in static builds.
+    EDIT_ENABLED && 'mn-editable-figure',
     pinned ? 'figure-pinned' : hovered ? 'figure-hovered' : '',
   ]
     .filter(Boolean)
