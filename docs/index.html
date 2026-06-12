@@ -405,7 +405,7 @@ svg .grid path { stroke: none; }
   <!-- Examples -->
   <h2>Examples</h2>
 
-  <p>Articles built with moonshine. Each is a self-contained HTML file with interactive visualizations. See <a href="https://syntagmatic.github.io/moonshine/index.html">syntagmatic's collection</a> for many more examples across different domains.</p>
+  <p>Articles built with moonshine. Most are single self-contained HTML files (the <code>shine</code> flavor); the Conductor article is a built <code>still</code> project with React figures and markdown prose. See <a href="https://syntagmatic.github.io/moonshine/index.html">syntagmatic's collection</a> for many more examples across different domains.</p>
 
   <div class="examples-list">
     <a class="example-card" href="sph/index.html">
@@ -441,6 +441,15 @@ svg .grid path { stroke: none; }
         <div class="example-card-title">Latent Verse</div>
         <p class="example-card-desc">A workbench for studying latent spaces. From embedding text into vectors, to projecting with UMAP, to finding structure with clustering, to decomposing with sparse autoencoders.</p>
         <div class="example-card-tags">embeddings &middot; UMAP &middot; clustering &middot; sparse autoencoders &middot; 5 articles</div>
+      </div>
+    </a>
+
+    <a class="example-card" href="conductor/index.html">
+      <div class="example-thumb" id="conductor-thumb"></div>
+      <div>
+        <div class="example-card-title">Introduction to Conductor</div>
+        <p class="example-card-desc">An interactive reading of &ldquo;Learning to Orchestrate Agents in Natural Language with the Conductor&rdquo;: a small language model that coordinates other language models for improved performance.</p>
+        <div class="example-card-tags">multi-agent systems &middot; reinforcement learning &middot; built with still &middot; English / 日本語</div>
       </div>
     </a>
   </div>
@@ -932,6 +941,70 @@ rm -rf /tmp/moonshine</pre>
       ctx.fill();
     });
     ctx.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ─── Conductor thumbnail: orchestrator dispatching to agents ───
+(function() {
+  const el = document.getElementById('conductor-thumb');
+  if (!el) return;
+  const canvas = document.createElement('canvas');
+  const s = 100, dpr = window.devicePixelRatio || 1;
+  canvas.width = s * dpr; canvas.height = s * dpr;
+  canvas.style.width = s + 'px'; canvas.style.height = s + 'px';
+  el.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const hub = { x: 24, y: 50 };
+  const agents = [
+    { x: 76, y: 16 }, { x: 82, y: 40 }, { x: 82, y: 62 }, { x: 76, y: 86 },
+  ];
+  let t = 0;
+
+  function draw() {
+    t += 0.012;
+    ctx.clearRect(0, 0, s, s);
+
+    agents.forEach((a, i) => {
+      // Edge
+      ctx.beginPath();
+      ctx.moveTo(hub.x, hub.y);
+      ctx.lineTo(a.x, a.y);
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Pulse traveling hub → agent, staggered per edge
+      const p = (t + i * 0.25) % 1;
+      const px = hub.x + (a.x - hub.x) * p;
+      const py = hub.y + (a.y - hub.y) * p;
+      ctx.beginPath();
+      ctx.arc(px, py, 1.8, 0, Math.PI * 2);
+      ctx.fillStyle = '#2563eb';
+      ctx.globalAlpha = 0.9 * Math.sin(Math.PI * p);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Agent node, lit while the pulse arrives
+      const lit = p > 0.85;
+      ctx.beginPath();
+      ctx.arc(a.x, a.y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = lit ? '#2563eb' : '#fff';
+      ctx.strokeStyle = lit ? '#2563eb' : '#94a3b8';
+      ctx.lineWidth = 1.2;
+      ctx.fill();
+      ctx.stroke();
+    });
+
+    // Conductor hub
+    ctx.beginPath();
+    ctx.arc(hub.x, hub.y, 8, 0, Math.PI * 2);
+    ctx.fillStyle = '#2563eb';
+    ctx.fill();
+
     requestAnimationFrame(draw);
   }
   draw();
