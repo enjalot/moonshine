@@ -125,6 +125,7 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
         <FigureKnobs
           figureId={id}
           defaults={entry.defaults}
+          paramHints={entry.paramHints}
           attrs={attrs}
           overrides={overrides}
           onChange={(key, value) =>

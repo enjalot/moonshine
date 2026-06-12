@@ -1,8 +1,14 @@
 import type { ComponentType } from 'react'
 import GradientField, { DEFAULTS as gradientFieldDefaults } from './GradientField'
-import LossLandscape, { DEFAULTS as lossLandscapeDefaults } from './LossLandscape'
+import LossLandscape, {
+  DEFAULTS as lossLandscapeDefaults,
+  PARAM_HINTS as lossLandscapeHints,
+} from './LossLandscape'
 import FlowDiagram from './FlowDiagram'
-import Sparkline, { DEFAULTS as sparklineDefaults } from './Sparkline'
+import Sparkline, {
+  DEFAULTS as sparklineDefaults,
+  PARAM_HINTS as sparklineHints,
+} from './Sparkline'
 import MiniSpark from './inline/MiniSpark'
 
 // The registry is the seam between writers and developers. Authors
@@ -27,6 +33,15 @@ export type FigureProps = {
   figureId: string
 } & Record<string, unknown>
 
+// Explicit slider bounds for a numeric parameter in the knob panel.
+// Without a hint, bounds come from the default's magnitude, and an
+// integer default infers an integer step.
+export type ParamHint = {
+  min?: number
+  max?: number
+  step?: number
+}
+
 export type FigureEntry = {
   component: ComponentType<FigureProps>
   // Vertical space (px) reserved before the figure lazily mounts.
@@ -40,6 +55,10 @@ export type FigureEntry = {
   // generated from these values' types, and tweaks write back into the
   // directive's attributes in the markdown.
   defaults?: Record<string, number | boolean | string>
+  // Optional per-parameter slider bounds (the figure's exported
+  // PARAM_HINTS). Use when the magnitude heuristic gets a range wrong —
+  // e.g. a coordinate that should run [-1, 1].
+  paramHints?: Record<string, ParamHint>
 }
 
 export const figures: Record<string, FigureEntry> = {
@@ -53,9 +72,15 @@ export const figures: Record<string, FigureEntry> = {
     component: LossLandscape,
     height: 350,
     defaults: lossLandscapeDefaults,
+    paramHints: lossLandscapeHints,
   },
   'flow-diagram': { component: FlowDiagram, height: 280 },
-  sparkline: { component: Sparkline, height: 120, defaults: sparklineDefaults },
+  sparkline: {
+    component: Sparkline,
+    height: 120,
+    defaults: sparklineDefaults,
+    paramHints: sparklineHints,
+  },
 }
 
 export const inlineFigures: Record<string, ComponentType<Record<string, unknown>>> = {

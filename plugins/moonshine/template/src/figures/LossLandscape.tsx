@@ -20,6 +20,15 @@ export const DEFAULTS = {
   startY: 0.45,
 }
 
+// Knob-panel slider bounds where the magnitude heuristic guesses wrong:
+// the start point lives in [-1, 1] (the heuristic would offer [0, 5]),
+// and lr past ~0.5 just diverges.
+export const PARAM_HINTS = {
+  lr: { min: 0.005, max: 0.5, step: 0.005 },
+  startX: { min: -1, max: 1, step: 0.05 },
+  startY: { min: -1, max: 1, step: 0.05 },
+}
+
 export default function LossLandscape(props: FigureProps) {
   const lr = num(props.lr, DEFAULTS.lr)
   const steps = num(props.steps, DEFAULTS.steps)
