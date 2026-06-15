@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { figures } from '../figures/registry'
 import { useArticleStore, useFigureHighlight } from '../store'
-import { EDIT_ENABLED } from '../lib/EditContext'
+import { EDIT_ENABLED, useEdit } from '../lib/EditContext'
 import LazyIsland from './LazyIsland'
 import FigureKnobs from './FigureKnobs'
 
@@ -27,6 +27,7 @@ type Props = {
 
 export default function Figure({ id, caption, children, node, ...rest }: Props) {
   const { hovered, pinned } = useFigureHighlight(id)
+  const { blocks, moveBlock } = useEdit()
   // Depend on the raw pinned ref, not the boolean: pinning a different
   // part of the same figure should re-scroll, and a boolean wouldn't
   // change between `fig.a` and `fig.b`.
@@ -100,6 +101,16 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
   const range: [number, number] | null =
     typeof start === 'number' && typeof end === 'number' ? [start, end] : null
 
+  // This figure's index among top-level blocks, for the reorder controls.
+  const figIndex =
+    typeof start === 'number' ? blocks.findIndex((b) => b.start === start) : -1
+  const moveProps = {
+    onMoveUp: () => void moveBlock(figIndex, figIndex - 1),
+    onMoveDown: () => void moveBlock(figIndex, figIndex + 1),
+    canMoveUp: figIndex > 0,
+    canMoveDown: figIndex >= 0 && figIndex < blocks.length - 1,
+  }
+
   // Cmd/Ctrl+click toggles the knob panel — the same gesture that edits
   // prose. Capture phase so interactive figure internals don't also
   // react; clicks inside the caption fall through to its own prose
@@ -137,6 +148,7 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
           }}
           onSaved={() => setKnobsOpen(false)}
           range={range}
+          {...moveProps}
         />
       )}
       {EDIT_ENABLED && knobsOpen && !entry.defaults && (
@@ -145,13 +157,35 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
             <span>
               <code>{id}</code> exposes no parameters
             </span>
-            <button
-              type="button"
-              aria-label="Close parameter panel"
-              onClick={() => setKnobsOpen(false)}
-            >
-              ×
-            </button>
+            <span className="mn-knobs-controls">
+              <span className="mn-edit-move">
+                <button
+                  type="button"
+                  aria-label="Move figure up"
+                  title="Move figure up"
+                  onClick={moveProps.onMoveUp}
+                  disabled={!moveProps.canMoveUp}
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  aria-label="Move figure down"
+                  title="Move figure down"
+                  onClick={moveProps.onMoveDown}
+                  disabled={!moveProps.canMoveDown}
+                >
+                  ↓
+                </button>
+              </span>
+              <button
+                type="button"
+                aria-label="Close parameter panel"
+                onClick={() => setKnobsOpen(false)}
+              >
+                ×
+              </button>
+            </span>
           </div>
           <p className="mn-knobs-empty">
             Export a <code>DEFAULTS</code> const from the figure file and

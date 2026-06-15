@@ -12,6 +12,12 @@ type Props = {
   variant?: 'block' | 'field'
   // Rendered wrapper element. Editing an li must keep an li in the list.
   wrapperTag?: 'span' | 'li'
+  // Reorder controls (block variant only): move this block's enclosing
+  // top-level section up or down. Omitted for frontmatter fields.
+  onMoveUp?: () => void
+  onMoveDown?: () => void
+  canMoveUp?: boolean
+  canMoveDown?: boolean
 }
 
 // Auto-sizing textarea seeded with raw markdown source. Cmd/Ctrl+Enter or
@@ -24,6 +30,10 @@ export default function SourceEditor({
   onChangeValue,
   variant = 'block',
   wrapperTag = 'span',
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
 }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const [value, setValue] = useState(initialValue)
@@ -69,6 +79,8 @@ export default function SourceEditor({
     }
   }
 
+  const showMove = Boolean(onMoveUp || onMoveDown)
+
   const Wrapper = wrapperTag
   return (
     <Wrapper className={`mn-edit mn-edit-${variant}`}>
@@ -88,6 +100,30 @@ export default function SourceEditor({
         <button type="button" className="mn-edit-done" onMouseDown={(e) => e.preventDefault()} onClick={() => void commit()} disabled={saving}>
           {saving ? 'Saving…' : 'Done'}
         </button>
+        {showMove && (
+          <span className="mn-edit-move">
+            <button
+              type="button"
+              aria-label="Move section up"
+              title="Move section up"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onMoveUp?.()}
+              disabled={saving || !canMoveUp}
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              aria-label="Move section down"
+              title="Move section down"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onMoveDown?.()}
+              disabled={saving || !canMoveDown}
+            >
+              ↓
+            </button>
+          </span>
+        )}
         <span className="mn-edit-hint">⌘↵ save · esc cancel</span>
       </span>
     </Wrapper>

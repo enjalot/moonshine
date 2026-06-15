@@ -27,6 +27,11 @@ type Props = {
   onSaved: () => void
   // Source offsets of the whole :::figure block in the article body.
   range: [number, number] | null
+  // Reorder controls: move this figure up or down among top-level blocks.
+  onMoveUp?: () => void
+  onMoveDown?: () => void
+  canMoveUp?: boolean
+  canMoveDown?: boolean
 }
 
 export default function FigureKnobs({
@@ -39,6 +44,10 @@ export default function FigureKnobs({
   onClose,
   onSaved,
   range,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
 }: Props) {
   const { body, commitBody } = useEdit()
   const [saving, setSaving] = useState(false)
@@ -92,9 +101,33 @@ export default function FigureKnobs({
         <span>
           <code>{figureId}</code> parameters
         </span>
-        <button type="button" aria-label="Close parameter panel" onClick={onClose}>
-          ×
-        </button>
+        <span className="mn-knobs-controls">
+          {(onMoveUp || onMoveDown) && (
+            <span className="mn-edit-move">
+              <button
+                type="button"
+                aria-label="Move figure up"
+                title="Move figure up"
+                onClick={() => onMoveUp?.()}
+                disabled={saving || !canMoveUp}
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                aria-label="Move figure down"
+                title="Move figure down"
+                onClick={() => onMoveDown?.()}
+                disabled={saving || !canMoveDown}
+              >
+                ↓
+              </button>
+            </span>
+          )}
+          <button type="button" aria-label="Close parameter panel" onClick={onClose}>
+            ×
+          </button>
+        </span>
       </div>
       {Object.entries(defaults).map(([key, def]) => (
         <Knob

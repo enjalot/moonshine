@@ -2,10 +2,18 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
 } from 'react'
+import {
+  topLevelBlocks,
+  blockIndexAt,
+  rebuildBody,
+  moveOrder,
+  type Block,
+} from './blocks'
 
 // Client side of the in-place markdown editor. The provider holds the raw
 // article body as a string and exposes operations that edit it by source
@@ -48,6 +56,15 @@ type EditContextValue = {
   // undo a just-committed change.
   canUndo: boolean
   undoLastSave: () => Promise<void>
+  // Top-level block ranges of the current body, in document order. Drives
+  // reordering (Cmd-drag, and the up/down buttons in the editor).
+  blocks: Block[]
+  // Reorder: move the top-level block at `from` to land at index `to`.
+  // Used by Cmd-drag (no editor open).
+  moveBlock: (from: number, to: number) => Promise<void>
+  // Move the top-level block containing the open editor up or down,
+  // folding in any unsaved textarea draft so edits aren't lost.
+  moveActiveBlock: (direction: 'up' | 'down') => Promise<void>
 }
 
 const EditContext = createContext<EditContextValue | null>(null)
@@ -129,6 +146,22 @@ export function EditProvider({ body, path, children }: ProviderProps) {
     }
   })
   const [lastSavedBody, setLastSavedBody] = useState<string | null>(null)
+
+  // Top-level block ranges, recomputed when the body changes. Dev-only;
+  // parsing a few KB of markdown is sub-millisecond.
+  const blocks = useMemo(
+    () => (EDIT_ENABLED ? topLevelBlocks(body) : []),
+    [body],
+  )
+
+  // Post a fully-rebuilt body (used by the reorder paths). baseHash is the
+  // current on-disk body so a concurrent agent edit still 409s; the
+  // previous body is kept for undo.
+  const saveReorderedBody = async (newBody: string) => {
+    if (newBody === body) return
+    await postSave({ path, body: newBody, baseHash: fnv1a(body) })
+    setLastSavedBody(body)
+  }
 
   // When the body changes while an editor is open, its offsets may be
   // stale. If the original slice still occurs exactly once, re-anchor the
@@ -246,6 +279,41 @@ export function EditProvider({ body, path, children }: ProviderProps) {
       // still 409s instead of being clobbered by the undo.
       await postSave({ path, body: lastSavedBody, baseHash: fnv1a(body) })
       setLastSavedBody(null)
+    },
+    blocks,
+    moveBlock: async (from, to) => {
+      if (
+        from === to ||
+        from < 0 ||
+        to < 0 ||
+        from >= blocks.length ||
+        to >= blocks.length
+      ) {
+        return
+      }
+      const order = moveOrder(blocks.length, from, to)
+      await saveReorderedBody(rebuildBody(body, blocks, order))
+    },
+    moveActiveBlock: async (direction) => {
+      if (!activeRange) return
+      // Fold any unsaved draft into the body first, so moving the block
+      // doesn't discard in-progress edits. Re-parse so block geometry
+      // accounts for the (possibly different) draft length.
+      const [aStart, aEnd] = activeRange
+      const draft = draftRef.current ?? body.slice(aStart, aEnd)
+      const merged = body.slice(0, aStart) + draft + body.slice(aEnd)
+      const mergedBlocks = topLevelBlocks(merged)
+      const ti = blockIndexAt(mergedBlocks, aStart)
+      if (ti < 0) return
+      const to = direction === 'up' ? ti - 1 : ti + 1
+      if (to < 0 || to >= mergedBlocks.length) return
+      const order = moveOrder(mergedBlocks.length, ti, to)
+      const newBody = rebuildBody(merged, mergedBlocks, order)
+      // Keep the editor open on this block after HMR: the re-anchor effect
+      // matches activeSliceRef against the new body, and the draft text is
+      // unique, so it repositions activeRange to the moved block.
+      activeSliceRef.current = draft
+      await saveReorderedBody(newBody)
     },
   }
 
