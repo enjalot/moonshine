@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkDirective from 'remark-directive'
 import remarkGfm from 'remark-gfm'
@@ -13,6 +13,7 @@ import InlineViz from './InlineViz'
 import EditableBlock from './EditableBlock'
 import EditableField from './EditableField'
 import EditChrome from './EditChrome'
+import BlockReorderLayer from './BlockReorderLayer'
 import MoonshineFooter from './MoonshineFooter'
 import { EditProvider } from '../lib/EditContext'
 import type { ArticleData } from '../lib/types'
@@ -34,6 +35,7 @@ const editableComponents = Object.fromEntries(
 
 export default function Article({ article, all }: Props) {
   const clearPinned = useArticleStore((s) => s.clearPinned)
+  const articleRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     document.title = article.title
@@ -63,7 +65,7 @@ export default function Article({ article, all }: Props) {
 
   return (
     <EditProvider body={article.body} path={article.path}>
-      <article className="article">
+      <article className="article" ref={articleRef}>
         <header>
           <EditableField as="h1" fieldKey="title" value={article.title} />
           {article.description && (
@@ -121,6 +123,7 @@ export default function Article({ article, all }: Props) {
 
         <MoonshineFooter />
         <EditChrome />
+        <BlockReorderLayer containerRef={articleRef} />
       </article>
     </EditProvider>
   )

@@ -36,6 +36,8 @@ export default function EditableBlock({ node, children, className, ...rest }: Pr
     commitBody,
     updateDraft,
     getDraft,
+    blocks,
+    moveActiveBlock,
   } = useEdit()
   const tag = node?.tagName || 'p'
   const start = node?.position?.start?.offset
@@ -47,6 +49,11 @@ export default function EditableBlock({ node, children, className, ...rest }: Pr
   // the in-progress draft (not the slice) so the editor survives a
   // remount when the body shifts and the range gets re-anchored.
   if (haveRange && activeRange && activeRange[0] === start && activeRange[1] === end) {
+    // Reorder is by top-level block: find the section this (possibly
+    // nested) block belongs to, and enable up/down at the ends.
+    const ti = blocks.findIndex(
+      (b) => b.start <= (start as number) && (end as number) <= b.end,
+    )
     return (
       <SourceEditor
         variant="block"
@@ -56,6 +63,10 @@ export default function EditableBlock({ node, children, className, ...rest }: Pr
         onChangeValue={updateDraft}
         onCommit={(text) => commitBody(start as number, end as number, text)}
         onCancel={cancelEdit}
+        onMoveUp={() => void moveActiveBlock('up')}
+        onMoveDown={() => void moveActiveBlock('down')}
+        canMoveUp={ti > 0}
+        canMoveDown={ti >= 0 && ti < blocks.length - 1}
       />
     )
   }

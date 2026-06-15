@@ -374,8 +374,16 @@ page — no jumping back to the `.md` file for small wording changes.
   textarea showing its *raw markdown* — directives like
   `:term[word]{to=fig}` and `:inline-viz{kind=…}` appear as source, so
   you edit exactly what's on disk.
-- **Cmd/Ctrl+Enter** (or the floating **Done** button) writes the change
-  back to the `.md` file; **Esc** cancels.
+- **Cmd/Ctrl+Enter** (or the **Done** button, which sits in a control
+  column to the right of the editing box) writes the change back to the
+  `.md` file; **Esc** cancels.
+- **Reorder sections and figures.** Cmd/Ctrl+drag any block up or down to
+  move it; a drop line shows where it will land, and releasing rewrites
+  the markdown. The open editor (and a figure's knob panel) also carry
+  **↑ / ↓** buttons next to Done that move the block one step. Both act on
+  whole top-level blocks — a paragraph, a heading, a `:::figure`, a `$$`
+  math block — so editing a caption and pressing ↓ moves the whole
+  figure. Up/down folds in any unsaved textarea edit before moving.
 - A dismissable pill in the corner teaches the gesture; after each save
   a transient **Undo** toast can restore the previous text (through the
   same conflict-checked save path).
@@ -407,7 +415,10 @@ How it holds together:
 
 The pieces live in `src/lib/EditContext.tsx`, `src/components/
 EditableBlock.tsx`, `EditableField.tsx`, and `SourceEditor.tsx`, wired up
-in `Article.tsx`.
+in `Article.tsx`. Reordering adds `src/lib/blocks.ts` (parses the body
+into top-level block ranges and rebuilds it in a new order) and
+`src/components/BlockReorderLayer.tsx` (the Cmd-drag controller); the
+splice it produces goes through the same conflict-checked save path.
 
 What's editable in place: paragraphs, headings, lists, blockquotes, the
 title/lede — and **figure captions**, because caption text written as the
