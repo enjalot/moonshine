@@ -74,7 +74,7 @@ const EditContext = createContext<EditContextValue | null>(null)
 // to tell the save endpoint which version of the body an edit was spliced
 // from, so concurrent changes (e.g. a coding agent editing the same file)
 // get a 409 instead of being silently overwritten.
-function fnv1a(str: string): string {
+export function fnv1a(str: string): string {
   let h = 0x811c9dc5
   for (let i = 0; i < str.length; i++) {
     h ^= str.charCodeAt(i)

@@ -18,6 +18,9 @@ type Props = {
   onMoveDown?: () => void
   canMoveUp?: boolean
   canMoveDown?: boolean
+  // Open a comment-to-the-agent box targeting this block. Omitted when the
+  // feedback subsystem is off, which also hides the affordance.
+  onComment?: () => void
 }
 
 // Auto-sizing textarea seeded with raw markdown source. Cmd/Ctrl+Enter or
@@ -34,6 +37,7 @@ export default function SourceEditor({
   onMoveDown,
   canMoveUp,
   canMoveDown,
+  onComment,
 }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const [value, setValue] = useState(initialValue)
@@ -100,6 +104,18 @@ export default function SourceEditor({
         <button type="button" className="mn-edit-done" onMouseDown={(e) => e.preventDefault()} onClick={() => void commit()} disabled={saving}>
           {saving ? 'Saving…' : 'Done'}
         </button>
+        {onComment && (
+          <button
+            type="button"
+            className="mn-edit-comment"
+            aria-label="Comment to the agent"
+            title="Comment to the agent"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onComment}
+          >
+            💬
+          </button>
+        )}
         {showMove && (
           <span className="mn-edit-move">
             <button

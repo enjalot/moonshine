@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { EDIT_ENABLED, useEdit } from '../lib/EditContext'
+import AuthorshipHUD from './AuthorshipHUD'
+import CommentBox from './CommentBox'
 
 // Dev-only page chrome for the in-place editor: a discoverability hint,
 // an undo toast after saves, and a recovery banner for interrupted
@@ -16,6 +18,8 @@ export default function EditChrome() {
       <DraftRecovery />
       <UndoToast />
       <EditHint />
+      <AuthorshipHUD />
+      <CommentBox />
     </>
   )
 }

@@ -1,5 +1,6 @@
 import { createElement, type ReactNode } from 'react'
-import { useEdit } from '../lib/EditContext'
+import { fnv1a, useEdit } from '../lib/EditContext'
+import { useFeedback } from '../lib/FeedbackContext'
 import SourceEditor from './SourceEditor'
 
 // react-markdown hands every component a hast `node`. For block elements
@@ -36,9 +37,11 @@ export default function EditableBlock({ node, children, className, ...rest }: Pr
     commitBody,
     updateDraft,
     getDraft,
+    path,
     blocks,
     moveActiveBlock,
   } = useEdit()
+  const { caps, startComment } = useFeedback()
   const tag = node?.tagName || 'p'
   const start = node?.position?.start?.offset
   const end = node?.position?.end?.offset
@@ -67,6 +70,18 @@ export default function EditableBlock({ node, children, className, ...rest }: Pr
         onMoveDown={() => void moveActiveBlock('down')}
         canMoveUp={ti > 0}
         canMoveDown={ti >= 0 && ti < blocks.length - 1}
+        onComment={
+          caps.enabled
+            ? () =>
+                startComment({
+                  kind: 'block',
+                  path,
+                  range: [start as number, end as number],
+                  excerpt: body.slice(start as number, end as number),
+                  anchorHash: fnv1a(body),
+                })
+            : undefined
+        }
       />
     )
   }
