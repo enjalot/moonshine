@@ -11,3 +11,6 @@ dist
 velite.config.js
 vite.config.js
 vite.config.d.ts
+
+# Authorship-feedback inbox — transient comment/control/heartbeat files
+.feedback

@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/adapters/claude-code/hooks/moonshine-stop.sh",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

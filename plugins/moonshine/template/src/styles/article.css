@@ -688,3 +688,249 @@ body.mn-reordering {
   z-index: 50;
   pointer-events: none;
 }
+
+/* Authorship feedback: comment affordance, comment box, HUD ----------- */
+
+/* The 💬 button living inside the prose source editor and figure knob
+   panels — the in-edit-mode entry point to commenting. */
+.mn-edit-comment {
+  font: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0 0.2rem;
+  line-height: 1;
+  filter: grayscale(0.3);
+}
+.mn-edit-comment:hover {
+  filter: none;
+}
+
+/* Floating comment composer, above the HUD at the bottom-right. */
+.mn-comment-box {
+  position: fixed;
+  right: 1rem;
+  bottom: 7.5rem;
+  width: min(24rem, calc(100vw - 2rem));
+  background: var(--fig-bg);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.7rem 0.85rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+  z-index: 42;
+}
+.mn-comment-box-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+.mn-comment-box-head button {
+  font: inherit;
+  border: none;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+  line-height: 1;
+}
+.mn-comment-excerpt {
+  margin: 0 0 0.5rem;
+  padding: 0.3rem 0.5rem;
+  font-family: var(--mono-font);
+  font-size: 0.75rem;
+  color: var(--text-2);
+  background: var(--bg);
+  border-left: 2px solid var(--border);
+  border-radius: 3px;
+}
+.mn-comment-textarea {
+  width: 100%;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.4rem;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.mn-comment-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
+.mn-comment-hint {
+  font-family: var(--mono-font);
+  font-size: 0.7rem;
+  color: var(--text-2);
+}
+.mn-comment-actions button {
+  font: inherit;
+  font-weight: 600;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: 4px;
+  padding: 0.2rem 0.8rem;
+  cursor: pointer;
+}
+.mn-comment-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* The authorship HUD: a collapsible status panel pinned bottom-right. */
+.mn-hud {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  width: max-content;
+  max-width: min(26rem, calc(100vw - 2rem));
+  z-index: 41;
+}
+.mn-hud-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--text-2);
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+}
+.mn-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  flex: none;
+  background: var(--text-2);
+}
+.mn-dot-live {
+  background: #2e9e5b;
+  box-shadow: 0 0 0 3px rgba(46, 158, 91, 0.2);
+}
+.mn-dot-paused {
+  background: #d6a13a;
+}
+.mn-dot-off {
+  background: var(--border);
+}
+.mn-hud-label {
+  white-space: nowrap;
+}
+.mn-hud-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  padding: 0 0.4rem;
+  min-width: 1.1rem;
+  text-align: center;
+}
+.mn-hud-caret {
+  margin-left: auto;
+  color: var(--text-2);
+}
+.mn-hud-body {
+  margin-top: 0.5rem;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.7rem 0.85rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  font-size: 0.8rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.mn-hud-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.mn-hud-controls button {
+  font: inherit;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0.2rem 0.7rem;
+  cursor: pointer;
+}
+.mn-hud-controls button:first-child {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.mn-hud-note {
+  margin: 0 0 0.4rem;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+.mn-hud-section {
+  margin: 0.6rem 0 0.3rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+}
+.mn-hud-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.mn-hud-item {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0.4rem 0.5rem;
+}
+.mn-hud-item-addressed {
+  opacity: 0.8;
+}
+.mn-hud-item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.mn-hud-item-where {
+  font-family: var(--mono-font);
+  font-size: 0.7rem;
+  color: var(--accent);
+}
+.mn-hud-item-head button {
+  font: inherit;
+  border: none;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+  line-height: 1;
+}
+.mn-hud-item-text {
+  margin: 0.2rem 0 0;
+  color: var(--text);
+}
+.mn-hud-item-reply {
+  margin: 0.3rem 0 0;
+  color: var(--text-2);
+  border-left: 2px solid var(--accent);
+  padding-left: 0.4rem;
+}
+.mn-hud-item-tag {
+  font-size: 0.7rem;
+  color: var(--text-2);
+  font-style: italic;
+}

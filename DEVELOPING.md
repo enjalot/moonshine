@@ -49,8 +49,9 @@ Two watchers run concurrently: Velite re-emits typed content on any
 side reloads without disturbing the other.
 
 > **Security note:** `dev:lan` exposes the dev server — including the
-> `/__moonshine/save` write endpoint — to your local network. Use it on
-> networks you trust.
+> `/__moonshine/save` and `/__moonshine/feedback` write endpoints — to your
+> local network. Both apply the same content-type + `sec-fetch-site` guards,
+> but use `dev:lan` only on networks you trust.
 
 ### The example content is the regression surface
 
@@ -87,8 +88,12 @@ plugins/moonshine/
   ARTICLE.md        single-file HTML scaffold (the `shine` substrate)
   VISUALS.md        D3 patterns, interaction, rendering decisions
   STILL.md          the structured project: directives, registry, editing
+  FEEDBACK.md       authorship-feedback protocol (web ⇄ harness ABI)
   commands/         Claude Code slash commands (thin wrappers)
-  skills/           Codex skills (symlinks back to the canonical files)
+  skills/           moonshine/ (symlinks to canonical docs) + shine/ still/
+                    (thin wrappers) + moonshine-listen/ (the feedback listener)
+  hooks/            plugin hooks.json (registers the Claude Code Stop hook)
+  adapters/         per-harness feedback adapters (claude-code/ first)
   template/         the runnable still project (see below)
 docs/               published example articles (GitHub Pages)
 ```
@@ -117,6 +122,20 @@ not a limitation.
 `vite-plugin-moonshine-edit.ts` (the dev-only save endpoint). The invariant to
 preserve: edits are pure offset splices into the markdown body — never
 serialize rendered output back to markdown.
+
+**The feedback subsystem** — the author↔agent comment loop (`FEEDBACK.md` is
+the spec). Web side: `vite-plugin-moonshine-feedback.ts` (dev-only endpoints,
+gated behind `moonshine.config.json → feedback.enabled` / `MOONSHINE_FEEDBACK`),
+`src/lib/feedback.ts` + `src/lib/FeedbackContext.tsx` (typed client + React
+state), and `src/components/AuthorshipHUD.tsx` / `CommentBox.tsx` (UI, mounted
+from `EditChrome`). Harness side (Claude Code adapter): `hooks/hooks.json`,
+`adapters/claude-code/hooks/moonshine-stop.sh` (turn-boundary claim), and
+`skills/moonshine-listen/` (idle heartbeat/control loop). The invariant:
+**the two sides never call each other** — they share a directory of JSON files
+under `<project>/.feedback/`. A new harness adapter implements the four verbs in
+`FEEDBACK.md` and touches nothing in `src/`. Like the edit endpoint, the whole
+subsystem is `apply: 'serve'` + `import.meta.env.DEV`-gated, so a production
+`vite build` ships no feedback surface at all.
 
 **Styles** — shared palette and type stack live in `src/styles/tokens.css`;
 figures reference the CSS custom properties (`var(--accent)`, `var(--text-2)`)

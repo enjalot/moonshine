@@ -32,6 +32,9 @@ type Props = {
   onMoveDown?: () => void
   canMoveUp?: boolean
   canMoveDown?: boolean
+  // Open a comment-to-the-agent box targeting this figure. Omitted when the
+  // feedback subsystem is off.
+  onComment?: () => void
 }
 
 export default function FigureKnobs({
@@ -48,6 +51,7 @@ export default function FigureKnobs({
   onMoveDown,
   canMoveUp,
   canMoveDown,
+  onComment,
 }: Props) {
   const { body, commitBody } = useEdit()
   const [saving, setSaving] = useState(false)
@@ -123,6 +127,17 @@ export default function FigureKnobs({
                 ↓
               </button>
             </span>
+          )}
+          {onComment && (
+            <button
+              type="button"
+              className="mn-edit-comment"
+              aria-label="Comment to the agent"
+              title="Comment to the agent"
+              onClick={onComment}
+            >
+              💬
+            </button>
           )}
           <button type="button" aria-label="Close parameter panel" onClick={onClose}>
             ×

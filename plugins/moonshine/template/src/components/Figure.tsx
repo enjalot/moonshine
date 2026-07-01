@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { figures } from '../figures/registry'
 import { useArticleStore, useFigureHighlight } from '../store'
-import { EDIT_ENABLED, useEdit } from '../lib/EditContext'
+import { EDIT_ENABLED, fnv1a, useEdit } from '../lib/EditContext'
+import { useFeedback } from '../lib/FeedbackContext'
 import LazyIsland from './LazyIsland'
 import FigureKnobs from './FigureKnobs'
 
@@ -27,7 +28,8 @@ type Props = {
 
 export default function Figure({ id, caption, children, node, ...rest }: Props) {
   const { hovered, pinned } = useFigureHighlight(id)
-  const { blocks, moveBlock } = useEdit()
+  const { body, path, blocks, moveBlock } = useEdit()
+  const { caps, startComment } = useFeedback()
   // Depend on the raw pinned ref, not the boolean: pinning a different
   // part of the same figure should re-scroll, and a boolean wouldn't
   // change between `fig.a` and `fig.b`.
@@ -111,6 +113,24 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
     canMoveDown: figIndex >= 0 && figIndex < blocks.length - 1,
   }
 
+  // Open a comment targeting this whole figure. Excerpt prefers the caption
+  // (what the reader sees) and falls back to the head of the directive source.
+  const onFigureComment = caps.enabled
+    ? () =>
+        startComment({
+          kind: 'figure',
+          path,
+          figureId: id,
+          range: range ?? undefined,
+          excerpt:
+            typeof caption === 'string' && caption.trim()
+              ? caption
+              : range
+                ? body.slice(range[0], Math.min(range[1], range[0] + 160))
+                : undefined,
+        })
+    : undefined
+
   // Cmd/Ctrl+click toggles the knob panel — the same gesture that edits
   // prose. Capture phase so interactive figure internals don't also
   // react; clicks inside the caption fall through to its own prose
@@ -148,6 +168,7 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
           }}
           onSaved={() => setKnobsOpen(false)}
           range={range}
+          onComment={onFigureComment}
           {...moveProps}
         />
       )}
@@ -178,6 +199,17 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
                   ↓
                 </button>
               </span>
+              {onFigureComment && (
+                <button
+                  type="button"
+                  className="mn-edit-comment"
+                  aria-label="Comment to the agent"
+                  title="Comment to the agent"
+                  onClick={onFigureComment}
+                >
+                  💬
+                </button>
+              )}
               <button
                 type="button"
                 aria-label="Close parameter panel"

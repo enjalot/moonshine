@@ -16,6 +16,7 @@ import EditChrome from './EditChrome'
 import BlockReorderLayer from './BlockReorderLayer'
 import MoonshineFooter from './MoonshineFooter'
 import { EditProvider } from '../lib/EditContext'
+import { FeedbackProvider } from '../lib/FeedbackContext'
 import type { ArticleData } from '../lib/types'
 
 type Props = {
@@ -65,6 +66,7 @@ export default function Article({ article, all }: Props) {
 
   return (
     <EditProvider body={article.body} path={article.path}>
+      <FeedbackProvider>
       <article className="article" ref={articleRef}>
         <header>
           <EditableField as="h1" fieldKey="title" value={article.title} />
@@ -125,6 +127,7 @@ export default function Article({ article, all }: Props) {
         <EditChrome />
         <BlockReorderLayer containerRef={articleRef} />
       </article>
+      </FeedbackProvider>
     </EditProvider>
   )
 }

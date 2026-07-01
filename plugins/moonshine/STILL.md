@@ -451,6 +451,38 @@ without explicit handoffs:
   commit history is the real undo. If the author asks to restore older
   wording, use git.
 
+## Authorship Feedback: Comments From the Rendered Page (dev only)
+
+Git carries edits the author *made*; the feedback loop carries changes they
+want *you* to make. During `npm run dev` the author can hold Cmd/Ctrl, open a
+prose block or a figure's knob panel, and hit **💬** to send you a comment
+about that exact passage — "this is too hand-wavy," "make this figure start
+zoomed out." Each comment is written as a file under `<project>/.feedback/`.
+
+You receive these without polling: the Claude Code **Stop hook** injects any
+pending comments at a turn boundary and blocks the stop until you handle them.
+For each one:
+
+1. Edit the referenced source file (`<project>/content/<target.path>`) — or the
+   figure component / registry for a `figure` comment — to address the note.
+   The comment carries an `excerpt` and an `anchorHash`; if the hash no longer
+   matches the file, the prose moved, so locate the passage by `excerpt` rather
+   than trusting stale offsets.
+2. Record the outcome in the comment's own JSON file: set `status:"addressed"`,
+   an ISO-8601 `addressedAt`, and a one-line `reply`. The reply surfaces back in
+   the author's HUD next to their comment, so keep it short and factual.
+
+Comments left while you're parked at the prompt are covered by the idle
+listener — run `/moonshine-listen` (best under `/loop`) to keep ticking; it also
+powers the HUD's live "listening / paused / off" status.
+
+**Contract boundaries.** Only the per-comment `<id>.json` files are your shared
+surface with the author. `heartbeat.json`, `control.json`, and `adapter.json` in
+that directory are adapter-owned bookkeeping — never hand-edit them. Skip any
+comment whose `status` is `dismissed` (the author closed it). The full protocol,
+including the reserved comment kinds not yet wired to UI, is specified in
+`FEEDBACK.md`.
+
 ## Workflow When Building an Article With This Skill
 
 This section is canonical — the `/moonshine:still` command and the Codex
