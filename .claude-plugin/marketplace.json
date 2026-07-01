@@ -5,8 +5,7 @@
   },
   "metadata": {
     "description": "Plugin distribution for moonshine",
-    "version": "1.0.0",
-    "pluginRoot": "./plugins"
+    "version": "1.0.0"
   },
   "plugins": [
     {

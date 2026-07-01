@@ -72,10 +72,50 @@ A production build must contain no edit affordances: everything is gated on
 `import.meta.env.DEV` and the save middleware is `apply: 'serve'`. If you add
 dev-only behavior, follow that pattern.
 
+## Publishing an example to docs/
+
+The GitHub Pages site (`https://enjalot.github.io/moonshine/`) serves the
+`docs/` directory verbatim on every push to `main` (`.github/workflows/pages.yml`).
+To publish a still article there:
+
+```bash
+scripts/publish-example.sh ~/.agent/moonshine/<project> <slug> ["Title"]
+```
+
+The script builds the project with `--base=/moonshine/<slug>/` (the template's
+`BrowserRouter` reads the base from `import.meta.env.BASE_URL`), patches the
+static `<title>` (derived from the article frontmatter for single-article
+projects; pass it explicitly for series), adds a `404.html` SPA fallback for
+deep links, and syncs `dist/` into `docs/<slug>/`.
+
+Two manual steps remain: add a card for the example to `docs/index.html`, and
+commit `docs/` on `main`. Shine articles are single HTML files — copy them
+into `docs/<slug>/` directly.
+
+## Releasing
+
+The version lives in four files — keep them in lockstep:
+
+- `package.json`
+- `plugins/moonshine/.claude-plugin/plugin.json`
+- `plugins/moonshine/.codex-plugin/plugin.json`
+- `.claude-plugin/marketplace.json` (the plugin entry's `version`)
+
+Bump all four in the release commit, then tag it:
+
+```bash
+git tag v0.7.0 && git push origin v0.7.0
+```
+
+Marketplace installs pull from `main`, so the tag is for traceability, not
+distribution.
+
 ## How template changes propagate
 
 `/moonshine:still` copies `template/` into `~/.agent/moonshine/<project>/` at
-bootstrap (excluding `node_modules/`, `.velite/`, `dist/`). Existing projects
+bootstrap (excluding `node_modules/`, `.velite/`, `dist/`, `.feedback/`, and
+the runtime-compiled config mirrors — see the rsync in `STILL.md`). Existing
+projects
 do **not** update when the template changes — they own their copy. To bring an
 existing article up to date, copy the changed files under `src/` and the
 configs into the project, or diff against the template and cherry-pick.
