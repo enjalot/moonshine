@@ -473,7 +473,7 @@ For each one:
    the author's HUD next to their comment, so keep it short and factual.
 
 Comments left while you're parked at the prompt are covered by the idle
-listener — run `/moonshine-listen` (best under `/loop`) to keep ticking; it also
+listener — run `/moonshine:moonshine-listen` (best under `/loop`) to keep ticking; it also
 powers the HUD's live "listening / paused / off" status.
 
 **Contract boundaries.** Only the per-comment `<id>.json` files are your shared
@@ -496,9 +496,15 @@ Once the outline is agreed:
      exists, ask the user whether to reuse, rename, or wipe before
      continuing.
    - Copy `template/` from the plugin into the project root, excluding
-     build artifacts the in-repo dev harness may have left behind:
+     artifacts the in-repo dev harness may have left behind — the
+     compiled config mirrors would silently shadow the real `.ts`
+     configs (Vite resolves `vite.config.js` first), and stale
+     `.feedback/` files would be delivered as phantom comments in the
+     new project:
      `rsync -a --exclude node_modules --exclude .velite --exclude dist
-     --exclude '*.tsbuildinfo' template/ <project-root>/`
+     --exclude '*.tsbuildinfo' --exclude .feedback
+     --exclude vite.config.js --exclude vite.config.d.ts
+     --exclude velite.config.js template/ <project-root>/`
    - `git init` the project and make an initial commit ("moonshine still
      scaffold"). The template ships a `.gitignore`. This powers the
      author/agent shared history described in "Git: the Shared Memory"

@@ -178,7 +178,7 @@ $reason"
 fi
 if [ -n "$listen_waiting" ]; then
   msg="$msg
-The author enabled feedback-listening for project(s):$listen_waiting but no listener is running. After handling any comments above, start the idle listener by invoking the /moonshine-listen skill."
+The author enabled feedback-listening for project(s):$listen_waiting but no listener is running. After handling any comments above, start the idle listener by invoking the moonshine:moonshine-listen skill."
 fi
 
 jq -n --arg r "$msg" '{decision:"block", reason:$r}'

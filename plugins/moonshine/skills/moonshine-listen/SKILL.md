@@ -68,9 +68,13 @@ For each in-scope `.feedback/` directory:
 After the tick, unless every in-scope project was `stopped`:
 - When running under `/loop` (dynamic): call **ScheduleWakeup** with
   `delaySeconds: 90` and the same prompt (`$moonshine-listen`) so the next tick
-  fires. Keep `intervalSec` in the heartbeat aligned with this delay.
-- If you are not in a loop, tell the author to run `/loop $moonshine-listen`
-  for continuous listening; a bare invocation only does a single tick.
+  fires. Keep `intervalSec` in the heartbeat aligned with this delay. If the
+  harness has no ScheduleWakeup tool, fall back to telling the author to
+  re-invoke the skill (or run it under `/loop`).
+- If you are not in a loop, tell the author to run
+  `/loop /moonshine:moonshine-listen` for continuous listening; a bare
+  invocation only does a single tick. (Plugin skills are namespaced — the bare
+  `/moonshine-listen` does not resolve.)
 
 ## Notes
 
