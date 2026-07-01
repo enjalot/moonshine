@@ -390,7 +390,7 @@ svg .grid path { stroke: none; }
       <div class="step-num">3</div>
       <div class="step-content">
         <h3>Project Scaffolding</h3>
-        <p>Generate a self-contained HTML file with D3 visualizations, article typography, and shared state for linked views. No build tools needed.</p>
+        <p>Scaffold a structured Vite + React project with markdown prose and live in-page editing (<code>still</code>), or a single self-contained HTML file with no build tools (<code>shine</code>). Both come with D3 visualizations, article typography, and shared state for linked views.</p>
       </div>
     </div>
     <div class="workflow-step" data-step="4">
@@ -458,23 +458,17 @@ svg .grid path { stroke: none; }
   <h2>Get Started</h2>
 
   <div class="install-block">
-    <h4>Claude Code</h4>
+    <h4>Claude Code / Codex</h4>
     <pre style="margin: 0;"><span class="c"># Add the marketplace and install</span>
 /plugin marketplace add enjalot/moonshine
 /plugin install moonshine@moonshine-marketplace
 
 <span class="c"># Then start a new explanation</span>
-/moonshine:shine how gradient descent finds minima</pre>
+/moonshine:still how gradient descent finds minima   <span class="c"># structured project (Codex: $still)</span>
+/moonshine:shine how gradient descent finds minima   <span class="c"># single HTML file (Codex: $shine)</span></pre>
   </div>
 
-  <div class="install-block">
-    <h4>Manual install</h4>
-    <pre style="margin: 0;">git clone --depth 1 https://github.com/enjalot/moonshine.git /tmp/moonshine
-cp -r /tmp/moonshine/plugins/moonshine ~/.claude/skills/moonshine
-rm -rf /tmp/moonshine</pre>
-  </div>
-
-  <p style="margin-top: 1.5rem;">The <code>/moonshine:shine</code> command kicks off the moonshine workflow. It will ask you questions about what you're explaining and who the audience is before writing any code. Each explanation is a self-contained HTML file with D3 v7. No build tools, no npm install. Open the file in a browser and it works.</p>
+  <p style="margin-top: 1.5rem;">Moonshine asks what you're explaining and who the audience is before writing any code. <code>still</code> scaffolds a Vite + React project where the prose stays in markdown and the rendered page is the editing surface: edit blocks in place, tune figure parameters with a knob panel, reorder sections by dragging, and send comments straight back to the authoring agent. <code>shine</code> produces a single self-contained HTML file with D3 — no build tools, open it in a browser and it works. Manual install and development setup are covered in the <a href="https://github.com/enjalot/moonshine">repo README</a>.</p>
 
   <!-- Inspirations -->
   <h2>Standing On</h2>

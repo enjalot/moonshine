@@ -8,117 +8,83 @@
 
 AI tools generate complexity faster than people can consume it. Inspired by [Distill.pub](https://distill.pub), moonshine helps apply distillation to the flood of technical output, turning complex ideas into explorable, visual, interactive articles.
 
-Each explanation is a self-contained HTML file with vanilla JS and D3 v7. No build tools, no frameworks. Open the file in a browser and it works.
+Moonshine starts with story discovery — concept, audience, the one insight the reader should walk away with — before it writes any code, and renders the article on one of two substrates:
+
+- **still** (`/moonshine:still`) — a Vite + React + Velite project where prose lives in pristine markdown and figures are React components. This is the substrate with the authoring loop (below) and the default for anything that will keep being edited.
+- **shine** (`/moonshine:shine`) — a single self-contained HTML file with vanilla JS and D3. No build tools; one file you can email or host anywhere.
 
 ```shell
 # Claude Code
-/moonshine:shine how gradient descent finds minima
+/moonshine:still how gradient descent finds minima
 
 # Codex
-$shine how gradient descent finds minima
+$still how gradient descent finds minima
 ```
 
-Moonshine will ask what the reader should understand before it writes code.
+## The authoring loop (still)
+
+While `npm run dev` runs, the rendered article is itself the editing surface, for both the author and the agent:
+
+- **Edit prose in place.** Cmd/Ctrl+click any block to edit its raw markdown in the page; saves splice back into the `.md` by source offset.
+- **Tune figures with knobs.** Cmd/Ctrl+click a figure to open a panel generated from its `DEFAULTS`; "Save to markdown" writes the tweaked values into the directive's attributes.
+- **Reorder sections.** Cmd/Ctrl+drag any block (or use ↑/↓ in the editor) to move it; the markdown is rewritten.
+- **Arrange diagrams.** Node-link figures built on `DiagramFigure` (React Flow) get an author-owned layout: drag nodes, frame the viewport, save. Regenerating the diagram's code never clobbers the arrangement.
+- **Git as shared memory.** Every browser save auto-commits with a `moonshine-edit:` prefix, so the agent can see exactly what the author changed and build around their words.
+- **Comments back to the agent.** The 💬 affordance sends feedback ("this is too hand-wavy") into `.feedback/` files that the agent picks up at turn boundaries (Stop hook) or via the idle listener (`/moonshine:moonshine-listen`).
+
+All of it is dev-only: `vite build` produces a plain, read-only static page with none of the editing machinery in the bundle.
 
 ## Install
 
-**Claude Code (marketplace):**
+**Marketplace (Claude Code, and Codex via the same marketplace):**
 ```shell
 /plugin marketplace add enjalot/moonshine
 /plugin install moonshine@moonshine-marketplace
 ```
 
-**Codex (marketplace):**
-```shell
-/plugin marketplace add enjalot/moonshine
-/plugin install moonshine@moonshine-marketplace
-```
+Restart the session. Claude Code invokes with `/moonshine:still` and `/moonshine:shine`; Codex with `$still` and `$shine` (or just describe the article you want).
 
-Then restart Codex. Invoke with `$shine <topic>` or `$still <topic>` (or just describe the article you want to write).
+**Manual install (degraded — read the caveat):**
 
-**Manual install (Claude Code):**
 ```bash
+# Claude Code
 git clone --depth 1 https://github.com/enjalot/moonshine.git /tmp/moonshine
 cp -r /tmp/moonshine/plugins/moonshine ~/.claude/skills/moonshine
 rm -rf /tmp/moonshine
-```
 
-**Manual install (Codex):**
-```bash
+# Codex
 git clone --depth 1 https://github.com/enjalot/moonshine.git /tmp/moonshine
-ln -s /tmp/moonshine/plugins/moonshine/skills/moonshine ~/.codex/skills/moonshine
-ln -s /tmp/moonshine/plugins/moonshine/skills/shine     ~/.codex/skills/shine
-ln -s /tmp/moonshine/plugins/moonshine/skills/still     ~/.codex/skills/still
+ln -s /tmp/moonshine/plugins/moonshine/skills/moonshine        ~/.codex/skills/moonshine
+ln -s /tmp/moonshine/plugins/moonshine/skills/shine            ~/.codex/skills/shine
+ln -s /tmp/moonshine/plugins/moonshine/skills/still            ~/.codex/skills/still
+ln -s /tmp/moonshine/plugins/moonshine/skills/moonshine-listen ~/.codex/skills/moonshine-listen
 # (use `cp -rL` instead of `ln -s` if you don't want to keep the clone around)
 ```
 
-> **Windows note:** this repo uses git symlinks for shared skill assets. If you're on Windows, run `git config --global core.symlinks true` before cloning.
+> **Caveat:** a skills-directory install registers the skills but **not the plugin's Stop hook**, so feedback comments are only picked up when the listener skill runs — the automatic turn-boundary delivery needs the marketplace install. Everything else works.
+
+> **Windows note:** this repo uses git symlinks for shared skill assets. Run `git config --global core.symlinks true` before cloning.
+
+To develop against your checkout instead, see [DEVELOPING.md](DEVELOPING.md) (symlink install, dev harness, repo map).
 
 ## Usage
 
-Start a new explanation and moonshine will ask about the concept, audience, and key insight before writing any code.
-
 ```
-# Claude Code
-/moonshine:shine                              # start from scratch
-/moonshine:shine fourier transforms           # start with a topic
-
-# Codex
-$shine                                        # start from scratch
-$shine fourier transforms                     # start with a topic
+/moonshine:still                    # start from scratch (structured project)
+/moonshine:still fourier transforms # start with a topic
+/moonshine:shine fourier transforms # single-file flavor
+/moonshine:moonshine-listen         # feedback listener (best under /loop)
 ```
 
-For the structured Vite + React project flavor, use `/moonshine:still` (Claude Code) or `$still` (Codex).
-
-## What It Does
-
-The `/moonshine:shine` command guides you through:
-
-1. **Story discovery** Clarify the concept, audience, key insight, and progression of understanding
-2. **Interaction design** Decide where static prose, interactive explorations, linked views, and scroll-driven narrative serve the explanation best
-3. **Project scaffolding** Generate a self-contained HTML file with D3 visualizations and moonshine typography
-4. **Iterative building** Start with prose and static figures, add interaction only where it genuinely helps
-
-Moonshine includes a built-in D3 visualization reference (`VISUALS.md`) covering chart types, interaction patterns, and the editorial style foundation.
+Moonshine asks about the concept, audience, and key insight before scaffolding, then builds one section at a time with checkpoints. The editorial rules (anti-slop, the editing pass) live in the skill and apply to everything it writes.
 
 ## Output
 
-Each explanation lives in `~/.agent/moonshine/project-name/`:
-
-```
-~/.agent/moonshine/project-name/
-  index.html          # Self-contained explanation
-  data/               # Optional external datasets
-```
-
-## Project Structure
-
-```
-.agents/plugins/marketplace.json   Codex marketplace entry
-plugins/
-└── moonshine/
-    ├── .claude-plugin/plugin.json Claude Code manifest
-    ├── .codex-plugin/plugin.json  Codex manifest
-    ├── SKILL.md                   editorial process, story discovery, anti-slop rules
-    ├── ARTICLE.md                 HTML scaffold, CSS foundation, layout patterns, series structure
-    ├── VISUALS.md                 D3 visualization patterns, interaction, rendering, iteration
-    ├── STILL.md                   structured Vite + React project guidance
-    ├── commands/                  Claude Code slash commands
-    │   ├── shine.md               /moonshine:shine
-    │   └── still.md               /moonshine:still
-    ├── skills/                    Codex skills (symlinks to canonical root files)
-    │   ├── moonshine/             main skill
-    │   ├── shine/                 $shine
-    │   └── still/                 $still
-    └── template/                  Vite + React + Velite starter
-```
+Projects live in `~/.agent/moonshine/<project-name>/`. A still project is a complete Vite app (markdown in `content/`, figures in `src/figures/`) whose `npm run build` emits a static site; a shine article is a self-contained `index.html` plus an optional `data/` directory. Publishing recipes — domain root, subpath, or this repo's Pages site — are in `STILL.md` § Publishing and `DEVELOPING.md`.
 
 ## Developing
 
-To work on the skill itself — run the `still` template in-repo as a live dev
-harness, install the skill from your checkout via symlink, and extend the
-built-in figures, directives, or edit pipeline — see
-[DEVELOPING.md](DEVELOPING.md).
+To work on the skill itself — run the `still` template in-repo as a live dev harness, install from your checkout, extend figures/directives/the edit pipeline, publish examples, or cut a release — see [DEVELOPING.md](DEVELOPING.md), which also carries the current repo map.
 
 ## Inspirations
 
