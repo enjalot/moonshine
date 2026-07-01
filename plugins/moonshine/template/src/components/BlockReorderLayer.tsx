@@ -11,9 +11,12 @@ import { EDIT_ENABLED, useEdit } from '../lib/EditContext'
 // The article's direct element children map 1:1 and in document order to
 // the parsed top-level blocks (every block — paragraph, figure, list,
 // fenced code, `$$` math, … — renders exactly one top-level element), once
-// the non-content children (header, footers, dev chrome) are filtered out.
-// That correspondence, not per-element markers, is what links a dragged DOM
-// element to its block index, so every block type is draggable.
+// the non-content children (header, footers, dev chrome, the GFM footnote
+// section) are filtered out. topLevelBlocks upholds the other half of the
+// invariant by folding non-rendering nodes (HTML comments, link/footnote
+// definitions) into the block that follows them. That correspondence, not
+// per-element markers, is what links a dragged DOM element to its block
+// index, so every block type is draggable.
 //
 // Nothing here renders in production — the wrapper returns null on the
 // build constant before any hooks, so the whole layer is tree-shaken.
@@ -34,6 +37,9 @@ export default function BlockReorderLayer(props: Props) {
 function isBlockChild(el: Element): boolean {
   const tag = el.tagName.toLowerCase()
   if (tag === 'header' || tag === 'footer') return false
+  // GFM footnotes render as an appended <section data-footnotes> with no
+  // corresponding top-level block.
+  if (el.hasAttribute('data-footnotes')) return false
   if (
     el.classList.contains('mn-chrome') ||
     el.classList.contains('mn-drop-indicator')

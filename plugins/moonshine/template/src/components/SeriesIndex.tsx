@@ -15,11 +15,28 @@ type Props = {
 export default function SeriesIndex({ articles }: Props) {
   const sorted = [...articles].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
   const intro = articles.find((a) => a.slug === 'series-index') ?? sorted[0]
-  const cards = sorted.filter((a) => a.slug !== intro.slug)
+  const cards = sorted.filter((a) => a.slug !== intro?.slug)
 
   useEffect(() => {
-    document.title = intro.title
-  }, [intro.title])
+    if (intro) document.title = intro.title
+  }, [intro])
+
+  // content/ is momentarily empty mid-authoring (the scaffold flow deletes
+  // the example before the first real article lands). Show a pointer
+  // instead of a white page.
+  if (!intro) {
+    return (
+      <article className="article">
+        <header>
+          <h1>No articles yet</h1>
+          <p className="lede">
+            Add a markdown file under <code>content/</code> to see it here.
+          </p>
+        </header>
+        <MoonshineFooter />
+      </article>
+    )
+  }
 
   return (
     <article className="article">

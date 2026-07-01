@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { figures } from '../figures/registry'
+import { blockIndexAt } from '../lib/blocks'
 import { useArticleStore, useFigureHighlight } from '../store'
 import { EDIT_ENABLED, fnv1a, useEdit } from '../lib/EditContext'
 import { useFeedback } from '../lib/FeedbackContext'
@@ -104,8 +105,9 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
     typeof start === 'number' && typeof end === 'number' ? [start, end] : null
 
   // This figure's index among top-level blocks, for the reorder controls.
-  const figIndex =
-    typeof start === 'number' ? blocks.findIndex((b) => b.start === start) : -1
+  // Containment, not exact match: a non-rendering node (HTML comment)
+  // right before the directive folds into this block and shifts its start.
+  const figIndex = typeof start === 'number' ? blockIndexAt(blocks, start) : -1
   const moveProps = {
     onMoveUp: () => void moveBlock(figIndex, figIndex - 1),
     onMoveDown: () => void moveBlock(figIndex, figIndex + 1),
@@ -146,6 +148,12 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
   }
 
   const attrs = rest as Record<string, string>
+  // `caption` was destructured out of the directive's attributes for
+  // rendering, so it never reaches `attrs`. Fold it back in for the knob
+  // panel — it isn't a knob param, so buildAttrString carries it through
+  // as an unknown attribute instead of dropping it on save.
+  const sourceAttrs =
+    typeof caption === 'string' ? { ...attrs, caption } : attrs
 
   return (
     <figure ref={ref} id={id} className={cls} onClickCapture={onClickCapture}>
@@ -157,7 +165,7 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
           figureId={id}
           defaults={entry.defaults}
           paramHints={entry.paramHints}
-          attrs={attrs}
+          attrs={sourceAttrs}
           overrides={overrides}
           onChange={(key, value) =>
             setOverrides((o) => ({ ...o, [key]: value }))
