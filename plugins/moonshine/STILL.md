@@ -588,9 +588,12 @@ is dev-only and absent from the bundle.
   deploy `dist/` as-is.
 - **Served under a subpath** (a project Pages site, a directory on an
   existing server): build with `npm run build -- --base=/that/subpath/`.
-  The router follows the base automatically. Copy `dist/index.html` to
-  `dist/404.html` so deep links survive static hosts that serve
-  404.html for unknown paths.
+  The router follows the base automatically. For deep links on GitHub
+  Pages, the custom 404 must live at the **site root** (per-directory
+  404 files never fire): a root `404.html` packs the path into `?/` and
+  the template's `index.html` restores it before the app boots (the
+  spa-github-pages pattern; `scripts/publish-example.sh` writes the
+  root file).
 - **Publishing an example to the moonshine repo's own Pages site**: use
   `scripts/publish-example.sh` in the plugin repo (see `DEVELOPING.md`),
   which does the base, title, and 404 steps and syncs into `docs/<slug>/`.

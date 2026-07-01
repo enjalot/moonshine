@@ -12,6 +12,29 @@
     />
   </head>
   <body>
+    <script>
+      // Restore a deep link packed into ?/ by a root-level 404.html on
+      // static hosts (the spa-github-pages pattern; see
+      // scripts/publish-example.sh in the moonshine repo). No-op unless
+      // the query starts with "/", so dev and root-hosted builds are
+      // unaffected.
+      ;(function () {
+        var q = window.location.search
+        if (q.slice(0, 2) !== '?/') return
+        var path = q
+          .slice(2)
+          .split('&')
+          .map(function (s) {
+            return s.replace(/~and~/g, '&')
+          })
+          .join('?')
+        window.history.replaceState(
+          null,
+          '',
+          window.location.pathname.replace(/\/?$/, '/') + path + window.location.hash
+        )
+      })()
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

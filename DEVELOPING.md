@@ -85,8 +85,10 @@ scripts/publish-example.sh ~/.agent/moonshine/<project> <slug> ["Title"]
 The script builds the project with `--base=/moonshine/<slug>/` (the template's
 `BrowserRouter` reads the base from `import.meta.env.BASE_URL`), patches the
 static `<title>` (derived from the article frontmatter for single-article
-projects; pass it explicitly for series), adds a `404.html` SPA fallback for
-deep links, and syncs `dist/` into `docs/<slug>/`.
+projects; pass it explicitly for series), syncs `dist/` into `docs/<slug>/`,
+and (re)writes the root `docs/404.html` — GitHub Pages only honors a custom
+404 at the site root, so deep links redirect through `?/` and the template's
+`index.html` restores the path before the app boots.
 
 Two manual steps remain: add a card for the example to `docs/index.html`, and
 commit `docs/` on `main`. Shine articles are single HTML files — copy them

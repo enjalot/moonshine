@@ -20,8 +20,8 @@ slug="$2"
 title="${3:-}"
 
 case "$slug" in
-  *[!a-z0-9-]*)
-    echo "slug must be kebab-case (a-z, 0-9, -), got: $slug" >&2
+  '' | *[!a-z0-9-]*)
+    echo "slug must be non-empty kebab-case (a-z, 0-9, -), got: '$slug'" >&2
     exit 1
     ;;
 esac
@@ -55,12 +55,38 @@ else
   echo "warning: no title derived — dist/index.html keeps the template <title>" >&2
 fi
 
-# GitHub Pages serves 404.html for unknown paths; a copy of index.html
-# makes deep links into the SPA (e.g. /moonshine/<slug>/<article>) work.
-cp dist/index.html dist/404.html
-
 mkdir -p "$repo_root/docs/$slug"
 rsync -a --delete dist/ "$repo_root/docs/$slug/"
+
+# GitHub Pages only serves a custom 404 from the site root, so per-slug
+# 404 files never fire. A root docs/404.html redirects a deep link like
+# /moonshine/<slug>/<article> to /moonshine/<slug>/?/<article>; the
+# template's index.html decodes the ?/ back into the real path before
+# the app boots (the rafgraph/spa-github-pages pattern). Idempotent —
+# safe to rewrite on every publish.
+cat > "$repo_root/docs/404.html" <<'HTML'
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Moonshine</title>
+    <script>
+      // Keep /moonshine/<slug>/ and pack the rest into ?/ for the SPA
+      // to restore. pathSegmentsToKeep = 2 (project pages: /moonshine/ + slug).
+      var segments = 2
+      var l = window.location
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        l.pathname.split('/').slice(0, 1 + segments).join('/') + '/?/' +
+        l.pathname.split('/').slice(1 + segments).join('/').replace(/&/g, '~and~') +
+        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash
+      )
+    </script>
+  </head>
+  <body></body>
+</html>
+HTML
 
 echo "Published to docs/$slug/."
 echo "Next: add a card to docs/index.html, then commit docs/ and push main."

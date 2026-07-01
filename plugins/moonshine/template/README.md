@@ -157,9 +157,11 @@ npm run build       # static site in dist/, no editing machinery
 ```
 
 Deploying under a subpath? `npm run build -- --base=/that/path/` — the
-router follows automatically. Copy `dist/index.html` to `dist/404.html`
-for static hosts, and patch the `<title>` in `dist/index.html` (article
-titles are set at runtime).
+router follows automatically. Patch the `<title>` in `dist/index.html`
+(article titles are set at runtime). For deep links on GitHub Pages,
+the custom 404 must sit at the site root; `index.html` already decodes
+the `?/`-packed path a root `404.html` produces (the spa-github-pages
+pattern — the moonshine repo's publish script writes that root file).
 
 ## Supply-chain hygiene
 
