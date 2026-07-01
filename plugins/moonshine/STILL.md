@@ -130,25 +130,42 @@ One constraint: figure ids must not contain `.` — the first dot in a
 template/
   content/                   ← writers edit only here
     example.md
+    figures/
+      flow-diagram.json      ← author-baked diagram layouts (see Diagrams)
     series/
       index.md
       01-gradient-descent.md
       02-momentum.md
   src/
     main.tsx
-    App.tsx                  ← routing: / and /:slug
+    App.tsx                  ← routing: / and /:slug (base-aware builds)
     store.ts                 ← Zustand: hover + pinned state
     components/
       Article.tsx            ← renders one article
       SeriesIndex.tsx        ← renders the cards list
-      Figure.tsx             ← container-directive handler
+      Figure.tsx             ← container-directive handler + knob panel host
+      FigureKnobs.tsx        ← dev-only parameter panel (DEFAULTS-driven)
       Term.tsx               ← text-directive handler
       InlineViz.tsx          ← unlabeled text-directive handler
       LazyIsland.tsx         ← visibility-gated hydration wrapper
+      EditableBlock.tsx      ← per-block edit affordance (dev only)
+      EditableField.tsx      ← title/lede frontmatter editing (dev only)
+      SourceEditor.tsx       ← the raw-markdown textarea (dev only)
+      EditChrome.tsx         ← pill, undo toast, draft banner, HUD mount
+      BlockReorderLayer.tsx  ← Cmd-drag block reordering (dev only)
+      AuthorshipHUD.tsx      ← feedback status + listener controls (dev only)
+      CommentBox.tsx         ← 💬 comment composer (dev only)
+      MoonshineFooter.tsx
     lib/
       directive-handler.ts   ← remark plugin: maps directives to tags
+      EditContext.tsx        ← edit state + offset-splice save pipeline
+      blocks.ts              ← top-level block geometry for reordering
+      bakedFigures.ts        ← loads content/figures/*.json layouts
+      feedback.ts            ← typed client for the feedback endpoints
+      FeedbackContext.tsx    ← feedback state (capabilities, comments)
+      types.ts
     figures/
-      registry.ts            ← id → {component, height, wide} map
+      registry.ts            ← id → {component, height, wide, defaults, paramHints}
       Sparkline.tsx          ← D3 example
       GradientField.tsx      ← plain SVG example
       LossLandscape.tsx      ← interactive React state example
@@ -161,9 +178,12 @@ template/
         MiniSpark.tsx        ← inline visual example
     styles/
       tokens.css             ← shared palette + type stack
-      article.css            ← article + figure + term styling
+      article.css            ← article + figure + term + edit-chrome styling
   velite.config.ts           ← schema for frontmatter; emits typed JSON
   vite.config.ts
+  vite-plugin-moonshine-edit.ts      ← dev-only save endpoint + auto-commit
+  vite-plugin-moonshine-feedback.ts  ← dev-only feedback endpoints
+  moonshine.config.json      ← feedback.enabled kill switch (see below)
   index.html
   package.json
 ```
@@ -308,7 +328,9 @@ bad at. The template splits the two cleanly:
 The author's loop, during `npm run dev`: click **arrange** under the
 diagram → drag nodes, scroll-zoom, pan to the framing readers should
 get → **Save layout**. The JSON is written through the same
-conflict-checked, auto-committed save path as prose. In the built
+auto-committing save path as prose, but unlike prose saves it carries
+no conflict check (last writer wins) — one more reason the layout
+files are the author's surface alone. In the built
 article the diagram is locked (no dragging or panning; wheel scrolls
 the page) and renders the author's exact arrangement — baking isn't a
 separate publish step, it's just what saving means.
@@ -384,9 +406,10 @@ page — no jumping back to the `.md` file for small wording changes.
   whole top-level blocks — a paragraph, a heading, a `:::figure`, a `$$`
   math block — so editing a caption and pressing ↓ moves the whole
   figure. Up/down folds in any unsaved textarea edit before moving.
-- A dismissable pill in the corner teaches the gesture; after each save
-  a transient **Undo** toast can restore the previous text (through the
-  same conflict-checked save path).
+- A dismissable pill in the corner teaches the gesture; after each body
+  save a transient **Undo** toast can restore the previous text (through
+  the same conflict-checked save path). Title/lede and figure-layout
+  saves aren't covered by the toast — the git history is their undo.
 - Edits are safe against concurrent changes: if the agent edits the file
   while a block is open in the browser, the editor re-anchors when it
   can, parks the draft in a recovery banner when it can't, and the save
@@ -483,11 +506,17 @@ comment whose `status` is `dismissed` (the author closed it). The full protocol,
 including the reserved comment kinds not yet wired to UI, is specified in
 `FEEDBACK.md`.
 
+**Kill switch.** The whole subsystem is off when `moonshine.config.json` sets
+`feedback.enabled: false`, or per-invocation with `MOONSHINE_FEEDBACK=off` in
+the environment (which the dev server, the Stop hook, and the listener all
+honor). This loop is still-only — shine articles have no feedback surface.
+
 ## Workflow When Building an Article With This Skill
 
-This section is canonical — the `/moonshine:still` command and the Codex
-`$still` skill are thin wrappers that point here. Follow the moonshine
-process from `SKILL.md` — story discovery first, no skipping to code.
+This section is canonical — the `$still` skill (surfaced as
+`/moonshine:still` in Claude Code) is a thin wrapper that points here.
+Follow the moonshine process from `SKILL.md` — story discovery first, no
+skipping to code.
 Once the outline is agreed:
 
 1. **Bootstrap the project.**
@@ -548,6 +577,28 @@ Once the outline is agreed:
    `content/example.md`. The root URL renders a series index when more
    than one article exists, and a single article when only one does.
 
+## Publishing
+
+`npm run build` produces a static site in `dist/` — typecheck, Velite
+validation, and Vite build in one step. The output is plain read-only
+prose: every authoring affordance (editing, knobs, reorder, feedback)
+is dev-only and absent from the bundle.
+
+- **Served from a domain root** (Netlify, Vercel, `<user>.github.io`):
+  deploy `dist/` as-is.
+- **Served under a subpath** (a project Pages site, a directory on an
+  existing server): build with `npm run build -- --base=/that/subpath/`.
+  The router follows the base automatically. Copy `dist/index.html` to
+  `dist/404.html` so deep links survive static hosts that serve
+  404.html for unknown paths.
+- **Publishing an example to the moonshine repo's own Pages site**: use
+  `scripts/publish-example.sh` in the plugin repo (see `DEVELOPING.md`),
+  which does the base, title, and 404 steps and syncs into `docs/<slug>/`.
+
+The static `<title>` in `index.html` is the template's generic one
+(article titles are set at runtime); patch it in `dist/` after building
+so link unfurls show the article title.
+
 ## What Not to Do
 
 - **Don't put JSX in markdown.** If you reach for `<Component prop="x" />`,
@@ -565,6 +616,9 @@ Once the outline is agreed:
 ## Cross-References
 
 - `SKILL.md` — story discovery, editorial principles, anti-slop checklist
-- `ARTICLE.md` — the HTML scaffold and CSS foundation `still` inherits
-- `VISUALS.md` — D3 patterns; applies inside figure components the same
-  way it does in `shine`
+- `VISUALS.md` — visualization patterns; applies inside figure components
+  (see its "In a still project" preamble for the substrate differences)
+- `FEEDBACK.md` — the authorship-feedback protocol in full
+- `ARTICLE.md` — the shine reference; don't take scaffold, state
+  coordination, or series mechanics from it. The palette and type stack
+  live in this template's `src/styles/tokens.css`.

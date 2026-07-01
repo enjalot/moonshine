@@ -19,5 +19,9 @@ Use this skill to start a new moonshine explanation. The user invokes it as `$sh
 
 ## Notes
 
-- This skill is the Codex equivalent of the Claude Code `/moonshine:shine` command.
-- For the structured **Vite + React + Velite** project flavor (multi-file content, markdown directives, React figures), use `$still` instead.
+- This skill is the single shine entry point in every harness; Claude Code
+  surfaces it as `/moonshine:shine`.
+- For the structured **Vite + React + Velite** project flavor (multi-file
+  content, markdown directives, React figures, in-place editing, authorship
+  feedback), use `$still` instead. When the user hasn't picked a substrate,
+  `SKILL.md` § "Two Substrates" makes still the default.

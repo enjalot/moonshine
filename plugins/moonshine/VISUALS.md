@@ -5,9 +5,13 @@ description: D3 v7 visualization patterns for interactive technical explanations
 
 # Visuals
 
-D3 v7 visualization patterns for moonshine explanations. For the HTML scaffold, CSS foundation, and article layout, see `ARTICLE.md`.
+Visualization patterns for moonshine explanations on either substrate. For the shine HTML scaffold, CSS foundation, and article layout, see `ARTICLE.md`; for the still project structure, see `STILL.md`.
 
-D3 owns the DOM. No framework abstraction layer. Use `.join()` for data binding, `selection.call()` for reusable chart functions, `d3.dispatch` for cross-chart communication (see State Coordination in `ARTICLE.md`). Load D3 from CDN: `https://d3js.org/d3.v7.min.js`.
+D3 owns the DOM. No framework abstraction layer. Use `.join()` for data binding and `selection.call()` for reusable chart functions.
+
+**In a shine article** (single HTML file): load D3 from CDN (`https://d3js.org/d3.v7.min.js`), coordinate figures with `d3.dispatch` (see State Coordination in `ARTICLE.md`), and cross-reference prose to figures with `data-ref` hover events (see Hover cross-references below).
+
+**In a still project** (Vite + React): D3 and KaTeX are npm dependencies already in the template — never inject CDN script tags. Give D3 its DOM inside a figure component via `useRef` + `useEffect` and treat that element as D3-owned (see `STILL.md`). Prose-to-figure highlighting is the `:term` directive plus the Zustand store, not `data-ref` events, and cross-figure state goes through the store, not `d3.dispatch`. Everything else in this file — rendering technology, interaction, encoding, annotation — applies unchanged.
 
 Use CSS custom properties from the article scaffold (`var(--text)`, `var(--accent)`, etc.) in SVG style attributes. Never hardcode colors the palette already defines.
 
@@ -25,7 +29,7 @@ Choose the technology that fits each figure. Start with SVG and only switch when
 
 **Hybrid** Canvas for the data layer, SVG for axes and labels, HTML for controls and tooltips. Often the right answer for complex figures.
 
-**Libraries:** D3 v7 is the primary tool. Use additional libraries when they're the right fit: d3-sankey for Sankey diagrams, topojson-client for geographic data, KaTeX for math. Load from CDN. Prefer fewer dependencies.
+**Libraries:** D3 v7 is the primary tool. Use additional libraries when they're the right fit: d3-sankey for Sankey diagrams, topojson-client for geographic data, KaTeX for math. In shine, load from CDN; in still, add them as npm dependencies. Prefer fewer dependencies either way.
 
 **Judgment:** The explanation's job is to communicate, not to benchmark. Switch to Canvas only when you hit a performance wall you can feel.
 
@@ -303,9 +307,9 @@ Direct labeling beats legends for 5 or fewer series. Leader lines connect data p
 
 Font: use `var(--heading-font)` for all SVG text. Body font is for article prose, not chart labels.
 
-**Math rendering:** KaTeX from CDN for equations. `katex.render(expression, element)` for display, `katex.renderToString(expression)` for inline.
+**Math rendering:** In shine, KaTeX from CDN — `katex.render(expression, element)` for display, `katex.renderToString(expression)` for inline. In still, write `$$` / `$` in the markdown (remark-math + rehype-katex, bundled from npm); inside a figure component, import katex directly.
 
-**Hover cross-references:** When a term in prose is hovered, highlight the corresponding element in a figure. Implement with `data-ref` attributes and shared hover events.
+**Hover cross-references (shine):** When a term in prose is hovered, highlight the corresponding element in a figure. Implement with `data-ref` attributes and shared hover events. In still this mechanism already exists as the `:term` directive — use that, don't build a parallel one.
 
 **Pitfall:** `getComputedTextLength()` returns 0 if text is not yet in the DOM. Append first, then measure. For pre-layout measurement, use [pretext](https://github.com/chenglou/pretext) which computes text metrics from font tables directly.
 

@@ -11,9 +11,10 @@ Moonshine helps create interactive, web-based explanations of technical concepts
 AI tools generate complexity faster than people can consume it. Moonshine is for bridging that gap: helping people digest and communicate technical concepts clearly.
 
 **Reference files:**
-- `ARTICLE.md` HTML scaffold, CSS foundation, layout patterns, series structure
-- `VISUALS.md` D3 visualization patterns, interaction, rendering technology, iteration
-- `STILL.md` the structured Vite + React project flavor: markdown directives, figure registry, in-place editing
+- `STILL.md` the structured Vite + React project flavor: markdown directives, figure registry, in-place editing, publishing
+- `ARTICLE.md` the shine substrate: single-file HTML scaffold, CSS foundation, layout patterns, series structure (shine's hand-built kind)
+- `VISUALS.md` visualization patterns, interaction, rendering technology, iteration (both substrates; see its preamble for still differences)
+- `FEEDBACK.md` the authorship-feedback protocol: comments from the rendered still article flow back to the agent
 
 ## Articles, Not Dashboards
 
@@ -36,7 +37,7 @@ Moonshine renders articles on one of two substrates. Decide early, during story 
 - **shine** — a single self-contained HTML file (vanilla JS + D3 from CDN). Choose when drafting fast, when the user wants one file they can email or host anywhere, or when the article is one-shot.
 - **still** — a Vite + React + Velite project where prose lives in pristine markdown and figures are React components. Choose when the article will keep being edited after first publication, when figures need React state or component libraries (React Flow, react-three-fiber), when people will edit the prose without touching figure code, or when the work is a series or could become one.
 
-If the user invoked a specific command (`/moonshine:shine` or `/moonshine:still`), the choice is made. If they invoked moonshine generically, default to shine for one-shot explainers and suggest still when any of its criteria apply. Everything still-specific lives in `STILL.md`.
+If the user invoked a specific skill (`/moonshine:shine` or `/moonshine:still`), the choice is made. If they invoked moonshine generically, default to still — nearly every real article keeps being edited after first publication, and still is where the authoring affordances live (in-place editing, the knob panel, authorship feedback). Offer shine when the user wants one file they can email or host anywhere with no build step. Everything still-specific lives in `STILL.md`; the authorship-feedback loop (`FEEDBACK.md`) is still-only.
 
 ## The Process
 

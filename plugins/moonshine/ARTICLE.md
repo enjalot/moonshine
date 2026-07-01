@@ -1,11 +1,11 @@
 ---
 name: article
-description: HTML scaffold, CSS foundation, article layout patterns, and series structure for moonshine explanations
+description: HTML scaffold, CSS foundation, article layout patterns, and series structure for shine (single-file) moonshine explanations
 ---
 
-# Article Structure
+# Article Structure (shine)
 
-How moonshine explanations are built as self-contained HTML files. This covers the scaffold template, CSS foundation, layout patterns, and series structure.
+How **shine** explanations are built as self-contained HTML files. This covers the scaffold template, CSS foundation, layout patterns, and series structure — all of it shine-specific. In a **still** project the equivalents live in the template: palette and type stack in `src/styles/tokens.css`, state coordination in the Zustand store, and the series index generated from Velite (see `STILL.md`). The one part still authors may still consult here is the design sensibility, not the mechanisms.
 
 ## Tech Stack
 

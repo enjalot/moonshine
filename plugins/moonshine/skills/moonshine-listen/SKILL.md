@@ -18,6 +18,8 @@ Each invocation performs **one tick**. Run it under `/loop` so the ticks repeat.
 - If invoked with a project name argument, operate on
   `~/.agent/moonshine/<arg>/.feedback/` only.
 - Otherwise operate on every existing `~/.agent/moonshine/*/.feedback/` inbox.
+- If `MOONSHINE_FEEDBACK=off` is set in the environment, do nothing and end
+  the loop — the same kill switch the Stop hook and the dev server honor.
 
 Use absolute, ISO-8601 UTC timestamps (`date -u +%Y-%m-%dT%H:%M:%SZ`) everywhere.
 

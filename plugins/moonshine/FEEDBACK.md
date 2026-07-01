@@ -233,8 +233,9 @@ Two independent gates:
    { "feedback": { "enabled": true } }
    ```
    Override with env `MOONSHINE_FEEDBACK=off`. When disabled: the Vite plugin
-   skips registering feedback routes, and `EditChrome` mounts neither the HUD nor
-   the 💬 comment affordance. Combined with `import.meta.env.DEV`, the subsystem is
+   skips registering feedback routes, and the HUD and 💬 comment affordance
+   suppress themselves at runtime (the `/capabilities` probe fails, so
+   `caps.enabled` stays false). Combined with `import.meta.env.DEV`, the subsystem is
    absent from production builds and one-line-disableable in dev. No code removal.
    The claude-code Stop-hook adapter independently honors `MOONSHINE_FEEDBACK=off`
    as well, so a session doing unrelated work can silence the turn-boundary pickup
