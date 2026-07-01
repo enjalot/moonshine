@@ -98,12 +98,23 @@ pending ──claim──▶ delivered ──reply──▶ addressed
 
 #### Atomicity / claiming
 
-Multiple pickup paths may exist within one adapter (e.g. Claude Code has both a
-Stop hook and an idle loop). To avoid double-processing, **claim by atomic rename**:
-read a `pending` record, write the `delivered` version to a temp file, then
-`rename()` over the original. The rename is the commit point; whoever wins owns the
-comment. Writers MUST use temp-file + `rename` for every mutation (never partial
-writes), mirroring the existing `/__moonshine/save` endpoint.
+Multiple pickup paths may race one inbox (e.g. two Claude Code sessions, or a
+Stop hook and the idle loop). To avoid double-processing, **claim by renaming the
+record itself** to a private name — `rename(<id>.json, <id>.json.claiming.<pid>)`
+— *before* touching its contents. `rename()` is atomic, so if two drainers race,
+exactly one finds the source and wins; the loser's rename fails (source already
+gone) and it skips the comment. Only after winning does the owner rewrite the
+claimed file to `delivered` and rename it back to `<id>.json`.
+
+> Note: renaming the *new* version **over** the original is NOT a claim — an
+> overwrite succeeds for every racer, so both would "win" and inject the comment
+> twice. The source rename is the mutual-exclusion primitive; the content
+> rewrite is a separate step. A drainer that dies mid-claim leaves a
+> `*.claiming.*` file; adapters SHOULD restore such orphans (whose owner process
+> is gone) back to `<id>.json` on a later pass so nothing is stranded.
+
+All content mutations still use temp-file + `rename` (never partial writes),
+mirroring the existing `/__moonshine/save` endpoint.
 
 **Re-delivery of stranded comments.** Claiming marks a record `delivered` *before*
 the session has addressed it, so a turn that is interrupted or ignored can leave a

@@ -46,8 +46,13 @@ For each in-scope `.feedback/` directory:
    is either `status == "pending"` **or** `status == "delivered"` with a
    `deliveredAt` more than 300s ago (a comment claimed by an earlier
    turn/tick that was never addressed — re-surface it rather than strand it):
-   - Claim it atomically: rewrite with `status:"delivered"` and `deliveredAt:"<now>"`
-     to a temp file, then `mv` over the original.
+   - Claim it exclusively by first renaming the record itself to a private name
+     (`mv <id>.json <id>.json.claiming.$$`). That rename is the mutual-exclusion
+     point — if another drainer already took it, your `mv` fails and you skip
+     the comment. Renaming a rewritten copy *over* the original is NOT a claim
+     (both racers would win). Then rewrite the claimed file with
+     `status:"delivered"` and `deliveredAt:"<now>"` and rename it back to
+     `<id>.json`.
    - Read `target` (`path`, `kind`, `figureId`, `range`, `excerpt`, `anchorHash`)
      and `comment`. The source file is `<project>/content/<target.path>`.
    - If `anchorHash` no longer matches the current file body, the prose moved —

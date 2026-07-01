@@ -38,6 +38,17 @@ root="$HOME/.agent/moonshine"
 STALE_DELIVERED_SEC=300
 shopt -s nullglob
 
+# Portable ISO-8601 UTC ("…Z") → epoch seconds. GNU date parses with -d; BSD /
+# macOS date needs -j -f (Claude Code sessions commonly run on macOS, where -d
+# is unsupported and would otherwise silently fail). Echoes 0 when neither
+# parses; callers treat 0 as "unknown" and skip the time-based branch.
+iso_to_epoch() {
+  local ts="$1" e
+  e=$(date -u -d "$ts" +%s 2>/dev/null) && { printf '%s' "$e"; return; }
+  e=$(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$ts" +%s 2>/dev/null) && { printf '%s' "$e"; return; }
+  printf '0'
+}
+
 reason=""
 count=0
 listen_waiting=""
@@ -66,6 +77,18 @@ for fb in "$root"/*/.feedback; do
   fi
   [ "$mode" = "listen" ] || continue
 
+  # Recover any record orphaned by a crash mid-claim — a "<f>.claiming.<pid>"
+  # left behind if a drainer died between taking a record and writing it back.
+  # Only reclaim true orphans: if the owning process is still alive it is
+  # mid-claim right now, so leave it alone (avoids stealing a live claim).
+  for orphan in "$fb"/*.json.claiming.*; do
+    [ -e "$orphan" ] || continue
+    opid="${orphan##*.claiming.}"
+    case "$opid" in ''|*[!0-9]*) : ;; *) kill -0 "$opid" 2>/dev/null && continue ;; esac
+    base="${orphan%.claiming.*}"
+    if [ -e "$base" ]; then rm -f "$orphan"; else mv "$orphan" "$base" 2>/dev/null || true; fi
+  done
+
   # Claim comments to deliver: every pending one, plus any stuck in "delivered"
   # past the staleness window (claimed by an earlier turn that never addressed
   # them). Without the second case an interrupted turn would strand a comment
@@ -81,17 +104,28 @@ for fb in "$root"/*/.feedback; do
     elif [ "$status" = "delivered" ]; then
       da=$(jq -r '.deliveredAt // empty' "$f" 2>/dev/null)
       if [ -n "$da" ]; then
-        da_epoch=$(date -d "$da" +%s 2>/dev/null || echo 0)
+        da_epoch=$(iso_to_epoch "$da")
         [ "$da_epoch" -gt 0 ] && [ "$((now_epoch - da_epoch))" -ge "$STALE_DELIVERED_SEC" ] && claim=yes
       fi
     fi
     [ "$claim" = yes ] || continue
 
-    tmp="$f.moonshine-tmp"
-    if jq --arg now "$now" '.status="delivered" | .deliveredAt=$now' "$f" > "$tmp" 2>/dev/null; then
+    # Take exclusive ownership by renaming the record itself to a private name.
+    # rename() is atomic, so if another drainer (a second session, or the idle
+    # listener) is racing us, exactly one mv finds the source and wins; the
+    # loser's mv fails (source already gone) and it skips the comment. A plain
+    # rewrite-in-place lets both "win" and inject the same comment twice.
+    claimed="$f.claiming.$$"
+    mv "$f" "$claimed" 2>/dev/null || continue
+
+    # Rewrite the claimed record to delivered, then restore the canonical name.
+    tmp="$claimed.tmp"
+    if jq --arg now "$now" '.status="delivered" | .deliveredAt=$now' "$claimed" > "$tmp" 2>/dev/null; then
       mv "$tmp" "$f"
+      rm -f "$claimed"
     else
       rm -f "$tmp"
+      mv "$claimed" "$f" 2>/dev/null || true   # rewrite failed: put it back untouched
       continue
     fi
 
@@ -125,7 +159,7 @@ for fb in "$root"/*/.feedback; do
     hb_ts=$(jq -r '.ts // empty' "$fb/heartbeat.json" 2>/dev/null)
     iv=$(jq -r '.intervalSec // 90' "$fb/heartbeat.json" 2>/dev/null)
     if [ -n "$hb_ts" ]; then
-      hb_epoch=$(date -d "$hb_ts" +%s 2>/dev/null || echo 0)
+      hb_epoch=$(iso_to_epoch "$hb_ts")
       [ "$hb_epoch" -gt 0 ] && [ "$((now_epoch - hb_epoch))" -lt "$((iv * 2))" ] && fresh=yes
     fi
   fi
