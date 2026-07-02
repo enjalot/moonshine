@@ -5,15 +5,14 @@
   },
   "metadata": {
     "description": "Plugin distribution for moonshine",
-    "version": "1.0.0",
-    "pluginRoot": "./plugins"
+    "version": "1.0.0"
   },
   "plugins": [
     {
       "name": "moonshine",
       "source": "./plugins/moonshine",
       "description": "Create interactive technical explanations inspired by Distill.pub",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "author": {
         "name": "enjalot"
       },

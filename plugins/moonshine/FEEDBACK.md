@@ -233,8 +233,9 @@ Two independent gates:
    { "feedback": { "enabled": true } }
    ```
    Override with env `MOONSHINE_FEEDBACK=off`. When disabled: the Vite plugin
-   skips registering feedback routes, and `EditChrome` mounts neither the HUD nor
-   the 💬 comment affordance. Combined with `import.meta.env.DEV`, the subsystem is
+   skips registering feedback routes, and the HUD and 💬 comment affordance
+   suppress themselves at runtime (the `/capabilities` probe fails, so
+   `caps.enabled` stays false). Combined with `import.meta.env.DEV`, the subsystem is
    absent from production builds and one-line-disableable in dev. No code removal.
    The claude-code Stop-hook adapter independently honors `MOONSHINE_FEEDBACK=off`
    as well, so a session doing unrelated work can silence the turn-boundary pickup
@@ -264,7 +265,9 @@ the harness:
 - The HUD "Start" writes `control:listen` and is honored opportunistically when the
   session is next active (e.g. the Claude Code adapter's Stop hook notices
   `listen` + stale heartbeat and nudges the session to start its listener).
-- A guaranteed cold start uses a harness command (Claude Code: `/moonshine-listen`).
+- A guaranteed cold start uses a harness command (Claude Code:
+  `/moonshine:moonshine-listen` — plugin skills are namespaced, so the bare
+  `/moonshine-listen` does not resolve).
 
 The HUD states this plainly rather than offering a button that silently no-ops.
 
@@ -284,7 +287,7 @@ The **claude-code** adapter (the first one) is split across three files:
   `MOONSHINE_FEEDBACK=off`.
 - `skills/moonshine-listen/SKILL.md` — the `heartbeat`+`control` loop for idle
   coverage. Lives in `skills/` (not under `adapters/`) so it is discoverable as
-  `$moonshine-listen`; run it under `/loop` to keep ticking.
+  `/moonshine:moonshine-listen`; run it under `/loop` to keep ticking.
 
 A future `adapters/<harness>/` implements the same four verbs however that
 harness allows, and touches nothing in core.

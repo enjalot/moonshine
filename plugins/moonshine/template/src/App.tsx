@@ -11,7 +11,10 @@ const all: ArticleData[] = articles
 
 export default function App() {
   return (
-    <BrowserRouter>
+    // BASE_URL follows `vite build --base=/some/subpath/` (it's "/" in
+    // dev), so a build published under a subpath — e.g. the repo's Pages
+    // site at /moonshine/<slug>/ — routes correctly without hand edits.
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/:slug" element={<ArticleRoute />} />

@@ -107,7 +107,7 @@ export default function AuthorshipHUD() {
           {caps.harness && !caps.alive && (
             <p className="mn-hud-note">
               No live listener. Click Start while the session is active, or run{' '}
-              <code>/moonshine-listen</code> in an idle session.
+              <code>/moonshine:moonshine-listen</code> in an idle session.
             </p>
           )}
 

@@ -44,3 +44,10 @@ loss and gradient computed, parameters updated. Repeat.
 
 The full picture is just this loop, run for thousands of iterations
 with a step size that shrinks as the loss flattens.
+
+:::figure{id=sparkline seed=0.7}
+A seeded random walk standing in for a loss curve. The seed is set in
+the directive (`seed=0.7`); during `npm run dev`, Cmd/Ctrl+click the
+figure to dial it with the knob panel and save the value back to this
+file.
+:::

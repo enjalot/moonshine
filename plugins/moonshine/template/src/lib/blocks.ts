@@ -26,6 +26,18 @@ const processor = unified()
 
 export type Block = { start: number; end: number }
 
+// Top-level mdast nodes that produce no in-place DOM through react-markdown
+// (no rehype-raw): raw HTML blocks (comments included — exactly what agents
+// leave in markdown), link-reference definitions, and footnote definitions
+// (GFM renders those in an appended section, not in place). They can't be
+// dragged, but their text must survive a reorder, so each one rides with
+// the next rendering block — a comment stays attached to what it annotates.
+// Trailing ones (after the last rendering block) are preserved by
+// rebuildBody's suffix. This keeps blocks 1:1 with rendered top-level
+// elements, which is the invariant BlockReorderLayer's DOM↔block mapping
+// depends on.
+const HIDDEN_TYPES = new Set(['html', 'definition', 'footnoteDefinition'])
+
 export function topLevelBlocks(body: string): Block[] {
   let tree: Root
   try {
@@ -34,12 +46,17 @@ export function topLevelBlocks(body: string): Block[] {
     return []
   }
   const out: Block[] = []
+  let pendingStart: number | null = null
   for (const node of tree.children) {
     const start = node.position?.start?.offset
     const end = node.position?.end?.offset
-    if (typeof start === 'number' && typeof end === 'number') {
-      out.push({ start, end })
+    if (typeof start !== 'number' || typeof end !== 'number') continue
+    if (HIDDEN_TYPES.has(node.type)) {
+      if (pendingStart === null) pendingStart = start
+      continue
     }
+    out.push({ start: pendingStart ?? start, end })
+    pendingStart = null
   }
   return out
 }

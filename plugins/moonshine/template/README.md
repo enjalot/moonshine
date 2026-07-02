@@ -4,8 +4,9 @@ A Vite + React project for a moonshine article where prose lives in
 pristine markdown (`content/*.md`) and figures are first-class React
 components (`src/figures/`).
 
-For the full architecture and design rationale, see
-[`../STILL.md`](../STILL.md). This README is just the survival guide.
+For the full architecture and design rationale, see the plugin's
+`STILL.md`. This README is the survival guide for working inside a
+scaffolded project.
 
 ## Run
 
@@ -14,119 +15,167 @@ npm install        # first time; respects exact pins in package.json
 npm run dev        # vite + velite in watch mode
 ```
 
-Open <http://localhost:5173>. Vite and Velite both run in watch mode.
+Open <http://localhost:5173>. Two watchers run: Velite re-emits typed
+content on any `content/**/*.md` change, Vite hot-swaps anything under
+`src/`.
 
-For reproducible installs across machines and CI, use:
+- `npm run dev:lan` binds `0.0.0.0` for browsing from another device
+  (`http://<hostname>.local:5173` passes Vite's host check). This
+  exposes the dev-only write endpoints to your LAN — trusted networks
+  only.
+- The port is strict (no silent fallback). Run a second project with
+  `MOONSHINE_PORT=5180 npm run dev`.
+- `npm ci` for reproducible installs from `package-lock.json`.
 
-```bash
-npm ci             # installs from package-lock.json exactly, no resolution
-```
+## Editing in the page (dev only)
 
-## Supply-chain hygiene
+During `npm run dev` the rendered article is an editing surface:
 
-This template ships with strict version pinning to limit exposure to
-compromised package updates:
+- **Hold Cmd/Ctrl** to reveal block boundaries; **Cmd/Ctrl+click a
+  block** (paragraph, heading, list, caption, title/lede) to edit its
+  raw markdown in place. **Cmd/Ctrl+Enter** or **Done** saves; **Esc**
+  cancels. After a body save, a transient **Undo** toast can restore
+  the previous text.
+- **Cmd/Ctrl+click a figure** to open the knob panel: sliders,
+  checkboxes, and text inputs generated from the figure's registered
+  `DEFAULTS`. Changes apply live; **Save to markdown** writes the
+  values into the directive's attributes (only the ones that differ
+  from the defaults). Figures without registered defaults explain how
+  to opt in.
+- **Cmd/Ctrl+drag a block** to reorder; a drop line shows the target.
+  The open editor and the knob panel also carry **↑ / ↓** buttons.
+- **💬 Comment to the agent** from the editor or knob panel sends
+  feedback about that exact passage into `.feedback/`; the authoring
+  agent picks it up and replies in the HUD (bottom corner), which also
+  shows whether a listener is running.
+- Every successful save **auto-commits** (message prefix
+  `moonshine-edit:`) when the project is its own git repo, so you and
+  the agent share one history. Older wording lives in `git log`.
 
-- All top-level deps in `package.json` are exact versions (no `^`, no `~`).
-- `.npmrc` sets `save-exact=true` so future `npm install <pkg>` writes
-  exact pins, and `engine-strict=true` to refuse mismatched Node.
-- **Commit `package-lock.json`** to git — it pins transitive deps by
-  content hash and is what `npm ci` reads from.
-- Run `npm audit` periodically; upgrade deliberately by changing
-  versions in `package.json` and running `npm install` + retesting.
+Concurrent edits are safe: stale writes are rejected instead of
+overwriting, and an open editor re-anchors (or parks your draft in a
+recovery banner) when the file changes underneath it.
+
+To turn the feedback subsystem off: set `feedback.enabled: false` in
+`moonshine.config.json`, or `MOONSHINE_FEEDBACK=off` in the
+environment.
+
+None of this ships: a production `vite build` contains no edit UI and
+no write endpoints.
 
 ## What's where
 
 ```
 content/                  ← writers edit only here
   example.md
+  figures/                ← author-saved diagram layouts (*.json)
   series/
     index.md
     01-...md
-    02-...md
 
 src/
-  components/
-    Article.tsx           ← renders one article
-    SeriesIndex.tsx       ← renders cards for the index
-    Figure.tsx            ← block figure (:::figure{id=...}:::)
-    Term.tsx              ← inline term (:term[word]{to=id})
-    InlineViz.tsx         ← inline visual (:inline-viz{kind=...})
-    LazyIsland.tsx        ← visibility-gated hydration wrapper
+  components/             ← article rendering + the dev-only edit chrome
+    Article.tsx, SeriesIndex.tsx, Figure.tsx, Term.tsx, InlineViz.tsx,
+    LazyIsland.tsx, FigureKnobs.tsx, EditableBlock.tsx, EditableField.tsx,
+    SourceEditor.tsx, EditChrome.tsx, BlockReorderLayer.tsx,
+    AuthorshipHUD.tsx, CommentBox.tsx, MoonshineFooter.tsx
   figures/
-    registry.ts           ← id → component map
-    Sparkline.tsx         ← D3 example
+    registry.ts           ← id → {component, height, wide, defaults, paramHints}
+    Sparkline.tsx         ← D3 example (registered knobs)
     GradientField.tsx     ← plain SVG example
-    LossLandscape.tsx     ← interactive React-state example
-    FlowDiagram.tsx       ← React Flow example
-    inline/
-      MiniSpark.tsx       ← inline visual example
-  lib/directive-handler.ts
+    LossLandscape.tsx     ← interactive React-state example (PARAM_HINTS)
+    DiagramFigure.tsx     ← generic React Flow diagram + arrange/save
+    FlowDiagram.tsx       ← example diagram semantics on DiagramFigure
+    lib/params.ts         ← attr→number/bool/string coercers
+    inline/MiniSpark.tsx  ← inline visual example
+  lib/                    ← EditContext, blocks, feedback client, directives
   store.ts                ← Zustand: hover + pinned state
-  styles/                 ← tokens.css + article.css
+  styles/                 ← tokens.css (palette + type) + article.css
 
 velite.config.ts          ← frontmatter schema; emits typed JSON
-vite.config.ts
-index.html
+vite-plugin-moonshine-edit.ts      ← dev-only save endpoint + auto-commit
+vite-plugin-moonshine-feedback.ts  ← dev-only feedback endpoints
+moonshine.config.json     ← feedback kill switch
 ```
 
 ## Markdown grammar
 
-Three directives, plus standard CommonMark.
+Three directives, plus standard CommonMark and math (`$\eta$` inline,
+`$$...$$` display — KaTeX, bundled from npm).
 
 ```md
-:::figure{id=loss-landscape}
-Optional caption as markdown.
+:::figure{id=loss-landscape lr=0.12}
+Optional caption as markdown. Attributes become props.
 :::
 
-The :term[gradient]{to=gradient-field} points uphill.
+The :term[gradient]{to=gradient-field.well} points uphill.
 
 Too small :inline-viz{kind=mini-spark value=0.15} and you stall.
 ```
 
-Three directive shapes (all single-colon for inline, triple-colon for
-block):
-
-- `:::figure{id=name}` ... `:::` — block figure (own paragraph)
-- `:term[word]{to=id}` — inline labeled directive (clickable term)
-- `:inline-viz{kind=foo attr=bar}` — inline unlabeled directive (mid-text visual)
-
-Terms hover-highlight the linked figure on pointerenter/focus, and
-pin-highlight + scroll into view on click.
+- `:::figure{id=name attr=value}` ... `:::` — block figure; every
+  attribute passes to the component as a string prop.
+- `:term[word]{to=id}` — clickable term; hover soft-highlights the
+  linked figure, click pins it and scrolls it into view. Dotted refs
+  (`to=figure-id.part`) target a specific element inside the figure.
+- `:inline-viz{kind=foo attr=bar}` — mid-text visual.
 
 ## Add a figure
 
-1. Create `src/figures/MyFigure.tsx` with a default-exported React
-   component.
-2. Add an entry to `src/figures/registry.ts`:
+1. Create `src/figures/MyFigure.tsx` with a default-exported component
+   typed `(props: FigureProps)`. Export a `DEFAULTS` const for its
+   tunable values and parse props against it with `lib/params.ts`.
+2. Register it in `src/figures/registry.ts`:
    ```ts
-   import MyFigure from './MyFigure'
+   import MyFigure, { DEFAULTS as myFigureDefaults } from './MyFigure'
    export const figures = {
      // ...
-     'my-figure': MyFigure,
+     'my-figure': { component: MyFigure, height: 320, defaults: myFigureDefaults },
    }
    ```
+   `height` reserves space before lazy mount; `wide` breaks out of the
+   article column; `defaults` powers the knob panel; add `paramHints`
+   when a slider needs explicit bounds.
 3. Reference it in markdown: `:::figure{id=my-figure}:::`.
 
-For inline figures, register under `inlineFigures` and reference with
-`:inline-viz{kind=my-figure ...attrs}`.
+Inline figures register under `inlineFigures` and render with
+`:inline-viz{kind=my-figure ...attrs}`. For node-link diagrams, build
+on `DiagramFigure` (see `FlowDiagram.tsx`) — never Mermaid.
 
 ## Single article vs series
 
-The template ships with both modes wired. Root URL behavior:
+Both modes are wired; what's in `content/` decides. More than one
+article → the root URL renders a cards index; exactly one → that
+article directly. Delete `content/series/` for single-article mode, or
+`content/example.md` for series mode.
 
-- **More than one article** → renders `SeriesIndex`, a cards list.
-- **Exactly one article** → renders that article directly.
+## Build and publish
 
-To switch to single-article mode, delete `content/series/`. To switch
-to series-only mode, delete `content/example.md`.
+```bash
+npm run typecheck   # velite + tsc over src/ and the node-side configs
+npm run build       # static site in dist/, no editing machinery
+```
+
+Deploying under a subpath? `npm run build -- --base=/that/path/` — the
+router follows automatically. Patch the `<title>` in `dist/index.html`
+(article titles are set at runtime). For deep links on GitHub Pages,
+the custom 404 must sit at the site root; `index.html` already decodes
+the `?/`-packed path a root `404.html` produces (the spa-github-pages
+pattern — the moonshine repo's publish script writes that root file).
+
+## Supply-chain hygiene
+
+- All top-level deps are exact versions; `.npmrc` sets
+  `save-exact=true` and `engine-strict=true` (Node ≥ 20).
+- **Commit `package-lock.json`** — it pins transitive deps by hash and
+  is what `npm ci` reads.
+- Run `npm audit` periodically; upgrade deliberately and retest.
 
 ## Notes
 
-- Don't use MDX or write JSX in markdown — that would defeat the
-  pristine-prose contract. Use directives instead.
-- Don't use Mermaid. Use React Flow for interactive diagrams (the
-  `FlowDiagram.tsx` example shows the pattern).
-- Wrap heavy figures in `<LazyIsland>` (`<Figure>` already does this).
+- Don't use MDX or write JSX in markdown — use directives.
 - Reference CSS custom properties in figure code (`var(--accent)`,
-  `var(--text-2)`), not hardcoded hex.
+  `var(--text-2)`) from `tokens.css`, not hardcoded hex.
+- Wrap heavy figures in `<LazyIsland>` (`<Figure>` already does this).
+- `content/figures/*.json` is the author's arrangement surface — agents
+  regenerate diagram *code*, never those files.
