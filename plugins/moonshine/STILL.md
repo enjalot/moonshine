@@ -49,7 +49,22 @@ and you stall.
 
 **Container directive** (`:::name{}`...`:::`) — block-level. Used for
 figures that take their own paragraph. The id matches an entry in the
-figure registry. Inner content becomes the caption.
+figure registry. Inner content becomes the caption — except a *leading*
+heading (any level), which renders as the figure's **title** above the
+figure:
+
+```md
+:::figure{id=loss-landscape lr=0.12}
+### Descending a two-well surface
+Drag to set a starting point; the path settles into the nearest minimum.
+:::
+```
+
+Title and caption are ordinary markdown blocks inside the directive, so
+both are editable in place exactly like body prose. The heading level
+carries no meaning inside a figure (it styles to one consistent size);
+only the first block counts — a heading later in the content stays in
+the caption.
 
 Math also works out of the box: `$\eta$` inline and `$$...$$` display
 blocks render through remark-math + KaTeX (styles bundled from npm, no
@@ -444,9 +459,10 @@ into top-level block ranges and rebuilds it in a new order) and
 splice it produces goes through the same conflict-checked save path.
 
 What's editable in place: paragraphs, headings, lists, blockquotes, the
-title/lede — and **figure captions**, because caption text written as the
-directive's inner content renders as an ordinary paragraph whose source
-offsets point into the markdown. The directive line itself
+title/lede — and **figure titles and captions**, because both are the
+directive's inner content (a leading heading and the blocks after it),
+rendered as ordinary markdown whose source offsets point into the file.
+The directive line itself
 (`:::figure{id=…}` and its attributes) and figure component code are not
 editable in the browser — change those in the `.md` source or the
 component files as usual.

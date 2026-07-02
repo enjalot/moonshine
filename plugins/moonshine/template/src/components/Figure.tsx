@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import {
+  Children,
+  isValidElement,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { figures } from '../figures/registry'
 import { blockIndexAt } from '../lib/blocks'
 import { useArticleStore, useFigureHighlight } from '../store'
@@ -25,6 +32,28 @@ type Props = {
   // Everything else came from the directive's attributes and passes
   // through to the figure component as props (as strings).
   [key: string]: unknown
+}
+
+// The directive's inner content renders through the markdown component
+// map, so each child block carries its source offsets. A *leading*
+// heading (any level) is the figure's title, shown above the figure;
+// everything after it is the caption below. Both are ordinary markdown
+// blocks, so both are Cmd/Ctrl+click editable exactly like body prose.
+function splitTitle(children: ReactNode): {
+  title: ReactNode | null
+  rest: ReactNode | null
+} {
+  const kids = Children.toArray(children).filter(
+    (k) => !(typeof k === 'string' && k.trim() === ''),
+  )
+  const first = kids[0]
+  const tag = isValidElement(first)
+    ? ((first.props as { node?: { tagName?: string } }).node?.tagName ?? '')
+    : ''
+  if (/^h[1-6]$/.test(tag)) {
+    return { title: first, rest: kids.length > 1 ? kids.slice(1) : null }
+  }
+  return { title: null, rest: kids.length > 0 ? kids : null }
 }
 
 export default function Figure({ id, caption, children, node, ...rest }: Props) {
@@ -140,7 +169,13 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
   const onClickCapture = (e: React.MouseEvent) => {
     if (!EDIT_ENABLED || !(e.metaKey || e.ctrlKey)) return
     const el = e.target as Element
-    if (el.closest('figcaption') || el.closest('.mn-knobs')) return
+    if (
+      el.closest('figcaption') ||
+      el.closest('.figure-title') ||
+      el.closest('.mn-knobs')
+    ) {
+      return
+    }
     e.preventDefault()
     e.stopPropagation()
     if (!knobsOpen) setOverrides({})
@@ -155,8 +190,11 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
   const sourceAttrs =
     typeof caption === 'string' ? { ...attrs, caption } : attrs
 
+  const { title: figTitle, rest: captionContent } = splitTitle(children)
+
   return (
     <figure ref={ref} id={id} className={cls} onClickCapture={onClickCapture}>
+      {figTitle && <div className="figure-title">{figTitle}</div>}
       <LazyIsland height={entry.height}>
         <Component figureId={id} {...attrs} {...overrides} />
       </LazyIsland>
@@ -233,9 +271,9 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
           </p>
         </div>
       )}
-      {(caption || children) && (
+      {(caption || captionContent) && (
         <figcaption className="figure-caption">
-          {caption ?? children}
+          {caption ?? captionContent}
         </figcaption>
       )}
     </figure>
