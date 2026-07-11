@@ -1,14 +1,24 @@
 ---
 name: critique
-description: Adversarial critique of a moonshine article against the skill's editorial, visual, and pedagogy standards. Use when the user wants a moonshine article reviewed, graded, or checked for slop before publishing. Invoked as `$critique` or `$critique <path>`.
+description: Adversarial critique of a moonshine article (still or shine) against the skill's editorial, visual, and pedagogy standards. Use when the user wants a moonshine article reviewed, graded, or checked for slop before publishing. Invoked as `$critique` or `$critique <path>`.
 ---
 
 # Critique — Adversarially Review a Moonshine Article
 
-Load the moonshine skill's reference standards, then perform an adversarial critique of the article the user names.
+Load the moonshine skill's reference standards, then perform an adversarial critique of the article the user names. Most moonshine articles are **still** projects (Vite + React + Velite); a **shine** article is a single self-contained HTML file. Figure out which one you're grading before you start — the standards you load and the checks you run depend on it.
 
-1. **Load the standards.** Read `../moonshine/SKILL.md`, `../moonshine/ARTICLE.md`, and `../moonshine/VISUALS.md`. These are the bar you grade against.
-2. **Find the article.** Anything after `$critique` is the path to critique. If no path is provided, look for the most recently modified moonshine article under `~/.agent/moonshine/` — a **shine** article is a single `index.html`; a **still** article is a project directory (grade its content markdown plus the rendered dev-server output).
+## Setup
+
+1. **Identify the substrate.**
+   - **still** — a project directory: `package.json` + `content/*.md` prose + `src/figures/registry.ts`. This is the common case.
+   - **shine** — a single `index.html` with inline JS and D3 from a CDN.
+
+2. **Load the standards for that substrate.** These are the bar you grade against; don't grade a substrate against rules you haven't read.
+   - Always: `../moonshine/SKILL.md` (editorial process, anti-slop, editing pass) and `../moonshine/VISUALS.md` (visualization patterns; its "In a still project" preamble covers the substrate differences).
+   - **still** also: `../moonshine/STILL.md` (project structure, the three directives, figure registry, DEFAULTS/knobs, diagrams, series, publishing). Read `../moonshine/FEEDBACK.md` too if the article carries a `.feedback/` directory or the authorship loop is in scope.
+   - **shine** also: `../moonshine/ARTICLE.md` (single-file HTML scaffold, CSS foundation, layout, series). Do **not** grade a shine article against `STILL.md`, or a still project against `ARTICLE.md`'s scaffold — they describe different substrates.
+
+3. **Find the article.** Anything after `$critique` is the path to critique. If no path is given, look under `~/.agent/moonshine/` for the most recently modified article — a still project (a directory with `package.json`) or a shine `index.html`. When it's ambiguous, ask which one.
 
 You are a critic, not a fixer. Do not rewrite the article. Do not generate code. Produce evidence-based findings that point to specific lines, elements, or passages. Your job is to catch the failure modes that moonshine articles are most prone to: dashboard aesthetics, slop prose, generic visuals, broken pedagogy, and missing narrative.
 
@@ -20,13 +30,16 @@ You are a critic, not a fixer. Do not rewrite the article. Do not generate code.
 4. **Grade the dimensions.** Use the scorecard below. Be strict. S means exceptional, not "no complaints."
 5. **Be blunt and specific.** If it looks like a dashboard, say which elements make it look like a dashboard and what article pattern should replace them. If the prose is slop, quote the sentence and explain the machinery it uses.
 
-## Open the Article First
+## Read Both the Source and the Rendered Result
 
-Read the source (a shine article's single HTML file; a still article's content markdown and figure components). Open the rendered result in the browser — shine's `index.html` directly, or the still project's running dev server. You need both the code and the visual result.
+You need the code and the visual output.
+
+- **still** — read the prose in `content/**/*.md`, the figure components in `src/figures/`, the `src/figures/registry.ts` entries, and the palette/type stack in `src/styles/tokens.css`. Then view the rendered article: use the running dev server if there is one (read the real URL from Vite's stdout, don't assume `localhost:5173`), or `npm run build` and open `dist/`. Grade the built (reader-facing) view, not the dev editing chrome.
+- **shine** — read the single `index.html`, then open it in the browser.
 
 ## Critique Scorecard
 
-Grade each dimension S through F. Every grade must cite evidence.
+Grade each dimension S through F. Every grade must cite evidence. The dimensions apply to both substrates; the substrate-specific checks below feed dimensions 1, 4, 8, 9, and 10.
 
 | # | Dimension | What to check |
 |---|-----------|---------------|
@@ -39,9 +52,30 @@ Grade each dimension S through F. Every grade must cite evidence.
 | 7 | **Narrative Progression** | The article has a progression of ideas, not a collection of sections. Each section builds on the previous one. The reader arrives at the key insight through a sequence, not a dump. Prose drives understanding; figures serve the narrative. |
 | 8 | **Figure Pedagogy** | Exaggerated defaults that make phenomena dramatically visible. Sensible defaults (something interesting before the reader touches anything). Slow enough animations to follow cause and effect. Consistent visual conventions across figures. Looping animations reset cleanly. |
 | 9 | **Interaction Design** | Interactions teach, not just demonstrate. The right pattern for the job (details-on-demand, explorable explanation, linked views, scroll-driven, animated transition). No blank canvases or "click to start" states. |
-| 10 | **Code Quality** | The article runs clean with no console errors. For **shine**: self-contained HTML that works when opened in a browser, D3 v7 from CDN, no framework dependencies. For **still**: figures are clean, self-contained components registered in the figure registry, prose stays in the content markdown. No accessibility disasters (contrast, keyboard nav for critical interactions). |
+| 10 | **Code Quality** | Runs clean, no console errors, no accessibility disasters (contrast, keyboard nav for critical interactions). Substrate-specific structure — see the checks below. |
 | 11 | **Editorial Tone** | Clear and humble. "Tries to", "can", "helps" instead of absolute claims. Short, direct sentences. No overselling. No keynote presentation energy. Would feel at home in a Distill.pub article. |
 | 12 | **Content Specificity** | The article explains this specific concept, not a generic version of it. Examples are well-chosen for the audience. Parameter values are pedagogically motivated. The key insight is clear and earned through the progression. |
+
+## Substrate-Specific Checks
+
+Run the block for the substrate you identified. These are concrete, gradeable checks; fold each finding into the scorecard dimension it belongs to (noted in brackets).
+
+### still
+
+- **Pristine markdown [10].** `content/**/*.md` contains only CommonMark, math (`$…$` / `$$…$$`), and the three directives. No JSX, no `import`, no raw `<Component>` in prose. A `<tag>` in markdown is a defect — it should be a figure component or a directive.
+- **Directives earn their place [9].** `:::figure{id=…}` block figures, `:term[word]{to=figure-id}` / `{to=figure-id.part}` links, and `:inline-viz{kind=…}` inline visuals. Every `to=` targets a real registry id (and a real part id after the dot). A `:term` link should teach — clicking it should reveal something in the figure the prose is talking about, not just outline a box. Flag term links that point at nothing or that never pay off.
+- **Registry is honest [10].** Every id referenced in markdown is registered in `src/figures/registry.ts`. `height` is set so there's no layout shift before lazy mount and term-pin scroll lands right. `wide` is used intentionally, not by default. Heavy figures (3D, large canvas) are wrapped in `<LazyIsland>`.
+- **Tunables are DEFAULTS, not magic numbers [8].** Values that shape what the reader sees are exported as a `DEFAULTS` const (registered for the knob panel), with `PARAM_HINTS` where a slider range matters. Constants shared across figures live in `src/figures/lib/`. Flag pedagogically load-bearing numbers buried in render logic.
+- **Palette from tokens [4].** Figure components reference `var(--accent)`, `var(--text-2)`, etc. from `src/styles/tokens.css`. Hardcoded hex/rgb colors in a figure file are a defect — they break dark mode and the shared visual language.
+- **Diagrams the right way [9/10].** Node-link diagrams are built on the template's `DiagramFigure` (React Flow), never Mermaid, and the author's `content/figures/*.json` layout is treated as untouchable author surface. Whole-figure vs part-level highlighting reads the store via `useFigureHighlight`.
+- **Series integrity [7/10].** If it's a series, Velite frontmatter validates (`title`, `order`, `series`), the index cards and prev/next derive from the typed `articles[]`, and reading order tells a coherent progression. A single article has no stray `content/series/` folder.
+- **The build is reader-clean [10].** `npm run build` passes (typecheck + Velite validation + Vite). The static export is inert — no editing chrome, knobs, or feedback UI in the bundle. Grade the built page, not the dev affordances.
+
+### shine
+
+- **Self-contained [10].** One `index.html` that works when opened directly from disk. D3 v7 from CDN. No framework dependencies, no build step, no external asset that breaks offline (beyond the CDN scripts and optional `data/`).
+- **Layout and type from the scaffold [5].** Follows `ARTICLE.md`'s CSS foundation and layout patterns rather than a bespoke dashboard grid.
+- **Interaction without a framework [9].** Vanilla JS interaction that still teaches; no blank "click to start" canvases.
 
 ## Slop Repair Examples
 
@@ -52,6 +86,8 @@ When citing prose problems, use this diagnostic scaffold to show what the senten
 Do not rewrite the sentence. Describe the repair direction.
 
 ## Output Format
+
+State the substrate you graded in one line at the top, then:
 
 ### 1. Steelman
 
@@ -83,7 +119,7 @@ Quote every sentence that uses slop machinery. For each, name the machinery and 
 
 ### 6. Anti-Slop Visual Audit
 
-List every visual element that would survive a topic swap unchanged. For each, describe what a content-specific alternative would look like.
+List every visual element that would survive a topic swap unchanged. For each, describe what a content-specific alternative would look like. For a still project, include the substrate checks that failed (hardcoded colors, unregistered ids, JSX in markdown, Mermaid diagrams).
 
 ### 7. Remaining Issues
 
