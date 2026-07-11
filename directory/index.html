@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>moonshine directory</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1a1d21; --muted: #6b7280;
+    --line: #e2e5ea; --accent: #2563eb; --chip: #eef1f5; --chip-text: #374151;
+    --tmux: #ede9fe; --tmux-text: #5b21b6; --warn: #fef3c7; --warn-text: #92400e;
+    --live: #dcfce7; --live-text: #166534; --quote: #f0f3f7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101216; --card: #191c22; --text: #e6e8eb; --muted: #8b93a1;
+      --line: #2a2f38; --accent: #60a5fa; --chip: #242933; --chip-text: #c3c9d4;
+      --tmux: #2e2650; --tmux-text: #c4b5fd; --warn: #3d3014; --warn-text: #fbbf24;
+      --live: #14331e; --live-text: #4ade80; --quote: #1f232b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: .6em 1em;
+    padding: 1.2em 1.4em .4em;
+  }
+  header h1 { font-size: 1.25em; margin: 0; }
+  header .sub { color: var(--muted); font-size: .85em; }
+  #search {
+    margin-left: auto; padding: .45em .8em; min-width: 220px;
+    border: 1px solid var(--line); border-radius: 8px;
+    background: var(--card); color: var(--text); font-size: .9em;
+  }
+  main { padding: .6em 1.4em 3em; max-width: 1500px; margin: 0 auto; }
+  h2 { font-size: .95em; color: var(--muted); font-weight: 600;
+       margin: 1.4em 0 .7em; text-transform: uppercase; letter-spacing: .04em; }
+  .grid {
+    display: grid; gap: .9em;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: .9em 1em .75em; display: flex; flex-direction: column; gap: .5em;
+  }
+  .card .top { display: flex; align-items: baseline; gap: .5em; }
+  .card h3 { margin: 0; font-size: 1.02em; flex: 1; min-width: 0;
+             overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card h3 a { color: var(--accent); text-decoration: none; }
+  .card h3 a:hover { text-decoration: underline; }
+  .port { font: .8em/1.6 ui-monospace, monospace; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: .35em; }
+  .chip {
+    font-size: .72em; padding: .1em .55em; border-radius: 999px;
+    background: var(--chip); color: var(--chip-text); white-space: nowrap;
+  }
+  .chip.tmux { background: var(--tmux); color: var(--tmux-text); font-weight: 600; }
+  .chip.warn { background: var(--warn); color: var(--warn-text); }
+  .chip.live { background: var(--live); color: var(--live-text); font-weight: 600; }
+  .desc { font-size: .86em; color: var(--text); }
+  .prompt {
+    font-size: .8em; color: var(--muted); background: var(--quote);
+    border-left: 3px solid var(--line); border-radius: 0 6px 6px 0;
+    padding: .4em .6em; font-style: italic;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .foot {
+    margin-top: auto; display: flex; flex-wrap: wrap; gap: .3em .8em;
+    font-size: .74em; color: var(--muted); align-items: center;
+  }
+  .foot .cwd { font-family: ui-monospace, monospace; overflow: hidden;
+               text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  button.copy, button.start {
+    font-size: 1em; border: 1px solid var(--line); border-radius: 6px;
+    background: none; color: var(--muted); cursor: pointer; padding: 0 .5em;
+  }
+  button.copy:hover { color: var(--text); border-color: var(--muted); }
+  button.start {
+    color: var(--live-text); border-color: var(--live-text);
+    font-weight: 600; padding: .1em .7em;
+  }
+  button.start:hover { background: var(--live); }
+  button.start:disabled { opacity: .6; cursor: default; }
+  details { margin-top: 2em; }
+  summary { cursor: pointer; color: var(--muted); font-size: .95em; }
+  details .grid { margin-top: .9em; opacity: .75; }
+  #status { position: fixed; bottom: .8em; right: 1.2em; font-size: .75em;
+            color: var(--muted); background: var(--card); padding: .3em .7em;
+            border: 1px solid var(--line); border-radius: 999px; }
+  .empty { color: var(--muted); padding: 1em 0; font-size: .9em; }
+</style>
+</head>
+<body>
+<header>
+  <h1>moonshine directory</h1>
+  <span class="sub" id="summary"></span>
+  <input id="search" type="search" placeholder="filter: title, summary, tmux, port…">
+</header>
+<main>
+  <h2>articles</h2>
+  <div class="grid" id="projects"></div>
+  <h2>other running servers</h2>
+  <div class="grid" id="running"></div>
+  <details id="recentWrap"><summary></summary><div class="grid" id="recent"></div></details>
+</main>
+<div id="status"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+let data = null;
+const startState = {};  // project name -> "installing…" | "starting…"
+
+const rel = ts => {
+  if (!ts) return "";
+  let s = Math.max(0, Date.now() / 1000 - ts);
+  if (s < 90) return Math.round(s) + "s";
+  if (s < 5400) return Math.round(s / 60) + "m";
+  if (s < 129600) return (s / 3600).toFixed(1).replace(/\.0$/, "") + "h";
+  return Math.round(s / 86400) + "d";
+};
+
+function copyText(text, btn) {
+  const done = () => { btn.textContent = "✓"; setTimeout(() => btn.textContent = "copy", 1200); };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done);
+  } else {
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand("copy"); ta.remove(); done();
+  }
+}
+
+const chipEl = (parent, t, cls) => {
+  const c = document.createElement("span");
+  c.className = "chip" + (cls ? " " + cls : ""); c.textContent = t;
+  parent.appendChild(c);
+};
+
+function sessionFoot(foot, sessionId, lastActivity) {
+  const sid = document.createElement("span");
+  sid.textContent = "session " + sessionId.slice(0, 8);
+  if (lastActivity) sid.textContent += " · active " + rel(lastActivity) + " ago";
+  foot.appendChild(sid);
+  const b = document.createElement("button"); b.className = "copy"; b.textContent = "copy";
+  b.title = "copy: claude --resume " + sessionId;
+  b.onclick = () => copyText("claude --resume " + sessionId, b);
+  foot.appendChild(b);
+}
+
+// ---------------------------------------------------------------- articles
+
+async function startProject(p, btn) {
+  btn.disabled = true;
+  startState[p.name] = p.installed === false ? "installing…" : "starting…";
+  render();
+  try {
+    const r = await fetch("api/start", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ project: p.name }),
+    });
+    const res = await r.json();
+    if (!res.ok) throw new Error(res.error || "start failed");
+    if (res.installing) startState[p.name] = "installing…";
+    const port = res.port;
+    const deadline = Date.now() + 5 * 60 * 1000;
+    while (Date.now() < deadline) {
+      await new Promise(ok => setTimeout(ok, 2000));
+      const probe = await (await fetch("api/probe?port=" + port)).json();
+      if (probe.up) {
+        delete startState[p.name];
+        await fetch("api/scan", { method: "POST" });
+        await new Promise(ok => setTimeout(ok, 1500));
+        await refresh();
+        return;
+      }
+      if (startState[p.name] === "installing…" && Date.now() > deadline - 4 * 60 * 1000)
+        startState[p.name] = "starting…";
+    }
+    startState[p.name] = "timed out — check sites/logs/" + p.name + ".log";
+  } catch (e) {
+    startState[p.name] = "error: " + e.message;
+  }
+  render();
+}
+
+function projectCard(p) {
+  const el = document.createElement("div");
+  el.className = "card";
+
+  const running = !!p.port;
+  const url = running ? `http://${location.hostname}:${p.port}/` : p.url;
+
+  const top = document.createElement("div"); top.className = "top";
+  const h = document.createElement("h3");
+  if (url) { const a = document.createElement("a"); a.href = url; a.textContent = p.title; h.appendChild(a); }
+  else h.textContent = p.title;
+  top.appendChild(h);
+  if (running) {
+    const port = document.createElement("span"); port.className = "port";
+    port.textContent = ":" + p.port; top.appendChild(port);
+  }
+  el.appendChild(top);
+
+  const chips = document.createElement("div"); chips.className = "chips";
+  if (p.name !== p.title) chipEl(chips, p.name);
+  chipEl(chips, p.kind === "still" ? "vite" : "static");
+  if (running) chipEl(chips, "running", "live");
+  else if (startState[p.name]) chipEl(chips, startState[p.name], "warn");
+  if (p.kind === "still" && p.installed === false) chipEl(chips, "not installed", "warn");
+  el.appendChild(chips);
+
+  if (p.summary) { const d = document.createElement("div"); d.className = "desc";
+    d.textContent = p.summary; el.appendChild(d); }
+
+  const foot = document.createElement("div"); foot.className = "foot";
+  if (p.created) { const c = document.createElement("span");
+    c.textContent = "created " + p.created; foot.appendChild(c); }
+  if (p.updated_at) { const u = document.createElement("span");
+    u.textContent = "edited " + rel(p.updated_at) + " ago"; foot.appendChild(u); }
+  if (p.session_id) sessionFoot(foot, p.session_id, null);
+  if (p.kind === "still" && !running && !startState[p.name]) {
+    const b = document.createElement("button"); b.className = "start";
+    b.textContent = "▶ start";
+    b.title = p.installed === false
+      ? "npm install + npm run dev:lan (first start takes ~a minute)"
+      : "npm run dev:lan in " + p.name;
+    b.onclick = () => startProject(p, b);
+    foot.appendChild(b);
+  }
+  el.appendChild(foot);
+  return el;
+}
+
+// ---------------------------------------------------------------- servers
+
+function card(s, dead) {
+  const el = document.createElement("div");
+  el.className = "card";
+  const ann = s.annotation || {};
+  const weakTitle = !s.title || /^(moonshine$|vite app|directory listing)/i.test(s.title);
+  const name = ann.name || (!weakTitle && s.title) || s.project || s.title
+    || s.cmd.split(" ")[0] || ("port " + s.port);
+  const url = `http://${location.hostname}:${s.port}/`;
+
+  const top = document.createElement("div"); top.className = "top";
+  const h = document.createElement("h3");
+  if (dead || s.localhost_only) { h.textContent = name; }
+  else { const a = document.createElement("a"); a.href = url; a.textContent = name; h.appendChild(a); }
+  const port = document.createElement("span"); port.className = "port"; port.textContent = ":" + s.port;
+  top.append(h, port); el.appendChild(top);
+
+  const chips = document.createElement("div"); chips.className = "chips";
+  if (s.tmux_session) chipEl(chips, s.tmux_session, "tmux");
+  if (s.project && s.project !== name) chipEl(chips, s.project);
+  if (s.unit) chipEl(chips, s.unit);
+  if (s.framework) chipEl(chips, s.framework);
+  if (s.content_type && s.content_type.includes("json")) chipEl(chips, "API");
+  if (s.localhost_only) chipEl(chips, "localhost only", "warn");
+  if (s.http_status >= 400) chipEl(chips, "HTTP " + s.http_status, "warn");
+  if (dead) chipEl(chips, "stopped " + rel(s.ended_at) + " ago", "warn");
+  if (chips.children.length) el.appendChild(chips);
+
+  const desc = ann.description || s.description;
+  if (desc) { const d = document.createElement("div"); d.className = "desc"; d.textContent = desc; el.appendChild(d); }
+
+  if (s.claude && s.claude.first_prompt) {
+    const q = document.createElement("div"); q.className = "prompt";
+    q.textContent = "“" + s.claude.first_prompt + "”";
+    q.title = "first prompt of session " + s.claude.session_id;
+    el.appendChild(q);
+  }
+
+  const foot = document.createElement("div"); foot.className = "foot";
+  if (s.cwd) { const c = document.createElement("span"); c.className = "cwd";
+    c.textContent = s.cwd.replace(/^\/(home|Users)\/[^/]+/, "~"); c.title = s.cmd; foot.appendChild(c); }
+  if (!dead && s.started_at) { const u = document.createElement("span");
+    u.textContent = "up " + rel(s.started_at); foot.appendChild(u); }
+  if (s.claude) sessionFoot(foot, s.claude.session_id, s.claude.last_activity);
+  el.appendChild(foot);
+  return el;
+}
+
+// ---------------------------------------------------------------- render
+
+const blob = o => Object.values(o).filter(v => typeof v === "string" || typeof v === "number")
+  .join(" ").toLowerCase();
+
+function render() {
+  if (!data) return;
+  const q = $("search").value.trim().toLowerCase();
+
+  const projects = (data.projects || []).filter(p => !q || blob(p).includes(q));
+  projects.sort((a, b) => (!!b.port - !!a.port) || (b.updated_at || 0) - (a.updated_at || 0));
+  const pg = $("projects"); pg.innerHTML = "";
+  projects.forEach(p => pg.appendChild(projectCard(p)));
+  if (!projects.length) pg.innerHTML = '<div class="empty">no matching articles</div>';
+
+  const shown = new Set(projects.map(p => p.port).filter(Boolean));
+  const running = data.sites.filter(s =>
+    !shown.has(s.port) && !s.moonshine_project && (!q || blob(s).includes(q) ||
+      (s.claude && (s.claude.first_prompt || "").toLowerCase().includes(q)) ||
+      (s.annotation && blob(s.annotation).includes(q))));
+  const rg = $("running"); rg.innerHTML = "";
+  running.forEach(s => rg.appendChild(card(s, false)));
+  if (!running.length) rg.innerHTML = '<div class="empty">no matching servers</div>';
+
+  const recent = (data.recent || []).filter(s => !q || blob(s).includes(q));
+  const rc = $("recent"); rc.innerHTML = "";
+  recent.forEach(s => rc.appendChild(card(s, true)));
+  $("recentWrap").style.display = recent.length ? "" : "none";
+  $("recentWrap").querySelector("summary").textContent =
+    `recently stopped (${recent.length})`;
+
+  const nLive = (data.projects || []).filter(p => p.port).length;
+  $("summary").textContent =
+    `${(data.projects || []).length} articles (${nLive} live) · ${data.sites.length} servers on ${data.host}`;
+  const heading = data.host + " · moonshine";
+  if (document.title !== heading) {
+    document.title = heading;
+    document.querySelector("header h1").textContent = heading;
+  }
+}
+
+async function refresh() {
+  try {
+    const r = await fetch("registry.json", { cache: "no-store" });
+    data = await r.json();
+    render();
+  } catch (e) { /* keep last data */ }
+  tickStatus();
+}
+
+function tickStatus() {
+  if (!data) { $("status").textContent = "loading…"; return; }
+  const age = Math.round(Date.now() / 1000 - data.generated_at);
+  $("status").textContent = age > 120
+    ? `⚠ registry stale (${rel(data.generated_at)} old)`
+    : `scanned ${rel(data.generated_at)} ago`;
+}
+
+$("search").addEventListener("input", render);
+refresh();
+setInterval(refresh, 30000);
+setInterval(tickStatus, 5000);
+</script>
+</body>
+</html>

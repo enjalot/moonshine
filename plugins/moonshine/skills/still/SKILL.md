@@ -18,7 +18,7 @@ Use this skill to bootstrap a structured moonshine project. The user invokes it 
 
 2. **Story discovery first.** Follow the moonshine `SKILL.md` workflow — story discovery comes before code. Do not skip to scaffolding.
 
-3. **Bootstrap and iterate** per `STILL.md` § "Workflow When Building an Article With This Skill" — that section is canonical for the project bootstrap (template copy with artifact excludes, background `npm install`, dev server startup and URL reporting), the per-figure iteration loop, and series-vs-single-article guidance. The template lives at `../moonshine/template/`.
+3. **Bootstrap and iterate** per `STILL.md` § "Workflow When Building an Article With This Skill" — that section is canonical for the project bootstrap (template copy with artifact excludes, background `npm install`, `moonshine.meta.json` with the article's title/intent/session id, dev server startup and URL reporting), the per-figure iteration loop, and series-vs-single-article guidance. The template lives at `../moonshine/template/`. Don't skip the meta file — it's what the moonshine directory (`directory/` in the plugin repo) uses to index the article and link it back to this conversation.
 
 ## Anti-slop
 
