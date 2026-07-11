@@ -166,6 +166,61 @@ After drafting prose, and again before delivering, walk each section against thi
 8. Cut the lead-in. Start at the point, not one sentence before it.
 9. Proofread last — the relaxed register invites comma splices and dropped words.
 
+### Sentence-Level Discipline
+
+These rules come from Gopen's reader-expectation theory, adapted for explanatory articles. Readers receive meaning from structure, not from the writer's intention.
+
+**Topic position.** The beginning of a sentence tells the reader whose story is being told. Keep the continuing subject in topic position across a paragraph. If every sentence starts with a different actor, the reader can't track the thread.
+
+**Stress position.** The end of a sentence carries emphasis. Put the new concept, the causal turn, or the surprising detail near the end. Don't waste the stress position on filler ("basically", "in a sense", "overall").
+
+**Old to new.** Begin sentences with material the reader already knows. Add new information after the familiar anchor. This lets the reader absorb each step without backtracking.
+
+**Subject-verb proximity.** Don't let the grammatical subject and verb drift apart. Long sentences are fine. Buried verbs are not.
+
+**Action in verbs.** "The creation of alignment occurred through implementation of a review process" hides the action in nouns. "The review process aligned the teams" puts it where it belongs.
+
+### Banned Sentence Shapes
+
+Ban the machinery, not just the vocabulary. These structural patterns signal AI prose regardless of word choice.
+
+**Negation pivot:** "It is not X. It is Y." / "This is not about X; it is about Y." Only use this shape to correct a real false premise the reader holds. Otherwise, state the mechanism directly.
+
+**False elevation:** "More than just X..." / "This is more than a tool..." / "Beyond being X..." If something is important, show what it does. Don't announce that it transcends its category.
+
+**Dramatic reveal punctuation:** "The real issue: Y." / "The result? Z." / "One thing is clear: Y." Use punctuation for syntax, not as a drumroll.
+
+**Triadic adjective stacks:** "clear, concise, and compelling" / "robust, scalable, and intuitive." If three adjectives can be swapped with three others and the sentence still works, the sentence says nothing.
+
+**Aphoristic mirror sentences:** "X is the artifact; Y is the product." / "X is the surface; Y is the substrate." Symmetry is not insight. These sound smart because they are balanced, not because they are true.
+
+**Grand openers:** "In today's fast-paced world..." / "In an ever-evolving landscape..." / "In the realm of..." Start inside the subject.
+
+**Meta signposting:** "In this article, we'll explore..." / "Let's dive in." / "Here are the key takeaways." The reader is already reading. Don't narrate the experience of reading.
+
+### Slop Repair
+
+When a sentence smells like AI prose, don't just swap words. Rebuild the claim using this diagnostic scaffold:
+
+> Under [condition], [actor] does [behavior] because [mechanism]. The pattern breaks when [boundary].
+
+This scaffold is a repair tool, not always final prose. But it forces you to find the actor, mechanism, and boundary that the slop sentence was hiding.
+
+Bad: "The visualization unlocks deeper understanding."
+Repair direction: What does the reader do with the visualization? What changes in their mental model? When does the visualization fail to help?
+
+### Dead Compliance
+
+Prose can obey every rule above and still fail. Watch for:
+
+- Sentences that are correct but lifeless
+- Paragraphs that are clear but unsurprising
+- Examples that prove claims too neatly
+- Prose that feels like a well-edited memo wearing insight clothes
+- Rhythm so disciplined that no thought seems to discover anything
+
+Repair by adding pressure, not ornament: a stranger but accurate concrete detail, a real countercase, a boundary where the model breaks, or a sentence that admits uncertainty without surrendering the claim.
+
 ## Anti-Slop
 
 AI coding tools have strong defaults that produce generic, recognizable output. Moonshine articles should not look like AI made them. They should look like a thoughtful person made them.
