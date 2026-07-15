@@ -48,7 +48,9 @@ function splitTitle(children: ReactNode): {
   )
   const first = kids[0]
   const tag = isValidElement(first)
-    ? ((first.props as { node?: { tagName?: string } }).node?.tagName ?? '')
+    ? typeof first.type === 'string'
+      ? first.type
+      : ((first.props as { node?: { tagName?: string } }).node?.tagName ?? '')
     : ''
   if (/^h[1-6]$/.test(tag)) {
     return { title: first, rest: kids.length > 1 ? kids.slice(1) : null }

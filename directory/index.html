@@ -112,6 +112,7 @@
 <script>
 const $ = id => document.getElementById(id);
 let data = null;
+let controlAuthorized = false;
 const startState = {};  // project name -> "installing…" | "starting…"
 
 const rel = ts => {
@@ -154,6 +155,7 @@ function sessionFoot(foot, sessionId, lastActivity) {
 // ---------------------------------------------------------------- articles
 
 async function startProject(p, btn) {
+  if (!controlAuthorized) return;
   btn.disabled = true;
   startState[p.name] = p.installed === false ? "installing…" : "starting…";
   render();
@@ -172,7 +174,9 @@ async function startProject(p, btn) {
       const probe = await (await fetch("api/probe?port=" + port)).json();
       if (probe.up) {
         delete startState[p.name];
-        await fetch("api/scan", { method: "POST" });
+        await fetch("api/scan", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+        });
         await new Promise(ok => setTimeout(ok, 1500));
         await refresh();
         return;
@@ -192,7 +196,9 @@ function projectCard(p) {
   el.className = "card";
 
   const running = !!p.port;
-  const url = running ? `http://${location.hostname}:${p.port}/` : p.url;
+  const localDashboard = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(location.hostname);
+  const reachable = running && (!p.localhost_only || localDashboard);
+  const url = reachable ? `http://${location.hostname}:${p.port}/` : p.url;
 
   const top = document.createElement("div"); top.className = "top";
   const h = document.createElement("h3");
@@ -210,6 +216,7 @@ function projectCard(p) {
   chipEl(chips, p.kind === "still" ? "vite" : "static");
   if (running) chipEl(chips, "running", "live");
   else if (startState[p.name]) chipEl(chips, startState[p.name], "warn");
+  if (p.localhost_only && !localDashboard) chipEl(chips, "localhost only", "warn");
   if (p.kind === "still" && p.installed === false) chipEl(chips, "not installed", "warn");
   el.appendChild(chips);
 
@@ -222,7 +229,7 @@ function projectCard(p) {
   if (p.updated_at) { const u = document.createElement("span");
     u.textContent = "edited " + rel(p.updated_at) + " ago"; foot.appendChild(u); }
   if (p.session_id) sessionFoot(foot, p.session_id, null);
-  if (p.kind === "still" && !running && !startState[p.name]) {
+  if (p.kind === "still" && !running && !startState[p.name] && controlAuthorized) {
     const b = document.createElement("button"); b.className = "start";
     b.textContent = "▶ start";
     b.title = p.installed === false
@@ -327,8 +334,12 @@ function render() {
 
 async function refresh() {
   try {
-    const r = await fetch("registry.json", { cache: "no-store" });
+    const [r, auth] = await Promise.all([
+      fetch("registry.json", { cache: "no-store" }),
+      fetch("api/auth", { cache: "no-store" }),
+    ]);
     data = await r.json();
+    controlAuthorized = auth.ok && !!(await auth.json()).authorized;
     render();
   } catch (e) { /* keep last data */ }
   tickStatus();
@@ -336,6 +347,10 @@ async function refresh() {
 
 function tickStatus() {
   if (!data) { $("status").textContent = "loading…"; return; }
+  if (!controlAuthorized) {
+    $("status").textContent = "read only · use the control URL from the server log";
+    return;
+  }
   const age = Math.round(Date.now() / 1000 - data.generated_at);
   $("status").textContent = age > 120
     ? `⚠ registry stale (${rel(data.generated_at)} old)`

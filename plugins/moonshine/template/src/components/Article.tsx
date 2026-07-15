@@ -29,7 +29,7 @@ type Props = {
 // are left alone — editing is always block-granular. Every tag points at
 // the same EditableBlock, which reads the real tag from the hast node.
 const editableComponents = Object.fromEntries(
-  ['p', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'blockquote', 'pre', 'table'].map(
+  ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'pre', 'table'].map(
     (tag) => [tag, EditableBlock],
   ),
 )

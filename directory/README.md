@@ -27,16 +27,27 @@ python3 directory/server.py [PORT]     # default 8600
 ```
 
 That single process rescans every 30s (ports + projects), writes
-`$AGENT_ROOT/sites/registry.json`, serves the page at `/`, and serves
-`$AGENT_ROOT` (default `~/.agent`) statically — so static articles are
-directly browsable at `/moonshine/<name>/`.
+`$AGENT_ROOT/sites/registry.json`, serves the page at `/`, and serves static
+articles at `/moonshine/<name>/`. Static articles may contain arbitrary
+assets or data files, but dotfiles, dot-directories, directory listings,
+still/Vite project source, and everything else under `$AGENT_ROOT` are not
+web-accessible.
 
 Environment (all optional):
 
 | var | default | meaning |
 | --- | --- | --- |
-| `AGENT_ROOT` | `~/.agent` | served tree; registry lives at `<root>/sites/` |
+| `AGENT_ROOT` | `~/.agent` | registry and logs live at `<root>/sites/` |
 | `MOONSHINE_HOME` | `$AGENT_ROOT/moonshine` | where article projects live |
+| `MOONSHINE_DIRECTORY_TOKEN` | generated at startup | stable token for start/scan/probe controls |
+
+The article index and static exports are read-only without a control token.
+At startup the server prints a URL ending in `?token=...`; open it once to
+set a same-site, HTTP-only control cookie, after which the **▶ start** buttons
+become available. Replace `127.0.0.1` in that URL with the machine's LAN host
+when opening it from another device. Set `MOONSHINE_DIRECTORY_TOKEN` in a
+service definition if the token should remain stable across restarts. The
+server requires that cookie plus same-origin JSON for every mutating request.
 
 `scanner.py` also runs standalone (`python3 scanner.py`, or `--loop 30`)
 if you only want the registry file.
@@ -66,9 +77,10 @@ with the article.
 | route | method | behavior |
 | --- | --- | --- |
 | `/registry.json` | GET | current registry (no-store) |
-| `/api/probe?port=N` | GET | `{"up": bool}` — does localhost:N answer HTTP |
-| `/api/start` | POST | `{"project": "<name>"}` → spawn dev server, reply `{"port": N, "installing": bool}` |
-| `/api/scan` | POST | rescan now instead of waiting for the interval |
+| `/api/auth` | GET | whether this browser has control access |
+| `/api/probe?port=N` | GET | authorized control: does localhost:N answer HTTP |
+| `/api/start` | POST | authorized control: spawn a dev server for `{"project": "<name>"}` |
+| `/api/scan` | POST | authorized control: rescan now instead of waiting for the interval |
 
 Started servers are detached (their own session), spawned through a login
 shell with nvm sourced when present — so the right node is found without any

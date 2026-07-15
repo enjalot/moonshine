@@ -511,6 +511,7 @@ def scan_projects(sites):
             running = by_cwd.get(os.path.realpath(path))
             if running:
                 proj["port"] = running["port"]
+                proj["localhost_only"] = running.get("localhost_only", False)
                 running["moonshine_project"] = name
         else:
             proj["url"] = f"/moonshine/{name}/"
