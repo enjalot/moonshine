@@ -11,10 +11,12 @@ their way downhill not by searching everywhere, but by following the
 local slope.
 
 :::figure{id=loss-landscape lr=0.12}
+### Descending a two-well surface
 A two-well loss surface. Drag or click to set a starting point and
 watch the descent path settle into the nearest minimum. The step size
 here is set right in the markdown (`lr=0.12`) — every figure attribute
-becomes a prop.
+becomes a prop, and the heading on the first line renders as the
+figure's title.
 :::
 
 Random search is inefficient because the parameter space is too large.

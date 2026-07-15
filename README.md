@@ -82,6 +82,8 @@ Moonshine asks about the concept, audience, and key insight before scaffolding, 
 
 Projects live in `~/.agent/moonshine/<project-name>/`. A still project is a complete Vite app (markdown in `content/`, figures in `src/figures/`) whose `npm run build` emits a static site; a shine article is a self-contained `index.html` plus an optional `data/` directory. Publishing recipes — domain root, subpath, or this repo's Pages site — are in `STILL.md` § Publishing and `DEVELOPING.md`.
 
+[`directory/`](directory/) is an optional LAN dashboard for the machine hosting the articles: it indexes everything under `~/.agent/moonshine` (each article's `moonshine.meta.json` — title, intent, authoring session), lists every other running web server with its Claude session, and can start a stopped article's dev server from the browser. One stdlib-Python process, Linux + macOS — see its README.
+
 ## Developing
 
 To work on the skill itself — run the `still` template in-repo as a live dev harness, install from your checkout, extend figures/directives/the edit pipeline, publish examples, or cut a release — see [DEVELOPING.md](DEVELOPING.md), which also carries the current repo map.

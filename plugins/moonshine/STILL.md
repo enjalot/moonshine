@@ -49,7 +49,22 @@ and you stall.
 
 **Container directive** (`:::name{}`...`:::`) — block-level. Used for
 figures that take their own paragraph. The id matches an entry in the
-figure registry. Inner content becomes the caption.
+figure registry. Inner content becomes the caption — except a *leading*
+heading (any level), which renders as the figure's **title** above the
+figure:
+
+```md
+:::figure{id=loss-landscape lr=0.12}
+### Descending a two-well surface
+Drag to set a starting point; the path settles into the nearest minimum.
+:::
+```
+
+Title and caption are ordinary markdown blocks inside the directive, so
+both are editable in place exactly like body prose. The heading level
+carries no meaning inside a figure (it styles to one consistent size);
+only the first block counts — a heading later in the content stays in
+the caption.
 
 Math also works out of the box: `$\eta$` inline and `$$...$$` display
 blocks render through remark-math + KaTeX (styles bundled from npm, no
@@ -444,9 +459,10 @@ into top-level block ranges and rebuilds it in a new order) and
 splice it produces goes through the same conflict-checked save path.
 
 What's editable in place: paragraphs, headings, lists, blockquotes, the
-title/lede — and **figure captions**, because caption text written as the
-directive's inner content renders as an ordinary paragraph whose source
-offsets point into the markdown. The directive line itself
+title/lede — and **figure titles and captions**, because both are the
+directive's inner content (a leading heading and the blocks after it),
+rendered as ordinary markdown whose source offsets point into the file.
+The directive line itself
 (`:::figure{id=…}` and its attributes) and figure component code are not
 editable in the browser — change those in the `.md` source or the
 component files as usual.
@@ -549,6 +565,24 @@ Once the outline is agreed:
      author/agent shared history described in "Git: the Shared Memory"
      below; if git isn't available, continue without it — everything
      still works, history just won't accrue.
+   - Write `moonshine.meta.json` at the project root — this is what the
+     moonshine directory (`directory/` in the plugin repo) shows on the
+     article's card, and how a future session finds its way back to this
+     conversation. Commit it with the article:
+
+     ```json
+     {
+       "title": "<the article's working title>",
+       "summary": "<1–2 sentences: the intent behind the article, from story discovery — why it exists, not just what it covers>",
+       "sessionId": "<value of $CLAUDE_CODE_SESSION_ID>",
+       "created": "<today, YYYY-MM-DD>"
+     }
+     ```
+
+     Read the session id from the environment (`echo $CLAUDE_CODE_SESSION_ID`);
+     leave the field out if it's unset. Update `title`/`summary` later if
+     the article's focus shifts. The directory server adds a `port` field
+     when it first starts the dev server — leave that alone.
    - Run `npm install` in the background — it takes about a minute and
      you can keep talking to the user while it goes.
    - Start the dev server in the background: `npm run dev`, or
@@ -611,6 +645,18 @@ is dev-only and absent from the bundle.
 The static `<title>` in `index.html` is the template's generic one
 (article titles are set at runtime); patch it in `dist/` after building
 so link unfurls show the article title.
+
+## The Moonshine Directory
+
+The plugin repo ships a small LAN dashboard at `directory/` (see its
+README): one stdlib-Python server that indexes every article under
+`~/.agent/moonshine`, shows each card's `moonshine.meta.json`
+(title, intent summary, authoring session), links running dev servers,
+and can start a stopped article's dev server from the browser. If the
+machine runs it, tell the user their article will appear there — it's
+the durable way back to any article and its conversation. This is why
+writing `moonshine.meta.json` at bootstrap matters: without it the card
+falls back to frontmatter and loses the session linkage.
 
 ## What Not to Do
 

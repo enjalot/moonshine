@@ -111,6 +111,17 @@
   margin: 0;
 }
 
+/* Figure title: a leading heading inside the :::figure directive renders
+   above the figure. Whatever heading level the author wrote, it displays
+   at one consistent size — the level carries no meaning inside a figure. */
+.figure-title :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--heading-font);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 0.75rem;
+}
+
 /* Interaction hint under a figure's canvas, above the caption. */
 .figure-hint {
   font-family: var(--heading-font);

@@ -105,6 +105,7 @@ Three directives, plus standard CommonMark and math (`$\eta$` inline,
 
 ```md
 :::figure{id=loss-landscape lr=0.12}
+### Optional figure title (a leading heading)
 Optional caption as markdown. Attributes become props.
 :::
 
@@ -114,7 +115,9 @@ Too small :inline-viz{kind=mini-spark value=0.15} and you stall.
 ```
 
 - `:::figure{id=name attr=value}` ... `:::` — block figure; every
-  attribute passes to the component as a string prop.
+  attribute passes to the component as a string prop. A leading heading
+  in the inner content renders as the figure's title above the figure;
+  the rest is the caption below. Both edit in place like any block.
 - `:term[word]{to=id}` — clickable term; hover soft-highlights the
   linked figure, click pins it and scrolls it into view. Dotted refs
   (`to=figure-id.part`) target a specific element inside the figure.
