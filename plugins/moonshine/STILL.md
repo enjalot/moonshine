@@ -498,9 +498,16 @@ prose block or a figure's knob panel, and hit **💬** to send you a comment
 about that exact passage — "this is too hand-wavy," "make this figure start
 zoomed out." Each comment is written as a file under `<project>/.feedback/`.
 
-You receive these without polling: the Claude Code **Stop hook** injects any
-pending comments at a turn boundary and blocks the stop until you handle them.
-For each one:
+Comments **accumulate by default** — nothing is delivered until the author
+asks. When they press **Address** in the HUD (or turn on auto-address), the
+Claude Code **Stop hook** injects the pending comments at a turn boundary and
+blocks the stop until you handle them. Delivery requests carry the article's
+authoring `sessionId`, so another active session leaves them untouched. The
+author may also just ask you
+directly (e.g. "address my moonshine comments on <project>") — in that case
+drain the `.feedback/` inbox yourself following the same steps, but only if an
+`address.json` sessionId is absent or matches `$CLAUDE_CODE_SESSION_ID`; delete
+the matching request file when you're done. For each comment:
 
 1. Edit the referenced source file (`<project>/content/<target.path>`) — or the
    figure component / registry for a `figure` comment — to address the note.
@@ -511,13 +518,16 @@ For each one:
    an ISO-8601 `addressedAt`, and a one-line `reply`. The reply surfaces back in
    the author's HUD next to their comment, so keep it short and factual.
 
-Comments left while you're parked at the prompt are covered by the idle
-listener — run `/moonshine:moonshine-listen` (best under `/loop`) to keep ticking; it also
-powers the HUD's live "listening / paused / off" status.
+If the author enables continuous auto-address, requests left while you're
+parked at the prompt are covered by the idle listener — run
+`/moonshine:moonshine-listen` (best under `/loop`) to keep ticking; it also
+powers the HUD's live "listening / paused" status.
 
 **Contract boundaries.** Only the per-comment `<id>.json` files are your shared
-surface with the author. `heartbeat.json`, `control.json`, and `adapter.json` in
-that directory are adapter-owned bookkeeping — never hand-edit them. Skip any
+surface with the author. `heartbeat.json`, `control.json`, `address.json`, and
+`adapter.json` in that directory are adapter-owned bookkeeping — never
+hand-edit them (deleting a consumed `address.json` is part of the adapter's
+job, not an edit). Skip any
 comment whose `status` is `dismissed` (the author closed it). The full protocol,
 including the reserved comment kinds not yet wired to UI, is specified in
 `FEEDBACK.md`.

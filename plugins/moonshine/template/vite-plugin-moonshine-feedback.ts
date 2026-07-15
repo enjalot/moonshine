@@ -19,14 +19,18 @@ import path from 'node:path'
 //
 // Routes (all under /__moonshine/feedback):
 //   POST   /            { target, comment }  → append a pending comment file
-//   POST   /control     { mode }             → write control.json (listen/paused/stopped)
+//   POST   /control     { mode }             → write control.json (accumulate/listen/paused/stopped)
 //   POST   /dismiss     { id }               → mark a comment dismissed
+//   POST   /address     {}                   → write address.json (deliver accumulated comments)
 //   GET    /            → list comments (id, ts, status, target, comment, reply)
-//   GET    /capabilities → { enabled, harness, alive, mode, project }
+//   GET    /capabilities → { enabled, harness, alive, mode, control, addressRequestedAt, project }
 
-const RESERVED = new Set(['control.json', 'heartbeat.json', 'adapter.json'])
+const RESERVED = new Set(['control.json', 'heartbeat.json', 'adapter.json', 'address.json'])
 
-const LISTEN_MODES = new Set(['listen', 'paused', 'stopped'])
+// `accumulate` (the default when control.json is absent) means adapters must
+// NOT drain on their own — comments pile up until the author requests
+// delivery via address.json. `listen` is the explicit auto-address opt-in.
+const LISTEN_MODES = new Set(['accumulate', 'listen', 'paused', 'stopped'])
 
 // The full protocol kind set. `block` and `figure` are wired in the current
 // UI; `caption`, `term`, and `selection` are reserved (accepted here so the ABI
@@ -78,6 +82,15 @@ export default function moonshineFeedbackPlugin(): Plugin {
         return JSON.parse(Buffer.concat(chunks).toString('utf8')) as Json
       }
 
+      // Route delivery back to the session that authored the article. New
+      // projects persist this in moonshine.meta.json; a server launched
+      // directly from Claude Code can fall back to its inherited environment.
+      async function authorSessionId(): Promise<string | null> {
+        const meta = await readJSON(path.join(projectRoot, 'moonshine.meta.json'))
+        const value = meta?.sessionId ?? process.env.CLAUDE_CODE_SESSION_ID
+        return typeof value === 'string' && value.trim() ? value.trim() : null
+      }
+
       // List every comment file (everything that isn't a reserved control
       // file), newest first.
       async function listComments(): Promise<Json[]> {
@@ -103,6 +116,8 @@ export default function moonshineFeedbackPlugin(): Plugin {
       async function capabilities(): Promise<Json> {
         const adapter = await readJSON(path.join(feedbackDir, 'adapter.json'))
         const hb = await readJSON(path.join(feedbackDir, 'heartbeat.json'))
+        const control = await readJSON(path.join(feedbackDir, 'control.json'))
+        const address = await readJSON(path.join(feedbackDir, 'address.json'))
         const harness =
           (adapter?.harness as string | undefined) ??
           (hb?.harness as string | undefined) ??
@@ -112,10 +127,22 @@ export default function moonshineFeedbackPlugin(): Plugin {
         if (hb && typeof hb.ts === 'string') {
           const intervalSec = Number(hb.intervalSec) || 30
           const age = Date.now() - Date.parse(hb.ts)
-          alive = Number.isFinite(age) && age < intervalSec * 2 * 1000
+          // A stopped listener writes one final heartbeat. It may be fresh,
+          // but it is intentionally no longer alive.
+          alive =
+            hb.mode !== 'stopped' && Number.isFinite(age) && age < intervalSec * 2 * 1000
           mode = alive ? (hb.mode as string) ?? null : null
         }
-        return { enabled: true, harness, alive, mode, project }
+        // The author's requested mode (as opposed to `mode`, which is what a
+        // live listener says it is honoring). Absent file ≡ accumulate.
+        const controlMode = LISTEN_MODES.has(String(control?.mode))
+          ? (control?.mode as string)
+          : 'accumulate'
+        // address.json disappears when an adapter consumes the request, so
+        // its presence means "requested but not yet picked up".
+        const addressRequestedAt =
+          typeof address?.requestedAt === 'string' ? address.requestedAt : null
+        return { enabled: true, harness, alive, mode, control: controlMode, addressRequestedAt, project }
       }
 
       server.middlewares.use('/__moonshine/feedback', async (req, res) => {
@@ -188,16 +215,31 @@ export default function moonshineFeedbackPlugin(): Plugin {
             return
           }
 
-          // ---- start/pause/stop the listener ------------------------------
+          // ---- request delivery of accumulated comments --------------------
+          if (url === '/address') {
+            const sessionId = await authorSessionId()
+            const request: Json = {
+              requestedAt: new Date().toISOString(),
+            }
+            if (sessionId) request.sessionId = sessionId
+            await writeJSON(path.join(feedbackDir, 'address.json'), request)
+            send(res, 200, { ok: true })
+            return
+          }
+
+          // ---- set the listen mode (accumulate/listen/pause/stop) ----------
           if (url === '/control') {
             const mode = String(payload.mode ?? '')
             if (!LISTEN_MODES.has(mode)) {
-              throw httpError(400, 'mode must be listen|paused|stopped')
+              throw httpError(400, 'mode must be accumulate|listen|paused|stopped')
             }
-            await writeJSON(path.join(feedbackDir, 'control.json'), {
+            const sessionId = await authorSessionId()
+            const control: Json = {
               mode,
               updatedAt: new Date().toISOString(),
-            })
+            }
+            if (sessionId) control.sessionId = sessionId
+            await writeJSON(path.join(feedbackDir, 'control.json'), control)
             send(res, 200, { ok: true, mode })
             return
           }

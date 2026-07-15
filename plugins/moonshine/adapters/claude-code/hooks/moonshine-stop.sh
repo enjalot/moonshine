@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 # Claude Code adapter for the moonshine authorship-feedback protocol
 # (see plugins/moonshine/FEEDBACK.md). Runs as a Stop hook: at every turn
-# boundary it scans each project's .feedback/ inbox, claims pending comments
-# (atomic pending -> delivered), and injects them so Claude addresses the
-# feedback before the turn truly ends. This is the "claim" verb at turn
-# granularity plus an instruction to "reply"; the moonshine-listen skill adds
-# the idle-time heartbeat/control loop.
+# boundary it scans each project's .feedback/ inbox and — when the author has
+# asked for delivery — claims pending comments (atomic pending -> delivered)
+# and injects them so Claude addresses the feedback before the turn truly
+# ends. Delivery is requested either by an address.json (the HUD's Address
+# button; consumed after the drain) or by the explicit auto-address mode
+# (control.json mode "listen"). Requests carrying a sessionId are handled
+# only by that Claude session, so an unrelated session cannot steal them.
+# The default mode, "accumulate" (absent
+# control.json), never drains: comments pile up silently until the author
+# asks. This is the "claim" verb at turn granularity plus an instruction to
+# "reply"; the moonshine-listen skill adds the idle-time heartbeat/control
+# loop.
 #
 # Designed to never break a session: any unexpected condition exits 0 (allow
 # the stop) rather than erroring.
@@ -28,6 +35,7 @@ command -v jq >/dev/null 2>&1 || exit 0
 # let Claude stop.
 stop_active=$(printf '%s' "$input" | jq -r '.stop_hook_active // false' 2>/dev/null || echo false)
 [ "$stop_active" = "true" ] && exit 0
+hook_session=$(printf '%s' "$input" | jq -r '.session_id // empty' 2>/dev/null || echo "")
 
 now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 now_epoch=$(date +%s)
@@ -65,17 +73,50 @@ for fb in "$root"/*/.feedback; do
     printf '{"harness":"claude-code","version":"adapter","installedAt":"%s"}\n' "$now" \
       > "$fb/adapter.json" 2>/dev/null || true
 
-  # Read the author's listen-mode control once. Absent ≡ listen (default-on).
-  # If the author paused or stopped this project from the HUD, honor it here
-  # too: the turn-boundary pickup stays silent, so a stopped project never
-  # hijacks an unrelated session's stop. Only listen (or an absent control)
-  # drains — mirroring the listener's own semantics.
-  mode="listen"
+  # Read the author's listen-mode control once. Absent ≡ accumulate: the
+  # default is to let comments pile up, NOT to drain them — an author adding
+  # comments should never have them silently picked up by whatever session
+  # happens to end a turn first. paused/stopped are honored here too, so a
+  # silenced project does not drain automatically. A one-shot Address request
+  # is an explicit override and is handled below even while paused/stopped.
+  mode="accumulate"
+  control_session=""
   if [ -f "$fb/control.json" ]; then
     m=$(jq -r '.mode // empty' "$fb/control.json" 2>/dev/null || echo "")
     [ -n "$m" ] && mode="$m"
+    control_session=$(jq -r '.sessionId // empty' "$fb/control.json" 2>/dev/null || echo "")
   fi
-  [ "$mode" = "listen" ] || continue
+
+  # Drain only when the author asked: either continuous auto-address
+  # (mode listen) or a one-shot address request (address.json, written by the
+  # HUD's Address button and consumed below once the drain completes).
+  address_requested=no
+  address_session=""
+  if [ -f "$fb/address.json" ]; then
+    address_requested=yes
+    address_session=$(jq -r '.sessionId // empty' "$fb/address.json" 2>/dev/null || echo "")
+  fi
+
+  # Vite stamps new requests with the authoring session. Only that session's
+  # Stop hook may claim them; legacy unstamped files remain compatible.
+  requested_session=""
+  if [ "$address_requested" = "yes" ]; then
+    requested_session="$address_session"
+  elif [ "$mode" = "listen" ]; then
+    requested_session="$control_session"
+  fi
+  if [ -n "$requested_session" ] && [ "$hook_session" != "$requested_session" ]; then
+    continue
+  fi
+
+  # Pause/stop suppress automatic pickup, but the Address button is a
+  # deliberate one-shot override. With no request, keep honoring the silence.
+  if [ "$address_requested" = "no" ]; then
+    case "$mode" in paused|stopped) continue ;; esac
+  fi
+  if [ "$mode" != "listen" ] && [ "$address_requested" = "no" ]; then
+    continue
+  fi
 
   # Recover any record orphaned by a crash mid-claim — a "<f>.claiming.<pid>"
   # left behind if a drainer died between taking a record and writing it back.
@@ -95,7 +136,7 @@ for fb in "$root"/*/.feedback; do
   # forever, since nothing else re-surfaces a delivered record.
   for f in "$fb"/*.json; do
     case "$(basename "$f")" in
-      control.json|heartbeat.json|adapter.json) continue ;;
+      control.json|heartbeat.json|adapter.json|address.json) continue ;;
     esac
     status=$(jq -r '.status // empty' "$f" 2>/dev/null)
     claim=no
@@ -148,11 +189,16 @@ for fb in "$root"/*/.feedback; do
 "
   done
 
-  # Note projects where the author *explicitly* asked to listen (control.json
-  # present, mode listen) but no live heartbeat exists — an opportunistic cue
-  # to start the idle listener. An absent control.json is NOT a request to
-  # listen: the Stop hook already delivered any comments, so we only nudge when
-  # the author pressed Start in the HUD.
+  # The address request is fulfilled by this drain pass (any records another
+  # drainer raced us to are being handled there) — consume it so the HUD
+  # stops showing "address queued".
+  [ "$address_requested" = "yes" ] && rm -f "$fb/address.json"
+
+  # Note projects where the author *explicitly* asked for auto-address
+  # (control.json present, mode listen) but no live heartbeat exists — an
+  # opportunistic cue to start the idle listener. Accumulate-mode projects
+  # get no nudge: the Address flow covers them without a listener.
+  [ "$mode" = "listen" ] || continue
   [ -f "$fb/control.json" ] || continue
   fresh=no
   if [ -f "$fb/heartbeat.json" ]; then

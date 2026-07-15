@@ -243,13 +243,29 @@ export function EditProvider({ body, path, children }: ProviderProps) {
           'this block changed on disk while the editor was open — copy your text, close the editor, and re-apply it after the page refreshes',
         )
       }
+      // The save triggers velite → HMR, and the updated body prop can land
+      // *before* the await below resolves. Re-point the re-anchor snapshot at
+      // the text we are writing, so if that race happens the effect finds the
+      // new text and re-anchors (or harmlessly closes) instead of stashing
+      // the draft as an "interrupted edit". Restored on failure so a 409
+      // retry still compares against the original slice.
+      const prevSlice = activeSliceRef.current
+      const prevDraft = draftRef.current
+      activeSliceRef.current = text
+      draftRef.current = text
       // `baseHash` lets the server reject the write if the file changed
       // after our last HMR update (the window between a concurrent edit
       // landing on disk and velite re-emitting it). Velite's watcher
       // re-emits after the write and the page hot-reloads with the new
       // body.
       const next = body.slice(0, start) + text + body.slice(end)
-      await postSave({ path, body: next, baseHash: fnv1a(body) })
+      try {
+        await postSave({ path, body: next, baseHash: fnv1a(body) })
+      } catch (err) {
+        activeSliceRef.current = prevSlice
+        draftRef.current = prevDraft
+        throw err
+      }
       setLastSavedBody(body)
       activeSliceRef.current = null
       draftRef.current = null
