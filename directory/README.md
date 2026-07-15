@@ -39,15 +39,27 @@ Environment (all optional):
 | --- | --- | --- |
 | `AGENT_ROOT` | `~/.agent` | registry and logs live at `<root>/sites/` |
 | `MOONSHINE_HOME` | `$AGENT_ROOT/moonshine` | where article projects live |
-| `MOONSHINE_DIRECTORY_TOKEN` | generated at startup | stable token for start/scan/probe controls |
+| `MOONSHINE_DIRECTORY_TOKEN` | generated once | optional explicit token for start/scan/probe controls |
 
 The article index and static exports are read-only without a control token.
-At startup the server prints a URL ending in `?token=...`; open it once to
+The first startup generates one at `$AGENT_ROOT/sites/control-token` with mode
+`0600`; later starts reuse it, so browser access survives service restarts.
+`MOONSHINE_DIRECTORY_TOKEN` still overrides the generated value when an
+operator wants to manage the secret explicitly.
+
+An interactive startup prints a URL ending in `?token=...`; open it once to
 set a same-site, HTTP-only control cookie, after which the **▶ start** buttons
-become available. Replace `127.0.0.1` in that URL with the machine's LAN host
-when opening it from another device. Set `MOONSHINE_DIRECTORY_TOKEN` in a
-service definition if the token should remain stable across restarts. The
-server requires that cookie plus same-origin JSON for every mutating request.
+become available. Services do not write the secret into their logs. Ask the
+server to print the current URL directly, supplying the same port as the
+running directory and the hostname used by your browser:
+
+```bash
+python3 directory/server.py 8600 --control-url moonshine.local
+```
+
+Use `127.0.0.1` (the default when `--control-url` has no value) when the
+browser runs on the same machine. The server requires the cookie plus
+same-origin JSON for every mutating request.
 
 `scanner.py` also runs standalone (`python3 scanner.py`, or `--loop 30`)
 if you only want the registry file.

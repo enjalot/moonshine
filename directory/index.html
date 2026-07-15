@@ -348,7 +348,7 @@ async function refresh() {
 function tickStatus() {
   if (!data) { $("status").textContent = "loading…"; return; }
   if (!controlAuthorized) {
-    $("status").textContent = "read only · use the control URL from the server log";
+    $("status").textContent = "read only · authorize with the directory control URL";
     return;
   }
   const age = Math.round(Date.now() / 1000 - data.generated_at);
