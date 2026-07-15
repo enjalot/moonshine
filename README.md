@@ -58,6 +58,7 @@ ln -s /tmp/moonshine/plugins/moonshine/skills/moonshine        ~/.codex/skills/m
 ln -s /tmp/moonshine/plugins/moonshine/skills/shine            ~/.codex/skills/shine
 ln -s /tmp/moonshine/plugins/moonshine/skills/still            ~/.codex/skills/still
 ln -s /tmp/moonshine/plugins/moonshine/skills/moonshine-listen ~/.codex/skills/moonshine-listen
+ln -s /tmp/moonshine/plugins/moonshine/skills/critique         ~/.codex/skills/critique
 # (use `cp -rL` instead of `ln -s` if you don't want to keep the clone around)
 ```
 
@@ -73,6 +74,7 @@ To develop against your checkout instead, see [DEVELOPING.md](DEVELOPING.md) (sy
 /moonshine:still                    # start from scratch (structured project)
 /moonshine:still fourier transforms # start with a topic
 /moonshine:shine fourier transforms # single-file flavor
+/moonshine:critique                 # adversarially review an article (still or shine)
 /moonshine:moonshine-listen         # feedback listener (best under /loop)
 ```
 

@@ -134,6 +134,7 @@ plugins/moonshine/
   commands/         Claude Code slash commands (thin wrappers)
   skills/           moonshine/ (symlinks to canonical docs) + shine/ still/
                     (thin wrappers) + moonshine-listen/ (the feedback listener)
+                    + critique/ (adversarial article reviewer)
   hooks/            plugin hooks.json (registers the Claude Code Stop hook)
   adapters/         per-harness feedback adapters (claude-code/ first)
   template/         the runnable still project (see below)
