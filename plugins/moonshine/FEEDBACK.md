@@ -17,9 +17,16 @@ adapter is "done" when it fulfils the four verbs in [Adapter contract](#adapter-
 ```
 web app  ──write──▶  .feedback/<id>.json      ◀──claim/reply──  harness adapter
 HUD      ──write──▶  .feedback/control.json    ──read──▶         (Stop hook / loop /
-HUD      ──read───▶  .feedback/heartbeat.json  ◀──write──        daemon / MCP / …)
+HUD      ──write──▶  .feedback/address.json    ──consume──▶      daemon / MCP / …)
+HUD      ──read───▶  .feedback/heartbeat.json  ◀──write──
 HUD      ──read───▶  .feedback/adapter.json    ◀──write──
 ```
+
+Comments **accumulate by default**: adapters do not drain the inbox on their
+own. Delivery happens when the author explicitly requests it — the HUD's
+Address button writes `address.json`, which the next adapter pass consumes —
+or when the author has opted the project into continuous auto-address
+(`control.json` mode `listen`).
 
 Everything the web side knows is in this directory. Everything an adapter must do
 is defined against this directory. That is the entire coupling.
@@ -127,25 +134,38 @@ one staleness window instead of losing it outright.
 ### `control.json` — author's listen-mode request (HUD → adapter)
 
 ```jsonc
-{ "mode": "listen", "updatedAt": "2026-06-16T18:29:00Z" }
-// mode: "listen" | "paused" | "stopped"
+{ "mode": "accumulate", "updatedAt": "2026-06-16T18:29:00Z" }
+// mode: "accumulate" | "listen" | "paused" | "stopped"
 ```
 
-Written by the HUD's start/pause/stop controls. An adapter's listener reads it
-every tick:
+Written by the HUD's mode controls. Adapters read it on every pass (listener
+tick or turn-boundary pickup):
 
-- `listen` — drain pending comments, act, reply.
-- `paused` — stay alive (heartbeat) but don't drain.
+- `accumulate` — **the default** (absent file ≡ `accumulate`). Do not drain on
+  your own; comments pile up until the author requests delivery via
+  `address.json` (below).
+- `listen` — continuous auto-address: drain pending comments, act, reply.
+- `paused` — stay alive (heartbeat) but don't drain, even on an address request.
 - `stopped` — write a final heartbeat with `mode:"stopped"` and end the listener
   (do not reschedule).
 
-Absent file ≡ `listen` (default-on once a listener is started).
+A turn-boundary pickup (e.g. a Stop hook) MUST honor this too: skip projects
+whose `control.json` is `paused` or `stopped`, and treat an absent file as
+`accumulate` — never as license to drain. (This is a behavior change from the
+first protocol revision, where an absent file meant `listen`; silent pickup by
+whatever session ended a turn first proved surprising in practice.)
 
-A turn-boundary pickup (e.g. a Stop hook) SHOULD honor this too: skip projects
-whose `control.json` is `paused` or `stopped`, so `pause`/`stop` in the HUD
-actually silences a project rather than only pausing the idle listener. An
-absent `control.json` still means "deliver" — that is the default turn-boundary
-coverage.
+### `address.json` — one-shot delivery request (HUD → adapter)
+
+```jsonc
+{ "requestedAt": "2026-07-14T18:31:00Z" }
+```
+
+Written by the HUD's **Address** button. Its presence asks the next adapter
+pass to drain the inbox even in `accumulate` mode. The adapter that performs
+the drain **deletes the file** (the request is consumed) — its absence is how
+the HUD knows the request was picked up. Ignored while `paused`; irrelevant
+under `listen` (which drains anyway, but adapters SHOULD still consume it).
 
 ### `heartbeat.json` — adapter liveness (adapter → HUD)
 
@@ -189,9 +209,11 @@ A harness adapter is **anything that implements these four verbs** against the
 files above. How it does so (hook, polling loop, daemon, MCP, IPC) is the
 adapter's business and invisible to core.
 
-1. **claim** — find `status:"pending"` records (skip `dismissed`), atomic-rename
-   each to `delivered` (set `deliveredAt`), and surface its `comment` + `target`
-   to the agent session.
+1. **claim** — *only when the author asked* (`control.json` mode `listen`, or
+   an `address.json` present and mode not `paused`/`stopped`): find
+   `status:"pending"` records (skip `dismissed`), atomic-rename each to
+   `delivered` (set `deliveredAt`), and surface its `comment` + `target` to
+   the agent session. Consume `address.json` after the drain pass.
 2. **reply** — after the session acts, set `status:"addressed"`, `addressedAt`,
    and a one-line `reply` on the record.
 3. **heartbeat** — while a listener is active, write `heartbeat.json` each tick and
@@ -212,13 +234,17 @@ and **gated** on `moonshine.config.json → feedback.enabled`. Same content-type
 | Method | Route | Purpose |
 |---|---|---|
 | `POST` | `/__moonshine/feedback` | append a comment (`<id>.json`, `status:pending`) |
-| `POST` | `/__moonshine/feedback/control` | write `control.json` (listen/paused/stopped) |
+| `POST` | `/__moonshine/feedback/control` | write `control.json` (accumulate/listen/paused/stopped) |
 | `POST` | `/__moonshine/feedback/dismiss` | set a comment `status:dismissed` |
+| `POST` | `/__moonshine/feedback/address` | write `address.json` (request delivery of accumulated comments) |
 | `GET`  | `/__moonshine/feedback` | list comments (id, ts, status, target, comment, reply) |
-| `GET`  | `/__moonshine/feedback/capabilities` | `{ enabled, harness, alive, mode, project }` derived from `adapter.json` + `heartbeat.json` |
+| `GET`  | `/__moonshine/feedback/capabilities` | `{ enabled, harness, alive, mode, control, addressRequestedAt, project }` derived from `adapter.json` + `heartbeat.json` + `control.json` + `address.json` |
 
 `alive` is true when a listener heartbeat is fresh (`now - ts < 2 * intervalSec`),
 and `mode` (`listen`/`paused`) is its echoed control mode when alive, else null.
+`control` is the author's requested mode (`accumulate` when `control.json` is
+absent) and `addressRequestedAt` is the pending address request's timestamp, or
+null once an adapter has consumed it.
 
 `capabilities` is the single call the HUD makes on mount + on poll; it folds the
 flag, the manifest, and the heartbeat into the state machine in
@@ -248,7 +274,8 @@ Two independent gates:
 |---|---|---|---|
 | flag off | (routes 404) | not mounted | absent |
 | flag on, no `adapter.json` | `harness:null` | "⚪ no agent connected" | **writable** |
-| adapter present, stale heartbeat | `harness:"x", alive:false` | "⚪ x · off" + Start | writable |
+| adapter present, no live listener | `harness:"x", alive:false` | "◯ x · hook armed" + Address | writable |
+| address requested, not yet consumed | `addressRequestedAt` set | "🟡 x · address queued" + example prompt | writable |
 | adapter + fresh heartbeat | `alive:true, mode` | "🟢 listening" / "⏸ paused" | writable |
 
 Because comments are plain files, they are **never lost on an unsupported or
@@ -259,15 +286,20 @@ Codex user can author and comment today; the next listening session picks them u
 
 No supported mechanism pushes into a *fully idle* interactive session (one parked
 at the prompt). So a listener can be paused/resumed/stopped from the HUD live (the
-loop is ticking and reads `control.json`), but **starting from cold** depends on
-the harness:
+loop is ticking and reads `control.json`), but a request into an idle session
+waits for its next activity:
 
-- The HUD "Start" writes `control:listen` and is honored opportunistically when the
-  session is next active (e.g. the Claude Code adapter's Stop hook notices
-  `listen` + stale heartbeat and nudges the session to start its listener).
-- A guaranteed cold start uses a harness command (Claude Code:
-  `/moonshine:moonshine-listen` — plugin skills are namespaced, so the bare
-  `/moonshine-listen` does not resolve).
+- The HUD "Address" writes `address.json`, which the Stop hook consumes at the
+  session's **next turn boundary** — so the request is reliable, but an idle
+  session needs a nudge. The HUD therefore pairs the queued state with a
+  copyable example prompt (e.g. `address my moonshine comments on <project>`):
+  sending it both wakes the session and tells it exactly what to do.
+- Auto-address ("listen") is honored opportunistically when the session is next
+  active (the Claude Code adapter's Stop hook notices `listen` + stale heartbeat
+  and nudges the session to start its listener).
+- A guaranteed cold start of the idle listener uses a harness command (Claude
+  Code: `/moonshine:moonshine-listen` — plugin skills are namespaced, so the
+  bare `/moonshine-listen` does not resolve).
 
 The HUD states this plainly rather than offering a button that silently no-ops.
 
@@ -279,12 +311,14 @@ The **claude-code** adapter (the first one) is split across three files:
   location (auto-merged on install). Points at the script below via
   `${CLAUDE_PLUGIN_ROOT}`.
 - `adapters/claude-code/hooks/moonshine-stop.sh` — the Stop hook itself:
-  fulfils `manifest` (writes `adapter.json`), `claim` (atomic pending →
-  delivered + inject the comments so Claude addresses them), and nudges the
-  listener when the author pressed Start. Turn-boundary coverage. It skips
-  projects the author `paused`/`stopped`, re-delivers comments stranded in
-  `delivered` past the 300s staleness window, and no-ops entirely under
-  `MOONSHINE_FEEDBACK=off`.
+  fulfils `manifest` (writes `adapter.json`) and `claim` (atomic pending →
+  delivered + inject the comments so Claude addresses them) — but only when
+  the author asked: an `address.json` request (consumed after the drain) or
+  auto-address mode (`listen`). Accumulate-mode projects are left untouched.
+  It also nudges the listener when the author enabled auto-address with no
+  live heartbeat, skips projects the author `paused`/`stopped`, re-delivers
+  comments stranded in `delivered` past the 300s staleness window, and no-ops
+  entirely under `MOONSHINE_FEEDBACK=off`.
 - `skills/moonshine-listen/SKILL.md` — the `heartbeat`+`control` loop for idle
   coverage. Lives in `skills/` (not under `adapters/`) so it is discoverable as
   `/moonshine:moonshine-listen`; run it under `/loop` to keep ticking.

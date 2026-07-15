@@ -40,7 +40,10 @@ export type Comment = {
   reply: string | null
 }
 
-export type ListenMode = 'listen' | 'paused' | 'stopped'
+// `accumulate` is the default: comments pile up until the author explicitly
+// requests delivery (the HUD's Address button → address.json). `listen` is the
+// opt-in auto-address mode where adapters drain on their own.
+export type ListenMode = 'accumulate' | 'listen' | 'paused' | 'stopped'
 
 export type Capabilities = {
   // Whether the feedback subsystem is enabled at all (flag on + routes live).
@@ -51,6 +54,10 @@ export type Capabilities = {
   alive: boolean
   // The listener's current mode if alive, else null.
   mode: ListenMode | null
+  // The author's control.json mode; 'accumulate' when the file is absent.
+  control: ListenMode
+  // When the author pressed Address and no adapter has consumed it yet.
+  addressRequestedAt: string | null
   project: string | null
 }
 
@@ -59,6 +66,8 @@ export const DISABLED_CAPABILITIES: Capabilities = {
   harness: null,
   alive: false,
   mode: null,
+  control: 'accumulate',
+  addressRequestedAt: null,
   project: null,
 }
 
@@ -123,4 +132,26 @@ export async function postControl(mode: ListenMode): Promise<void> {
 export async function dismissComment(id: string): Promise<void> {
   if (!EDIT_ENABLED) return
   await postJSON('/dismiss', { id })
+}
+
+// Ask the connected adapter to address the accumulated comments: writes
+// address.json, which the adapter consumes at its next opportunity (turn
+// boundary for the Stop hook, next tick for a live listener).
+export async function requestAddress(): Promise<void> {
+  if (!EDIT_ENABLED) return
+  await postJSON('/address', {})
+}
+
+// Where a comment lives in the *current* body: prefer re-finding its excerpt
+// (prose shifts as the article is edited), fall back to the recorded range
+// start. Null means it can't be placed (excerpt gone and no range) — it still
+// shows in the HUD, just not on a block.
+export function anchorOffset(c: Comment, body: string): number | null {
+  const t = c.target
+  if (t.excerpt) {
+    const i = body.indexOf(t.excerpt)
+    if (i !== -1) return i
+  }
+  if (t.range) return t.range[0]
+  return null
 }

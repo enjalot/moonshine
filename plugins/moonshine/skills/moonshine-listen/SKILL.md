@@ -6,10 +6,12 @@ description: Listen for moonshine authorship feedback and address comments on an
 # moonshine-listen — authorship feedback listener (Claude Code adapter)
 
 This is the **idle-coverage half** of the moonshine authorship-feedback loop
-(`plugins/moonshine/FEEDBACK.md`). The Stop hook already picks up comments that
-arrive while you are actively working; this skill handles comments left while
-the session is idle, and powers the HUD's live status (the heartbeat) and its
-start/pause/stop controls (the `control.json` it reads).
+(`plugins/moonshine/FEEDBACK.md`). The Stop hook already handles delivery at
+turn boundaries; this skill covers requests that land while the session is
+idle, and powers the HUD's live status (the heartbeat) and its mode controls
+(the `control.json` it reads). Note the default mode is **accumulate**:
+comments pile up and are only drained when the author presses Address in the
+HUD (`address.json`) or has opted into continuous auto-address (`listen`).
 
 Each invocation performs **one tick**. Run it under `/loop` so the ticks repeat.
 
@@ -31,7 +33,7 @@ For each in-scope `.feedback/` directory:
    `{"harness":"claude-code","version":"adapter","installedAt":"<now>"}`.
 
 2. **Read control.** Read `control.json`; treat a missing file as
-   `{"mode":"listen"}`.
+   `{"mode":"accumulate"}` (the default: hold comments, don't drain).
    - If `mode == "stopped"`: write a final `heartbeat.json` with
      `"mode":"stopped"` and the current `ts`, then **end** — do not schedule
      another tick for this project. (If all in-scope projects are stopped, end
@@ -43,8 +45,14 @@ For each in-scope `.feedback/` directory:
    ```
    where `<n>` is the number of `status:"pending"` comment files.
 
-4. **Drain (only when `mode == "listen"`).** For each comment file (any
-   `*.json` other than `control.json` / `heartbeat.json` / `adapter.json`) that
+4. **Drain (only when the author asked).** Drain when `mode == "listen"`
+   (continuous auto-address), **or** when `address.json` exists (the HUD's
+   one-shot Address request) and the mode is not `paused`. After a drain pass
+   triggered by `address.json`, delete `address.json` — the request is
+   consumed. When `mode == "accumulate"` and there is no `address.json`, skip
+   draining entirely: comments accumulate by design.
+   For each comment file (any `*.json` other than `control.json` /
+   `heartbeat.json` / `adapter.json` / `address.json`) that
    is either `status == "pending"` **or** `status == "delivered"` with a
    `deliveredAt` more than 300s ago (a comment claimed by an earlier
    turn/tick that was never addressed — re-surface it rather than strand it):
@@ -63,7 +71,8 @@ For each in-scope `.feedback/` directory:
      component / registry it points at).
    - Record the outcome: set `status:"addressed"`, `addressedAt:"<now>"`, and a
      one-line `reply` summarizing what you changed. Write atomically.
-   - When `mode == "paused"`: skip draining (heartbeat only).
+   - When `mode == "paused"`: skip draining (heartbeat only), even if an
+     `address.json` is present — leave it for when the author resumes.
 
 ## Continue the loop
 

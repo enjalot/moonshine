@@ -15,6 +15,7 @@ import {
   fetchComments,
   postComment,
   postControl,
+  requestAddress as postAddress,
   type Capabilities,
   type Comment,
   type CommentTarget,
@@ -39,6 +40,10 @@ type FeedbackContextValue = {
   submitComment: (text: string) => Promise<void>
   setMode: (mode: ListenMode) => Promise<void>
   dismiss: (id: string) => Promise<void>
+  requestAddress: () => Promise<void>
+  // HUD panel open state lives here so per-block comment badges can open it.
+  hudOpen: boolean
+  setHudOpen: (open: boolean) => void
 }
 
 const FeedbackContext = createContext<FeedbackContextValue | null>(null)
@@ -47,6 +52,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   const [caps, setCaps] = useState<Capabilities>(DISABLED_CAPABILITIES)
   const [comments, setComments] = useState<Comment[]>([])
   const [draftTarget, setDraftTarget] = useState<CommentTarget | null>(null)
+  const [hudOpen, setHudOpen] = useState(false)
 
   // Hold the latest "is the subsystem enabled?" answer in a ref so the poll
   // loop can keep running at a steady cadence without re-subscribing.
@@ -88,6 +94,12 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
       await dismissComment(id)
       await refresh()
     },
+    requestAddress: async () => {
+      await postAddress()
+      await refresh()
+    },
+    hudOpen,
+    setHudOpen,
   }
 
   return <FeedbackContext.Provider value={value}>{children}</FeedbackContext.Provider>

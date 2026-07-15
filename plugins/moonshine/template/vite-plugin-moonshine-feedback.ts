@@ -19,14 +19,18 @@ import path from 'node:path'
 //
 // Routes (all under /__moonshine/feedback):
 //   POST   /            { target, comment }  → append a pending comment file
-//   POST   /control     { mode }             → write control.json (listen/paused/stopped)
+//   POST   /control     { mode }             → write control.json (accumulate/listen/paused/stopped)
 //   POST   /dismiss     { id }               → mark a comment dismissed
+//   POST   /address     {}                   → write address.json (deliver accumulated comments)
 //   GET    /            → list comments (id, ts, status, target, comment, reply)
-//   GET    /capabilities → { enabled, harness, alive, mode, project }
+//   GET    /capabilities → { enabled, harness, alive, mode, control, addressRequestedAt, project }
 
-const RESERVED = new Set(['control.json', 'heartbeat.json', 'adapter.json'])
+const RESERVED = new Set(['control.json', 'heartbeat.json', 'adapter.json', 'address.json'])
 
-const LISTEN_MODES = new Set(['listen', 'paused', 'stopped'])
+// `accumulate` (the default when control.json is absent) means adapters must
+// NOT drain on their own — comments pile up until the author requests
+// delivery via address.json. `listen` is the explicit auto-address opt-in.
+const LISTEN_MODES = new Set(['accumulate', 'listen', 'paused', 'stopped'])
 
 // The full protocol kind set. `block` and `figure` are wired in the current
 // UI; `caption`, `term`, and `selection` are reserved (accepted here so the ABI
@@ -103,6 +107,8 @@ export default function moonshineFeedbackPlugin(): Plugin {
       async function capabilities(): Promise<Json> {
         const adapter = await readJSON(path.join(feedbackDir, 'adapter.json'))
         const hb = await readJSON(path.join(feedbackDir, 'heartbeat.json'))
+        const control = await readJSON(path.join(feedbackDir, 'control.json'))
+        const address = await readJSON(path.join(feedbackDir, 'address.json'))
         const harness =
           (adapter?.harness as string | undefined) ??
           (hb?.harness as string | undefined) ??
@@ -115,7 +121,16 @@ export default function moonshineFeedbackPlugin(): Plugin {
           alive = Number.isFinite(age) && age < intervalSec * 2 * 1000
           mode = alive ? (hb.mode as string) ?? null : null
         }
-        return { enabled: true, harness, alive, mode, project }
+        // The author's requested mode (as opposed to `mode`, which is what a
+        // live listener says it is honoring). Absent file ≡ accumulate.
+        const controlMode = LISTEN_MODES.has(String(control?.mode))
+          ? (control?.mode as string)
+          : 'accumulate'
+        // address.json disappears when an adapter consumes the request, so
+        // its presence means "requested but not yet picked up".
+        const addressRequestedAt =
+          typeof address?.requestedAt === 'string' ? address.requestedAt : null
+        return { enabled: true, harness, alive, mode, control: controlMode, addressRequestedAt, project }
       }
 
       server.middlewares.use('/__moonshine/feedback', async (req, res) => {
@@ -188,11 +203,20 @@ export default function moonshineFeedbackPlugin(): Plugin {
             return
           }
 
-          // ---- start/pause/stop the listener ------------------------------
+          // ---- request delivery of accumulated comments --------------------
+          if (url === '/address') {
+            await writeJSON(path.join(feedbackDir, 'address.json'), {
+              requestedAt: new Date().toISOString(),
+            })
+            send(res, 200, { ok: true })
+            return
+          }
+
+          // ---- set the listen mode (accumulate/listen/pause/stop) ----------
           if (url === '/control') {
             const mode = String(payload.mode ?? '')
             if (!LISTEN_MODES.has(mode)) {
-              throw httpError(400, 'mode must be listen|paused|stopped')
+              throw httpError(400, 'mode must be accumulate|listen|paused|stopped')
             }
             await writeJSON(path.join(feedbackDir, 'control.json'), {
               mode,

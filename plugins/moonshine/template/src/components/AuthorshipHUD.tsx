@@ -1,28 +1,39 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useFeedback } from '../lib/FeedbackContext'
-import type { Comment, ListenMode } from '../lib/feedback'
+import type { Comment } from '../lib/feedback'
 
 // Bottom-right "authorship HUD": the author's view of the feedback loop.
-// Shows whether an agent harness is connected and listening, lets the author
-// start/pause/stop the listener, and lists the comments they've sent along
-// with the agent's replies. Reads everything from the polled capabilities +
-// comment list; writes go through the same .feedback/ protocol.
+// Comments accumulate by default — nothing is delivered to an agent until the
+// author presses "Address", which writes an address request the connected
+// adapter consumes (at its next turn boundary, or next listener tick). The HUD
+// shows whether a harness hook is armed, offers the Address button plus an
+// example prompt to nudge the chat directly, and lists sent comments with the
+// agent's replies. Auto-address (the old always-listen behavior) is an
+// explicit opt-in toggle.
 //
 // Mounted only from EditChrome (dev-only). Renders nothing when the feedback
 // subsystem is disabled (flag off / routes absent).
 
 type Status = { dot: string; label: string }
 
-function statusOf(harness: string | null, alive: boolean, mode: ListenMode | null): Status {
-  if (!harness) return { dot: 'mn-dot-off', label: 'no agent connected' }
-  if (alive && mode === 'listen') return { dot: 'mn-dot-live', label: `${harness} · listening` }
-  if (alive && mode === 'paused') return { dot: 'mn-dot-paused', label: `${harness} · paused` }
-  return { dot: 'mn-dot-off', label: `${harness} · off` }
+function statusOf(caps: {
+  harness: string | null
+  alive: boolean
+  mode: string | null
+  addressRequestedAt: string | null
+}): Status {
+  if (!caps.harness) return { dot: 'mn-dot-off', label: 'no agent connected' }
+  if (caps.alive && caps.mode === 'listen')
+    return { dot: 'mn-dot-live', label: `${caps.harness} · listening` }
+  if (caps.alive && caps.mode === 'paused')
+    return { dot: 'mn-dot-paused', label: `${caps.harness} · paused` }
+  if (caps.addressRequestedAt)
+    return { dot: 'mn-dot-paused', label: `${caps.harness} · address queued` }
+  return { dot: 'mn-dot-armed', label: `${caps.harness} · hook armed` }
 }
 
 export default function AuthorshipHUD() {
-  const { caps, comments, setMode, dismiss } = useFeedback()
-  const [open, setOpen] = useState(false)
+  const { caps, comments, setMode, dismiss, requestAddress, hudOpen, setHudOpen } = useFeedback()
   const [busy, setBusy] = useState(false)
 
   if (!caps.enabled) return null
@@ -30,84 +41,89 @@ export default function AuthorshipHUD() {
   const visible = comments.filter((c) => c.status !== 'dismissed')
   const active = visible.filter((c) => c.status === 'pending' || c.status === 'delivered')
   const resolved = visible.filter((c) => c.status === 'addressed')
-  const status = statusOf(caps.harness, caps.alive, caps.mode)
+  const status = statusOf(caps)
+  const addressQueued = caps.addressRequestedAt !== null
+  const autoOn = caps.control === 'listen'
 
-  const control = async (mode: ListenMode) => {
+  const run = async (fn: () => Promise<void>, what: string) => {
     setBusy(true)
     try {
-      await setMode(mode)
+      await fn()
     } catch (err) {
       // eslint-disable-next-line no-alert
-      window.alert(`Could not update listener: ${String(err)}`)
+      window.alert(`Could not ${what}: ${String(err)}`)
     } finally {
       setBusy(false)
     }
   }
-
-  // Which control buttons make sense given the current state.
-  const controls = (() => {
-    if (!caps.harness) return null
-    if (caps.alive && caps.mode === 'listen') {
-      return (
-        <>
-          <button type="button" disabled={busy} onClick={() => void control('paused')}>
-            Pause
-          </button>
-          <button type="button" disabled={busy} onClick={() => void control('stopped')}>
-            Stop
-          </button>
-        </>
-      )
-    }
-    if (caps.alive && caps.mode === 'paused') {
-      return (
-        <>
-          <button type="button" disabled={busy} onClick={() => void control('listen')}>
-            Resume
-          </button>
-          <button type="button" disabled={busy} onClick={() => void control('stopped')}>
-            Stop
-          </button>
-        </>
-      )
-    }
-    // Adapter installed but no live listener — Start is opportunistic (see
-    // FEEDBACK.md cold-start caveat); we say so rather than promise it.
-    return (
-      <button type="button" disabled={busy} onClick={() => void control('listen')}>
-        Start listening
-      </button>
-    )
-  })()
 
   return (
     <div className="mn-chrome mn-hud" role="region" aria-label="Authorship feedback">
       <button
         type="button"
         className="mn-hud-bar"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
+        aria-expanded={hudOpen}
+        onClick={() => setHudOpen(!hudOpen)}
       >
         <span className={`mn-dot ${status.dot}`} aria-hidden />
         <span className="mn-hud-label">{status.label}</span>
         {active.length > 0 && <span className="mn-hud-badge">{active.length}</span>}
-        <span className="mn-hud-caret">{open ? '▾' : '▸'}</span>
+        <span className="mn-hud-caret">{hudOpen ? '▾' : '▸'}</span>
       </button>
 
-      {open && (
+      {hudOpen && (
         <div className="mn-hud-body">
+          {active.length > 0 && (
+            <AddressPanel
+              count={active.length}
+              queued={addressQueued}
+              busy={busy}
+              caps={caps}
+              onAddress={() => void run(requestAddress, 'request addressing')}
+            />
+          )}
+
           <div className="mn-hud-controls">
-            {controls ?? (
-              <span className="mn-hud-note">
-                Comments are saved and will be picked up when an agent connects.
-              </span>
+            <label className="mn-hud-auto" title="When on, the agent picks up new comments on its own (turn boundaries + idle listener). When off, comments accumulate until you press Address.">
+              <input
+                type="checkbox"
+                checked={autoOn}
+                disabled={busy || !caps.harness}
+                onChange={(e) =>
+                  void run(() => setMode(e.target.checked ? 'listen' : 'accumulate'), 'update mode')
+                }
+              />{' '}
+              auto-address new comments
+            </label>
+            {caps.alive && caps.mode === 'listen' && (
+              <button type="button" disabled={busy} onClick={() => void run(() => setMode('paused'), 'pause')}>
+                Pause
+              </button>
+            )}
+            {caps.alive && caps.mode === 'paused' && (
+              <button type="button" disabled={busy} onClick={() => void run(() => setMode('listen'), 'resume')}>
+                Resume
+              </button>
+            )}
+            {caps.alive && (
+              <button type="button" disabled={busy} onClick={() => void run(() => setMode('stopped'), 'stop')}>
+                Stop listener
+              </button>
             )}
           </div>
 
-          {caps.harness && !caps.alive && (
+          {autoOn && !caps.alive && caps.harness && (
             <p className="mn-hud-note">
-              No live listener. Click Start while the session is active, or run{' '}
-              <code>/moonshine:moonshine-listen</code> in an idle session.
+              Auto is on, but no idle listener is running — comments are picked up when the
+              session is next active. For idle coverage run{' '}
+              <code>/loop /moonshine:moonshine-listen</code>.
+            </p>
+          )}
+
+          {!caps.harness && (
+            <p className="mn-hud-note">
+              No agent connected yet. Comments are saved and delivered once a harness with the
+              moonshine adapter takes a turn.
             </p>
           )}
 
@@ -140,6 +156,71 @@ export default function AuthorshipHUD() {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+// The Address button and its post-click status. The button writes an address
+// request (address.json); what happens next depends on what's connected, and
+// we say so honestly instead of promising a pickup we can't guarantee (see
+// FEEDBACK.md cold-start caveat). The example prompt both wakes an idle
+// session and tells it exactly what to do.
+function AddressPanel({
+  count,
+  queued,
+  busy,
+  caps,
+  onAddress,
+}: {
+  count: number
+  queued: boolean
+  busy: boolean
+  caps: { harness: string | null; alive: boolean; project: string | null }
+  onAddress: () => void
+}) {
+  const prompt = `address my moonshine comments on ${caps.project ?? 'this article'}`
+  return (
+    <div className="mn-hud-address-panel">
+      {!queued ? (
+        <button type="button" className="mn-hud-address" disabled={busy} onClick={onAddress}>
+          Address {count} comment{count === 1 ? '' : 's'}
+        </button>
+      ) : (
+        <p className="mn-hud-note">
+          {caps.alive
+            ? 'Address requested — the listener picks these up on its next tick (~90s).'
+            : caps.harness
+              ? `Address queued — the ${caps.harness} hook delivers these at the session's next turn. To have them handled right away, send the session a message:`
+              : 'Address queued — delivered once an agent connects.'}
+        </p>
+      )}
+      {caps.harness && !caps.alive && (
+        <PromptHint prompt={prompt} label={queued ? undefined : 'or ask the chat directly:'} />
+      )}
+    </div>
+  )
+}
+
+function PromptHint({ prompt, label }: { prompt: string; label?: string }) {
+  const [copied, setCopied] = useState(false)
+  useEffect(() => {
+    if (!copied) return
+    const t = setTimeout(() => setCopied(false), 2000)
+    return () => clearTimeout(t)
+  }, [copied])
+  return (
+    <div className="mn-hud-prompt">
+      {label && <span className="mn-hud-prompt-label">{label}</span>}
+      <code>{prompt}</code>
+      <button
+        type="button"
+        onClick={() => {
+          void navigator.clipboard?.writeText(prompt)
+          setCopied(true)
+        }}
+      >
+        {copied ? 'Copied' : 'Copy'}
+      </button>
     </div>
   )
 }

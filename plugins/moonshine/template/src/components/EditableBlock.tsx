@@ -1,6 +1,7 @@
 import { createElement, type ReactNode } from 'react'
 import { fnv1a, useEdit } from '../lib/EditContext'
 import { useFeedback } from '../lib/FeedbackContext'
+import { anchorOffset, type Comment } from '../lib/feedback'
 import SourceEditor from './SourceEditor'
 
 // react-markdown hands every component a hast `node`. For block elements
@@ -41,7 +42,7 @@ export default function EditableBlock({ node, children, className, ...rest }: Pr
     blocks,
     moveActiveBlock,
   } = useEdit()
-  const { caps, startComment } = useFeedback()
+  const { caps, startComment, comments, setHudOpen } = useFeedback()
   const tag = node?.tagName || 'p'
   const start = node?.position?.start?.offset
   const end = node?.position?.end?.offset
@@ -92,6 +93,20 @@ export default function EditableBlock({ node, children, className, ...rest }: Pr
 
   const cls = ['mn-block', armed ? 'mn-block-armed' : '', className].filter(Boolean).join(' ')
 
+  // Unaddressed comments anchored inside this block surface as a badge in the
+  // right margin. Only top-level blocks carry the badge, so a comment on a
+  // paragraph inside a blockquote doesn't render twice (once on each level).
+  const isTopLevel = blocks.some((b) => b.start === start && b.end === end)
+  const open =
+    isTopLevel && caps.enabled
+      ? comments.filter((c) => {
+          if (c.status !== 'pending' && c.status !== 'delivered') return false
+          if (c.target.path !== path) return false
+          const pos = anchorOffset(c, body)
+          return pos !== null && (start as number) <= pos && pos < (end as number)
+        })
+      : []
+
   return createElement(
     tag,
     {
@@ -109,5 +124,32 @@ export default function EditableBlock({ node, children, className, ...rest }: Pr
       },
     },
     children,
+    open.length > 0 && <CommentBadge key="mn-comments" open={open} onOpen={() => setHudOpen(true)} />,
+  )
+}
+
+// 💬 badge for a block with unaddressed comments; clicking opens the HUD
+// where the full comment (and Address button) lives.
+function CommentBadge({ open, onOpen }: { open: Comment[]; onOpen: () => void }) {
+  return (
+    <span
+      className="mn-block-comments"
+      role="button"
+      tabIndex={0}
+      title={open.map((c) => c.comment).join('\n\n')}
+      aria-label={`${open.length} unaddressed comment${open.length === 1 ? '' : 's'} on this block`}
+      onClick={(e) => {
+        e.stopPropagation()
+        onOpen()
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpen()
+        }
+      }}
+    >
+      💬{open.length > 1 ? <span className="mn-block-comments-count">{open.length}</span> : null}
+    </span>
   )
 }
