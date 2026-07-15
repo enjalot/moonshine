@@ -5,3 +5,4 @@ dist/
 .env
 .vite/
 .claude/
+__pycache__/

@@ -1,6 +1,6 @@
 {
   "name": "moonshine",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Create interactive technical explanations inspired by Distill.pub",
   "author": {
     "name": "enjalot",
