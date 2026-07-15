@@ -82,6 +82,15 @@ export default function moonshineFeedbackPlugin(): Plugin {
         return JSON.parse(Buffer.concat(chunks).toString('utf8')) as Json
       }
 
+      // Route delivery back to the session that authored the article. New
+      // projects persist this in moonshine.meta.json; a server launched
+      // directly from Claude Code can fall back to its inherited environment.
+      async function authorSessionId(): Promise<string | null> {
+        const meta = await readJSON(path.join(projectRoot, 'moonshine.meta.json'))
+        const value = meta?.sessionId ?? process.env.CLAUDE_CODE_SESSION_ID
+        return typeof value === 'string' && value.trim() ? value.trim() : null
+      }
+
       // List every comment file (everything that isn't a reserved control
       // file), newest first.
       async function listComments(): Promise<Json[]> {
@@ -118,7 +127,10 @@ export default function moonshineFeedbackPlugin(): Plugin {
         if (hb && typeof hb.ts === 'string') {
           const intervalSec = Number(hb.intervalSec) || 30
           const age = Date.now() - Date.parse(hb.ts)
-          alive = Number.isFinite(age) && age < intervalSec * 2 * 1000
+          // A stopped listener writes one final heartbeat. It may be fresh,
+          // but it is intentionally no longer alive.
+          alive =
+            hb.mode !== 'stopped' && Number.isFinite(age) && age < intervalSec * 2 * 1000
           mode = alive ? (hb.mode as string) ?? null : null
         }
         // The author's requested mode (as opposed to `mode`, which is what a
@@ -205,9 +217,12 @@ export default function moonshineFeedbackPlugin(): Plugin {
 
           // ---- request delivery of accumulated comments --------------------
           if (url === '/address') {
-            await writeJSON(path.join(feedbackDir, 'address.json'), {
+            const sessionId = await authorSessionId()
+            const request: Json = {
               requestedAt: new Date().toISOString(),
-            })
+            }
+            if (sessionId) request.sessionId = sessionId
+            await writeJSON(path.join(feedbackDir, 'address.json'), request)
             send(res, 200, { ok: true })
             return
           }
@@ -218,10 +233,13 @@ export default function moonshineFeedbackPlugin(): Plugin {
             if (!LISTEN_MODES.has(mode)) {
               throw httpError(400, 'mode must be accumulate|listen|paused|stopped')
             }
-            await writeJSON(path.join(feedbackDir, 'control.json'), {
+            const sessionId = await authorSessionId()
+            const control: Json = {
               mode,
               updatedAt: new Date().toISOString(),
-            })
+            }
+            if (sessionId) control.sessionId = sessionId
+            await writeJSON(path.join(feedbackDir, 'control.json'), control)
             send(res, 200, { ok: true, mode })
             return
           }

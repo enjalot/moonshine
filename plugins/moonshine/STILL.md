@@ -485,10 +485,13 @@ zoomed out." Each comment is written as a file under `<project>/.feedback/`.
 Comments **accumulate by default** — nothing is delivered until the author
 asks. When they press **Address** in the HUD (or turn on auto-address), the
 Claude Code **Stop hook** injects the pending comments at a turn boundary and
-blocks the stop until you handle them. The author may also just ask you
+blocks the stop until you handle them. Delivery requests carry the article's
+authoring `sessionId`, so another active session leaves them untouched. The
+author may also just ask you
 directly (e.g. "address my moonshine comments on <project>") — in that case
-drain the `.feedback/` inbox yourself following the same steps, and delete any
-`address.json` request file when you're done. For each comment:
+drain the `.feedback/` inbox yourself following the same steps, but only if an
+`address.json` sessionId is absent or matches `$CLAUDE_CODE_SESSION_ID`; delete
+the matching request file when you're done. For each comment:
 
 1. Edit the referenced source file (`<project>/content/<target.path>`) — or the
    figure component / registry for a `figure` comment — to address the note.

@@ -25,10 +25,10 @@ function statusOf(caps: {
   if (!caps.harness) return { dot: 'mn-dot-off', label: 'no agent connected' }
   if (caps.alive && caps.mode === 'listen')
     return { dot: 'mn-dot-live', label: `${caps.harness} · listening` }
-  if (caps.alive && caps.mode === 'paused')
-    return { dot: 'mn-dot-paused', label: `${caps.harness} · paused` }
   if (caps.addressRequestedAt)
     return { dot: 'mn-dot-paused', label: `${caps.harness} · address queued` }
+  if (caps.alive && caps.mode === 'paused')
+    return { dot: 'mn-dot-paused', label: `${caps.harness} · paused` }
   return { dot: 'mn-dot-armed', label: `${caps.harness} · hook armed` }
 }
 
@@ -190,7 +190,7 @@ function AddressPanel({
           {caps.alive
             ? 'Address requested — the listener picks these up on its next tick (~90s).'
             : caps.harness
-              ? `Address queued — the ${caps.harness} hook delivers these at the session's next turn. To have them handled right away, send the session a message:`
+              ? `Address queued — the ${caps.harness} hook delivers these when the authoring session next takes a turn. To have them handled right away, send that session a message:`
               : 'Address queued — delivered once an agent connects.'}
         </p>
       )}

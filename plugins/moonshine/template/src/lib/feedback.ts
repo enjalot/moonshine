@@ -149,8 +149,26 @@ export async function requestAddress(): Promise<void> {
 export function anchorOffset(c: Comment, body: string): number | null {
   const t = c.target
   if (t.excerpt) {
-    const i = body.indexOf(t.excerpt)
-    if (i !== -1) return i
+    const recorded = t.range?.[0]
+    if (recorded !== undefined && body.startsWith(t.excerpt, recorded)) return recorded
+
+    // Re-find moved prose, but do not blindly choose the first copy when an
+    // excerpt repeats. The occurrence nearest its recorded range is the most
+    // likely continuation of the original anchor.
+    let best: number | null = null
+    let bestDistance = Number.POSITIVE_INFINITY
+    let from = 0
+    while (from <= body.length) {
+      const i = body.indexOf(t.excerpt, from)
+      if (i === -1) break
+      const distance = recorded === undefined ? i : Math.abs(i - recorded)
+      if (distance < bestDistance) {
+        best = i
+        bestDistance = distance
+      }
+      from = i + Math.max(1, t.excerpt.length)
+    }
+    if (best !== null) return best
   }
   if (t.range) return t.range[0]
   return null

@@ -134,7 +134,11 @@ one staleness window instead of losing it outright.
 ### `control.json` — author's listen-mode request (HUD → adapter)
 
 ```jsonc
-{ "mode": "accumulate", "updatedAt": "2026-06-16T18:29:00Z" }
+{
+  "mode": "accumulate",
+  "updatedAt": "2026-06-16T18:29:00Z",
+  "sessionId": "8b1f6a2e-4c3d-4e5f-9a0b-1c2d3e4f5a6b"
+}
 // mode: "accumulate" | "listen" | "paused" | "stopped"
 ```
 
@@ -145,27 +149,40 @@ tick or turn-boundary pickup):
   your own; comments pile up until the author requests delivery via
   `address.json` (below).
 - `listen` — continuous auto-address: drain pending comments, act, reply.
-- `paused` — stay alive (heartbeat) but don't drain, even on an address request.
+- `paused` — stay alive (heartbeat) but don't drain automatically.
 - `stopped` — write a final heartbeat with `mode:"stopped"` and end the listener
-  (do not reschedule).
+  (do not reschedule). A later explicit Address request can still be handled by
+  a turn-boundary adapter.
 
-A turn-boundary pickup (e.g. a Stop hook) MUST honor this too: skip projects
-whose `control.json` is `paused` or `stopped`, and treat an absent file as
-`accumulate` — never as license to drain. (This is a behavior change from the
-first protocol revision, where an absent file meant `listen`; silent pickup by
-whatever session ended a turn first proved surprising in practice.)
+A turn-boundary pickup (e.g. a Stop hook) MUST honor this too: paused/stopped
+projects do not drain automatically, and an absent file is `accumulate` — never
+license to drain. A one-shot `address.json` is an explicit override: drain once
+without changing the underlying mode. (This is a behavior change from the first
+protocol revision, where an absent file meant `listen`; silent pickup by whatever
+session ended a turn first proved surprising in practice.)
+
+`sessionId` routes auto-address to the article's authoring session. The web side
+copies it from `moonshine.meta.json` or the dev server's Claude environment;
+adapters MUST leave a request for a different named session untouched. It is
+optional only for compatibility with records written before session routing.
 
 ### `address.json` — one-shot delivery request (HUD → adapter)
 
 ```jsonc
-{ "requestedAt": "2026-07-14T18:31:00Z" }
+{
+  "requestedAt": "2026-07-14T18:31:00Z",
+  "sessionId": "8b1f6a2e-4c3d-4e5f-9a0b-1c2d3e4f5a6b"
+}
 ```
 
 Written by the HUD's **Address** button. Its presence asks the next adapter
 pass to drain the inbox even in `accumulate` mode. The adapter that performs
 the drain **deletes the file** (the request is consumed) — its absence is how
-the HUD knows the request was picked up. Ignored while `paused`; irrelevant
-under `listen` (which drains anyway, but adapters SHOULD still consume it).
+the HUD knows the request was picked up. Because pressing Address is explicit,
+it drains once even while paused/stopped, without enabling continuous pickup.
+Under `listen` it is redundant, but adapters SHOULD still consume it.
+`sessionId` prevents another active session's turn-boundary hook from claiming
+the request first; a non-matching adapter MUST neither drain nor delete it.
 
 ### `heartbeat.json` — adapter liveness (adapter → HUD)
 
@@ -210,7 +227,8 @@ files above. How it does so (hook, polling loop, daemon, MCP, IPC) is the
 adapter's business and invisible to core.
 
 1. **claim** — *only when the author asked* (`control.json` mode `listen`, or
-   an `address.json` present and mode not `paused`/`stopped`): find
+   an `address.json` present as a one-shot override of any mode): first honor
+   the request's optional `sessionId`, then find
    `status:"pending"` records (skip `dismissed`), atomic-rename each to
    `delivered` (set `deliveredAt`), and surface its `comment` + `target` to
    the agent session. Consume `address.json` after the drain pass.
@@ -240,7 +258,7 @@ and **gated** on `moonshine.config.json → feedback.enabled`. Same content-type
 | `GET`  | `/__moonshine/feedback` | list comments (id, ts, status, target, comment, reply) |
 | `GET`  | `/__moonshine/feedback/capabilities` | `{ enabled, harness, alive, mode, control, addressRequestedAt, project }` derived from `adapter.json` + `heartbeat.json` + `control.json` + `address.json` |
 
-`alive` is true when a listener heartbeat is fresh (`now - ts < 2 * intervalSec`),
+`alive` is true when a non-stopped listener heartbeat is fresh (`now - ts < 2 * intervalSec`),
 and `mode` (`listen`/`paused`) is its echoed control mode when alive, else null.
 `control` is the author's requested mode (`accumulate` when `control.json` is
 absent) and `addressRequestedAt` is the pending address request's timestamp, or
@@ -290,7 +308,8 @@ loop is ticking and reads `control.json`), but a request into an idle session
 waits for its next activity:
 
 - The HUD "Address" writes `address.json`, which the Stop hook consumes at the
-  session's **next turn boundary** — so the request is reliable, but an idle
+  authoring session's **next turn boundary** — so the request is reliable and
+  cannot be stolen by another active session, but an idle
   session needs a nudge. The HUD therefore pairs the queued state with a
   copyable example prompt (e.g. `address my moonshine comments on <project>`):
   sending it both wakes the session and tells it exactly what to do.
@@ -314,9 +333,12 @@ The **claude-code** adapter (the first one) is split across three files:
   fulfils `manifest` (writes `adapter.json`) and `claim` (atomic pending →
   delivered + inject the comments so Claude addresses them) — but only when
   the author asked: an `address.json` request (consumed after the drain) or
-  auto-address mode (`listen`). Accumulate-mode projects are left untouched.
+  auto-address mode (`listen`). Requests are routed by `sessionId`, and an
+  explicit Address drains once even if automatic pickup is paused/stopped.
+  Accumulate-mode projects are otherwise left untouched.
   It also nudges the listener when the author enabled auto-address with no
-  live heartbeat, skips projects the author `paused`/`stopped`, re-delivers
+  live heartbeat, skips automatic pickup for projects the author
+  `paused`/`stopped`, re-delivers
   comments stranded in `delivered` past the 300s staleness window, and no-ops
   entirely under `MOONSHINE_FEEDBACK=off`.
 - `skills/moonshine-listen/SKILL.md` — the `heartbeat`+`control` loop for idle

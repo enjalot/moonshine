@@ -34,20 +34,29 @@ For each in-scope `.feedback/` directory:
 
 2. **Read control.** Read `control.json`; treat a missing file as
    `{"mode":"accumulate"}` (the default: hold comments, don't drain).
-   - If `mode == "stopped"`: write a final `heartbeat.json` with
+   - If `mode == "stopped"` and there is no `address.json`: write a final `heartbeat.json` with
      `"mode":"stopped"` and the current `ts`, then **end** — do not schedule
      another tick for this project. (If all in-scope projects are stopped, end
      the loop entirely; tell the user the listener stopped.)
 
-3. **Heartbeat.** Write `heartbeat.json`:
+3. **Route to the authoring session.** Read the optional `sessionId` from
+   `address.json` (for a one-shot request), or from `control.json` when mode is
+   `listen`. Compare it with `$CLAUDE_CODE_SESSION_ID`. If the request names a
+   different session — or names one but the current session ID is unavailable
+   — skip this project entirely and do not consume its request. Legacy files
+   without a `sessionId` remain unscoped.
+
+4. **Heartbeat.** Write `heartbeat.json`:
    ```json
    {"harness":"claude-code","mode":"<mode>","ts":"<now>","intervalSec":90,"pending":<n>}
    ```
    where `<n>` is the number of `status:"pending"` comment files.
 
-4. **Drain (only when the author asked).** Drain when `mode == "listen"`
-   (continuous auto-address), **or** when `address.json` exists (the HUD's
-   one-shot Address request) and the mode is not `paused`. After a drain pass
+5. **Drain (only when the author asked).** Drain when `mode == "listen"`
+   (continuous auto-address), **or** whenever `address.json` exists (the HUD's
+   explicit one-shot Address request). Address is a deliberate override of
+   pause/stop: drain once while leaving the underlying control mode unchanged.
+   After a drain pass
    triggered by `address.json`, delete `address.json` — the request is
    consumed. When `mode == "accumulate"` and there is no `address.json`, skip
    draining entirely: comments accumulate by design.
@@ -71,8 +80,9 @@ For each in-scope `.feedback/` directory:
      component / registry it points at).
    - Record the outcome: set `status:"addressed"`, `addressedAt:"<now>"`, and a
      one-line `reply` summarizing what you changed. Write atomically.
-   - When `mode == "paused"`: skip draining (heartbeat only), even if an
-     `address.json` is present — leave it for when the author resumes.
+   - When `mode == "paused"` or `"stopped"` and there is no address request,
+     skip draining. If stopped with an address request, drain once, write the
+     final stopped heartbeat, and then end this project's loop.
 
 ## Continue the loop
 
@@ -91,5 +101,7 @@ After the tick, unless every in-scope project was `stopped`:
 
 - The Stop hook and this loop both claim by atomic rename, so they never
   double-process a comment even if they run close together.
+- Both paths honor a request's `sessionId`, so another Claude session cannot
+  steal feedback intended for the article's authoring session.
 - Keep replies short and factual — they surface back in the author's HUD next
   to their original comment.
