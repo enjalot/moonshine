@@ -271,6 +271,17 @@ pre .c { color: #6c7086; }
   color: var(--accent);
   margin-top: 0.5rem;
 }
+.example-card-links {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 0.55rem;
+  font-family: var(--heading-font);
+  font-size: 0.8rem;
+}
+.example-card-links a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+}
 
 /* Footer */
 .footer {
@@ -405,7 +416,7 @@ svg .grid path { stroke: none; }
   <!-- Examples -->
   <h2>Examples</h2>
 
-  <p>Articles built with moonshine. Most are single self-contained HTML files (the <code>shine</code> flavor); the Conductor article is a built <code>still</code> project with React figures and markdown prose. See <a href="https://syntagmatic.github.io/moonshine/index.html">syntagmatic's collection</a> for many more examples across different domains.</p>
+  <p>Articles built with moonshine. Most are single self-contained HTML files (the <code>shine</code> flavor); Conductor and the curriculum map use <code>still</code>, with React figures and markdown prose. The curriculum map includes its complete source project. See <a href="https://syntagmatic.github.io/moonshine/index.html">syntagmatic's collection</a> for many more examples across different domains.</p>
 
   <div class="examples-list">
     <a class="example-card" href="sph/index.html">
@@ -443,6 +454,19 @@ svg .grid path { stroke: none; }
         <div class="example-card-tags">embeddings &middot; UMAP &middot; clustering &middot; sparse autoencoders &middot; 5 articles</div>
       </div>
     </a>
+
+    <div class="example-card">
+      <div class="example-thumb" id="taxonomy-thumb"></div>
+      <div>
+        <div class="example-card-title">A Map of What Children Learn</div>
+        <p class="example-card-desc">1,590 school topics arranged by semantic similarity instead of timetable order, with subject continents, age cohorts, and prerequisite paths revealed through three linked views.</p>
+        <div class="example-card-tags">embeddings &middot; UMAP &middot; curriculum taxonomy &middot; built with still</div>
+        <div class="example-card-links">
+          <a href="os-taxonomy-map/index.html">Read article</a>
+          <a href="https://github.com/enjalot/moonshine/tree/main/examples/os-taxonomy-map">View source</a>
+        </div>
+      </div>
+    </div>
 
     <a class="example-card" href="conductor/index.html">
       <div class="example-thumb" id="conductor-thumb"></div>
@@ -932,6 +956,54 @@ svg .grid path { stroke: none; }
       const isHigh = p.c === colors[highlighted];
       ctx.fillStyle = p.c;
       ctx.globalAlpha = isHigh ? 0.85 : 0.15;
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ─── Curriculum taxonomy thumbnail: subject continents ───
+(function() {
+  const el = document.getElementById('taxonomy-thumb');
+  if (!el) return;
+  const canvas = document.createElement('canvas');
+  const s = 100, dpr = window.devicePixelRatio || 1;
+  canvas.width = s * dpr; canvas.height = s * dpr;
+  canvas.style.width = s + 'px'; canvas.style.height = s + 'px';
+  el.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const groups = [
+    { x: 31, y: 28, rx: 22, ry: 16, color: '#3ca951', n: 38 },
+    { x: 29, y: 73, rx: 24, ry: 17, color: '#4269d0', n: 40 },
+    { x: 68, y: 75, rx: 21, ry: 13, color: '#efb118', n: 34 },
+    { x: 75, y: 33, rx: 15, ry: 18, color: '#9c6b4e', n: 28 },
+    { x: 53, y: 54, rx: 13, ry: 11, color: '#a463f2', n: 18 },
+    { x: 48, y: 67, rx: 10, ry: 8, color: '#ff725c', n: 14 },
+  ];
+  let seed = 23;
+  const random = () => {
+    seed = (seed * 48271) % 2147483647;
+    return seed / 2147483647;
+  };
+  const points = groups.flatMap((g, group) => Array.from({ length: g.n }, () => {
+    const a = random() * Math.PI * 2;
+    const r = Math.sqrt(random());
+    return { x: g.x + Math.cos(a) * g.rx * r, y: g.y + Math.sin(a) * g.ry * r, color: g.color, group };
+  }));
+  let t = 0;
+  function draw() {
+    t += 0.012;
+    const active = Math.floor(t % groups.length);
+    ctx.clearRect(0, 0, s, s);
+    points.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.group === active ? 2 : 1.45, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = p.group === active ? 0.95 : 0.38;
       ctx.fill();
     });
     ctx.globalAlpha = 1;

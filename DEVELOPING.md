@@ -94,6 +94,12 @@ Two manual steps remain: add a card for the example to `docs/index.html`, and
 commit `docs/` on `main`. Shine articles are single HTML files — copy them
 into `docs/<slug>/` directly.
 
+For an example that should also be reproducible, keep a clean still project
+under `examples/<slug>/` and publish from that directory. Include the package
+lock, markdown, figure source, and required public data; omit `node_modules/`,
+`.velite/`, `dist/`, `.feedback/`, and project-local git history. Link both the
+published article and its source from the example card.
+
 ## Releasing
 
 The version lives in four files — keep them in lockstep:
@@ -139,6 +145,7 @@ plugins/moonshine/
   adapters/         per-harness feedback adapters (claude-code/ first)
   template/         the runnable still project (see below)
 docs/               published example articles (GitHub Pages)
+examples/           source-backed example projects
 ```
 
 Skill behavior lives in the markdown files; runtime behavior lives in the

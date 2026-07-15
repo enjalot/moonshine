@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Moonshine</title>
+    <script>
+      // Keep /moonshine/<slug>/ and pack the rest into ?/ for the SPA
+      // to restore. pathSegmentsToKeep = 2 (project pages: /moonshine/ + slug).
+      var segments = 2
+      var l = window.location
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        l.pathname.split('/').slice(0, 1 + segments).join('/') + '/?/' +
+        l.pathname.split('/').slice(1 + segments).join('/').replace(/&/g, '~and~') +
+        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash
+      )
+    </script>
+  </head>
+  <body></body>
+</html>
