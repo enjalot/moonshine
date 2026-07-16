@@ -227,7 +227,7 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
               <code>{id}</code> exposes no parameters
             </span>
             <span className="mn-knobs-controls">
-              <span className="mn-edit-move">
+              <span className="mn-edit-move mn-edit-move-figure">
                 <button
                   type="button"
                   aria-label="Move figure up"

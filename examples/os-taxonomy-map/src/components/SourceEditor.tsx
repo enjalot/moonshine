@@ -24,7 +24,7 @@ type Props = {
 }
 
 // Auto-sizing textarea seeded with raw markdown source. Cmd/Ctrl+Enter or
-// the floating Done button commits; Esc cancels. Used for both body blocks
+// the floating check button commits; Esc cancels. Used for both body blocks
 // and frontmatter fields — the only difference is chrome and font.
 export default function SourceEditor({
   initialValue,
@@ -101,8 +101,16 @@ export default function SourceEditor({
         onKeyDown={onKeyDown}
       />
       <span className="mn-edit-bar" contentEditable={false}>
-        <button type="button" className="mn-edit-done" onMouseDown={(e) => e.preventDefault()} onClick={() => void commit()} disabled={saving}>
-          {saving ? 'Saving…' : 'Done'}
+        <button
+          type="button"
+          className="mn-edit-done"
+          aria-label={saving ? 'Saving changes' : 'Save changes'}
+          title="Save changes (⌘/Ctrl+Enter)"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => void commit()}
+          disabled={saving}
+        >
+          <span aria-hidden>{saving ? '…' : '✓'}</span>
         </button>
         {onComment && (
           <button
@@ -117,7 +125,7 @@ export default function SourceEditor({
           </button>
         )}
         {showMove && (
-          <span className="mn-edit-move">
+          <span className="mn-edit-move mn-edit-move-text">
             <button
               type="button"
               aria-label="Move section up"
@@ -140,7 +148,10 @@ export default function SourceEditor({
             </button>
           </span>
         )}
-        <span className="mn-edit-hint">⌘↵ save · esc cancel</span>
+        <span className="mn-edit-hint">
+          <span>⌘↵ save</span>
+          <span>esc cancel</span>
+        </span>
       </span>
     </Wrapper>
   )

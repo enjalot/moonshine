@@ -29,7 +29,7 @@ with bays and peninsulas. The structure is already here. We just can't read it y
 We color each dot by its subject and the shape resolves into clear clusters. Science fills the north.
 Mathematics holds the west. English runs along the south, and History sits on the east coast.
 
-The placement of the dots had no awareness of the subjects. Topics about plants just read more like each other than
+The placement of the dots had no awareness of the subjects. Topics about plants read more like each other than
 topics about commas or historical figures. The smaller subjects such as Personal & Social Development, Life Skills,
 Computing, and Learning to Learn gather in the interior between Mathematics and English.
 :::

@@ -40,17 +40,18 @@ During `npm run dev` the rendered article is an editing surface:
 
 - **Hold Cmd/Ctrl** to reveal block boundaries; **Cmd/Ctrl+click a
   block** (paragraph, heading, list, caption, title/lede) to edit its
-  raw markdown in place. **Cmd/Ctrl+Enter** or **Done** saves; **Esc**
-  cancels. After a body save, a transient **Undo** toast can restore
-  the previous text.
+  raw markdown in place. **Cmd/Ctrl+Enter** or the **✓** button saves;
+  **Esc** cancels. After a body save, a transient **Undo** toast can
+  restore the previous text.
 - **Cmd/Ctrl+click a figure** to open the knob panel: sliders,
   checkboxes, and text inputs generated from the figure's registered
   `DEFAULTS`. Changes apply live; **Save to markdown** writes the
   values into the directive's attributes (only the ones that differ
   from the defaults). Figures without registered defaults explain how
   to opt in.
-- **Cmd/Ctrl+drag a block** to reorder; a drop line shows the target.
-  The open editor and the knob panel also carry **↑ / ↓** buttons.
+- **Cmd/Ctrl+drag a block** to reorder; a drop line shows the target and
+  moved blocks settle into place. The open editor and the knob panel also
+  carry **↑ / ↓** buttons.
 - **💬 Comment to the agent** from the editor or knob panel sends
   feedback about that exact passage into `.feedback/`; the authoring
   agent picks it up and replies in the HUD (bottom corner), which also
@@ -95,7 +96,7 @@ src/
     FlowDiagram.tsx       ← example diagram semantics on DiagramFigure
     lib/params.ts         ← attr→number/bool/string coercers
     inline/MiniSpark.tsx  ← inline visual example
-  lib/                    ← EditContext, blocks, feedback client, directives
+  lib/                    ← editing, block geometry, reorder animation, feedback
   store.ts                ← Zustand: hover + pinned state
   styles/                 ← tokens.css (palette + type) + article.css
 
