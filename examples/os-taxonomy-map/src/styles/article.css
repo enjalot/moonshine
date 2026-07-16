@@ -1,0 +1,1425 @@
+/* Article-shaped layout: a 740px column of prose with figures that can
+   break out wider via .figure-wide. Mirrors the look in
+   plugins/moonshine/ARTICLE.md so a reader can't tell which command
+   produced an article from the chrome alone. */
+
+.article {
+  max-width: var(--article-width);
+  margin: 0 auto;
+  padding: 2rem 1.25rem 6rem;
+}
+
+.article h1,
+.article h2,
+.article h3 {
+  font-family: var(--heading-font);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.article h1 {
+  font-size: 2.5rem;
+  margin: 0 0 0.5rem;
+}
+.article h2 {
+  font-size: 1.5rem;
+  margin: 3rem 0 1rem;
+}
+.article h3 {
+  font-size: 1.15rem;
+  margin: 2rem 0 0.75rem;
+}
+
+.article p {
+  margin: 0 0 1rem;
+}
+
+.article a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.article code {
+  font-family: var(--mono-font);
+  font-size: 0.9em;
+  background: var(--accent-light);
+  padding: 0 0.3em;
+  border-radius: 3px;
+}
+
+.article pre {
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1rem;
+  overflow-x: auto;
+  font-family: var(--mono-font);
+  font-size: 0.9rem;
+}
+.article pre code {
+  background: none;
+  padding: 0;
+}
+
+.article blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: var(--text-2);
+}
+
+.lede {
+  font-family: var(--heading-font);
+  font-size: 1.15rem;
+  color: var(--text-2);
+  margin: 0 0 2rem;
+}
+
+/* Figures ------------------------------------------------------------ */
+
+.figure {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+
+.figure-wide {
+  margin-left: -2rem;
+  margin-right: -2rem;
+}
+
+.figure-hovered {
+  border-color: var(--accent);
+}
+
+.figure-pinned {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+.figure-caption {
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  color: var(--text-2);
+  margin-top: 0.75rem;
+}
+.figure-caption p {
+  margin: 0;
+}
+
+/* Figure title: a leading heading inside the :::figure directive renders
+   above the figure. Whatever heading level the author wrote, it displays
+   at one consistent size — the level carries no meaning inside a figure. */
+.figure-title :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--heading-font);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 0.75rem;
+}
+
+/* Interaction hint under a figure's canvas, above the caption. */
+.figure-hint {
+  font-family: var(--heading-font);
+  font-size: 0.75rem;
+  color: var(--text-2);
+  margin: 0.35rem 0 0;
+  opacity: 0.8;
+}
+
+.figure-missing {
+  background: var(--error-bg);
+  border-color: var(--error-border);
+  color: var(--error);
+}
+
+/* Inline term button ------------------------------------------------- */
+
+.term {
+  font: inherit;
+  color: var(--accent);
+  background: transparent;
+  border: none;
+  border-bottom: 1px dotted var(--accent);
+  padding: 0 1px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  border-radius: 2px;
+}
+.term:hover,
+.term-hovered {
+  background: var(--accent-light);
+}
+.term-pinned {
+  background: var(--accent-light);
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+}
+.term-static {
+  color: var(--text);
+  border-bottom: 1px dotted var(--text-2);
+  cursor: default;
+}
+.term:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Inline visualization ----------------------------------------------- */
+
+.inline-viz {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 0.2rem;
+  line-height: 0;
+}
+
+.inline-viz-missing {
+  color: var(--error);
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 0.85em;
+  line-height: normal;
+}
+
+/* Series index cards ------------------------------------------------- */
+
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.article a.card,
+.article a.card:hover {
+  text-decoration: none;
+  color: inherit;
+}
+
+.card {
+  display: block;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.25rem 1.5rem;
+  transition: border-color 0.15s;
+}
+.card:hover {
+  border-color: var(--accent);
+}
+
+.card-number {
+  font-family: var(--mono-font);
+  font-size: 0.8rem;
+  color: var(--text-2);
+}
+.card-title {
+  font-family: var(--heading-font);
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+}
+.card-desc {
+  font-size: 0.95rem;
+  color: var(--text-2);
+  margin: 0;
+}
+.card-tags {
+  font-family: var(--heading-font);
+  font-size: 0.75rem;
+  color: var(--accent);
+  margin-top: 0.6rem;
+}
+
+/* Footer ------------------------------------------------------------- */
+
+.article-footer {
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.article-footer a {
+  color: var(--text-2);
+}
+.article-footer p {
+  margin: 0 0 0.5rem;
+}
+
+/* Moonshine attribution -------------------------------------------- */
+
+.moonshine-footer {
+  margin-top: 4rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  font-family: var(--heading-font);
+  font-size: 0.8rem;
+  color: var(--text-2);
+}
+.moonshine-footer p {
+  margin: 0;
+}
+.article .moonshine-footer a {
+  color: var(--text-2);
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+}
+.article .moonshine-footer a:hover {
+  text-decoration-color: var(--text-2);
+}
+
+@media (max-width: 640px) {
+  .article h1 {
+    font-size: 1.75rem;
+  }
+  .figure-wide {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+/* In-place markdown editor (dev only) ------------------------------------
+   These styles only ever apply when the EditContext is enabled, i.e. under
+   `npm run dev`. A production build never adds the `mn-block`/`mn-edit`
+   classes, so this block is inert in static exports. */
+
+/* A whisper of an affordance on plain hover (dev only — the mn-block
+   class is never added in static builds): a faint left rule says "this
+   block can be edited" without suggesting a click does anything yet.
+   Innermost block only, mirroring the armed rule below. */
+.mn-block {
+  /* Anchors the absolutely-positioned unaddressed-comment badge. */
+  position: relative;
+  border-radius: 4px;
+  transition: background 0.12s, box-shadow 0.12s;
+}
+.mn-block:hover:not(:has(.mn-block:hover)) {
+  box-shadow: -0.6rem 0 0 0 var(--border);
+}
+
+/* Reveal block boundaries only while Cmd/Ctrl is held ("armed"), so the
+   page reads as normal prose until the author signals intent to edit. */
+.mn-block-armed {
+  cursor: pointer;
+}
+/* Highlight only the innermost armed block under the cursor — :hover also
+   matches ancestors (the ul around a hovered li), but the click opens the
+   innermost block, so the outline should agree with what will happen. */
+.mn-block-armed:hover:not(:has(.mn-block-armed:hover)) {
+  background: var(--accent-light);
+  /* A left rule marks where this editable block begins and ends. */
+  box-shadow: -0.6rem 0 0 0 var(--accent), inset 0.15rem 0 0 0 var(--accent);
+}
+
+/* Badge in the right margin of a block that has unaddressed comments.
+   Clicking it opens the authorship HUD where the comment text lives. */
+.mn-block-comments {
+  position: absolute;
+  top: 0;
+  right: -2.4rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  cursor: pointer;
+  opacity: 0.65;
+  user-select: none;
+}
+.mn-block-comments:hover,
+.mn-block-comments:focus-visible {
+  opacity: 1;
+}
+.mn-block-comments-count {
+  font-family: var(--heading-font);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  padding: 0 0.3rem;
+  margin-left: 0.15rem;
+  vertical-align: top;
+}
+
+.mn-edit {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  position: relative;
+  margin: 0 0 1rem;
+}
+
+.mn-edit-textarea {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--mono-font);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--fig-bg);
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  padding: 0.7rem 0.85rem;
+  resize: none;
+  overflow: hidden;
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+.mn-edit-textarea:focus {
+  outline: none;
+}
+
+/* Field editor (title/lede from frontmatter) borrows the heading font so
+   the edit surface echoes what it replaces. */
+.mn-edit-field .mn-edit-textarea {
+  font-family: var(--heading-font);
+  font-size: 1.25rem;
+}
+
+/* Controls sit in a column to the right of the editing box (not floating
+   above the text). Done on top, then the move buttons, then the hint. */
+.mn-edit-bar {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+
+.mn-edit-done {
+  font-family: var(--heading-font);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 4px;
+  padding: 0.2rem 0.7rem;
+  cursor: pointer;
+}
+.mn-edit-done:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.mn-edit-hint {
+  font-family: var(--mono-font);
+  font-size: 0.72rem;
+  color: var(--text-2);
+}
+
+/* Dev-only edit chrome: hint pill, undo toast, draft recovery -------- */
+
+.mn-chrome {
+  font-family: var(--heading-font);
+  font-size: 0.8rem;
+  color: var(--text-2);
+}
+
+.mn-hint-pill,
+.mn-undo-toast {
+  position: fixed;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  z-index: 40;
+}
+
+.mn-hint-pill {
+  bottom: 1rem;
+}
+
+.mn-hint-pill kbd {
+  font-family: var(--mono-font);
+  font-size: 0.75em;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 0.25em;
+  background: var(--bg);
+}
+
+.mn-hint-pill button {
+  font: inherit;
+  border: none;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+  padding: 0 0.1rem;
+  line-height: 1;
+}
+
+/* Bottom-center so it never stacks with the hint pill or the HUD, which
+   both live in the bottom-right corner. */
+.mn-undo-toast {
+  bottom: 1rem;
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.mn-undo-toast button {
+  font: inherit;
+  font-weight: 600;
+  border: none;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+}
+
+.mn-draft-recovery {
+  position: fixed;
+  right: 1rem;
+  bottom: 6rem;
+  width: min(26rem, calc(100vw - 2rem));
+  background: var(--fig-bg);
+  border: 1px solid var(--error-border);
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  z-index: 41;
+}
+
+.mn-draft-recovery p {
+  margin: 0 0 0.5rem;
+  color: var(--error);
+}
+
+.mn-draft-recovery textarea {
+  width: 100%;
+  font-family: var(--mono-font);
+  font-size: 0.8rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.4rem;
+  resize: vertical;
+}
+
+.mn-draft-recovery-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.mn-draft-recovery-actions button {
+  font: inherit;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0.15rem 0.7rem;
+  cursor: pointer;
+}
+
+/* Dev-only figure knob panel ------------------------------------------ */
+
+/* Visually a tool, not content: tinted background + dashed border set
+   the panel apart from the figure canvas above and the caption below,
+   so it can't read as part of the article. */
+.mn-knobs {
+  font-family: var(--heading-font);
+  font-size: 0.8rem;
+  color: var(--text-2);
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.8rem;
+}
+
+.mn-knobs-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+
+.mn-knobs-title code {
+  background: none;
+  padding: 0;
+}
+
+.mn-knobs-title button {
+  font: inherit;
+  border: none;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.mn-knob {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.25rem 0;
+}
+
+.mn-knob-name {
+  font-family: var(--mono-font);
+  font-size: 0.75rem;
+  min-width: 5.5rem;
+}
+
+.mn-knob input[type='range'] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.mn-knob input[type='number'],
+.mn-knob input[type='text'] {
+  font-family: var(--mono-font);
+  font-size: 0.75rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.15rem 0.35rem;
+}
+
+.mn-knob input[type='number'] {
+  width: 5.5rem;
+}
+
+.mn-knobs-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.mn-knobs-actions button {
+  font: inherit;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0.15rem 0.7rem;
+  cursor: pointer;
+}
+
+.mn-knobs-actions button:first-child {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.mn-knobs-empty {
+  margin: 0;
+}
+
+/* Dev-only diagram arrange bar ---------------------------------------- */
+
+.mn-diagram-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--heading-font);
+  font-size: 0.75rem;
+  color: var(--text-2);
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.6rem;
+}
+
+.mn-diagram-bar button {
+  font: inherit;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0.1rem 0.6rem;
+  cursor: pointer;
+}
+
+.mn-diagram-bar button:first-of-type {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Dev-only hint that a figure has an edit affordance: a faint pencil
+   fades in on hover, top-right. Distinct from the term-highlight states
+   (.figure-hovered/.figure-pinned), which color the border instead. */
+.mn-editable-figure {
+  position: relative;
+}
+.mn-editable-figure::after {
+  content: '✎';
+  position: absolute;
+  top: 0.4rem;
+  right: 0.6rem;
+  font-family: var(--heading-font);
+  font-size: 0.8rem;
+  color: var(--text-2);
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+.mn-editable-figure:hover::after {
+  opacity: 0.45;
+}
+
+/* Block reordering (dev only): up/down buttons in the editor + knob
+   panels, and the Cmd-drag drop indicator. Appended after the knob panel
+   section so .mn-edit-move buttons keep their box inside .mn-knobs-title
+   (which otherwise restyles descendant buttons). */
+
+.mn-edit-move {
+  display: flex;
+  gap: 0.25rem;
+}
+.mn-edit-move button {
+  font-family: var(--heading-font);
+  font-size: 0.9rem;
+  line-height: 1;
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--fig-bg);
+  color: var(--text);
+  cursor: pointer;
+}
+.mn-edit-move button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.mn-edit-move button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Knob-panel title can hold the move buttons next to the close ×. */
+.mn-knobs-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* The block being Cmd-dragged is lifted out of the flow visually. */
+.mn-dragging {
+  opacity: 0.4;
+}
+
+/* Suppress selection and signal the drag while reordering. */
+body.mn-reordering {
+  user-select: none;
+  cursor: grabbing;
+}
+
+/* Drop line shown at the gap the dragged block will land in. */
+.mn-drop-indicator {
+  position: fixed;
+  height: 0;
+  border-top: 2px solid var(--accent);
+  border-radius: 1px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+/* Authorship feedback: comment affordance, comment box, HUD ----------- */
+
+/* The 💬 button living inside the prose source editor and figure knob
+   panels — the in-edit-mode entry point to commenting. */
+.mn-edit-comment {
+  font: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0 0.2rem;
+  line-height: 1;
+  filter: grayscale(0.3);
+}
+.mn-edit-comment:hover {
+  filter: none;
+}
+
+/* Floating comment composer, above the HUD at the bottom-right. */
+.mn-comment-box {
+  position: fixed;
+  right: 1rem;
+  bottom: 7.5rem;
+  width: min(24rem, calc(100vw - 2rem));
+  background: var(--fig-bg);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.7rem 0.85rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+  z-index: 42;
+}
+.mn-comment-box-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+.mn-comment-box-head button {
+  font: inherit;
+  border: none;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+  line-height: 1;
+}
+.mn-comment-excerpt {
+  margin: 0 0 0.5rem;
+  padding: 0.3rem 0.5rem;
+  font-family: var(--mono-font);
+  font-size: 0.75rem;
+  color: var(--text-2);
+  background: var(--bg);
+  border-left: 2px solid var(--border);
+  border-radius: 3px;
+}
+.mn-comment-textarea {
+  width: 100%;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.4rem;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.mn-comment-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
+.mn-comment-hint {
+  font-family: var(--mono-font);
+  font-size: 0.7rem;
+  color: var(--text-2);
+}
+.mn-comment-actions button {
+  font: inherit;
+  font-weight: 600;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: 4px;
+  padding: 0.2rem 0.8rem;
+  cursor: pointer;
+}
+.mn-comment-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* The authorship HUD: a collapsible status panel pinned bottom-right,
+   raised above the edit-hint pill (which sits at bottom: 1rem). */
+.mn-hud {
+  position: fixed;
+  right: 1rem;
+  bottom: 3.2rem;
+  width: max-content;
+  max-width: min(26rem, calc(100vw - 2rem));
+  z-index: 41;
+}
+.mn-hud-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--text-2);
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+}
+.mn-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  flex: none;
+  background: var(--text-2);
+}
+.mn-dot-live {
+  background: #2e9e5b;
+  box-shadow: 0 0 0 3px rgba(46, 158, 91, 0.2);
+}
+.mn-dot-paused {
+  background: #d6a13a;
+}
+.mn-dot-off {
+  background: var(--border);
+}
+/* Hook armed: an adapter is installed and will act, but nothing is live-
+   listening right now — a hollow accent ring rather than a filled dot. */
+.mn-dot-armed {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.mn-hud-label {
+  white-space: nowrap;
+}
+.mn-hud-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 999px;
+  padding: 0 0.4rem;
+  min-width: 1.1rem;
+  text-align: center;
+}
+.mn-hud-caret {
+  margin-left: auto;
+  color: var(--text-2);
+}
+.mn-hud-body {
+  margin-top: 0.5rem;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.7rem 0.85rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  font-size: 0.8rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.mn-hud-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.mn-hud-controls button {
+  font: inherit;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0.2rem 0.7rem;
+  cursor: pointer;
+}
+.mn-hud-auto {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-2);
+  cursor: pointer;
+  user-select: none;
+}
+.mn-hud-address-panel {
+  margin-bottom: 0.6rem;
+}
+.mn-hud-address {
+  font: inherit;
+  font-weight: 700;
+  width: 100%;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: 5px;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+}
+.mn-hud-address:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.mn-hud-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+.mn-hud-prompt-label {
+  color: var(--text-2);
+}
+.mn-hud-prompt code {
+  flex: 1 1 100%;
+  font-family: var(--mono-font);
+  font-size: 0.72rem;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  padding: 0.25rem 0.4rem;
+  user-select: all;
+}
+.mn-hud-prompt button {
+  font: inherit;
+  font-size: 0.72rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0.1rem 0.5rem;
+  cursor: pointer;
+}
+.mn-hud-note {
+  margin: 0 0 0.4rem;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+.mn-hud-section {
+  margin: 0.6rem 0 0.3rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+}
+.mn-hud-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.mn-hud-item {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0.4rem 0.5rem;
+}
+.mn-hud-item-addressed {
+  opacity: 0.8;
+}
+.mn-hud-item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.mn-hud-item-where {
+  font-family: var(--mono-font);
+  font-size: 0.7rem;
+  color: var(--accent);
+}
+.mn-hud-item-head button {
+  font: inherit;
+  border: none;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+  line-height: 1;
+}
+.mn-hud-item-text {
+  margin: 0.2rem 0 0;
+  color: var(--text);
+}
+.mn-hud-item-reply {
+  margin: 0.3rem 0 0;
+  color: var(--text-2);
+  border-left: 2px solid var(--accent);
+  padding-left: 0.4rem;
+}
+.mn-hud-item-tag {
+  font-size: 0.7rem;
+  color: var(--text-2);
+  font-style: italic;
+}
+
+/* ==================================================================
+   Taxonomy-map article figures (ported from the shine original).
+   The scrollytelling tour, the age player, and the explorer.
+   ================================================================== */
+
+.figure-label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Shared figure controls (age player + explorer) */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.controls input[type='range'] {
+  width: 160px;
+  accent-color: var(--accent);
+}
+.controls button {
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--fig-bg);
+  color: var(--text);
+  cursor: pointer;
+}
+.controls button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---- Figure 1: the scrollytelling tour ---- */
+/* Breaks out of the 740px article column to give the sticky map and the
+   story cards room to sit side by side. */
+.scrolly-tour {
+  width: min(1100px, calc(100vw - 2rem));
+  margin-left: 50%;
+  transform: translateX(-50%);
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+.tour {
+  display: flex;
+  gap: 2.5rem;
+  align-items: flex-start;
+}
+.tour-figure {
+  position: sticky;
+  top: 1.5rem;
+  flex: 1.35;
+  height: fit-content;
+}
+.tour-figure .figure {
+  margin: 0;
+}
+.tour-canvas-wrap {
+  position: relative;
+}
+.tour-steps {
+  flex: 1;
+}
+.tour-step {
+  min-height: 78vh;
+  display: flex;
+  align-items: center;
+}
+.tour-step .step-text {
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.1rem 1.3rem;
+  font-size: 1.02rem;
+  opacity: 0.45;
+  transition: opacity 0.3s;
+}
+.tour-step.active .step-text {
+  opacity: 1;
+  box-shadow: 0 1px 4px rgba(26, 26, 46, 0.07);
+}
+.tour-step .step-text > :last-child {
+  margin-bottom: 0;
+}
+/* The story cards hold editable body prose; keep the dev edit affordance
+   from stretching the paragraphs. */
+.tour-step .step-text p {
+  margin: 0 0 0.8rem;
+}
+
+@media (max-width: 880px) {
+  .tour {
+    flex-direction: column;
+    gap: 0;
+  }
+  .tour-figure {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    z-index: 2;
+    background: var(--bg);
+    padding-bottom: 0.5rem;
+  }
+  .tour-step {
+    min-height: 60vh;
+  }
+}
+
+/* ---- Figure 2: the age player ---- */
+.age-map .age-canvas-wrap {
+  position: relative;
+}
+.age-readout {
+  font-family: var(--mono-font);
+  min-width: 15em;
+  display: inline-block;
+}
+.age-bars {
+  display: block;
+  width: 100%;
+  height: 74px;
+  margin-top: 0.5rem;
+}
+
+/* ---- Figure 3: the explorer ---- */
+#explorer.figure-wide {
+  width: min(1180px, calc(100vw - 2rem));
+  max-width: none;
+  margin-left: 50%;
+  margin-right: 0;
+  transform: translateX(-50%);
+}
+.age-brush-control {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.age-brush {
+  display: block;
+  width: 250px;
+  height: 42px;
+  overflow: visible;
+  touch-action: none;
+}
+.age-brush-track {
+  stroke: var(--border);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+.age-brush-tick {
+  stroke: var(--text-2);
+  stroke-width: 1;
+  opacity: 0.45;
+}
+.age-brush-label {
+  fill: var(--text-2);
+  font-family: var(--mono-font);
+  font-size: 9px;
+}
+.age-brush .selection {
+  fill: var(--accent-light);
+  fill-opacity: 0.8;
+  stroke: var(--accent);
+}
+.age-brush .handle {
+  fill: var(--accent);
+  rx: 2;
+  outline: none;
+}
+.age-brush .handle:focus-visible {
+  stroke: var(--text);
+  stroke-width: 2;
+}
+.ex-age-readout {
+  min-width: 3.5em;
+  font-family: var(--mono-font);
+}
+.explorer-body {
+  display: flex;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+.explorer-map {
+  flex: 1.6;
+  position: relative;
+  min-width: 0;
+}
+.explorer-map canvas,
+.ex-canvas-wrap canvas {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: crosshair;
+}
+.explorer-panel {
+  flex: 1;
+  min-width: 240px;
+  max-width: 330px;
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  overflow-y: auto;
+  max-height: 620px;
+  padding-right: 0.25rem;
+}
+.explorer-panel h4 {
+  font-size: 1.02rem;
+  margin: 0 0 0.15rem;
+  line-height: 1.25;
+}
+.explorer-panel .sub {
+  color: var(--text-2);
+  font-size: 0.78rem;
+  margin-bottom: 0.5rem;
+}
+.explorer-panel .desc {
+  font-family: var(--body-font);
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--text);
+  margin-bottom: 0.9rem;
+}
+.explorer-panel h5 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+  margin: 0.9rem 0 0.35rem;
+}
+.link-item {
+  padding: 0.35rem 0.5rem;
+  border-left: 2px solid var(--border);
+  margin-bottom: 0.3rem;
+  cursor: pointer;
+  border-radius: 0 3px 3px 0;
+}
+.link-item:hover {
+  background: var(--accent-light);
+}
+.link-item .li-name {
+  font-weight: 600;
+}
+.link-item .li-reason {
+  color: var(--text-2);
+  font-size: 0.76rem;
+  line-height: 1.35;
+  margin-top: 0.1rem;
+}
+.link-item .li-tag {
+  font-family: var(--mono-font);
+  font-size: 0.66rem;
+  color: var(--text-2);
+  margin-left: 0.3rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.chip {
+  font-family: var(--heading-font);
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+  background: var(--fig-bg);
+}
+.chip.off {
+  opacity: 0.35;
+}
+.chip .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.3rem;
+}
+
+.explorer .search-wrap {
+  position: relative;
+}
+.explorer .search-wrap input[type='text'] {
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  width: 220px;
+  background: var(--fig-bg);
+  color: var(--text);
+}
+.search-results {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  z-index: 10;
+  width: 300px;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(26, 26, 46, 0.12);
+  display: none;
+}
+.search-results div {
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+.search-results div:hover {
+  background: var(--accent-light);
+}
+.search-results .sr-sub {
+  color: var(--text-2);
+  font-size: 0.72rem;
+}
+
+.explorer .tip,
+.age-map .tip {
+  position: fixed;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 20;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  box-shadow: 0 4px 14px rgba(26, 26, 46, 0.14);
+  padding: 0.55rem 0.7rem;
+  font-family: var(--heading-font);
+  font-size: 0.8rem;
+  max-width: 280px;
+  line-height: 1.4;
+}
+.explorer .tip .tip-name,
+.age-map .tip .tip-name {
+  font-weight: 700;
+}
+.explorer .tip .tip-sub,
+.age-map .tip .tip-sub {
+  color: var(--text-2);
+  font-size: 0.72rem;
+  margin-bottom: 0.2rem;
+}
+.explorer .tip .tip-desc,
+.age-map .tip .tip-desc {
+  font-family: var(--body-font);
+  font-size: 0.76rem;
+  color: var(--text-2);
+}
+
+@media (max-width: 880px) {
+  #explorer.figure-wide {
+    width: auto;
+    margin-left: -1rem;
+    margin-right: -1rem;
+    transform: none;
+  }
+  .age-brush-control {
+    width: 100%;
+  }
+  .age-brush {
+    flex: 1;
+    min-width: 180px;
+  }
+  .explorer-body {
+    flex-direction: column;
+  }
+  .explorer-panel {
+    max-width: none;
+    max-height: 300px;
+  }
+}

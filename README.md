@@ -6,6 +6,9 @@
 
 ### 🌕 [See examples at enjalot.github.io/moonshine](https://enjalot.github.io/moonshine/)
 
+Source-backed still example: [A Map of What Children Learn](https://enjalot.github.io/moonshine/os-taxonomy-map/)
+([source](examples/os-taxonomy-map/)).
+
 AI tools generate complexity faster than people can consume it. Inspired by [Distill.pub](https://distill.pub), moonshine helps apply distillation to the flood of technical output, turning complex ideas into explorable, visual, interactive articles.
 
 Moonshine starts with story discovery — concept, audience, the one insight the reader should walk away with — before it writes any code, and renders the article on one of two substrates:
