@@ -2,7 +2,12 @@
 
 import os
 import secrets
+import time
 from urllib.parse import urlencode
+
+
+TOKEN_READ_ATTEMPTS = 50
+TOKEN_READ_DELAY_SEC = 0.02
 
 
 def _read_token(path):
@@ -11,6 +16,18 @@ def _read_token(path):
     if not token:
         raise RuntimeError(f"control token file is empty: {path}")
     return token
+
+
+def _read_token_when_ready(path):
+    """Read a token that another process may still be writing."""
+
+    for attempt in range(TOKEN_READ_ATTEMPTS):
+        try:
+            return _read_token(path)
+        except RuntimeError:
+            if attempt == TOKEN_READ_ATTEMPTS - 1:
+                raise
+            time.sleep(TOKEN_READ_DELAY_SEC)
 
 
 def load_or_create_control_token(explicit_token, path, token_factory=None):
@@ -26,7 +43,7 @@ def load_or_create_control_token(explicit_token, path, token_factory=None):
         return explicit_token, "environment"
 
     try:
-        return _read_token(path), "file"
+        return _read_token_when_ready(path), "file"
     except FileNotFoundError:
         pass
 
@@ -37,7 +54,7 @@ def load_or_create_control_token(explicit_token, path, token_factory=None):
     try:
         fd = os.open(path, flags, 0o600)
     except FileExistsError:
-        return _read_token(path), "file"
+        return _read_token_when_ready(path), "file"
 
     with os.fdopen(fd, "w", encoding="utf-8") as token_file:
         token_file.write(token + "\n")

@@ -2,6 +2,7 @@ import os
 import stat
 import tempfile
 import unittest
+from unittest import mock
 
 from control_token import control_url, load_or_create_control_token
 
@@ -32,8 +33,31 @@ class ControlTokenTest(unittest.TestCase):
             path = os.path.join(root, "control-token")
             with open(path, "w", encoding="utf-8"):
                 pass
-            with self.assertRaisesRegex(RuntimeError, "control token file is empty"):
-                load_or_create_control_token(None, path)
+            with mock.patch("control_token.time.sleep"):
+                with self.assertRaisesRegex(RuntimeError, "control token file is empty"):
+                    load_or_create_control_token(None, path)
+
+    def test_exclusive_create_loser_waits_for_winner_to_write(self):
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "control-token")
+
+            def lose_create_race(*_args):
+                with open(path, "w", encoding="utf-8"):
+                    pass
+                raise FileExistsError(path)
+
+            def finish_winner(_delay):
+                with open(path, "w", encoding="utf-8") as token_file:
+                    token_file.write("winner-token\n")
+
+            with mock.patch("control_token.os.open", side_effect=lose_create_race):
+                with mock.patch("control_token.time.sleep", side_effect=finish_winner) as sleep:
+                    token, source = load_or_create_control_token(
+                        None, path, token_factory=lambda: "loser-token"
+                    )
+
+            self.assertEqual((token, source), ("winner-token", "file"))
+            sleep.assert_called_once()
 
     def test_control_url_encodes_the_token(self):
         self.assertEqual(
