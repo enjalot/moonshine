@@ -292,8 +292,8 @@ Two independent gates:
 |---|---|---|---|
 | flag off | (routes 404) | not mounted | absent |
 | flag on, no `adapter.json` | `harness:null` | "⚪ no agent connected" | **writable** |
-| adapter present, no live listener | `harness:"x", alive:false` | "◯ x · hook armed" + Address | writable |
-| address requested, not yet consumed | `addressRequestedAt` set | "🟡 x · address queued" + example prompt | writable |
+| adapter present, no live listener | `harness:"x", alive:false` | "◯ agent · ready" + Address | writable |
+| address requested, not yet consumed | `addressRequestedAt` set | "🟡 agent · address queued" + example prompt | writable |
 | adapter + fresh heartbeat | `alive:true, mode` | "🟢 listening" / "⏸ paused" | writable |
 
 Because comments are plain files, they are **never lost on an unsupported or

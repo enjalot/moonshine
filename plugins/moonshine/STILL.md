@@ -411,16 +411,18 @@ page — no jumping back to the `.md` file for small wording changes.
   textarea showing its *raw markdown* — directives like
   `:term[word]{to=fig}` and `:inline-viz{kind=…}` appear as source, so
   you edit exactly what's on disk.
-- **Cmd/Ctrl+Enter** (or the **Done** button, which sits in a control
-  column to the right of the editing box) writes the change back to the
-  `.md` file; **Esc** cancels.
+- **Cmd/Ctrl+Enter** (or the **✓** save button, which sits in a floating
+  control rail to the right of the editing box) writes the change back
+  to the `.md` file; **Esc** cancels.
 - **Reorder sections and figures.** Cmd/Ctrl+drag any block up or down to
   move it; a drop line shows where it will land, and releasing rewrites
-  the markdown. The open editor (and a figure's knob panel) also carry
-  **↑ / ↓** buttons next to Done that move the block one step. Both act on
-  whole top-level blocks — a paragraph, a heading, a `:::figure`, a `$$`
-  math block — so editing a caption and pressing ↓ moves the whole
-  figure. Up/down folds in any unsaved textarea edit before moving.
+  the markdown, then the moved blocks settle smoothly into their new
+  positions (respecting reduced-motion preferences). The open editor (and a
+  figure's knob panel) also carry **↑ / ↓** buttons that move the block
+  one step. Both act on whole top-level blocks — a paragraph, a heading,
+  a `:::figure`, a `$$` math block — so editing a caption and pressing ↓
+  moves the whole figure. Up/down folds in any unsaved textarea edit
+  before moving.
 - A dismissable pill in the corner teaches the gesture; after each body
   save a transient **Undo** toast can restore the previous text (through
   the same conflict-checked save path). Title/lede and figure-layout
