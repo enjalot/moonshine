@@ -1,0 +1,30 @@
+{
+  "figure": "still-pipeline",
+  "layout": {
+    "markdown": {
+      "x": 112,
+      "y": 90
+    },
+    "directive": {
+      "x": 173,
+      "y": 177
+    },
+    "registry": {
+      "x": 382,
+      "y": 207
+    },
+    "component": {
+      "x": 571,
+      "y": 210
+    },
+    "page": {
+      "x": 704,
+      "y": 121
+    }
+  },
+  "viewport": {
+    "x": 3,
+    "y": 1,
+    "zoom": 0.676
+  }
+}

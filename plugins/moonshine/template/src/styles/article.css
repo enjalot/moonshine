@@ -87,6 +87,13 @@
   overflow: hidden;
 }
 
+/* SourceEditor keeps its controls in a right-hand rail. While a figure
+   title or caption is open, let that rail escape the figure's decorative
+   boundary instead of clipping it. */
+.figure:has(.mn-edit) {
+  overflow: visible;
+}
+
 .figure-wide {
   margin-left: -2rem;
   margin-right: -2rem;
@@ -350,16 +357,15 @@
 }
 
 .mn-edit {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
+  display: block;
   position: relative;
   margin: 0 0 1rem;
 }
 
 .mn-edit-textarea {
   display: block;
-  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
   min-width: 0;
   margin: 0;
   font-family: var(--mono-font);
@@ -385,25 +391,32 @@
   font-size: 1.25rem;
 }
 
-/* Controls sit in a column to the right of the editing box (not floating
-   above the text). Done on top, then the move buttons, then the hint. */
+/* The control rail floats in the right margin, so opening the editor never
+   steals width from the block. Save on top, then comment/move, then help. */
 .mn-edit-bar {
-  flex: none;
+  position: absolute;
+  top: 0;
+  left: calc(100% + 0.55rem);
+  z-index: 2;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
   gap: 0.4rem;
+  width: max-content;
 }
 
 .mn-edit-done {
   font-family: var(--heading-font);
-  font-size: 0.8rem;
+  font-size: 1rem;
   font-weight: 700;
+  line-height: 1;
+  width: 1.7rem;
+  height: 1.7rem;
   color: #fff;
   background: var(--accent);
   border: none;
   border-radius: 4px;
-  padding: 0.2rem 0.7rem;
+  padding: 0;
   cursor: pointer;
 }
 .mn-edit-done:disabled {
@@ -412,9 +425,15 @@
 }
 
 .mn-edit-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.08rem;
   font-family: var(--mono-font);
   font-size: 0.72rem;
+  line-height: 1.25;
   color: var(--text-2);
+  white-space: nowrap;
 }
 
 /* Dev-only edit chrome: hint pill, undo toast, draft recovery -------- */
@@ -683,7 +702,14 @@
 
 .mn-edit-move {
   display: flex;
+  flex-direction: column;
   gap: 0.25rem;
+}
+.mn-edit-move-text {
+  flex-direction: column;
+}
+.mn-edit-move-figure {
+  flex-direction: row;
 }
 .mn-edit-move button {
   font-family: var(--heading-font);
@@ -705,6 +731,25 @@
 .mn-edit-move button:disabled {
   opacity: 0.35;
   cursor: default;
+}
+
+/* Reordered blocks first render at an inverse Y offset, then settle into
+   their new document position. */
+.mn-reorder-from {
+  transform: translateY(var(--mn-reorder-delta-y));
+}
+.mn-reorder-settling {
+  position: relative;
+  z-index: 1;
+  transform: translateY(0);
+  transition: transform 240ms cubic-bezier(0.2, 0.75, 0.25, 1);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mn-reorder-settling {
+    transition: none;
+  }
 }
 
 /* Knob-panel title can hold the move buttons next to the close ×. */
@@ -741,10 +786,14 @@ body.mn-reordering {
    panels — the in-edit-mode entry point to commenting. */
 .mn-edit-comment {
   font: inherit;
+  display: grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
   border: none;
   background: none;
   cursor: pointer;
-  padding: 0 0.2rem;
+  padding: 0;
   line-height: 1;
   filter: grayscale(0.3);
 }
@@ -834,15 +883,19 @@ body.mn-reordering {
   position: fixed;
   right: 1rem;
   bottom: 3.2rem;
-  width: max-content;
-  max-width: min(26rem, calc(100vw - 2rem));
+  width: min(26rem, calc(100vw - 2rem));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   z-index: 41;
 }
 .mn-hud-bar {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
+  box-sizing: border-box;
   font: inherit;
   font-size: 0.8rem;
   color: var(--text-2);
@@ -870,7 +923,7 @@ body.mn-reordering {
 .mn-dot-off {
   background: var(--border);
 }
-/* Hook armed: an adapter is installed and will act, but nothing is live-
+/* Adapter ready: one is installed and will act, but nothing is live-
    listening right now — a hollow accent ring rather than a filled dot. */
 .mn-dot-armed {
   background: transparent;
@@ -878,6 +931,8 @@ body.mn-reordering {
 }
 .mn-hud-label {
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .mn-hud-badge {
   font-size: 0.7rem;
@@ -894,6 +949,8 @@ body.mn-reordering {
   color: var(--text-2);
 }
 .mn-hud-body {
+  width: 100%;
+  box-sizing: border-box;
   margin-top: 0.5rem;
   background: var(--fig-bg);
   border: 1px solid var(--border);

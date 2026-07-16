@@ -416,7 +416,7 @@ svg .grid path { stroke: none; }
   <!-- Examples -->
   <h2>Examples</h2>
 
-  <p>Articles built with moonshine. Most are single self-contained HTML files (the <code>shine</code> flavor); Conductor and the curriculum map use <code>still</code>, with React figures and markdown prose. The curriculum map includes its complete source project. See <a href="https://syntagmatic.github.io/moonshine/index.html">syntagmatic's collection</a> for many more examples across different domains.</p>
+  <p>Articles built with moonshine. Most are single self-contained HTML files (the <code>shine</code> flavor); Conductor, the still guide, and the curriculum map use <code>still</code>, with React figures and markdown prose. The guide and curriculum map include their complete source projects. See <a href="https://syntagmatic.github.io/moonshine/index.html">syntagmatic's collection</a> for many more examples across different domains.</p>
 
   <div class="examples-list">
     <a class="example-card" href="sph/index.html">
@@ -454,6 +454,19 @@ svg .grid path { stroke: none; }
         <div class="example-card-tags">embeddings &middot; UMAP &middot; clustering &middot; sparse autoencoders &middot; 5 articles</div>
       </div>
     </a>
+
+    <div class="example-card">
+      <div class="example-thumb" id="guide-thumb"></div>
+      <div>
+        <div class="example-card-title">The Still: Moonshine's Harness</div>
+        <p class="example-card-desc">A self-demonstrating guide to still's authoring loop: edit prose where it renders, tune figures, reorder blocks, arrange diagrams, and route comments back to the agent.</p>
+        <div class="example-card-tags">authoring tools &middot; direct manipulation &middot; feedback loop &middot; built with still</div>
+        <div class="example-card-links">
+          <a href="moonshine-guide/index.html">Read article</a>
+          <a href="https://github.com/enjalot/moonshine/tree/main/examples/moonshine-guide">View source</a>
+        </div>
+      </div>
+    </div>
 
     <div class="example-card">
       <div class="example-thumb" id="taxonomy-thumb"></div>
@@ -962,6 +975,59 @@ svg .grid path { stroke: none; }
     requestAnimationFrame(draw);
   }
   draw();
+})();
+
+// ─── Still guide thumbnail: rendered prose connected to source ───
+(function() {
+  const el = document.getElementById('guide-thumb');
+  if (!el) return;
+  const canvas = document.createElement('canvas');
+  const s = 100, dpr = window.devicePixelRatio || 1;
+  canvas.width = s * dpr; canvas.height = s * dpr;
+  canvas.style.width = s + 'px'; canvas.style.height = s + 'px';
+  el.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, s, s);
+
+  const blocks = [16, 31, 46];
+  blocks.forEach((y, i) => {
+    ctx.fillStyle = i === 1 ? '#dbeafe' : '#ffffff';
+    ctx.strokeStyle = i === 1 ? '#2563eb' : '#cbd5e1';
+    ctx.lineWidth = i === 1 ? 1.5 : 1;
+    ctx.beginPath();
+    ctx.roundRect(10, y, 64, 10, 2);
+    ctx.fill();
+    ctx.stroke();
+  });
+
+  ctx.fillStyle = '#2563eb';
+  ctx.beginPath();
+  ctx.roundRect(79, 31, 12, 12, 3);
+  ctx.fill();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(82, 37);
+  ctx.lineTo(85, 40);
+  ctx.lineTo(89, 34);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(42, 61);
+  ctx.lineTo(42, 72);
+  ctx.lineTo(39, 69);
+  ctx.moveTo(42, 72);
+  ctx.lineTo(45, 69);
+  ctx.stroke();
+
+  ctx.fillStyle = '#1e293b';
+  ctx.font = '8px monospace';
+  ctx.fillText('content/guide.md', 13, 86);
 })();
 
 // ─── Curriculum taxonomy thumbnail: subject continents ───
