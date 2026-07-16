@@ -24,12 +24,12 @@ function statusOf(caps: {
 }): Status {
   if (!caps.harness) return { dot: 'mn-dot-off', label: 'no agent connected' }
   if (caps.alive && caps.mode === 'listen')
-    return { dot: 'mn-dot-live', label: `${caps.harness} · listening` }
+    return { dot: 'mn-dot-live', label: 'agent · listening' }
   if (caps.addressRequestedAt)
-    return { dot: 'mn-dot-paused', label: `${caps.harness} · address queued` }
+    return { dot: 'mn-dot-paused', label: 'agent · address queued' }
   if (caps.alive && caps.mode === 'paused')
-    return { dot: 'mn-dot-paused', label: `${caps.harness} · paused` }
-  return { dot: 'mn-dot-armed', label: `${caps.harness} · hook armed` }
+    return { dot: 'mn-dot-paused', label: 'agent · paused' }
+  return { dot: 'mn-dot-armed', label: 'agent · ready' }
 }
 
 export default function AuthorshipHUD() {
@@ -114,15 +114,14 @@ export default function AuthorshipHUD() {
 
           {autoOn && !caps.alive && caps.harness && (
             <p className="mn-hud-note">
-              Auto is on, but no idle listener is running — comments are picked up when the
-              session is next active. For idle coverage run{' '}
-              <code>/loop /moonshine:moonshine-listen</code>.
+              Auto is on, but no idle listener is running. Comments are picked up when the
+              session is next active; start the adapter's listener for idle coverage.
             </p>
           )}
 
           {!caps.harness && (
             <p className="mn-hud-note">
-              No agent connected yet. Comments are saved and delivered once a harness with the
+              No agent connected yet. Comments are saved and delivered once an agent with the
               moonshine adapter takes a turn.
             </p>
           )}
@@ -190,7 +189,7 @@ function AddressPanel({
           {caps.alive
             ? 'Address requested — the listener picks these up on its next tick (~90s).'
             : caps.harness
-              ? `Address queued — the ${caps.harness} hook delivers these when the authoring session next takes a turn. To have them handled right away, send that session a message:`
+              ? 'Address queued — the agent adapter delivers these when the authoring session next takes a turn. To have them handled right away, send that session a message:'
               : 'Address queued — delivered once an agent connects.'}
         </p>
       )}

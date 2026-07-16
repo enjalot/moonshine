@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkDirective from 'remark-directive'
 import remarkGfm from 'remark-gfm'
@@ -17,8 +17,10 @@ import EditableField from './EditableField'
 import EditChrome from './EditChrome'
 import BlockReorderLayer from './BlockReorderLayer'
 import MoonshineFooter from './MoonshineFooter'
-import { EditProvider } from '../lib/EditContext'
+import { EditProvider, fnv1a } from '../lib/EditContext'
 import { FeedbackProvider } from '../lib/FeedbackContext'
+import { topLevelBlocks } from '../lib/blocks'
+import { animateVerticalReorder } from '../lib/reorderTransition'
 import type { ArticleData } from '../lib/types'
 
 type Props = {
@@ -36,9 +38,82 @@ const editableComponents = Object.fromEntries(
   ),
 )
 
+// Keep the DOM/block correspondence in sync with BlockReorderLayer. These
+// are the article children that represent markdown top-level blocks.
+function bodyBlockElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.children).filter((el) => {
+    const tag = el.tagName.toLowerCase()
+    if (tag === 'header' || tag === 'footer') return false
+    if (el.hasAttribute('data-footnotes')) return false
+    return !(
+      el.classList.contains('mn-chrome') ||
+      el.classList.contains('mn-drop-indicator')
+    )
+  }) as HTMLElement[]
+}
+
+// Hash source slices rather than DOM text so the same block keeps its key
+// after moving. The occurrence suffix makes duplicate blocks unambiguous.
+function blockKeys(body: string): string[] {
+  const seen = new Map<string, number>()
+  return topLevelBlocks(body).map((block) => {
+    const hash = fnv1a(body.slice(block.start, block.end))
+    const occurrence = seen.get(hash) ?? 0
+    seen.set(hash, occurrence + 1)
+    return `${hash}:${occurrence}`
+  })
+}
+
+function useArticleReorderTransition(
+  containerRef: RefObject<HTMLElement | null>,
+  body: string,
+) {
+  const previous = useRef<{
+    keys: string[]
+    tops: Map<string, number>
+  } | null>(null)
+  const stopAnimation = useRef<(() => void) | null>(null)
+
+  useLayoutEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    const keys = blockKeys(body)
+    const els = bodyBlockElements(container)
+    if (keys.length !== els.length) {
+      previous.current = null
+      return
+    }
+
+    const elements = new Map(keys.map((key, i) => [key, els[i]]))
+    const tops = new Map(
+      Array.from(elements, ([key, el]) => [key, el.getBoundingClientRect().top]),
+    )
+    const old = previous.current
+    // A prose edit changes one key in place. A reorder changes the index of
+    // at least one surviving key, so only the latter gets movement chrome.
+    const oldIndex = new Map(old?.keys.map((key, i) => [key, i]) ?? [])
+    const reordered = Boolean(
+      old && keys.some((key, i) => oldIndex.has(key) && oldIndex.get(key) !== i),
+    )
+    if (old && reordered) {
+      stopAnimation.current?.()
+      stopAnimation.current = animateVerticalReorder(elements, old.tops)
+    }
+    previous.current = { keys, tops }
+  }, [body, containerRef])
+
+  useEffect(
+    () => () => {
+      stopAnimation.current?.()
+    },
+    [],
+  )
+}
+
 export default function Article({ article, all }: Props) {
   const clearPinned = useArticleStore((s) => s.clearPinned)
   const articleRef = useRef<HTMLElement>(null)
+  useArticleReorderTransition(articleRef, article.body)
 
   useEffect(() => {
     document.title = article.title

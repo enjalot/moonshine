@@ -107,7 +107,7 @@ export default function FigureKnobs({
         </span>
         <span className="mn-knobs-controls">
           {(onMoveUp || onMoveDown) && (
-            <span className="mn-edit-move">
+            <span className="mn-edit-move mn-edit-move-figure">
               <button
                 type="button"
                 aria-label="Move figure up"

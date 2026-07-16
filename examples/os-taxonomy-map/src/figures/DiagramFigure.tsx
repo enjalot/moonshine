@@ -145,6 +145,9 @@ function DiagramInner({ figureId, nodes: nodeDefs, edges: edgeDefs, height = 280
           zoomOnPinch={arranging}
           zoomOnDoubleClick={false}
           panOnScroll={false}
+          // React Flow defaults to 15; a gentler edge pan keeps a dragged
+          // node from accelerating away from the pointer in a small figure.
+          autoPanSpeed={4}
           preventScrolling={arranging}
           fitView={!baked?.viewport}
           defaultViewport={baked?.viewport}
