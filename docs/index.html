@@ -337,7 +337,7 @@ svg .grid path { stroke: none; }
   <!-- 1. The problem -->
   <p>AI tools help us write code, design systems, and generate documentation faster than ever. They've also created a new problem: the volume of technical output now exceeds our ability to understand it.</p>
 
-  <p>This is cognitive debt. AI-generated modules, auto-documented APIs, and synthesized design docs pile up faster than teammates can parse, review, and reason about them.</p>
+  <p>We are drowning in cognitive debt: AI-generated modules, auto-documented APIs, and synthesized design docs pile up faster than teammates can parse, review, and reason about them.</p>
 
   <p>Inspired by <a href="https://distill.pub">Distill.pub</a> we aim to make it easier to apply distillation to the flood of technical output. We aren't just summarizing, we assist the creative work of finding the right decomposition, the right visualization, the right sequence of ideas that turns complexity into understanding.</p>
 
@@ -419,6 +419,32 @@ svg .grid path { stroke: none; }
   <p>Articles built with moonshine. Most are single self-contained HTML files (the <code>shine</code> flavor); Conductor, the still guide, and the curriculum map use <code>still</code>, with React figures and markdown prose. The guide and curriculum map include their complete source projects. See <a href="https://syntagmatic.github.io/moonshine/index.html">syntagmatic's collection</a> for many more examples across different domains.</p>
 
   <div class="examples-list">
+    <div class="example-card">
+      <div class="example-thumb" id="guide-thumb"></div>
+      <div>
+        <div class="example-card-title">The Still: Moonshine's Harness</div>
+        <p class="example-card-desc">A self-demonstrating guide to still's authoring loop: edit prose where it renders, tune figures, reorder blocks, arrange diagrams, and route comments back to the agent.</p>
+        <div class="example-card-tags">authoring tools &middot; direct manipulation &middot; feedback loop &middot; built with still</div>
+        <div class="example-card-links">
+          <a href="moonshine-guide/index.html">Read article</a>
+          <a href="https://github.com/enjalot/moonshine/tree/main/examples/moonshine-guide">View source</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="example-card">
+      <div class="example-thumb" id="taxonomy-thumb"></div>
+      <div>
+        <div class="example-card-title">A Map of What Children Learn</div>
+        <p class="example-card-desc">1,590 school topics arranged by semantic similarity instead of timetable order, with subject continents, age cohorts, and prerequisite paths revealed through three linked views.</p>
+        <div class="example-card-tags">embeddings &middot; UMAP &middot; curriculum taxonomy &middot; built with still</div>
+        <div class="example-card-links">
+          <a href="os-taxonomy-map/index.html">Read article</a>
+          <a href="https://github.com/enjalot/moonshine/tree/main/examples/os-taxonomy-map">View source</a>
+        </div>
+      </div>
+    </div>
+
     <a class="example-card" href="sph/index.html">
       <div class="example-thumb" id="sph-thumb"></div>
       <div>
@@ -455,32 +481,6 @@ svg .grid path { stroke: none; }
       </div>
     </a>
 
-    <div class="example-card">
-      <div class="example-thumb" id="guide-thumb"></div>
-      <div>
-        <div class="example-card-title">The Still: Moonshine's Harness</div>
-        <p class="example-card-desc">A self-demonstrating guide to still's authoring loop: edit prose where it renders, tune figures, reorder blocks, arrange diagrams, and route comments back to the agent.</p>
-        <div class="example-card-tags">authoring tools &middot; direct manipulation &middot; feedback loop &middot; built with still</div>
-        <div class="example-card-links">
-          <a href="moonshine-guide/index.html">Read article</a>
-          <a href="https://github.com/enjalot/moonshine/tree/main/examples/moonshine-guide">View source</a>
-        </div>
-      </div>
-    </div>
-
-    <div class="example-card">
-      <div class="example-thumb" id="taxonomy-thumb"></div>
-      <div>
-        <div class="example-card-title">A Map of What Children Learn</div>
-        <p class="example-card-desc">1,590 school topics arranged by semantic similarity instead of timetable order, with subject continents, age cohorts, and prerequisite paths revealed through three linked views.</p>
-        <div class="example-card-tags">embeddings &middot; UMAP &middot; curriculum taxonomy &middot; built with still</div>
-        <div class="example-card-links">
-          <a href="os-taxonomy-map/index.html">Read article</a>
-          <a href="https://github.com/enjalot/moonshine/tree/main/examples/os-taxonomy-map">View source</a>
-        </div>
-      </div>
-    </div>
-
     <a class="example-card" href="conductor/index.html">
       <div class="example-thumb" id="conductor-thumb"></div>
       <div>
@@ -508,7 +508,7 @@ svg .grid path { stroke: none; }
   <p style="margin-top: 1.5rem;">Moonshine asks what you're explaining and who the audience is before writing any code. <code>still</code> scaffolds a Vite + React project where the prose stays in markdown and the rendered page is the editing surface: edit blocks in place, tune figure parameters with a knob panel, reorder sections by dragging, and send comments straight back to the authoring agent. <code>shine</code> produces a single self-contained HTML file with D3 — no build tools, open it in a browser and it works. Manual install and development setup are covered in the <a href="https://github.com/enjalot/moonshine">repo README</a>.</p>
 
   <!-- Inspirations -->
-  <h2>Standing On</h2>
+  <h2>Inspiration</h2>
 
   <p><a href="https://distill.pub">Distill.pub</a> articulated why distillation matters in their essay <a href="https://distill.pub/2017/research-debt/">Research Debt</a>, and published some of the best examples of what interactive explanations can be. <a href="https://bost.ocks.org/mike/">Mike Bostock</a> created <a href="https://d3js.org">D3.js</a> and wrote a series of interactive articles that showed how visualization and narrative can work together. <a href="http://worrydream.com/ExplorableExplanations/">Bret Victor</a> imagined explorable explanations. <a href="https://ncase.me/">Nicky Case</a>, <a href="https://ciechanow.ski/">Bartosz Ciechanowski</a>, and <a href="https://pudding.cool/">The Pudding</a> proved the format works across a range of subjects. Moonshine tries to make it practical to build them with AI assistance.</p>
 
