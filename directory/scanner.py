@@ -63,6 +63,7 @@ HTTP_TIMEOUT = 2.0
 BODY_LIMIT = 131072
 RETAIN_DAYS = 7
 PROMPT_PREVIEW_CHARS = 280
+SYSTEM_TOOL_DIRS = ("/usr/bin", "/bin", "/usr/sbin", "/sbin")
 
 SID_RE = re.compile(r"CLAUDE_CODE_SESSION_ID=([0-9a-fA-F][0-9a-fA-F-]{7,})")
 
@@ -72,6 +73,15 @@ def run(cmd, timeout=10):
         return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout).stdout
     except Exception:
         return ""
+
+
+def system_tool(name, search_dirs=SYSTEM_TOOL_DIRS):
+    """Prefer the operating system's binary over a same-named PATH shim."""
+    for directory in search_dirs:
+        candidate = os.path.join(directory, name)
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return name
 
 
 # ---------------------------------------------------------------- process table
@@ -85,7 +95,7 @@ def process_table():
     """pid -> {name, ppid, start?, cmd?} for all visible processes."""
     table = {}
     if IS_MAC:
-        out = run(["ps", "-axww", "-o", "pid=,ppid=,lstart=,command="])
+        out = run([system_tool("ps"), "-axww", "-o", "pid=,ppid=,lstart=,command="])
         for line in out.splitlines():
             m = MAC_PS_RE.match(line)
             if not m:
@@ -143,7 +153,7 @@ def proc_cmdline(pid, table):
 
 def proc_cwd(pid):
     if IS_MAC:
-        out = run(["lsof", "-a", "-p", str(pid), "-d", "cwd", "-Fn"])
+        out = run([system_tool("lsof"), "-a", "-p", str(pid), "-d", "cwd", "-Fn"])
         for line in out.splitlines():
             if line.startswith("n"):
                 return line[1:]
@@ -175,7 +185,7 @@ def unit_map():
     if not IS_MAC:
         return None  # Linux resolves lazily from cgroup, see proc_unit
     units = {}
-    for line in run(["launchctl", "list"]).splitlines()[1:]:
+    for line in run([system_tool("launchctl"), "list"]).splitlines()[1:]:
         parts = line.split("\t")
         if (len(parts) == 3 and parts[0].isdigit()
                 and not parts[2].startswith(("com.apple.", "application."))):
@@ -210,7 +220,7 @@ def list_listeners():
             entry["pid"], entry["proc"] = pid, proc
 
     if IS_MAC:
-        out = run(["lsof", "+c", "0", "-nP", "-iTCP", "-sTCP:LISTEN", "-Fpcn"])
+        out = run([system_tool("lsof"), "+c", "0", "-nP", "-iTCP", "-sTCP:LISTEN", "-Fpcn"])
         pid, proc = None, None
         for line in out.splitlines():
             tag, val = line[:1], line[1:]
@@ -227,7 +237,7 @@ def list_listeners():
                     continue
                 add(port, addr, pid, proc)
     else:
-        out = run(["ss", "-tlnp"])
+        out = run([system_tool("ss"), "-tlnp"])
         for line in out.splitlines()[1:]:
             parts = line.split()
             if len(parts) < 4:
@@ -286,7 +296,7 @@ def session_id_map():
     if not IS_MAC:
         return None
     sids = {}
-    for line in run(["ps", "-axwwE", "-o", "pid=,command="]).splitlines():
+    for line in run([system_tool("ps"), "-axwwE", "-o", "pid=,command="]).splitlines():
         parts = line.split(None, 1)
         if len(parts) < 2 or not parts[0].isdigit():
             continue
@@ -336,7 +346,7 @@ def claude_session_id(claude_pid, kids, sid_map, max_reads=25):
 def tmux_pane_map():
     try:
         out = subprocess.run(
-            ["tmux", "list-panes", "-a", "-F", "#{pane_pid} #{session_name}"],
+            [system_tool("tmux"), "list-panes", "-a", "-F", "#{pane_pid} #{session_name}"],
             capture_output=True, text=True, timeout=5,
         ).stdout
     except Exception:
@@ -652,7 +662,7 @@ def scan():
 
     host = os.uname().nodename.split(".")[0]
     if IS_MAC:
-        host = run(["scutil", "--get", "LocalHostName"]).strip() or host
+        host = run([system_tool("scutil"), "--get", "LocalHostName"]).strip() or host
     return {
         "generated_at": now,
         "host": host,

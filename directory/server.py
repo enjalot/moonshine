@@ -19,17 +19,17 @@ Usage: server.py [PORT]   (default 8600)
 Environment:
   AGENT_ROOT      registry/log location (default ~/.agent)
   MOONSHINE_HOME  article projects dir (default $AGENT_ROOT/moonshine)
-  MOONSHINE_DIRECTORY_TOKEN  stable control token (generated when absent)
+  MOONSHINE_DIRECTORY_TOKEN  optional explicit control token
 
 Dev servers are spawned through a login shell with nvm sourced when
 present, so the node that authored the articles is the node that runs
 them — no machine-specific paths in here.
 """
+import argparse
 import json
 import hmac
 import os
 import re
-import secrets
 import socket
 import subprocess
 import sys
@@ -41,8 +41,24 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlsplit
 
 import scanner
+from control_token import control_url, load_or_create_control_token
 
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8600
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="moonshine directory server")
+    parser.add_argument("port", nargs="?", type=int, default=8600)
+    parser.add_argument(
+        "--control-url",
+        nargs="?",
+        const="127.0.0.1",
+        metavar="HOST",
+        help="print the persisted control URL for HOST and exit",
+    )
+    return parser.parse_args()
+
+
+ARGS = parse_args()
+PORT = ARGS.port
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 AGENT_ROOT = scanner.AGENT_ROOT
 MOONSHINE_HOME = scanner.MOONSHINE_HOME
@@ -53,7 +69,10 @@ MAX_REQUEST_BODY = 64 * 1024
 
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 CONTROL_COOKIE = "moonshine_control"
-CONTROL_TOKEN = os.environ.get("MOONSHINE_DIRECTORY_TOKEN") or secrets.token_urlsafe(24)
+CONTROL_TOKEN_PATH = os.path.join(scanner.OUT_DIR, "control-token")
+CONTROL_TOKEN, CONTROL_TOKEN_SOURCE = load_or_create_control_token(
+    os.environ.get("MOONSHINE_DIRECTORY_TOKEN"), CONTROL_TOKEN_PATH
+)
 
 rescan_now = threading.Event()
 starting_lock = threading.Lock()
@@ -338,13 +357,25 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    if ARGS.control_url:
+        print(control_url(ARGS.control_url, PORT, CONTROL_TOKEN))
+        raise SystemExit(0)
     threading.Thread(target=scan_loop, daemon=True).start()
     handler = partial(Handler, directory=AGENT_ROOT)
     server = ThreadingHTTPServer(("", PORT), handler)
     print(f"moonshine directory on :{PORT} — projects from {MOONSHINE_HOME}", flush=True)
-    print(
-        f"control access: http://127.0.0.1:{PORT}/?token={CONTROL_TOKEN} "
-        "(replace 127.0.0.1 with this machine's LAN host when remote)",
-        flush=True,
-    )
+    if sys.stdout.isatty():
+        print(
+            f"control access: {control_url('127.0.0.1', PORT, CONTROL_TOKEN)} "
+            "(replace 127.0.0.1 with this machine's LAN host when remote)",
+            flush=True,
+        )
+    else:
+        print(
+            f"control access: run {sys.executable} {os.path.abspath(__file__)} "
+            f"{PORT} --control-url [HOST]",
+            flush=True,
+        )
+    if CONTROL_TOKEN_SOURCE == "file":
+        print(f"control token persists at {CONTROL_TOKEN_PATH}", flush=True)
     server.serve_forever()
