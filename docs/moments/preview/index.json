@@ -1,0 +1,249 @@
+{
+ "cell": [
+  160,
+  120
+ ],
+ "grid": 4,
+ "items": [
+  {
+   "key": "00",
+   "title": "Chance You Take",
+   "year": null,
+   "start": 300.3,
+   "end": 360.36,
+   "scene": "The video presents a dramatic sequence of a car's catastrophic failure, transitioning from a repair attempt to a catastrophic accident. Initially, a man in a grey shirt and black trousers is seen kneeling on a dark, textured surface, meticulously working on a car's undercarriage. He is focused on a specific area near the rear wheel, using his hands to manipulate small components. The scene then sh",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/ChanceYouTak.mp4",
+   "iaUrl": "https://archive.org/details/ChanceYouTak"
+  },
+  {
+   "key": "01",
+   "title": "Chevrolet Leader News (Vol. 2, No. 2)",
+   "year": "1936",
+   "start": 300.3,
+   "end": 360.36,
+   "scene": "This black and white film sequence captures a series of travels and preparations in a mid-20th-century setting. Initially, a man in a light-colored suit and hat is seen on a dock next to a dark vintage car, handling a rope. The scene then transitions to a wide shot of a harbor where a dark sedan, carrying a small motorboat on its roof, drives past other parked vehicles and a large boat. The action",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/Chevrole1936_2.mp4",
+   "iaUrl": "https://archive.org/details/Chevrole1936_2"
+  },
+  {
+   "key": "02",
+   "title": "[Chevrolet Sales Convention Musical]",
+   "year": "1954",
+   "start": 540.14,
+   "end": 600.2,
+   "scene": "The video features two women in a brightly lit, vintage-style studio setting. The background is a large, flat surface with a stylized, hand-drawn map of a state, possibly New York, in light blue and tan tones. The first woman, with blonde hair styled in a classic mid-century wave, wears a teal-colored blouse with a large bow at the neck. She is positioned in the center of the frame, speaking direc",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/Chevrole1954.mp4",
+   "iaUrl": "https://archive.org/details/Chevrole1954"
+  },
+  {
+   "key": "03",
+   "title": "Belo Horizonte",
+   "year": "1949",
+   "start": 600.2,
+   "end": 660.26,
+   "scene": "This black-and-white archival footage captures a series of vintage advertisements and scenes from a mid-20th-century city. The video begins with a close-up of a display case filled with various types of cigarette packs, followed by shots of corn on the cob and dried plants. It then transitions to a shop window showcasing a wide variety of glass bottles and jars, likely containing medicinal or cosm",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/BeloHori1949.mp4",
+   "iaUrl": "https://archive.org/details/BeloHori1949"
+  },
+  {
+   "key": "04",
+   "title": "Atom Bomb [Joe Bonica's Movie of the Month]",
+   "year": "1955",
+   "start": 300.067,
+   "end": 360.127,
+   "scene": "This black-and-white archival footage documents the preparation and execution of the Teapot Atom Test in a vast, arid desert environment. The scene begins with a close-up of a man in a light-colored uniform meticulously painting a horizontal line on a concrete wall, likely marking a specific test site. The camera then transitions to a wide shot of a desolate landscape dotted with utility poles and",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/AtomBomb1946.mp4",
+   "iaUrl": "https://archive.org/details/AtomBomb1946"
+  },
+  {
+   "key": "05",
+   "title": "American Cowboy (Part II)",
+   "year": "1950",
+   "start": 480.08,
+   "end": 540.14,
+   "scene": "The video captures a rural agricultural scene set against a backdrop of rolling hills and a prominent, craggy mountain peak under a cloudy sky. The primary focus is a vintage tractor, equipped with a large, curved metal rake attachment, which is being used to collect and transport hay. A man, dressed in a dark jacket and a wide-brimmed hat, operates the tractor, steering it across a field covered ",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/AmericanCowb_2.mp4",
+   "iaUrl": "https://archive.org/details/AmericanCowb_2"
+  },
+  {
+   "key": "06",
+   "title": "Atomic Power at Shippingport (Part I)",
+   "year": "1958",
+   "start": 480.08,
+   "end": 540.14,
+   "scene": "The video presents a technical explanation of a large-scale industrial process, likely related to the development of a jet engine. It begins with a detailed 2D diagram of a cylindrical fuel tank, showing internal components like a fuel nozzle and a pressurized tank connected by pipes. The scene then transitions to a black-and-white industrial setting where a massive, vertical metallic cylinder is ",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/AtomicPo1958.mp4",
+   "iaUrl": "https://archive.org/details/AtomicPo1958"
+  },
+  {
+   "key": "07",
+   "title": "Another Cup Of Coffee",
+   "year": "1948",
+   "start": 480.08,
+   "end": 540.14,
+   "scene": "The scene is set in a cozy, well-lit living room during the day, captured in a classic black-and-white cinematic style. In the foreground, two men are seated on a plush, dark-colored couch. One man, dressed in a light-colored button-down shirt, holds a small baby wrapped in a white cloth. Beside him, a second man in a dark suit and tie is focused on a small notepad and pen, appearing to write or c",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/AnotherCupOf.mp4",
+   "iaUrl": "https://archive.org/details/AnotherCupOf"
+  },
+  {
+   "key": "08",
+   "title": "American Look (Part I)",
+   "year": "1958",
+   "start": 300.3,
+   "end": 360.36,
+   "scene": "The video presents a series of elegantly designed mid-century modern interior settings, transitioning between various rooms and furniture pieces. It begins with a minimalist sideboard featuring a tall vase of dried branches and a patterned wall hanging. The scene then shifts to a stark white room where a classic wooden chair with a curved metal frame is displayed. This is followed by a shot of a v",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/American1958.mp4",
+   "iaUrl": "https://archive.org/details/American1958"
+  },
+  {
+   "key": "09",
+   "title": "Brezhnev (Pt 2)",
+   "year": null,
+   "start": 420.153,
+   "end": 480.214,
+   "scene": "The video captures a series of formal international events, likely from the mid-20th century, featuring various groups of men in dark suits and ties. The setting transitions between a crowded indoor hall where men are seen shaking hands and conversing, a formal meeting room with a long table where officials are seated, and a large, brightly lit assembly hall. In the assembly hall, a massive crowd ",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/BrezhnevB.mp4",
+   "iaUrl": "https://archive.org/details/BrezhnevB"
+  },
+  {
+   "key": "10",
+   "title": "#Bfl O {ggGX = STwWcfl x 2s4 (Calvin Workshop)",
+   "year": "1963",
+   "start": 240.007,
+   "end": 300.067,
+   "scene": "The scene is set in a dimly lit, vintage-style animation studio. A monkey, dressed in a red and orange striped sweater and a dark plaid hat with a white pom-pom, is the central figure. He is seated at a large, complex mechanical typewriter. The studio environment includes a desk with a computer monitor, a keyboard, and various papers. The background features framed pictures on the wall and a large",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/BflOggGX1963.mp4",
+   "iaUrl": "https://archive.org/details/BflOggGX1963"
+  },
+  {
+   "key": "11",
+   "title": "American Look (Part III)",
+   "year": "1958",
+   "start": 360.36,
+   "end": 420.02,
+   "scene": "The scene is set in a spacious, brightly lit interior that appears to be a high-end automotive showroom or a professional design studio. The atmosphere is formal and industrious, characterized by a palette of muted grays, browns, and the vibrant colors of various car paint samples. In the foreground of the initial shot, a dark brown car is partially visible, its polished surface reflecting the ove",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/American1958_3.mp4",
+   "iaUrl": "https://archive.org/details/American1958_3"
+  },
+  {
+   "key": "12",
+   "title": "Mallinckrodt Chemical Comedy",
+   "year": "1935",
+   "start": 300.3,
+   "end": 360.36,
+   "scene": "This black and white archival footage captures a series of scenes from the 1910s, beginning with a shot of a small houseboat on a river. The video then transitions to a narrow alleyway where a man in a light-colored shirt and trousers walks toward the camera, followed by a man in a suit and straw hat. A sign on a brick wall provides a notice to truck drivers about noise and freight. The scene shif",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/1935_comedy_mallinckrodt.mp4",
+   "iaUrl": "https://archive.org/details/1935_comedy_mallinckrodt"
+  },
+  {
+   "key": "13",
+   "title": "Building a Highway",
+   "year": "1948",
+   "start": 360.36,
+   "end": 420.02,
+   "scene": "This black and white historical footage captures a large-scale construction project, likely for a bridge or highway, set in a dusty, open landscape. The scene begins with a massive pile of light-colored gravel or sand. A large, industrial bucket grapple, suspended by a crane labeled \"SPEEDDRANE,\" is used to lift and transport heavy loads of material. The camera follows the grapple as it ascends th",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/Building1948.mp4",
+   "iaUrl": "https://archive.org/details/Building1948"
+  },
+  {
+   "key": "14",
+   "title": "[California Color Film / Golden Gate International Exposition]",
+   "year": "1939",
+   "start": 300.3,
+   "end": 360.36,
+   "scene": "The video captures a festive scene at the Golden Gate Bridge, likely during a historical military parade. Initially, the camera shows a large crowd of people gathered on the bridge, with the iconic suspension cables and towers of the bridge visible in the background. Several individuals are seen wearing military-style uniforms and hats, some holding rifles. A man in a cowboy hat is shown drinking ",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/Californ1939.mp4",
+   "iaUrl": "https://archive.org/details/Californ1939"
+  },
+  {
+   "key": "15",
+   "title": "[California State Fair Highlights]",
+   "year": "1913",
+   "start": 240.24,
+   "end": 300.3,
+   "scene": "This black and white historical footage captures a series of activities at a racetrack, likely during the early 20th century. The scene begins with a high-angle view of a dirt track bordered by a white wooden fence, where several horses and riders are seen galloping at high speeds. The camera then cuts to a group of men dressed in period-appropriate attire, including hats and long coats, who are w",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/Californ1913.mp4",
+   "iaUrl": "https://archive.org/details/Californ1913"
+  },
+  {
+   "key": "16",
+   "title": "Around the Corner",
+   "year": "1937",
+   "start": 360.36,
+   "end": 420.02,
+   "scene": "The video is a black-and-white demonstration of a mechanical gear system, likely from a vintage film. The setting is a studio with a neutral, light-colored background. The primary entities are a person's hands and a complex arrangement of metal gears and wheels mounted on a horizontal metal rod. Initially, the person uses a large wrench to tighten a central gear. As the video progresses, the focus",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/Aroundth1937.mp4",
+   "iaUrl": "https://archive.org/details/Aroundth1937"
+  },
+  {
+   "key": "17",
+   "title": "Alaska's Silver Millions (Part II)",
+   "year": "1936",
+   "start": 540.274,
+   "end": 600.334,
+   "scene": "This black-and-white historical footage captures the intricate and mechanical process of a large-scale industrial beverage production facility. The scene begins with a close-up of a complex assembly of rotating gears, metal components, and a central shaft, which are in constant motion. As the camera pans, it reveals a long, multi-tiered conveyor system where numerous metal cans are being transport",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/AlaskasS1936_2.mp4",
+   "iaUrl": "https://archive.org/details/AlaskasS1936_2"
+  },
+  {
+   "key": "18",
+   "title": "Atomic Power at Shippingport (Part II)",
+   "year": "1958",
+   "start": 480.08,
+   "end": 540.14,
+   "scene": "The video transitions through several distinct industrial and construction settings, beginning with a technical diagram of a reactor core. It then moves to a mid-20th-century office where a man in a light-colored suit and tie sits at a desk, surrounded by colleagues in dark suits. They are examining large blueprints. The scene shifts to a large, bustling factory floor where numerous workers in whi",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/AtomicPo1958_2.mp4",
+   "iaUrl": "https://archive.org/details/AtomicPo1958_2"
+  },
+  {
+   "key": "19",
+   "title": "Chevrolet Leader News (Vol. 4, No. 3)",
+   "year": "1938",
+   "start": 360.127,
+   "end": 420.187,
+   "scene": "The video begins with a black-and-white sequence featuring a vintage 1930s-style sedan parked on a tree-lined street. Inside the car, a man is seen operating the dashboard, which includes a speedometer and various control buttons. The scene then transitions to a large, two-story house with a prominent porch and columns. A man on a tall wooden stilts is positioned on the porch, while another man in",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/Chevrole1938_2.mp4",
+   "iaUrl": "https://archive.org/details/Chevrole1938_2"
+  },
+  {
+   "key": "20",
+   "title": "Attitudes and Health",
+   "year": "1949",
+   "start": 360.36,
+   "end": 420.02,
+   "scene": "The scene is set in a classic, mid-20th-century interior room, likely a living room or study, characterized by its formal yet lived-in atmosphere. A large, dark wooden table dominates the center of the frame, around which three people are gathered. On the left, a man in a dark suit and tie sits in a chair, his expression serious as he engages in conversation. In the center, a woman with her hair s",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/Attitude1949.mp4",
+   "iaUrl": "https://archive.org/details/Attitude1949"
+  },
+  {
+   "key": "21",
+   "title": "[Besler Corporation Promo Film: Steam-Driven Vehicles]",
+   "year": "1932",
+   "start": 540.073,
+   "end": 600.133,
+   "scene": "This black and white historical footage captures a bustling train station environment, likely from the mid-20th century. The scene begins with a wide view of a large, multi-story industrial building with several loading bays where several passenger trains are parked. In the foreground, multiple sets of curved railroad tracks curve through a gravel-covered yard. A man in a light-colored shirt and d",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/BeslerCo1932.mp4",
+   "iaUrl": "https://archive.org/details/BeslerCo1932"
+  },
+  {
+   "key": "22",
+   "title": "[California Cotton Mills]",
+   "year": "1924",
+   "start": 240.24,
+   "end": 300.3,
+   "scene": "The video captures a historical black-and-white scene inside a large-scale industrial spinning factory. The environment is filled with rows of massive, vertical spinning wheels, each holding several large, white spools of thread. A man, dressed in a dark vest over a light-colored shirt and wearing a flat cap, is the primary human subject. He is seen operating the machinery, his hands moving rhythm",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/Californ1924.mp4",
+   "iaUrl": "https://archive.org/details/Californ1924"
+  },
+  {
+   "key": "23",
+   "title": "Beef Rings the Bell (Part I)",
+   "year": "1960",
+   "start": 480.08,
+   "end": 540.14,
+   "scene": "The video captures a series of scenes from a cattle ranch, beginning with a vast, open field under a grey, overcast sky. A massive herd of black and white cattle is seen moving across the dry, dusty terrain. The camera then transitions to a more structured environment, showing a large wooden corral or chute system. In this setting, several men dressed in traditional western attire, including cowbo",
+   "videoUrl": "https://huggingface.co/buckets/biglam/prelinger-films/resolve/films/BeefRing1960.mp4",
+   "iaUrl": "https://archive.org/details/BeefRing1960"
+  }
+ ]
+}

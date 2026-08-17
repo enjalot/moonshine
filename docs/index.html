@@ -259,6 +259,18 @@ pre .c { color: #6c7086; }
   color: var(--text);
   margin-bottom: 0.3rem;
 }
+/* Source-backed cards keep a links row, so the card itself isn't an <a>;
+   the thumb and title become links to the article instead. */
+a.example-thumb,
+a.example-card-title {
+  display: block;
+  text-decoration: none;
+}
+a.example-card-title:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .example-card-desc {
   font-size: 0.95rem;
   color: var(--text-2);
@@ -416,13 +428,13 @@ svg .grid path { stroke: none; }
   <!-- Examples -->
   <h2>Examples</h2>
 
-  <p>Articles built with moonshine. Most are single self-contained HTML files (the <code>shine</code> flavor); Conductor, the still guide, and the curriculum map use <code>still</code>, with React figures and markdown prose. The guide and curriculum map include their complete source projects. See <a href="https://syntagmatic.github.io/moonshine/index.html">syntagmatic's collection</a> for many more examples across different domains.</p>
+  <p>Articles built with moonshine. Most are single self-contained HTML files (the <code>shine</code> flavor); Conductor, the still guide, the curriculum map, and Moments use <code>still</code>, with React figures and markdown prose. The guide and curriculum map include their complete source projects. See <a href="https://syntagmatic.github.io/moonshine/index.html">syntagmatic's collection</a> for many more examples across different domains.</p>
 
   <div class="examples-list">
     <div class="example-card">
-      <div class="example-thumb" id="guide-thumb"></div>
+      <a class="example-thumb" id="guide-thumb" href="moonshine-guide/index.html" aria-label="The Still: Moonshine's Harness"></a>
       <div>
-        <div class="example-card-title">The Still: Moonshine's Harness</div>
+        <a class="example-card-title" href="moonshine-guide/index.html">The Still: Moonshine's Harness</a>
         <p class="example-card-desc">A self-demonstrating guide to still's authoring loop: edit prose where it renders, tune figures, reorder blocks, arrange diagrams, and route comments back to the agent.</p>
         <div class="example-card-tags">authoring tools &middot; direct manipulation &middot; feedback loop &middot; built with still</div>
         <div class="example-card-links">
@@ -433,9 +445,9 @@ svg .grid path { stroke: none; }
     </div>
 
     <div class="example-card">
-      <div class="example-thumb" id="taxonomy-thumb"></div>
+      <a class="example-thumb" id="taxonomy-thumb" href="os-taxonomy-map/index.html" aria-label="A Map of What Children Learn"></a>
       <div>
-        <div class="example-card-title">A Map of What Children Learn</div>
+        <a class="example-card-title" href="os-taxonomy-map/index.html">A Map of What Children Learn</a>
         <p class="example-card-desc">1,590 school topics arranged by semantic similarity instead of timetable order, with subject continents, age cohorts, and prerequisite paths revealed through three linked views.</p>
         <div class="example-card-tags">embeddings &middot; UMAP &middot; curriculum taxonomy &middot; built with still</div>
         <div class="example-card-links">
@@ -444,6 +456,15 @@ svg .grid path { stroke: none; }
         </div>
       </div>
     </div>
+
+    <a class="example-card" href="moments/index.html">
+      <div class="example-thumb" id="moments-thumb"></div>
+      <div>
+        <div class="example-card-title">Moments on a manifold</div>
+        <p class="example-card-desc">23,148 one-minute moments from the Prelinger Archives arranged by semantic similarity: animated tile thumbnails, four swappable embedding projections, and clips that play straight off archive.org.</p>
+        <div class="example-card-tags">video embeddings &middot; UMAP &middot; WebGL &middot; built with still</div>
+      </div>
+    </a>
 
     <a class="example-card" href="sph/index.html">
       <div class="example-thumb" id="sph-thumb"></div>
@@ -1073,6 +1094,69 @@ svg .grid path { stroke: none; }
       ctx.fill();
     });
     ctx.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ─── Moments thumbnail: binned map of flickering film tiles ───
+(function() {
+  const el = document.getElementById('moments-thumb');
+  if (!el) return;
+  const canvas = document.createElement('canvas');
+  const s = 100, dpr = window.devicePixelRatio || 1;
+  canvas.width = s * dpr; canvas.height = s * dpr;
+  canvas.style.width = s + 'px'; canvas.style.height = s + 'px';
+  el.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  let seed = 47;
+  const random = () => {
+    seed = (seed * 48271) % 2147483647;
+    return seed / 2147483647;
+  };
+  // Occupied bins snapped to an 8px grid, clustered like the map's density.
+  const clusters = [
+    { x: 30, y: 30, r: 20, n: 14 },
+    { x: 70, y: 62, r: 22, n: 16 },
+    { x: 42, y: 76, r: 14, n: 8 },
+    { x: 74, y: 22, r: 12, n: 6 },
+  ];
+  const cells = new Map();
+  clusters.forEach(c => {
+    for (let i = 0; i < c.n; i++) {
+      const a = random() * Math.PI * 2, r = Math.sqrt(random()) * c.r;
+      const gx = Math.max(0, Math.min(11, Math.round((c.x + Math.cos(a) * r) / 8)));
+      const gy = Math.max(0, Math.min(11, Math.round((c.y + Math.sin(a) * r) / 8)));
+      const key = gx + ',' + gy;
+      if (!cells.has(key)) cells.set(key, {
+        x: gx * 8 + 2, y: gy * 8 + 2,
+        base: 60 + random() * 75, phase: random() * 16, amp: 14 + random() * 24,
+      });
+    }
+  });
+  const tiles = [...cells.values()];
+  const dots = Array.from({ length: 60 }, () => {
+    const c = clusters[Math.floor(random() * clusters.length)];
+    const a = random() * Math.PI * 2, r = Math.sqrt(random()) * c.r * 1.3;
+    return { x: c.x + Math.cos(a) * r, y: c.y + Math.sin(a) * r };
+  });
+  let t = 0;
+  function draw() {
+    t += 1 / 60;
+    ctx.clearRect(0, 0, s, s);
+    ctx.fillStyle = '#6b6b8a';
+    ctx.globalAlpha = 0.35;
+    dots.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 1.1, 0, Math.PI * 2); ctx.fill(); });
+    ctx.globalAlpha = 1;
+    // Tiles step through shades at ~6fps, like the flipbook atlas.
+    const f = Math.floor(t * 6);
+    tiles.forEach(tl => {
+      const v = tl.base + Math.sin((f + tl.phase) * 1.7) * tl.amp;
+      ctx.fillStyle = 'rgb(' + ((v * 1.08) | 0) + ',' + (v | 0) + ',' + ((v * 0.85) | 0) + ')';
+      ctx.fillRect(tl.x, tl.y, 7, 7);
+    });
     requestAnimationFrame(draw);
   }
   draw();
