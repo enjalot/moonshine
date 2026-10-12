@@ -337,9 +337,9 @@ svg text { font-family: var(--heading-font); }
     <svg id="tradeoff-svg" style="width:100%; display:block; border-radius:4px;"></svg>
     <div class="figure-caption">
       <span class="figure-label">Figure 5.</span>
-      Queries-per-second against recall at 10, both on log-ish axes. Up and to the right
-      is better: high recall, high throughput. Exact search is the vertical wall on the
-      right, offering perfect recall at a speed ceiling set by the dataset size. HNSW
+      Recall at 10 against queries per second (log scale). Up and to the right is
+      better: high recall, high throughput. Exact search is the dashed line on the
+      left: perfect recall at the lowest throughput, set by the dataset size. HNSW
       sits above the others across most of the plane. IVF is close behind and competitive
       at lower recall targets. LSH lags, especially at high recall.
     </div>

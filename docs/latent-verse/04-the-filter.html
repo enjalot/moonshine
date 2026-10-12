@@ -44,7 +44,8 @@ svg text { font-family: var(--heading-font); }
 }
 .feature-bar-row:last-child { border-bottom: none; }
 .feature-bar-label {
-  flex: 0 0 auto; max-width: 50%; color: var(--text);
+  /* Fixed column so every bar starts at the same baseline. */
+  flex: 0 0 13.5rem; max-width: 45%; color: var(--text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .feature-bar-track {

@@ -526,7 +526,7 @@ function renderFeatureBars(containerId, features, featureLabels, maxCount = 8) {
     const pct = Math.max(4, (f.activation / maxAct * 100));
     const c = color(f.activation / maxAct);
     return `<div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0; font-family: var(--heading-font); font-size: 0.8rem; min-width: 0;">
-      <span style="flex: 0 0 auto; max-width: 45%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
+      <span style="flex: 0 0 11.5rem; max-width: 45%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
       <span style="flex: 1 1 auto; display: block; height: 14px; background: #f0f0f5; border-radius: 2px; overflow: hidden; min-width: 30px;">
         <span style="display: block; height: 100%; width: ${pct}%; background: ${c}; border-radius: 2px;"></span>
       </span>
