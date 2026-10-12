@@ -75,6 +75,109 @@
   margin: 0 0 2rem;
 }
 
+/* Tables ---------------------------------------------------------------
+   GFM tables are wrapped by lib/rehype-tables.ts in <div class="mn-table">.
+   The wrapper scrolls sideways when the table is wider than the column;
+   the <table> keeps real table layout. Horizontal rules only, sans type a
+   step smaller than prose, tabular figures, numeric columns right-aligned
+   (`td.num`, detected from the column's contents). */
+
+.mn-table {
+  margin: 1.75rem 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Fade edges hint that a too-wide table scrolls. Painted by the
+     background so they move with the scroll position. */
+  background:
+    linear-gradient(to right, var(--bg) 30%, transparent) left / 2rem 100% no-repeat local,
+    linear-gradient(to left, var(--bg) 30%, transparent) right / 2rem 100% no-repeat local,
+    linear-gradient(to right, var(--shadow-edge), transparent) left / 0.75rem 100% no-repeat scroll,
+    linear-gradient(to left, var(--shadow-edge), transparent) right / 0.75rem 100% no-repeat scroll;
+}
+
+/* Six or more columns: break out of the prose column like .figure-wide. */
+.mn-table-wide {
+  margin-left: -2rem;
+  margin-right: -2rem;
+  padding: 0 2rem;
+}
+
+.article table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--heading-font);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.article th,
+.article td {
+  padding: 0.5rem 0.9rem;
+  text-align: left;
+  vertical-align: top;
+}
+.article th:first-child,
+.article td:first-child {
+  padding-left: 0;
+}
+.article th:last-child,
+.article td:last-child {
+  padding-right: 0;
+}
+
+.article thead th {
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
+  color: var(--text-2);
+  vertical-align: bottom;
+  border-bottom: 1.5px solid var(--text-2);
+}
+
+.article tbody td {
+  border-bottom: 1px solid var(--border);
+}
+.article tbody tr:last-child td {
+  border-bottom: none;
+}
+.article tbody tr:hover td {
+  background: var(--row-hover);
+}
+
+/* Numbers: right-aligned so place values line up; never wrapped. */
+.article th.num,
+.article td.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Explicit GFM alignment (`---:`, `:---:`) always wins. */
+.article th[align='right'],
+.article td[align='right'] {
+  text-align: right;
+}
+.article th[align='center'],
+.article td[align='center'] {
+  text-align: center;
+}
+
+/* Bold in a cell usually marks the winner of a comparison. */
+.article td strong {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.article td code {
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+.article table + p,
+.mn-table + p {
+  margin-top: 0;
+}
+
 /* Figures ------------------------------------------------------------ */
 
 .figure {
@@ -292,6 +395,11 @@
   .figure-wide {
     margin-left: 0;
     margin-right: 0;
+  }
+  .mn-table-wide {
+    margin-left: -1.25rem;
+    margin-right: -1.25rem;
+    padding: 0 1.25rem;
   }
 }
 
@@ -649,6 +757,94 @@
 }
 
 /* Dev-only diagram arrange bar ---------------------------------------- */
+
+/* Diagrams (DiagramFigure) -------------------------------------------
+   Readers get either the author's baked tldraw SVG (both themes inlined,
+   one shown) or the plain-SVG spec rendering. Never wider than drawn, so
+   label text stays the size the author saw. */
+
+.mn-diagram-baked {
+  position: relative;
+  margin: 0 auto;
+}
+.mn-diagram-baked svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.mn-diagram-dark {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  .mn-diagram-light {
+    display: none;
+  }
+  .mn-diagram-dark {
+    display: block;
+  }
+}
+.mn-diagram-baked > svg.mn-diagram-overlay {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  pointer-events: none;
+}
+.mn-diagram-overlay rect {
+  transition: opacity 0.2s;
+}
+.mn-diagram-loading {
+  min-height: 120px;
+}
+.mn-diagram-empty {
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  color: var(--text-2);
+  text-align: center;
+  margin: 2rem 0;
+}
+
+/* Dev-only full-screen tldraw editor (portaled to <body>). */
+.mn-diagram-editor {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+.mn-diagram-editor-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.mn-diagram-editor-bar strong {
+  color: var(--text);
+  font-family: var(--mono-font);
+  font-weight: 500;
+}
+.mn-diagram-editor-bar button {
+  font: inherit;
+  border: 1px solid var(--border);
+  background: var(--fig-bg);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0.25rem 0.8rem;
+  cursor: pointer;
+}
+.mn-diagram-editor-bar button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.mn-diagram-editor-canvas {
+  position: relative;
+  flex: 1;
+}
 
 .mn-diagram-bar {
   display: flex;

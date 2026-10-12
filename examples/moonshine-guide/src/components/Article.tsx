@@ -4,6 +4,7 @@ import remarkDirective from 'remark-directive'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
+import rehypeTables from '../lib/rehype-tables'
 import { Link } from 'react-router-dom'
 import directiveHandler from '../lib/directive-handler'
 import { useArticleStore } from '../store'
@@ -157,7 +158,7 @@ export default function Article({ article, all }: Props) {
 
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath, remarkDirective, directiveHandler]}
-          rehypePlugins={[rehypeKatex]}
+          rehypePlugins={[rehypeKatex, rehypeTables]}
           // react-markdown's Components type only enumerates known HTML
           // tag names; our directive handler emits dashed custom tag
           // names (mn-figure, mn-term, mn-inline-viz) that react-markdown

@@ -10,6 +10,8 @@ import { defineConfig, s } from 'velite'
 // remark/directive parsing at render time — keeping that work on the client
 // side means HMR on a content edit is one re-render, not a full rebuild.
 
+const box = s.object({ x: s.number(), y: s.number(), w: s.number(), h: s.number() })
+
 export default defineConfig({
   root: 'content',
   output: {
@@ -20,26 +22,33 @@ export default defineConfig({
   },
   collections: {
     // Author-owned figure state, baked into the build. Written by the
-    // dev-only arrange/knob affordances (e.g. DiagramFigure's "arrange"
-    // mode serializes node positions + viewport here); read back via
-    // src/lib/bakedFigures.ts. JSON instead of frontmatter because the
+    // dev-only arrange/draw affordance (DiagramFigure's tldraw editor
+    // saves light/dark SVGs, part boxes, and node boxes here); read back
+    // via src/lib/bakedFigures.ts. JSON instead of frontmatter because the
     // same figure can appear in several articles, and JSON round-trips
-    // machine writes cleanly. The schema splits author-owned layout
-    // (positions, viewport) from machine-owned semantics (node ids,
-    // edges live in the figure's code) — merged by node id at render,
-    // so regenerated diagram code never clobbers the author's
-    // arrangement.
+    // machine writes cleanly. Machine-owned semantics (the diagram spec)
+    // live in the figure's code and are merged with the saved arrangement
+    // by id, so regenerated diagram code never clobbers the author's work.
     figureData: {
       name: 'FigureData',
-      pattern: 'figures/**/*.json',
+      // Top level only: figures/tldraw/*.tldr.json are editor documents
+      // that must never be bundled for readers.
+      pattern: 'figures/*.json',
       schema: s
         .object({
           figure: s.string(),
-          layout: s
-            .record(s.string(), s.object({ x: s.number(), y: s.number() }))
-            .optional(),
-          viewport: s
-            .object({ x: s.number(), y: s.number(), zoom: s.number() })
+          specHash: s.string().optional(),
+          nodes: s.record(s.string(), box).optional(),
+          groups: s.record(s.string(), box).optional(),
+          parts: s.record(s.string(), box).optional(),
+          svg: s
+            .object({
+              light: s.string(),
+              dark: s.string(),
+              viewBox: s.string(),
+              width: s.number(),
+              height: s.number(),
+            })
             .optional(),
         })
         .transform((data, ctx) => {
