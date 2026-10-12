@@ -164,9 +164,8 @@ svg text { font-family: var(--heading-font); }
 
   <p>
     Both methods need "what is near this vector?" to be fast enough and good enough. What they
-    demand beyond that is where the two disciplines diverge. Thinking about them side by side
-    is the clearest way to see that the three-idea stack is not one recipe but a set of dials
-    tuned for the job at hand.
+    demand beyond that is where the two diverge, and each one turns the three ideas from this
+    series to different settings.
   </p>
 
   <h2>UMAP: Neighbors as Skeleton</h2>
@@ -184,8 +183,7 @@ svg text { font-family: var(--heading-font); }
     them apart.
   </p>
   <p>
-    The crucial observation for our purposes: <em>the graph does not have to be perfect.</em>
-    UMAP does not need the true nearest neighbors. It needs a graph that roughly captures local
+    The graph does not have to be perfect. UMAP does not need the true nearest neighbors. It needs a graph that roughly captures local
     structure. A few mistakes are smoothed out by the optimization. This is why UMAP
     implementations are built on approximate nearest-neighbor libraries, not exact search.
   </p>
@@ -362,31 +360,20 @@ svg text { font-family: var(--heading-font); }
     </div>
   </div>
 
-  <h2>Closing Reflection</h2>
+  <h2>The whole stack</h2>
   <p>
-    Approximate nearest-neighbor search is infrastructure. You rarely talk to it directly, the
-    way you rarely talk to a database query planner or a network stack. It sits below the
-    products we actually use: the search bar that understands what you meant, the recommender
-    that knows what you will want next, the 2D projection that makes a million-row dataset
-    legible in a single glance.
-  </p>
-  <p>
-    The fact that this works at all comes down to the three ideas in this series, stacked and
-    tuned for the job. <span class="t-partition">Partition</span> the space so you are not
+    Both systems come down to the three ideas in this series, stacked and tuned for the job. <span class="t-partition">Partition</span> the space so you are not
     looking everywhere. <span class="t-compress">Compress</span> the vectors so comparisons
     are cheap and the data fits. Design for the <span class="t-hardware">hardware</span> you
-    are running on. Each idea is simple in isolation. Together, they make it possible to
-    visualize a million embeddings, retrieve from a billion documents, and power a recommender
-    over tens of billions of users, with the same primitive.
+    are running on. The same stack builds the kNN graph behind a map of a million embeddings
+    and serves queries over a billion documents.
   </p>
 
   <div class="figure" id="fig-recap">
     <svg id="recap-svg" style="width:100%; display:block; border-radius:4px;"></svg>
     <div class="figure-caption">
       <span class="figure-label">Figure 6.</span>
-      The full stack in one picture. The three ideas feed both destinations. The work of this
-      series was to understand why each idea is necessary. The work of your next project is to
-      decide how hard to turn each dial.
+      The full stack in one picture. The three ideas feed both destinations.
     </div>
   </div>
 

@@ -139,17 +139,15 @@ svg text { font-family: var(--heading-font); }
     Springs for jelly run in their own compute pass before forces. Each jelly
     particle stores up to four neighbor indices that were within range at
     spawn time, and the spring pass applies a stiff restoring force toward
-    each one&apos;s rest length. The fixed buffer keeps it simple and fast:
-    sentinel values mark empty slots, and that&apos;s it.
+    each one&apos;s rest length. The fixed-size buffer keeps it simple and fast,
+    with sentinel values marking empty slots.
   </p>
 
   <p>
     Everything stays on a single thread of JavaScript above the GPU, mostly to
     handle the user tools and particle spawning. The compute shader does the
     real work. If your browser does not support WebGPU the same physics still
-    runs on CPU, just at a lower particle budget. The same ideas from
-    <a href="02-gpu.html">Part 2</a> and <a href="03-beyond-water.html">Part 3</a>
-    scaled out and combined in one place.
+    runs on CPU, just at a lower particle budget.
   </p>
 
   <footer style="margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border);font-family:var(--heading-font);font-size:0.85rem;color:var(--text-2);">

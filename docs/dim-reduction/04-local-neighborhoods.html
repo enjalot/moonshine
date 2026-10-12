@@ -78,7 +78,7 @@ svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crisp
 </p>
 
 <p>
-  The cost is that such plots tell you almost nothing about global geometry. The distance between two clusters in a t-SNE plot is not meaningful. The size of one cluster relative to another is not meaningful. These are not bugs; they are consequences of the objective. If you treat a t-SNE or UMAP plot as if its global coordinates mattered, you will reliably fool yourself. Understanding what this family preserves and what it discards is essential for reading its output honestly.
+  The cost is that such plots tell you almost nothing about global geometry. The distance between two clusters in a t-SNE plot is not meaningful. The size of one cluster relative to another is not meaningful. Both follow from the objective. If you treat a t-SNE or UMAP plot as if its global coordinates mattered, you will reliably fool yourself. 
 </p>
 
 <h2>From neighbors to forces</h2>
@@ -207,7 +207,7 @@ svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crisp
 </p>
 
 <p>
-  Used with this mental filter, the neighborhood-preserving family is remarkably useful. It is the default visualization for language model embeddings, image features, single-cell sequencing, and more. But the filter is essential. The most common misuse of these methods is to read the visual output as if it were a map.
+  Read this way, the neighborhood-preserving family is the default visualization for language model embeddings, image features, single-cell sequencing, and more. The most common misuse of these methods is to read the visual output as if it were a map.
 </p>
 
 <p>

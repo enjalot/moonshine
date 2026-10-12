@@ -175,7 +175,7 @@ svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crisp
 <h2>What you give up</h2>
 
 <p>
-  The learned-representation family comes with real costs. Training is slow (hours to days on a GPU) compared to a few minutes for UMAP on a CPU. Reproducibility depends on random seeds, initialization, and architecture choices. Hyperparameter sensitivity is higher than for the classical methods. Interpretability is lower: a trained network is an opaque function, and explaining why two points ended up near each other in its latent space is harder than explaining why they did in PCA or t-SNE.
+  The learned-representation family comes with real costs. Training takes longer and needs more tuning: minutes to hours on a GPU, against a few minutes for UMAP on a CPU at moderate scale. Reproducibility depends on random seeds, initialization, and architecture choices. Hyperparameter sensitivity is higher than for the classical methods. Interpretability is lower: a trained network is an opaque function, and explaining why two points ended up near each other in its latent space is harder than explaining why they did in PCA or t-SNE.
 </p>
 
 <p>
@@ -185,7 +185,7 @@ svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crisp
 <h2>Why this family matters for understanding ML latent spaces</h2>
 
 <p>
-  A small detail worth stating explicitly: if you are studying the internal representations of a large neural model (an LLM, a vision transformer, a protein model), you are already looking at a learned representation. The activations you want to visualize are themselves the output of an encoder trained on some objective; that objective is what determines what those activations preserve.
+  If you are studying the internal representations of a large neural model (an LLM, a vision transformer, a protein model), you are already looking at a learned representation. The activations you want to visualize are themselves the output of an encoder trained on some objective; that objective is what determines what those activations preserve.
 </p>
 
 <p>

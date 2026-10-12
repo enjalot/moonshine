@@ -61,7 +61,7 @@ svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crisp
   <div class="series-tag">Part 3 of 10 · Preserves pairwise and geodesic distances</div>
   <h1>Preserving Global Distances</h1>
   <p class="subtitle">
-    If we want the picture to tell us how far apart things are, we need a method that respects distances. But what counts as "distance" is itself a choice, and the field has produced three increasingly clever answers to it.
+    If we want the picture to tell us how far apart things are, we need a method that respects distances. But what counts as "distance" is itself a choice, and the methods in this article give four different answers.
   </p>
 </header>
 
@@ -70,7 +70,7 @@ svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crisp
 </p>
 
 <p>
-  This article is about methods that take distances seriously, and the key move each of them makes is redefining what distance means. Classical multidimensional scaling starts from a given distance matrix and asks for a low-dimensional arrangement that reproduces it. Sammon mapping adjusts the emphasis so that small distances are preserved more faithfully than large ones. Isomap replaces straight-line distance with the distance <em>along the data</em>. Diffusion maps replace it with the distance traveled by a random walk. Each is a different answer to the same question: what does "far" really mean?
+  This article is about methods that take distances seriously, and the key move each of them makes is redefining what distance means. Classical multidimensional scaling starts from a given distance matrix and asks for a low-dimensional arrangement that reproduces it. Sammon mapping adjusts the emphasis so that small distances are preserved more faithfully than large ones. Isomap replaces straight-line distance with the distance <em>along the data</em>. Diffusion maps replace it with the distance traveled by a random walk. Each one is a different definition of "far."
 </p>
 
 <h2>Classical MDS: given the distances, recover the points</h2>
@@ -123,7 +123,7 @@ svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crisp
 </p>
 
 <p>
-  Philosophically, Sammon is the bridge from the MDS family to the neighbor-based family we will see in article 4. Once you notice that local relationships matter more than global ones for most real data, you are halfway to t-SNE.
+  Sammon mapping is a bridge from the MDS family to the neighbor-based family we will see in article 4. Once you notice that local relationships matter more than global ones for most real data, you are halfway to t-SNE.
 </p>
 
 <h2>Isomap: distances through the data, not through empty space</h2>
@@ -133,7 +133,7 @@ svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crisp
 </p>
 
 <p>
-  Isomap, introduced by Tenenbaum, de Silva, and Langford in 2000, fixes this with a beautifully simple trick: redefine distance as shortest path in a k-nearest-neighbor graph. Build a graph where each point connects only to its <span style="font-family: var(--mono-font); font-size: 0.92em;">k</span> closest neighbors. The distance between two points is the total length of the shortest path through the graph between them. For a swiss roll with reasonable point density, this <em>geodesic</em> distance respects the curvature: two points at opposite ends of the ribbon are far apart even if they sit next to each other in three dimensions, because the shortest path has to walk all the way along the ribbon.
+  Isomap, introduced by Tenenbaum, de Silva, and Langford in 2000, fixes this by redefining distance as shortest path in a k-nearest-neighbor graph. Build a graph where each point connects only to its <span style="font-family: var(--mono-font); font-size: 0.92em;">k</span> closest neighbors. The distance between two points is the total length of the shortest path through the graph between them. For a swiss roll with reasonable point density, this <em>geodesic</em> distance respects the curvature: two points at opposite ends of the ribbon are far apart even if they sit next to each other in three dimensions, because the shortest path has to walk all the way along the ribbon.
 </p>
 
 <p>
@@ -207,7 +207,7 @@ svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crisp
 </p>
 
 <p>
-  What the family shares, for better and worse, is a commitment to distance as the governing concept. When distance is a meaningful quantity (spatial data, feature vectors with calibrated scales, perceptual studies), this family is strong. When distance is not meaningful, or when the interesting structure is in <em>who is near whom</em> rather than <em>how far apart</em>, the distance-based methods start to struggle. The next article is about methods that give up on preserving distances and focus on preserving neighbor lists instead. That shift, from distances to neighborhoods, is the single biggest idea in the modern dimensionality reduction landscape.
+  What the family shares, for better and worse, is a commitment to distance as the governing concept. When distance is a meaningful quantity (spatial data, feature vectors with calibrated scales, perceptual studies), this family is strong. When distance is not meaningful, or when the interesting structure is in <em>who is near whom</em> rather than <em>how far apart</em>, the distance-based methods start to struggle. The next article is about methods that give up on preserving distances and focus on preserving neighbor lists instead, the shift behind t-SNE and UMAP.
 </p>
 
 <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">

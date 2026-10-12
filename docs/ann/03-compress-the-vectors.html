@@ -209,19 +209,18 @@ svg text { font-family: var(--heading-font); }
     popcount instructions.
   </p>
   <p>
-    Binary quantization loses a lot of information. It works surprisingly well on
-    well-trained embedding vectors, mostly because those vectors tend to be roughly
-    isotropic after layer normalization, and the sign pattern of each dimension carries more
-    signal than you would guess. It also fails gracefully: you can use it as a very fast
+    Binary quantization loses a lot of information, but on many embedding models the sign
+    pattern alone keeps enough of the neighborhood structure to be useful, especially for
+    models with many dimensions. It also fails gracefully: you can use it as a very fast
     first pass, then rerank survivors with a less aggressive scheme.
   </p>
 
   <h2>Product Quantization: The Key Idea</h2>
 
   <p>
-    The most important compression technique for ANN is Product Quantization, usually called
-    PQ. The insight is that you can beat scalar quantization's one-bit-per-dimension limit
-    by correlating dimensions with each other.
+    The most widely used compression technique for ANN is Product Quantization, usually
+    called PQ. It goes below one bit per dimension by quantizing groups of dimensions together,
+    so a single byte can encode where a whole subvector sits.
   </p>
   <p>
     Here is the recipe. Take the d-dimensional vector and split it into m chunks, each of
@@ -371,7 +370,7 @@ svg text { font-family: var(--heading-font); }
       vector is stored as a short stack of PQ codes inside its cell. A query arrives,
       <span class="t-partition" style="color: var(--c-partition); font-weight: 600;">nprobe</span>
       cells light up, the PQ lookup table is computed, candidates are scored, and a final
-      top-k is returned. This is the skeleton of production ANN.
+      top-k is returned.
     </div>
   </div>
 

@@ -200,8 +200,9 @@ svg text { font-family: var(--heading-font); }
 
   <p>
     The specific shape of the kernel matters less than its properties: it's smooth,
-    it falls off to zero at the smoothing radius, and it's normalized so that the
-    total influence integrates to 1.
+    it falls off to zero at the smoothing radius, and in a full simulation it is
+    scaled by a constant so the total influence integrates to 1. The figure leaves
+    that constant out so the weights read as 0 to 1.
   </p>
 
   <h2>Estimating Density</h2>
