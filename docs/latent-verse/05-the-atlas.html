@@ -166,16 +166,15 @@ svg text { font-family: var(--heading-font); }
   <h2>Training a permanent projector</h2>
 
   <p>
-    The approach is straightforward in concept: instead of running UMAP from scratch on each
-    dataset, train a neural network to learn the UMAP projection. Feed it millions of diverse
-    embeddings along with their UMAP coordinates. The network learns a function: embedding goes
+    Instead of running UMAP from scratch on each dataset, train a neural network on the UMAP
+    objective over millions of diverse embeddings. The network learns a function: embedding goes
     in, two coordinates come out.
   </p>
 
   <p>
     Once trained, this network can project any new embedding instantly. It doesn't need to see the
-    whole dataset. It doesn't need to recompute. It gives every text a consistent position on a
-    permanent map, because the map was shaped by the vast corpus the network trained on.
+    whole dataset or recompute anything. Every text gets a consistent position on a permanent map,
+    shaped by the corpus the network trained on.
   </p>
 
   <p>
@@ -212,7 +211,7 @@ svg text { font-family: var(--heading-font); }
     </div>
     <div class="figure-caption">
       <span class="figure-label">Figure 1.</span>
-      The same 100 jokes on two different maps. The local UMAP uses all its space to spread these specific jokes out. The basemap places them somewhere on a much larger coordinate system. Notice that local neighborhoods are mostly preserved, but the overall layout differs.
+      The same 100 jokes on two different maps. The local UMAP uses all its space to spread these specific jokes out. The basemap places them somewhere on a much larger coordinate system. Local neighborhoods are mostly preserved, but the overall layout differs. The basemap here was trained on all-MiniLM-L6-v2 embeddings and is applied to these bge-small embeddings, so its positions are a cross-model approximation.
     </div>
   </div>
 
@@ -244,15 +243,13 @@ svg text { font-family: var(--heading-font); }
     <div id="feature-map-container" style="width: 100%; height: 400px; position: relative;"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 2.</span>
-      The basemap colored by SAE feature activation. Bright points are jokes where this feature activates strongly. Different features concentrate in different regions of the map.
+      The basemap colored by SAE feature activation. Bright points are jokes where this feature activates strongly. The activations are the synthetic features from Part 4, so this shows the kind of picture a real SAE would produce, not a measured result.
     </div>
   </div>
 
   <p>
-    This is what makes the combination powerful. The basemap gives every text a position.
-    The SAE tells us what concepts activate in that text. Put them together, and the coordinate
-    system starts to mean something: a region of the map is a region of <em>meaning</em>, not
-    just an arbitrary cluster of similar dots.
+    The basemap gives every text a position, and the SAE says which concepts activate in that
+    text. Together they let you name a region of the map by the features that concentrate there.
   </p>
 
   <h2>The full microscope</h2>
@@ -357,28 +354,18 @@ svg text { font-family: var(--heading-font); }
   <h2>An atlas of meaning</h2>
 
   <p>
-    An atlas is more than a map. It's a map plus a vocabulary: the names of places, the features
-    of terrain, the categories that help you navigate. The basemap provides the geography. The SAE
+    An atlas pairs maps with a vocabulary: the names of places, the features of terrain, the
+    categories that help you navigate. The basemap provides the geography. The SAE
     taxonomy provides the vocabulary. Together they form a system for understanding what an
     embedding model has learned.
   </p>
 
   <p>
     Different embedding models produce different atlases, just as different lenses show different
-    things. A model trained on scientific literature produces an atlas where chemistry papers
-    form dense continents. A model trained on source code produces an atlas where function signatures
-    cluster together. Within any one atlas, though, everything has a place and a description:
-    a dad joke, a news article, a line of code, each locatable and describable in the same terms.
+    things. Within any one atlas, though, a dad joke, a news article, and a line of code all get
+    a position and a set of features described in the same terms.
   </p>
 
-  <div class="insight">
-    <p>
-      The microscope is complete. The lens focuses meaning into points. The projector shows
-      where those points live. The filter shows what they are made of. These three instruments,
-      trained to match each other, let you look at any text through a consistent view of the
-      space it inhabits.
-    </p>
-  </div>
 
   <h2>Where to go from here</h2>
 
@@ -387,31 +374,18 @@ svg text { font-family: var(--heading-font); }
     projection, clustering, feature decomposition, and global mapping. Each piece is
     interchangeable. You can swap in a different embedding model, try a different clustering
     algorithm, train a basemap on a different corpus, or use a different SAE architecture.
-    The pipeline stays the same. The views change.
   </p>
 
   <p>
-    We used dad jokes because they're fun, small, and accessible. The same tools work on any
-    text. The workbench was built to be applied broadly: to scientific literature, to legal
-    documents, to customer feedback, to code repositories, to anything written down. Every
-    application reveals something different about the data and something different about the
-    model looking at it.
-  </p>
-
-  <p>
-    The point has been the same throughout. Models have already learned something about your
-    data. These tools help you see what they learned. Embeddings, projections, clusters,
-    features, maps: none of them are the data, and none of them are the model. They're
-    instruments for looking through one at the other.
-  </p>
-
-  <p>
-    Now go put something under the microscope.
+    We used dad jokes because they're fun and small. The same tools work on scientific
+    literature, legal documents, customer feedback, or code, and
+    <a href="https://github.com/enjalot/latent-scope">Latent Scope</a> runs this pipeline on
+    your own data.
   </p>
 
   <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
     <p>End of series. Back to <a href="index.html" style="color: var(--accent);">Latent Verse</a>. Previous: <a href="04-the-filter.html" style="color: var(--accent);">The Filter</a>.</p>
-    <p style="margin-top: 0.5rem;">Basemap concept from <a href="https://github.com/enjalot/latent-basemap" style="color: var(--text-2);">latent-basemap</a>. SAE concept from <a href="https://github.com/enjalot/latent-sae" style="color: var(--text-2);">latent-sae</a>.</p>
+    <p style="margin-top: 0.5rem;">Basemap from <a href="https://github.com/enjalot/latent-basemap" style="color: var(--text-2);">latent-basemap</a> (a MiniLM-trained model applied cross-model). SAE features are synthetic placeholders; real ones are in <a href="https://github.com/enjalot/latent-sae" style="color: var(--text-2);">latent-sae</a>.</p>
   </footer>
 </div>
 

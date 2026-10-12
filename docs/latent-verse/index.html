@@ -65,21 +65,20 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
 
   <p>
     Language models learn something about the meaning of text. When they embed a sentence, they
-    compress their understanding into a list of numbers, placing it at a specific point in a
-    high-dimensional space. Similar texts land near each other. Related ideas form neighborhoods.
-    Structure emerges that no one explicitly designed.
+    produce a list of numbers that places it at a point in a high-dimensional space. Similar
+    texts land near each other, and related ideas form neighborhoods that no one designed.
   </p>
 
   <p>
-    This series explores that structure. Using 50,000 dad jokes as our specimen, we build up a
+    This series explores that structure. Using 53,000 dad jokes as our specimen, we build up a
     set of tools for seeing what models have learned: projecting high-dimensional spaces into
     visible landscapes, finding and naming groups, decomposing embeddings into interpretable
     features, and constructing permanent maps of meaning.
   </p>
 
   <p>
-    Think of it as setting up a microscope. Each article adds a piece of the instrument. By the
-    end, familiar data looks completely different.
+    Each article adds one piece: an embedding model as the lens, UMAP as the projector,
+    clustering, a sparse autoencoder as the filter, and a basemap that ties them together.
   </p>
 
   <div class="card-list">
@@ -136,7 +135,7 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
 
   <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
     <p>By <a href="https://github.com/enjalot" style="color: var(--text-2);">Ian Johnson</a>. Built with <a href="https://github.com/enjalot/latent-scope" style="color: var(--text-2);">Latent Scope</a>.</p>
-    <p style="margin-top: 0.25rem;">Data: 50,000 dad jokes from <a href="https://www.reddit.com/r/dadjokes/" style="color: var(--text-2);">r/dadjokes</a>.</p>
+    <p style="margin-top: 0.25rem;">Data: 53,133 dad jokes from <a href="https://www.reddit.com/r/dadjokes/" style="color: var(--text-2);">r/dadjokes</a>.</p>
   </footer>
 </div>
 

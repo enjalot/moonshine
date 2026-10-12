@@ -101,16 +101,13 @@ svg text { font-family: var(--heading-font); }
   </p>
 
   <p>
-    What if we could build a tool that decomposes <em>any</em> text into interpretable features?
-    Not groups specific to this dataset, but a universal vocabulary of concepts that the embedding
-    model recognizes?
+    A different kind of tool decomposes <em>any</em> text the model can embed into interpretable
+    features, using one vocabulary of concepts for every dataset.
   </p>
 
   <p>
-    This is what a <strong>Sparse Autoencoder</strong> (SAE) does. It learns to break an embedding
-    into a small number of active features from a much larger set of possible features. Think of it
-    like a polarizing filter on a microscope: it isolates specific wavelengths of meaning from the
-    full signal.
+    That tool is a <strong>Sparse Autoencoder</strong> (SAE). It learns to break an embedding
+    into a small number of active features chosen from a much larger set of possible features.
   </p>
 
   <h2>Decomposing a joke</h2>
@@ -132,15 +129,15 @@ svg text { font-family: var(--heading-font); }
     <div id="feature-bars" style="margin-top: 0.5rem;"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 1.</span>
-      SAE decomposition of a dad joke. Each bar is an active feature. The length shows activation strength: how strongly this feature responds to the text.
+      SAE decomposition of a dad joke. Each bar is an active feature. The length shows activation strength: how strongly this feature responds to the text. <strong>The features in this article are synthetic</strong>, hand-assigned to illustrate the idea; they do not come from a trained SAE.
     </div>
   </div>
 
   <p>
     Look at how the features describe different aspects of the joke. A joke about atoms might
-    activate "science and physics," "wordplay and puns," and "double meaning." These aren't
-    clusters specific to the dad jokes dataset. They're features the SAE learned from a large,
-    diverse training corpus. They apply to any text.
+    activate "science and physics," "wordplay and puns," and "double meaning." A real SAE learns
+    its features from a large, diverse training corpus rather than from the dad jokes, so the same
+    features apply to any text.
   </p>
 
   <h2>Shared features across jokes</h2>
@@ -179,7 +176,7 @@ svg text { font-family: var(--heading-font); }
   <h2>A global vocabulary</h2>
 
   <p>
-    The crucial difference between SAE features and clusters is scope. Clusters are computed
+    SAE features and clusters differ in scope. Clusters are computed
     <em>from</em> a dataset and apply only <em>to</em> that dataset. SAE features are trained
     to match the embedding model itself. They work on any text the model can embed.
   </p>
@@ -191,13 +188,6 @@ svg text { font-family: var(--heading-font); }
     filing system that works for any document.
   </p>
 
-  <div class="insight">
-    <p>
-      Clustering asks: "what groups exist in this data?"
-      SAE asks: "what concepts does the model recognize in this text?"
-      The first is local. The second is global.
-    </p>
-  </div>
 
   <p>
     Together, these features form a <strong>taxonomy</strong> of what the embedding model
@@ -207,7 +197,7 @@ svg text { font-family: var(--heading-font); }
 
   <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
     <p>Part of <a href="index.html" style="color: var(--text-2);">Latent Verse</a>. Previous: <a href="03-finding-structure.html" style="color: var(--accent);">Finding Structure</a>. Next: <a href="05-the-atlas.html" style="color: var(--accent);">The Atlas</a>.</p>
-    <p style="margin-top: 0.5rem;">SAE concepts from <a href="https://transformer-circuits.pub/" style="color: var(--text-2);">Anthropic's mechanistic interpretability research</a>.</p>
+    <p style="margin-top: 0.5rem;">The SAE features shown are synthetic placeholders. The approach follows <a href="https://transformer-circuits.pub/2023/monosemantic-features" style="color: var(--text-2);">Towards Monosemanticity</a>; trained SAEs on sentence embeddings are in <a href="https://github.com/enjalot/latent-sae" style="color: var(--text-2);">latent-sae</a>.</p>
   </footer>
 </div>
 

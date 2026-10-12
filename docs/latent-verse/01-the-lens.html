@@ -143,13 +143,13 @@ svg text { font-family: var(--heading-font); }
   <p>
     Take a sentence and feed it to a language model. Instead of asking the model to generate more text,
     ask it a different question: <em>what did you notice about that sentence?</em> The model's answer
-    comes back not as words, but as a list of numbers. Hundreds of them.
+    comes back as a list of numbers: 384 of them, for the model used in this series.
   </p>
 
   <p>
     This list is called an <strong>embedding</strong>. Each number is a dimension. Together they place
-    the sentence at a specific point in a high-dimensional space. The model has compressed everything it
-    understands about the meaning of that text into this single point.
+    the sentence at a specific point in a high-dimensional space. Where it lands depends on what the
+    model learned during training.
   </p>
 
   <p>Here is a dad joke, and its embedding:</p>
@@ -159,7 +159,7 @@ svg text { font-family: var(--heading-font); }
     <canvas id="single-embedding-canvas" class="embedding-canvas"></canvas>
     <div class="figure-caption">
       <span class="figure-label">Figure 1.</span>
-      Each vertical bar is one of 384 dimensions. The color encodes the value: warm tones for positive, cool for negative. It looks like noise, but it isn't.
+      Each vertical bar is one of 384 dimensions. The color encodes the value: warm tones for positive, cool for negative.
     </div>
   </div>
 
@@ -179,7 +179,7 @@ svg text { font-family: var(--heading-font); }
   <p>
     When two pieces of text are about the same thing, their embeddings land near each other in that
     high-dimensional space. We can measure how close they are with <strong>cosine similarity</strong>:
-    a score from 0 (completely different directions) to 1 (pointing the same way).
+    a score of 1 when two embeddings point the same way, falling toward 0 as they become unrelated.
   </p>
 
   <div class="margin-note" id="cosine-formula"></div>
@@ -213,10 +213,9 @@ svg text { font-family: var(--heading-font); }
   </div>
 
   <p>
-    Notice that similarity here is about meaning, not surface-level word overlap. Two jokes about
-    animals might use completely different words but still land near each other. The model learned
-    associations from millions of examples. It recognizes topical similarity, structural patterns,
-    and semantic relationships that go beyond keyword matching.
+    The similarity comes from meaning rather than shared words. Two jokes about animals can use
+    completely different words and still land near each other, because the model learned those
+    associations from millions of training examples.
   </p>
 
   <!-- Section 3: Search -->
@@ -249,18 +248,12 @@ svg text { font-family: var(--heading-font); }
   </div>
 
   <p>
-    This is the core idea: the embedding model has already learned something about language.
+    The embedding model has already learned something about language.
     It has read enough text to develop a sense of what words mean, what topics relate to each other,
     what structures look similar. When we embed our data through this model, we get to look at our
     data through the lens of everything the model has learned.
   </p>
 
-  <div class="insight">
-    <p>
-      You can learn about data by looking at what models have learned. The model is the lens.
-      Your data is what you see through it.
-    </p>
-  </div>
 
   <!-- Section 4: Choosing a lens -->
   <h2>Choosing a lens</h2>
@@ -273,7 +266,7 @@ svg text { font-family: var(--heading-font); }
   </p>
 
   <p>
-    This matters because the choice of model shapes what you see. A model trained heavily on
+    The choice of model shapes what you see. A model trained heavily on
     scientific papers might place two chemistry jokes closer together than a general-purpose model would.
     A model trained for retrieval might care more about topical overlap than tone or structure.
   </p>
