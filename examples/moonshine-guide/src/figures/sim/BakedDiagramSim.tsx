@@ -5,15 +5,14 @@ import { isSimActivate, SIM_GESTURE_LABEL } from './gesture'
 
 // A pure, local-state simulation of moonshine's "baked diagram layout".
 //
-// The real feature: a diagram's STRUCTURE (nodes + edges) lives in the
-// component code; the author's ARRANGEMENT (node positions + viewport)
-// lives in a tiny JSON file under content/figures/<id>.json. In dev you
-// click "arrange", drag nodes, then "Save layout"; saving writes the
-// positions and viewport into that JSON. Because the two are separate,
-// regenerating the diagram's structure (an agent rewriting the component)
-// never disturbs the author's layout.
+// The real feature: a diagram's STRUCTURE (a DiagramSpec of nodes + edges)
+// lives in the component code; the author's ARRANGEMENT lives in
+// content/figures/<id>.json. In dev you click "arrange", which opens the
+// diagram in tldraw; Save bakes node boxes and a light/dark SVG into that
+// JSON. Because the two are matched by id, regenerating the spec (an agent
+// rewriting the component) never disturbs the author's layout.
 //
-// No react-flow, no EditContext, no network — a hand-rolled SVG node-link
+// No tldraw, no EditContext, no network: a hand-rolled SVG node-link
 // graph plus local state. Deterministic: "regenerate" cycles a fixed list.
 
 type Pos = { x: number; y: number }
@@ -100,8 +99,6 @@ const STRUCTURES: Structure[] = [
 
 const round = (n: number) => Math.round(n)
 
-// The identity viewport the sim "saves" (it has no pan/zoom of its own).
-const SIM_VIEWPORT = { x: 0, y: 0, zoom: 1 }
 
 function defaultsFor(struct: Structure): Record<string, Pos> {
   const out: Record<string, Pos> = {}
@@ -213,13 +210,18 @@ export default function BakedDiagramSim(_props: FigureProps) {
     }
   }
 
-  // The sim has no pan/zoom, so the saved viewport is the identity frame.
-  // The real file stores both halves: node positions AND the exact
-  // viewport the author saved.
+  // The real file also carries part boxes, a spec hash, and the baked
+  // light/dark SVG readers see; the sim abbreviates the SVG.
   const jsonText = JSON.stringify(
     baked
-      ? { figure: struct.name, layout: baked, viewport: SIM_VIEWPORT }
-      : { figure: struct.name, layout: '— not saved yet —' },
+      ? {
+          figure: struct.name,
+          nodes: Object.fromEntries(
+            Object.entries(baked).map(([id, p]) => [id, { x: Math.round(p.x), y: Math.round(p.y), w: NODE_W, h: NODE_H }]),
+          ),
+          svg: { light: '<svg …/>', dark: '<svg …/>' },
+        }
+      : { figure: struct.name, nodes: '— not saved yet —' },
     null,
     2,
   )
@@ -229,7 +231,7 @@ export default function BakedDiagramSim(_props: FigureProps) {
       <p className="figure-hint" style={{ margin: '0 0 0.6rem' }}>
         Structure (nodes + edges) lives in code; the author's arrangement lives
         in JSON. {SIM_GESTURE_LABEL} the diagram to arrange, drag nodes, then
-        hit Save layout.
+        hit Save.
       </p>
 
       <div
@@ -317,7 +319,7 @@ export default function BakedDiagramSim(_props: FigureProps) {
             {!arranging ? (
               <button onClick={() => setArranging(true)}>arrange</button>
             ) : (
-              <button onClick={saveLayout}>Save layout</button>
+              <button onClick={saveLayout}>Save</button>
             )}
             <button onClick={reset}>Reset</button>
             <button onClick={regenerate}>Regenerate structure</button>
@@ -362,8 +364,8 @@ export default function BakedDiagramSim(_props: FigureProps) {
       <p className="figure-hint" style={{ marginTop: '0.7rem' }}>
         Hit <strong>Regenerate structure</strong> to simulate an agent
         rewriting the component: labels and edges change, but every saved
-        position survives. A brand-new node with no entry (dashed) falls back
-        to a default spot.
+        position survives. A brand-new node with no saved box (dashed) is
+        placed in a free spot for the author to drag into place.
       </p>
     </div>
   )

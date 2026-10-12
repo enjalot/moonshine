@@ -12,6 +12,7 @@ import {
 } from 'tldraw'
 import 'tldraw/tldraw.css'
 import { saveContentFile } from '../../lib/EditContext'
+import { getBakedFigure } from '../../lib/bakedFigures'
 import { THEMES } from './theme'
 import { nodeSize, place } from './layout'
 import { edgeKey, specHash, type BakedDiagram, type Box, type DiagramSpec, type NodeKind } from './spec'
@@ -87,7 +88,7 @@ function segmentHits(a: Box, b: Box, o: Box): boolean {
 // static text layout (animation, scrolling, interaction, print, paint
 // effects); everything that sizes or places text is kept.
 const DROP_STYLE =
-  /^(-webkit-(?!text-stroke)|accent-color|anchor-|animation|app-region|appearance|backdrop|backface|background-(?!color)|baseline-source|border-(image|shape|end|start|spacing|collapse)|box-decoration|buffered|caption-side|caret|clip|color-interpolation|color-rendering|column|contain|content-visibility|counter|cursor|cx|cy|d$|dominant|empty-cells|field-sizing|filter|flood|image-|interactivity|interpolate|isolation|lighting|list-style|marker|mask|math-|mix-blend|object-|offset|orphans|outline|overlay|overscroll|page|perspective|pointer-events|position-|print-|quotes|r$|reading-|resize|ruby|rx|ry|scroll|shape-|speak|stop-|table-layout|tab-size|timeline|touch-action|transition|user-select|vector-effect|view-|visibility|widows|will-change|x$|y$|zoom)/
+  /^(-webkit-(?!text-stroke)|accent-color|anchor-|animation|app-region|appearance|backdrop|backface|background-(?!color)|baseline-source|border-(image|shape|end|start|spacing|collapse)|box-decoration|buffered|caption-side|caret|clip$|color-interpolation|color-rendering|column|contain|content-visibility|counter|cursor|cx|cy|d$|dominant|empty-cells|field-sizing|filter|flood|image-|interactivity|interpolate|isolation|lighting|list-style|marker|mask|math-|mix-blend|object-|offset|orphans|outline|overlay|overscroll|page|perspective|pointer-events|position-|print-|quotes|r$|reading-|resize|ruby|rx|ry|scroll|shape-|speak|stop-|table-layout|tab-size|timeline|touch-action|transition|user-select|vector-effect|view-|visibility|widows|will-change|x$|y$|zoom)/
 
 function slimStyles(svg: string): string {
   return svg.replace(/style="([^"]*)"/g, (_m, raw: string) => {
@@ -105,10 +106,13 @@ function slimStyles(svg: string): string {
   })
 }
 
-async function reconcile(editor: Editor, fig: string, spec: DiagramSpec) {
+// `seed` is the bake's saved boxes: used for spec nodes the tldraw document
+// doesn't have yet (e.g. a diagram whose positions were saved before it had
+// a tldraw document), so an existing arrangement carries over.
+async function reconcile(editor: Editor, fig: string, spec: DiagramSpec, seed?: BakedDiagram | null) {
   const savedNodes: Record<string, Box> = {}
   for (const n of spec.nodes) {
-    const b = editor.getShape(nodeId(fig, n.id)) ? pageBox(editor, nodeId(fig, n.id)) : undefined
+    const b = editor.getShape(nodeId(fig, n.id)) ? pageBox(editor, nodeId(fig, n.id)) : seed?.nodes?.[n.id]
     if (b) savedNodes[n.id] = b
   }
   const savedGroups: Record<string, Box> = {}
@@ -323,7 +327,7 @@ export default function DiagramEditor({ figureId, spec, onClose }: Props) {
         const doc = await fetchDoc(figureId)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (doc) ed.loadSnapshot({ document: doc as any })
-        if (spec) await reconcile(ed, figureId, spec)
+        if (spec) await reconcile(ed, figureId, spec, doc ? null : (getBakedFigure(figureId) as BakedDiagram | null))
         ed.zoomToFit({ animation: { duration: 0 } })
         const fresh = ed.getCurrentPageShapes().filter((s) => (s.meta as Record<string, unknown>).unarranged)
         setStatus(

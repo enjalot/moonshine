@@ -13,7 +13,7 @@ This page is a `still` article about `still`. Each of the figures below is a wor
 
 ## Markdown prose
 
-Because the prose is plain text, you can :term[edit it in place]{to=prose-edit}. When you edit a block the change splices straight into the `.md` file on disk. We go into more detail on how saving works later, for now try out the interaction yourself:
+Because the prose is plain text, you can :term[edit it in place]{to=prose-edit}. When you edit a block the change splices straight into the `.md` file on disk. We go into more detail on how saving works later. For now, try out the interaction yourself:
 
 :::figure{id=prose-edit}
 ### Editing a paragraph where it renders
@@ -45,7 +45,7 @@ This panel, like the other editing features, only renders during development, an
 
 ## Rearranging the page
 
-Often times we want to move blocks or figures around to reorganize an article. Still supports :term[dragging any block]{to=reorder} up or down. The open editor also carries up and down buttons for moving one step at a time. Reordering rewrites the markdown body.
+Often we want to move blocks or figures around to reorganize an article. Still supports :term[dragging any block]{to=reorder} up or down. The open editor also carries up and down buttons for moving one step at a time. Reordering rewrites the markdown body.
 
 :::figure{id=reorder}
 Four blocks. Drag one past its neighbors to reorder them, or use the arrows. The order you leave them in is the order written back to the file.
@@ -55,31 +55,31 @@ A reorder is the same kind of save as a prose edit, which means it is covered by
 
 ## Tangled words
 
-Inspired by [Tangle](https://worrydream.com/Tangle/) prose can link to figures and drive interaction. A `:term[word]{to=figure-id}` turns a phrase into a sort of button. Hovering it highlights the linked figure while clicking pins the highlight and scrolls the figure into view. The dotted form `{to=figure-id.part}` targets one element inside a figure, so a phrase like :term[the gradient arrow]{to=terms.arrow} can light up the node or curve it describes, in this case a single arrow in the figure below.
+Inspired by [Tangle](https://worrydream.com/Tangle/), prose can link to figures and drive interaction. A `:term[word]{to=figure-id}` turns a phrase into a sort of button. Hovering it highlights the linked figure while clicking pins the highlight and scrolls the figure into view. The dotted form `{to=figure-id.part}` targets one element inside a figure, so a phrase like :term[the gradient arrow]{to=terms.arrow} can light up the node or curve it describes, in this case a single arrow in the figure below.
 
 :::figure{id=terms}
 A sentence with linked terms beside a small diagram. Hover a term to highlight its part of the figure, click to pin it. The link is just an id in the markdown.
 :::
 
-## Graph layouts
+## Diagrams
 
-With all due respect to Mermaid, it is difficult to prompt a good looking SVG diagram. Adjusting nodes and organizing links are still much easier to do manually, so we let the agent generate an initial diagram with [React Flow](https://reactflow.dev/) and the harness allows you to tweak the positions. The resulting edits are saved in a small json file that overrides the defaults:
+With all due respect to Mermaid, it is difficult to prompt a good looking SVG diagram. Adjusting nodes and organizing links are still much easier to do manually, so the agent declares a diagram as a small spec (nodes, edges, and groups) and the harness lets you arrange it in [tldraw](https://tldraw.dev), where you can also restyle shapes, re-route arrows, and sketch annotations on top. Saving bakes the drawing to SVG:
 
 :::figure{id=still-pipeline}
-The still pipeline as a live React Flow diagram, not a simulation. The nodes and edges are declared in `StillPipelineDiagram.tsx`; the positions and framing you see were saved to `content/figures/still-pipeline.json` from the arrange mode described below.
+The still pipeline as a live diagram, not a simulation. The nodes and edges are declared in `StillPipelineDiagram.tsx`; the arrangement you see was saved to `content/figures/still-pipeline.json` from the editor described below.
 :::
 
-In development an arrange button appears under a diagram. Click it, drag the nodes, and hit Save layout. The JSON stores the node positions and the exact viewport, which get loaded on read so the reader sees what you see. Because structure and arrangement are separate, the agent can regenerate the diagram's logic without disturbing where you placed everything:
+In development an arrange button appears under a diagram. Click it to open the diagram in a full-screen tldraw editor, drag and draw, and hit Save. The JSON stores the node positions and a light and a dark SVG of the whole drawing, which is what readers get; tldraw itself never ships with the article. Because structure and arrangement are separate, the agent can regenerate the diagram's logic without disturbing where you placed everything:
 
 :::figure{id=baked-diagram}
-Click the diagram (or the arrange button) to start arranging, drag the nodes, then hit Save layout. Regenerating the structure changes labels and edges, but every saved position stays put; only a brand-new node falls back to a default spot.
+Click the diagram (or the arrange button) to start arranging, drag the nodes, then hit Save. Regenerating the structure changes labels and edges, but every saved position stays put; a brand-new node lands in a free spot for you to drag into place.
 :::
 
 ## How the author and the agent share the files
 
 The point of all this is to let the author take over from the AI without a handoff. You prompt the coding agent in the terminal and you click and edit in the browser, and :term[both write to the same plain-text files]{to=dual-surface} under `content/`: markdown for prose, small JSON files for baked figure state.
 
-The harness uses git as the shared memory, each browser save is committed with a recognizable `moonshine-edit:` marker, so the agent can read exactly what you changed and treat it as authoritative, and you get real history to undo from.
+The harness uses git as the shared memory. Each browser save is committed with a recognizable `moonshine-edit:` marker, so the agent can read exactly what you changed and treat it as authoritative, and you get real history to undo from.
 
 :::figure{id=dual-surface}
 The two surfaces writing to one source. Click the author or the agent to make an edit, and watch it land in the shared files and the commit log.

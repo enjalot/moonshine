@@ -1,36 +1,35 @@
 import type { FigureProps } from './registry'
-import DiagramFigure, { type DiagramNode, type DiagramEdge } from './DiagramFigure'
+import DiagramFigure, { type DiagramSpec } from './DiagramFigure'
 
-// A REAL DiagramFigure (React Flow), not a simulation: the still pipeline
-// that turns this article's markdown into the page you are reading. This
-// file owns the machine-owned semantics (node ids, labels, edges, fallback
-// positions); the author-owned arrangement lives in
-// content/figures/still-pipeline.json, saved from the dev-only arrange
-// mode. Regenerate this file freely and the author's layout survives.
+// A REAL DiagramFigure, not a simulation: the still pipeline that turns
+// this article's markdown into the page you are reading. This file owns
+// the semantics (ids, labels, edges); the author-owned arrangement lives
+// in content/figures/still-pipeline.json, saved from the dev-only tldraw
+// editor. Regenerate this file freely and the author's layout survives.
 //
-// The dotted :term form can target single nodes, e.g.
+// Node ids are term targets, e.g.
 // `:term[the registry]{to=still-pipeline.registry}`.
 
-const NODES: DiagramNode[] = [
-  { id: 'markdown', label: 'markdown source', position: { x: 0, y: 90 } },
-  { id: 'directive', label: 'remark-directive', position: { x: 190, y: 20 } },
-  { id: 'registry', label: 'figure registry', position: { x: 380, y: 90 } },
-  { id: 'component', label: 'React figure', position: { x: 560, y: 20 } },
-  { id: 'page', label: 'rendered page', position: { x: 740, y: 90 } },
-]
-
-const EDGES: DiagramEdge[] = [
-  { id: 'a', source: 'markdown', target: 'directive', animated: true },
-  { id: 'b', source: 'directive', target: 'registry', animated: true },
-  { id: 'c', source: 'registry', target: 'component', animated: true },
-  { id: 'd', source: 'component', target: 'page', animated: true },
-  // Edits made on the page (knob saves, prose splices) write back into
-  // the markdown, closing the authoring loop.
-  { id: 'e', source: 'page', target: 'markdown', type: 'smoothstep' },
-]
+const SPEC: DiagramSpec = {
+  direction: 'RIGHT',
+  nodes: [
+    { id: 'markdown', label: 'markdown source', kind: 'data' },
+    { id: 'directive', label: 'remark-directive' },
+    { id: 'registry', label: 'figure registry', kind: 'accent' },
+    { id: 'component', label: 'React figure' },
+    { id: 'page', label: 'rendered page' },
+  ],
+  edges: [
+    { from: 'markdown', to: 'directive' },
+    { from: 'directive', to: 'registry' },
+    { from: 'registry', to: 'component' },
+    { from: 'component', to: 'page' },
+    // Edits made on the page (knob saves, prose splices) write back into
+    // the markdown, closing the authoring loop.
+    { from: 'page', to: 'markdown', label: 'edits save back', dashed: true },
+  ],
+}
 
 export default function StillPipelineDiagram({ figureId }: FigureProps) {
-  return (
-    <DiagramFigure figureId={figureId} nodes={NODES} edges={EDGES} height={260} />
-  )
+  return <DiagramFigure figureId={figureId} spec={SPEC} />
 }
