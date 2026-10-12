@@ -35,7 +35,7 @@ We are also not making coding tutorials. Equations and their connection to behav
 Moonshine renders articles on one of two substrates. Decide early, during story discovery, and confirm the choice at the Phase 1 checkpoint:
 
 - **shine** — a single self-contained HTML file (vanilla JS + D3 from CDN). Choose when drafting fast, when the user wants one file they can email or host anywhere, or when the article is one-shot.
-- **still** — a Vite + React + Velite project where prose lives in pristine markdown and figures are React components. Choose when the article will keep being edited after first publication, when figures need React state or component libraries (React Flow, react-three-fiber), when people will edit the prose without touching figure code, or when the work is a series or could become one.
+- **still** — a Vite + React + Velite project where prose lives in pristine markdown and figures are React components. Choose when the article will keep being edited after first publication, when figures need React state or component libraries (tldraw-arranged diagrams, react-three-fiber), when people will edit the prose without touching figure code, or when the work is a series or could become one.
 
 If the user invoked a specific skill (`/moonshine:shine` or `/moonshine:still`), the choice is made. If they invoked moonshine generically, default to still — nearly every real article keeps being edited after first publication, and still is where the authoring affordances live (in-place editing, the knob panel, authorship feedback). Offer shine when the user wants one file they can email or host anywhere with no build step. Everything still-specific lives in `STILL.md`; the authorship-feedback loop (`FEEDBACK.md`) is still-only.
 

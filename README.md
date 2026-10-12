@@ -34,7 +34,7 @@ While `npm run dev` runs, the rendered article is itself the editing surface, fo
 - **Edit prose in place.** Cmd/Ctrl+click any block to edit its raw markdown in the page; saves splice back into the `.md` by source offset.
 - **Tune figures with knobs.** Cmd/Ctrl+click a figure to open a panel generated from its `DEFAULTS`; "Save to markdown" writes the tweaked values into the directive's attributes.
 - **Reorder sections.** Cmd/Ctrl+drag any block (or use ↑/↓ in the editor) to move it; the markdown is rewritten.
-- **Arrange diagrams.** Node-link figures built on `DiagramFigure` (React Flow) get an author-owned layout: drag nodes, frame the viewport, save. Regenerating the diagram's code never clobbers the arrangement.
+- **Arrange and draw diagrams.** The agent declares a diagram as a small spec (nodes, edges, groups); the author arranges, restyles, and annotates it in a dev-only [tldraw](https://tldraw.dev) editor, and readers get the baked SVG. Regenerating the spec never clobbers the arrangement.
 - **Git as shared memory.** Every browser save auto-commits with a `moonshine-edit:` prefix, so the agent can see exactly what the author changed and build around their words.
 - **Comments back to the agent.** The 💬 affordance sends feedback ("this is too hand-wavy") into `.feedback/` files that the agent picks up at turn boundaries (Stop hook) or via the idle listener (`/moonshine:moonshine-listen`).
 

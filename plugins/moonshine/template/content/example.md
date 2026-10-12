@@ -41,7 +41,10 @@ $$
 
 :::figure{id=flow-diagram}
 One iteration of gradient descent as a small data flow: parameters in,
-loss and gradient computed, parameters updated. Repeat.
+loss and gradient computed, parameters updated. Repeat. The figure file
+declares only the nodes and edges; during `npm run dev`, click arrange to
+lay it out and annotate it in tldraw, and the saved drawing is what
+readers see.
 :::
 
 The full picture is just this loop, run for thousands of iterations

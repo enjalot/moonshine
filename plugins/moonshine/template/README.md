@@ -69,7 +69,7 @@ no write endpoints.
 ```
 content/                  ← writers edit only here
   example.md
-  figures/                ← author-saved diagram layouts (*.json)
+  figures/                ← author-saved diagram bakes (*.json, tldraw/*.tldr.json)
   series/
     index.md
     01-...md
@@ -85,8 +85,9 @@ src/
     Sparkline.tsx         ← D3 example (registered knobs)
     GradientField.tsx     ← plain SVG example
     LossLandscape.tsx     ← interactive React-state example (PARAM_HINTS)
-    DiagramFigure.tsx     ← generic React Flow diagram + arrange/save
-    FlowDiagram.tsx       ← example diagram semantics on DiagramFigure
+    DiagramFigure.tsx     ← DiagramSpec → baked SVG; dev-only tldraw arrange/draw
+    FlowDiagram.tsx       ← example DiagramSpec
+    diagram/              ← spec types, ELK layout, fallback SVG, tldraw editor
     lib/params.ts         ← attr→number/bool/string coercers
     inline/MiniSpark.tsx  ← inline visual example
   lib/                    ← editing, block geometry, reorder animation, feedback
@@ -181,5 +182,5 @@ pattern — the moonshine repo's publish script writes that root file).
 - Reference CSS custom properties in figure code (`var(--accent)`,
   `var(--text-2)`) from `tokens.css`, not hardcoded hex.
 - Wrap heavy figures in `<LazyIsland>` (`<Figure>` already does this).
-- `content/figures/*.json` is the author's arrangement surface — agents
-  regenerate diagram *code*, never those files.
+- `content/figures/` is the author's arrangement surface. Agents
+  regenerate diagram *specs*, never those files.

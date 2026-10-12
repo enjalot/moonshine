@@ -752,6 +752,94 @@
 
 /* Dev-only diagram arrange bar ---------------------------------------- */
 
+/* Diagrams (DiagramFigure) -------------------------------------------
+   Readers get either the author's baked tldraw SVG (both themes inlined,
+   one shown) or the plain-SVG spec rendering. Never wider than drawn, so
+   label text stays the size the author saw. */
+
+.mn-diagram-baked {
+  position: relative;
+  margin: 0 auto;
+}
+.mn-diagram-baked svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.mn-diagram-dark {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  .mn-diagram-light {
+    display: none;
+  }
+  .mn-diagram-dark {
+    display: block;
+  }
+}
+.mn-diagram-baked > svg.mn-diagram-overlay {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  pointer-events: none;
+}
+.mn-diagram-overlay rect {
+  transition: opacity 0.2s;
+}
+.mn-diagram-loading {
+  min-height: 120px;
+}
+.mn-diagram-empty {
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  color: var(--text-2);
+  text-align: center;
+  margin: 2rem 0;
+}
+
+/* Dev-only full-screen tldraw editor (portaled to <body>). */
+.mn-diagram-editor {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+.mn-diagram-editor-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.mn-diagram-editor-bar strong {
+  color: var(--text);
+  font-family: var(--mono-font);
+  font-weight: 500;
+}
+.mn-diagram-editor-bar button {
+  font: inherit;
+  border: 1px solid var(--border);
+  background: var(--fig-bg);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0.25rem 0.8rem;
+  cursor: pointer;
+}
+.mn-diagram-editor-bar button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.mn-diagram-editor-canvas {
+  position: relative;
+  flex: 1;
+}
+
 .mn-diagram-bar {
   display: flex;
   align-items: center;
