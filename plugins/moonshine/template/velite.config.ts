@@ -11,6 +11,7 @@ import { defineConfig, s } from 'velite'
 // side means HMR on a content edit is one re-render, not a full rebuild.
 
 const box = s.object({ x: s.number(), y: s.number(), w: s.number(), h: s.number() })
+const side = s.enum(['top', 'right', 'bottom', 'left'])
 
 export default defineConfig({
   root: 'content',
@@ -21,25 +22,42 @@ export default defineConfig({
     clean: true,
   },
   collections: {
-    // Author-owned figure state, baked into the build. Written by the
-    // dev-only arrange/draw affordance (DiagramFigure's tldraw editor
-    // saves light/dark SVGs, part boxes, and node boxes here); read back
-    // via src/lib/bakedFigures.ts. JSON instead of frontmatter because the
-    // same figure can appear in several articles, and JSON round-trips
-    // machine writes cleanly. Machine-owned semantics (the diagram spec)
-    // live in the figure's code and are merged with the saved arrangement
-    // by id, so regenerated diagram code never clobbers the author's work.
+    // Author-owned figure state, baked into the build. Diagrams save
+    // their arrangement here from the dev arrange editor (node/group boxes,
+    // edge sides, annotations, reader frame); drawings save light/dark SVG.
+    // Read back via src/lib/bakedFigures.ts. Machine-owned semantics (the
+    // DiagramSpec) live in the figure's code and are merged with this by
+    // id, so regenerated diagram code never clobbers the author's work.
     figureData: {
       name: 'FigureData',
-      // Top level only: figures/tldraw/*.tldr.json are editor documents
+      // Top level only: figures/tldraw/*.tldr.json are drawing documents
       // that must never be bundled for readers.
       pattern: 'figures/*.json',
       schema: s
         .object({
           figure: s.string(),
-          specHash: s.string().optional(),
           nodes: s.record(s.string(), box).optional(),
           groups: s.record(s.string(), box).optional(),
+          edges: s
+            .record(
+              s.string(),
+              s.object({ source: side.optional(), target: side.optional() }),
+            )
+            .optional(),
+          annotations: s
+            .array(
+              s.object({
+                id: s.string(),
+                kind: s.enum(['text', 'note']),
+                text: s.string(),
+                x: s.number(),
+                y: s.number(),
+                w: s.number(),
+                h: s.number(),
+              }),
+            )
+            .optional(),
+          frame: box.optional(),
           parts: s.record(s.string(), box).optional(),
           svg: s
             .object({

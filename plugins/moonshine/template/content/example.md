@@ -43,8 +43,8 @@ $$
 One iteration of gradient descent as a small data flow: parameters in,
 loss and gradient computed, parameters updated. Repeat. The figure file
 declares only the nodes and edges; during `npm run dev`, click arrange to
-lay it out and annotate it in tldraw, and the saved drawing is what
-readers see.
+position them, pick edge sides, add notes, and crop the frame. Readers get
+the live diagram with that arrangement.
 :::
 
 The full picture is just this loop, run for thousands of iterations
@@ -75,3 +75,8 @@ the directive (`seed=0.7`); during `npm run dev`, Cmd/Ctrl+click the
 figure to dial it with the knob panel and save the value back to this
 file.
 :::
+
+During `npm run dev`, hovering the gap between two blocks shows a **+**.
+It adds a paragraph, a drawing (a tldraw canvas baked to SVG), or an
+uploaded image right there in the markdown, and 💬 on the new block asks
+the agent to adjust it.

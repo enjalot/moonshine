@@ -69,7 +69,7 @@ no write endpoints.
 ```
 content/                  ← writers edit only here
   example.md
-  figures/                ← author-saved diagram bakes (*.json, tldraw/*.tldr.json)
+  figures/                ← author-saved arrangements and drawings (*.json, tldraw/)
   series/
     index.md
     01-...md
@@ -85,9 +85,10 @@ src/
     Sparkline.tsx         ← D3 example (registered knobs)
     GradientField.tsx     ← plain SVG example
     LossLandscape.tsx     ← interactive React-state example (PARAM_HINTS)
-    DiagramFigure.tsx     ← DiagramSpec → baked SVG; dev-only tldraw arrange/draw
+    DiagramFigure.tsx     ← DiagramSpec + saved arrangement → live React Flow
     FlowDiagram.tsx       ← example DiagramSpec
-    diagram/              ← spec types, ELK layout, fallback SVG, tldraw editor
+    DrawingFigure.tsx     ← built-in kind=drawing (tldraw, baked SVG)
+    diagram/              ← spec types, ELK layout, React Flow pieces, editors
     lib/params.ts         ← attr→number/bool/string coercers
     inline/MiniSpark.tsx  ← inline visual example
   lib/                    ← editing, block geometry, reorder animation, feedback

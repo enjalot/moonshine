@@ -146,9 +146,10 @@ template/
   content/                   ← writers edit only here
     example.md
     figures/
-      flow-diagram.json      ← author-baked diagram SVG + boxes (see Diagrams)
+      flow-diagram.json      ← author's diagram arrangement (see Diagrams)
+      drawing-1.json         ← a browser-added drawing's baked SVG
       tldraw/
-        flow-diagram.tldr.json  ← the author's tldraw document (editor only)
+        drawing-1.tldr.json  ← its tldraw document (editor only)
     series/
       index.md
       01-gradient-descent.md
@@ -170,6 +171,7 @@ template/
       SourceEditor.tsx       ← the raw-markdown textarea (dev only)
       EditChrome.tsx         ← pill, undo toast, draft banner, HUD mount
       BlockReorderLayer.tsx  ← Cmd-drag block reordering (dev only)
+      InsertLayer.tsx        ← the "+" between blocks: text, drawing, image (dev only)
       AuthorshipHUD.tsx      ← feedback status + listener controls (dev only)
       CommentBox.tsx         ← 💬 comment composer (dev only)
       MoonshineFooter.tsx
@@ -186,13 +188,16 @@ template/
       Sparkline.tsx          ← D3 example
       GradientField.tsx      ← plain SVG example
       LossLandscape.tsx      ← interactive React state example
-      DiagramFigure.tsx      ← spec → baked SVG / fallback SVG + dev arrange
+      DiagramFigure.tsx      ← spec + arrangement → live React Flow diagram
       FlowDiagram.tsx        ← example DiagramSpec on DiagramFigure
+      DrawingFigure.tsx      ← built-in kind=drawing: baked tldraw SVG
+      builtin.ts             ← built-in figure kinds (no registry entry)
       diagram/
         spec.ts              ← DiagramSpec + BakedDiagram types
         layout.ts            ← ELK auto-layout + merge with saved boxes
-        SpecSvg.tsx          ← token-themed SVG rendering of a spec
-        DiagramEditor.tsx    ← dev-only full-screen tldraw editor (lazy)
+        flow.tsx             ← React Flow nodes/edges shared by reader + editor
+        DiagramArrange.tsx   ← dev-only full-screen arrange editor (lazy)
+        DrawingEditor.tsx    ← dev-only tldraw editor for drawings (lazy)
         theme.ts             ← tldraw theme matched to tokens.css
       lib/
         params.ts            ← attr→number/bool/string coercers
@@ -305,12 +310,14 @@ either way.
 
 The figure layer is open. But there are real choices to make per figure:
 
-- **`DiagramFigure`** for node-link, system, and pipeline diagrams,
-  and for anything the author wants to draw by hand (see "Diagrams"
-  below). You declare a small spec; the author arranges and annotates
-  it in tldraw; readers get a baked SVG. Every node has a stable id, so
-  `:term[word]{to=diagram-id.node-id}` highlights one node inside the
-  diagram. Choose it whenever you'd reach for Mermaid.
+- **`DiagramFigure`** (React Flow) for node-link, system, and pipeline
+  diagrams (see "Diagrams" below). You declare a small spec; the author
+  arranges it; readers get a live diagram at the article's type size.
+  Every node, group and edge has a stable id, so
+  `:term[word]{to=diagram-id.node-id}` highlights one part inside the
+  diagram. Choose it whenever you'd reach for Mermaid. Free-hand
+  drawings are the author's: they add them with the **+** between
+  blocks (tldraw, baked to SVG).
 
 - **D3 v7** for custom data visualization — scales, axes, force
   layouts, contours, anything where the existing `VISUALS.md`
@@ -345,11 +352,12 @@ generated code is bad at it. The template splits a diagram in two:
     groups: [{ id: 'gpu', label: 'on the GPU box' }],
     nodes: [
       { id: 'chunks', label: 'parquet chunks', kind: 'data' },
-      { id: 'embed', label: 'embedder', kind: 'accent', group: 'gpu' },
+      { id: 'embed', label: 'embedder', kind: 'accent', group: 'gpu',
+        detail: 'all-MiniLM-L6-v2, batch 1024' },   // shown on hover
       { id: 'index', label: 'faiss index', kind: 'store', group: 'gpu' },
     ],
     edges: [
-      { from: 'chunks', to: 'embed' },
+      { from: 'chunks', to: 'embed', animated: true },
       { from: 'embed', to: 'index', label: 'kNN' },
     ],
   }
@@ -359,41 +367,35 @@ generated code is bad at it. The template splits a diagram in two:
   ```
 
   Kinds: `process` (default), `data` (dashed), `store` (pill),
-  `external` (cloud), `decision` (diamond), `accent` (tinted, for the
-  node the prose is about), `note`. Ids are stable handles: they key
-  the author's arrangement and are the part ids terms target (edges
-  default to `from--to`). Rename an id only when the thing changed.
+  `external` (dotted), `decision`, `accent` (tinted, for the node the
+  prose is about), `note`. Ids are stable handles: they key the author's
+  arrangement and are the part ids terms target (edges default to
+  `from--to`; groups and author annotations by their ids). Rename an id
+  only when the thing changed.
 
 - **Author-owned arrangement.** In `npm run dev`, **arrange** under the
-  diagram opens a full-screen [tldraw](https://tldraw.dev) editor:
-  drag, resize, restyle, re-route arrows, sketch, annotate. **Save**
-  writes `content/figures/<id>.json` (light and dark SVG, part boxes,
-  node boxes, a hash of the spec) and the tldraw document at
-  `content/figures/tldraw/<id>.tldr.json`, through the same
-  auto-committing save path as prose (last writer wins, no conflict
-  check). A figure with no `spec` is a free drawing: **draw** opens an
-  empty canvas.
+  diagram opens a full-screen editor: drag (8px grid, alignment guides
+  against other nodes' edges and centers), shift-drag to box-select,
+  arrow keys to nudge, corner handles to resize, click an edge to pick
+  the side it leaves from or arrives at, **+ Text / + Note** for
+  annotations (double-click to edit), **Auto-layout** (ELK; just the
+  selection when 2+ nodes are selected), **Frame** to crop what readers
+  see, ⌘Z / ⇧⌘Z. **Save** writes `content/figures/<id>.json` through
+  the same auto-committing save path as prose (last writer wins, no
+  conflict check).
 
-What readers get:
+Readers get a live React Flow diagram built from both, locked (the wheel
+scrolls the page), drawn from the tokens so it follows light/dark, and
+never scaled above 1, so labels stay at the article's type size. Edges
+run border to border, or orthogonally out of an author-chosen side; an
+edge that would cross a node bows around the row. Nodes with `detail`
+show it on hover or focus.
 
-- **Baked SVG** once the author has saved and the spec hasn't changed
-  since. tldraw never ships: it is lazy-loaded only under
-  `import.meta.env.DEV` (tldraw requires a license key on production
-  hosts), and the bake strips embedded fonts so labels use the
-  article's own type.
-- **Spec SVG** otherwise: an ELK auto-layout (or the author's saved node
-  positions, when there are some) drawn with the article's color tokens.
-  It never shows stale labels, but it omits the author's freehand
-  additions, and loading ELK costs readers ~430 KB gzipped. **Arrange
-  and save every diagram before publishing.** In dev, a stale bake says
-  "the spec changed since this layout was saved".
-
-When the agent changes a spec after the author arranged it, re-opening
-the editor reconciles by id: new nodes land next to their arranged
-neighbours (the bar reports how many need placing), removed ones
-disappear with their edges, changed labels update (boxes widen to
-fit), and everything the author drew stays. **Re-layout from spec**
-resets only spec shapes to ELK positions.
+When the agent changes a spec after the author arranged it, nothing
+breaks: new nodes are laid out by ELK next to their arranged neighbours
+(the dev bar says how many; arrange shows them dashed), removed ones
+disappear with their edges, changed labels just render. ELK loads only
+when some node has no saved position.
 
 Rules for agents:
 
@@ -401,10 +403,34 @@ Rules for agents:
   They are the author's surface, like their prose.
 - Keep diagrams editorial: roughly 3–12 nodes. Past that you're
   building a tool, not an article.
-- To arrange a diagram yourself (e.g. a first pass the author will
-  refine), drive the dev page with Playwright: click **arrange**, then
-  `window.__moonshineDiagram.editor` is the live tldraw `Editor`
-  (shape ids are `shape:<figure-id>.<node-id>`); click **Save**.
+- For a figure that needs more than node-link (custom node rendering,
+  live data inside nodes), build on `diagram/flow.tsx`'s pieces rather
+  than starting from raw React Flow.
+
+## Author-Added Content: the "+" Between Blocks (dev only)
+
+Hovering the gap between two top-level blocks (or after the last) shows
+a **+**, notebook-style. It inserts, at that spot in the markdown:
+
+- **Text**: a block written in place (any markdown, directives included).
+- **Drawing**: opens a full-screen tldraw canvas; Save writes
+  `figures/drawing-N.json` (light/dark SVG, fonts stripped so labels use
+  the article's type) and `figures/tldraw/drawing-N.tldr.json`, then
+  inserts `:::figure{id=drawing-N kind=drawing}`. `kind=drawing` is a
+  built-in figure (`src/figures/builtin.ts`): no registry entry needed.
+  tldraw only loads in dev (it needs a license key on production
+  hosts); readers get the SVG. **draw** under it re-opens the canvas.
+- **Image**: uploads to `public/media/` through
+  `POST /__moonshine/upload` and inserts `![alt](media/name.png)`;
+  `media/` paths resolve against the site base, so they work under a
+  Pages subpath.
+
+All three go through the conflict-checked save path and auto-commit like
+any author edit, so the agent sees them in `git log`. The author can 💬
+on the new block (Cmd/Ctrl+click a drawing for its comment button) to
+ask the agent to restyle, extend, or rebuild it as a proper figure.
+Agents treat author-added content like author prose: change it only
+when asked.
 
 ## Velite and Typed Metadata
 
