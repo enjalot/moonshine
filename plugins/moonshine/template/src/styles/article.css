@@ -757,6 +757,10 @@
    light/dark and the article's type with no baking. Readers never get
    pan/zoom: wheel and drag fall through to the page. */
 
+.mn-diagram-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 .mn-diagram-flow {
   position: relative;
   width: 100%;

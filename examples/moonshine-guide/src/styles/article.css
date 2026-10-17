@@ -758,11 +758,241 @@
 
 /* Dev-only diagram arrange bar ---------------------------------------- */
 
-/* Diagrams (DiagramFigure) -------------------------------------------
-   Readers get either the author's baked tldraw SVG (both themes inlined,
-   one shown) or the plain-SVG spec rendering. Never wider than drawn, so
-   label text stays the size the author saw. */
+/* Diagrams (DiagramFigure: live React Flow; DrawingFigure: baked SVG) --
+   Diagram nodes and edges are drawn from the tokens, so they follow
+   light/dark and the article's type with no baking. Readers never get
+   pan/zoom: wheel and drag fall through to the page. */
 
+.mn-diagram-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.mn-diagram-flow {
+  position: relative;
+  width: 100%;
+}
+.mn-diagram-flow .react-flow__pane,
+.mn-diagram-flow .react-flow__renderer {
+  cursor: default;
+}
+.mn-diagram-flow .react-flow__node {
+  cursor: default;
+}
+
+.mn-flow-node {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.75rem;
+  font-family: var(--heading-font);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--text);
+  background: var(--fig-bg);
+  border: 1.25px solid var(--text);
+  border-radius: 5px;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.mn-flow-label {
+  white-space: pre-line;
+}
+.mn-flow-node--data {
+  border: 1.25px dashed var(--text-2);
+  border-radius: 3px;
+}
+.mn-flow-node--store {
+  border-radius: 999px;
+  background: var(--accent-light);
+  border-color: var(--text-2);
+}
+.mn-flow-node--external {
+  border: 1.25px dotted var(--text-2);
+  border-radius: 14px;
+  color: var(--text-2);
+}
+.mn-flow-node--decision {
+  border-radius: 2px;
+  transform: none;
+  border-style: double;
+  border-width: 3px;
+}
+.mn-flow-node--accent {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.mn-flow-node--note {
+  background: var(--note-bg);
+  border-color: var(--note-border);
+  font-weight: 400;
+}
+.mn-flow-node.is-active,
+.mn-flow-group.is-active,
+.mn-flow-annot.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+.mn-flow-node.is-active {
+  background: var(--accent-light);
+}
+.mn-flow-node.is-unarranged {
+  outline: 2px dashed var(--accent);
+  outline-offset: 3px;
+}
+
+/* Reader detail on hover/focus for nodes that declare `detail`. */
+.mn-flow-node.has-detail {
+  cursor: help;
+}
+.mn-flow-detail {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  transform: translateX(-50%);
+  z-index: 10;
+  width: max-content;
+  max-width: 260px;
+  padding: 0.45rem 0.6rem;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  color: var(--text);
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  box-shadow: 0 4px 14px var(--shadow-edge);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.mn-flow-node.has-detail:hover .mn-flow-detail,
+.mn-flow-node.has-detail:focus .mn-flow-detail {
+  opacity: 1;
+}
+.react-flow__node:has(.mn-flow-node.has-detail:hover),
+.react-flow__node:has(.mn-flow-node.has-detail:focus) {
+  z-index: 1000 !important;
+}
+
+.mn-flow-group {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+}
+.mn-flow-group-label {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  font-family: var(--heading-font);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.mn-flow-annot {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  font-family: var(--heading-font);
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--text-2);
+  white-space: pre-wrap;
+  overflow: hidden;
+}
+.mn-flow-annot--note {
+  padding: 0.4rem 0.55rem;
+  color: var(--text);
+  background: var(--note-bg);
+  border: 1px solid var(--note-border);
+  border-radius: 4px;
+}
+.mn-flow-annot-edit {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  font: inherit;
+  color: var(--text);
+  background: var(--fig-bg);
+  border: 1px solid var(--accent);
+  resize: none;
+}
+
+.mn-flow-frame {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  border: 2px dashed var(--accent);
+  border-radius: 4px;
+}
+.mn-flow-frame-label {
+  position: absolute;
+  top: -1.4rem;
+  left: 0;
+  font-family: var(--heading-font);
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.mn-flow-handle {
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  min-width: 0;
+  min-height: 0;
+  border: none;
+  pointer-events: none;
+}
+
+.react-flow__edge-path.mn-flow-edge {
+  stroke: var(--text-2);
+  stroke-width: 1.4;
+  fill: none;
+}
+.react-flow__edge-path.mn-flow-edge.is-dashed {
+  stroke-dasharray: 5 4;
+}
+.react-flow__edge.animated .react-flow__edge-path.mn-flow-edge {
+  stroke-dasharray: 5 5;
+}
+.react-flow__edge-path.mn-flow-edge.is-active {
+  stroke: var(--accent);
+  stroke-width: 2.2;
+}
+.mn-flow-edge-label {
+  position: absolute;
+  padding: 0 0.3rem;
+  font-family: var(--heading-font);
+  font-size: 12.5px;
+  color: var(--text-2);
+  background: var(--fig-bg);
+  border-radius: 3px;
+  pointer-events: none;
+}
+.mn-flow-edge-label.is-active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.mn-flow-resize-line {
+  border-color: var(--accent) !important;
+}
+.mn-flow-resize-handle {
+  width: 8px !important;
+  height: 8px !important;
+  background: var(--fig-bg) !important;
+  border: 1.5px solid var(--accent) !important;
+  border-radius: 2px !important;
+}
+
+/* Drawings: both theme SVGs are inlined, CSS shows the matching one. */
 .mn-diagram-baked {
   position: relative;
   margin: 0 auto;
@@ -789,9 +1019,6 @@
   height: 100%;
   pointer-events: none;
 }
-.mn-diagram-overlay rect {
-  transition: opacity 0.2s;
-}
 .mn-diagram-loading {
   min-height: 120px;
 }
@@ -803,7 +1030,19 @@
   margin: 2rem 0;
 }
 
-/* Dev-only full-screen tldraw editor (portaled to <body>). */
+/* Images in prose (including ones added with the "+"). */
+.article p > img:only-child {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 2rem auto;
+  border-radius: 4px;
+}
+.article img {
+  max-width: 100%;
+}
+
+/* Dev-only full-screen editors (arrange, drawing), portaled to <body>. */
 .mn-diagram-editor {
   position: fixed;
   inset: 0;
@@ -844,6 +1083,149 @@
 .mn-diagram-editor-canvas {
   position: relative;
   flex: 1;
+}
+.mn-diagram-editor-status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mn-diagram-arrange {
+  background: var(--fig-bg);
+}
+.mn-diagram-arrange .react-flow__node.selected .mn-flow-node,
+.mn-diagram-arrange .react-flow__node.selected .mn-flow-annot--text {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.mn-diagram-arrange .react-flow__node {
+  cursor: grab;
+}
+.mn-diagram-arrange .react-flow__selection {
+  background: rgba(37, 99, 235, 0.06);
+  border: 1px solid var(--accent);
+}
+.mn-diagram-arrange .react-flow__edge.selected .react-flow__edge-path.mn-flow-edge,
+.mn-diagram-arrange .react-flow__edge:hover .react-flow__edge-path.mn-flow-edge {
+  stroke: var(--accent);
+}
+.mn-diagram-arrange .react-flow__edge {
+  cursor: pointer;
+}
+.mn-flow-guide {
+  position: absolute;
+  pointer-events: none;
+  background: var(--accent);
+  opacity: 0.7;
+  z-index: 1001;
+}
+.mn-flow-guide--v {
+  top: -100000px;
+  width: 1px;
+  height: 200000px;
+}
+.mn-flow-guide--h {
+  left: -100000px;
+  height: 1px;
+  width: 200000px;
+}
+.mn-diagram-edge-panel {
+  position: absolute;
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.45rem 0.8rem;
+  font-family: var(--heading-font);
+  font-size: 0.85rem;
+  color: var(--text-2);
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px var(--shadow-edge);
+}
+.mn-diagram-edge-panel select,
+.mn-diagram-edge-panel button {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+/* Dev-only notebook-style "+" between blocks (InsertLayer). */
+.mn-insert {
+  position: absolute;
+  z-index: 40;
+  height: 0;
+}
+.mn-insert-rail {
+  position: absolute;
+  left: -2.4rem;
+  top: -0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: calc(100% + 2.4rem);
+  font-family: var(--heading-font);
+}
+.mn-insert-rail::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.35;
+}
+.mn-insert-plus {
+  flex: none;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  font: 600 1.05rem/1 var(--heading-font);
+  color: var(--accent);
+  background: var(--fig-bg);
+  border: 1.5px solid var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.mn-insert-plus[aria-expanded='true'] {
+  color: #fff;
+  background: var(--accent);
+}
+.mn-insert-menu {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem;
+  font-size: 0.85rem;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px var(--shadow-edge);
+}
+.mn-insert-menu button {
+  font: inherit;
+  color: var(--text);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+}
+.mn-insert-menu button:hover {
+  background: var(--accent-light);
+}
+.mn-insert-error {
+  color: var(--error);
+  padding: 0 0.4rem;
+}
+.mn-insert-composer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0.4rem;
 }
 
 .mn-diagram-bar {

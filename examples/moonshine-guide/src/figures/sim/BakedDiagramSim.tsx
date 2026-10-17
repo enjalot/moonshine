@@ -7,12 +7,12 @@ import { isSimActivate, SIM_GESTURE_LABEL } from './gesture'
 //
 // The real feature: a diagram's STRUCTURE (a DiagramSpec of nodes + edges)
 // lives in the component code; the author's ARRANGEMENT lives in
-// content/figures/<id>.json. In dev you click "arrange", which opens the
-// diagram in tldraw; Save bakes node boxes and a light/dark SVG into that
-// JSON. Because the two are matched by id, regenerating the spec (an agent
+// content/figures/<id>.json. In dev you click "arrange", which opens a
+// full-screen editor; Save writes node boxes (plus edge sides, notes and
+// a crop frame, when used) into that JSON. Because the two are matched by id, regenerating the spec (an agent
 // rewriting the component) never disturbs the author's layout.
 //
-// No tldraw, no EditContext, no network: a hand-rolled SVG node-link
+// No React Flow, no EditContext, no network: a hand-rolled SVG node-link
 // graph plus local state. Deterministic: "regenerate" cycles a fixed list.
 
 type Pos = { x: number; y: number }
@@ -210,8 +210,7 @@ export default function BakedDiagramSim(_props: FigureProps) {
     }
   }
 
-  // The real file also carries part boxes, a spec hash, and the baked
-  // light/dark SVG readers see; the sim abbreviates the SVG.
+  // The real file can also carry edge sides, annotations and a crop frame.
   const jsonText = JSON.stringify(
     baked
       ? {
@@ -219,7 +218,6 @@ export default function BakedDiagramSim(_props: FigureProps) {
           nodes: Object.fromEntries(
             Object.entries(baked).map(([id, p]) => [id, { x: Math.round(p.x), y: Math.round(p.y), w: NODE_W, h: NODE_H }]),
           ),
-          svg: { light: '<svg …/>', dark: '<svg …/>' },
         }
       : { figure: struct.name, nodes: '— not saved yet —' },
     null,

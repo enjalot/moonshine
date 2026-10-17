@@ -25,6 +25,8 @@ export type { DiagramSpec } from './diagram/spec'
 // Nodes the author hasn't placed yet (added to the spec later) are laid out
 // by ELK next to their neighbours; ELK only loads when that happens.
 
+const MIN_ZOOM = 0.65
+
 const DiagramArrange = import.meta.env.DEV ? lazy(() => import('./diagram/DiagramArrange')) : null
 
 type Props = {
@@ -95,6 +97,7 @@ function ReaderFlow({
   baked: BakedDiagram | null
   activePart?: string | null
 }) {
+  // Measured on the scroll container: the column width available.
   const ref = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   useEffect(() => {
@@ -109,46 +112,49 @@ function ReaderFlow({
   const edges = useMemo(() => buildEdges(spec, baked, activePart), [spec, baked, activePart])
   const frame = useMemo(() => frameFor(spec, placement, baked), [spec, placement, baked])
 
-  // Never scale above 1: labels stay at the article's type size and only
-  // shrink when the column is narrower than the diagram.
-  const zoom = width ? Math.min(1, width / frame.w) : 1
+  // Never scale above 1 (labels stay at the article's type size), and
+  // never below MIN_ZOOM: on a narrow screen a wide diagram scrolls
+  // sideways like a wide table instead of shrinking to unreadable text.
+  const zoom = width ? Math.max(MIN_ZOOM, Math.min(1, width / frame.w)) : 1
+  const inner = Math.max(width, Math.ceil(frame.w * zoom))
   const viewport = {
-    x: -frame.x * zoom + Math.max(0, (width - frame.w * zoom) / 2),
+    x: -frame.x * zoom + Math.max(0, (inner - frame.w * zoom) / 2),
     y: -frame.y * zoom,
     zoom,
   }
 
   return (
-    <div
-      ref={ref}
-      className="mn-diagram-flow"
-      style={{ height: Math.ceil(frame.h * zoom) }}
-      role="img"
-      aria-label={spec.nodes.map((n) => n.label).join(', ')}
-    >
-      {width > 0 && (
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          viewport={viewport}
-          minZoom={0.05}
-          maxZoom={2}
-          proOptions={{ hideAttribution: true }}
-          nodesDraggable={false}
-          nodesConnectable={false}
-          elementsSelectable={false}
-          nodesFocusable={false}
-          edgesFocusable={false}
-          panOnDrag={false}
-          zoomOnScroll={false}
-          zoomOnPinch={false}
-          zoomOnDoubleClick={false}
-          panOnScroll={false}
-          preventScrolling={false}
-        />
-      )}
+    <div ref={ref} className="mn-diagram-scroll">
+      <div
+        className="mn-diagram-flow"
+        style={{ height: Math.ceil(frame.h * zoom), width: inner || '100%' }}
+        role="img"
+        aria-label={spec.nodes.map((n) => n.label).join(', ')}
+      >
+        {width > 0 && (
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            viewport={viewport}
+            minZoom={0.05}
+            maxZoom={2}
+            proOptions={{ hideAttribution: true }}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={false}
+            nodesFocusable={false}
+            edgesFocusable={false}
+            panOnDrag={false}
+            zoomOnScroll={false}
+            zoomOnPinch={false}
+            zoomOnDoubleClick={false}
+            panOnScroll={false}
+            preventScrolling={false}
+          />
+        )}
+      </div>
     </div>
   )
 }

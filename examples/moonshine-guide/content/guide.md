@@ -63,17 +63,21 @@ A sentence with linked terms beside a small diagram. Hover a term to highlight i
 
 ## Diagrams
 
-With all due respect to Mermaid, it is difficult to prompt a good looking SVG diagram. Adjusting nodes and organizing links are still much easier to do manually, so the agent declares a diagram as a small spec (nodes, edges, and groups) and the harness lets you arrange it in [tldraw](https://tldraw.dev), where you can also restyle shapes, re-route arrows, and sketch annotations on top. Saving bakes the drawing to SVG:
+With all due respect to Mermaid, it is difficult to prompt a good looking SVG diagram. Adjusting nodes and organizing links are still much easier to do manually, so the agent declares a diagram as a small spec (nodes, edges, and groups) rendered with [React Flow](https://reactflow.dev/), and the harness lets you arrange it. The arrangement is saved in a small JSON file next to the article:
 
 :::figure{id=still-pipeline}
-The still pipeline as a live diagram, not a simulation. The nodes and edges are declared in `StillPipelineDiagram.tsx`; the arrangement you see was saved to `content/figures/still-pipeline.json` from the editor described below.
+The still pipeline as a live React Flow diagram, not a simulation. The nodes and edges are declared in `StillPipelineDiagram.tsx`; the arrangement you see was saved to `content/figures/still-pipeline.json` from the editor described below.
 :::
 
-In development an arrange button appears under a diagram. Click it to open the diagram in a full-screen tldraw editor, drag and draw, and hit Save. The JSON stores the node positions and a light and a dark SVG of the whole drawing, which is what readers get; tldraw itself never ships with the article. Because structure and arrangement are separate, the agent can regenerate the diagram's logic without disturbing where you placed everything:
+In development an arrange button appears under a diagram. It opens a full-screen editor where nodes snap to a grid and to each other's edges, you can resize them, pick which side an edge leaves from, add text and sticky notes, run an automatic layout on a selection, and crop the frame readers see. Readers get the live diagram at the article's text size. Because structure and arrangement are separate, the agent can regenerate the diagram's logic without disturbing where you placed everything:
 
 :::figure{id=baked-diagram}
 Click the diagram (or the arrange button) to start arranging, drag the nodes, then hit Save. Regenerating the structure changes labels and edges, but every saved position stays put; a brand-new node lands in a free spot for you to drag into place.
 :::
+
+## Adding your own content
+
+Sometimes the fastest fix is to add something yourself. In edit mode, hovering the gap between any two blocks shows a **+**, notebook style, that inserts a paragraph, a drawing, or an image at that spot. Drawings open a [tldraw](https://tldraw.dev) canvas and are saved as SVG; images are uploaded next to the article. Everything lands in the markdown like any other edit, so you can 💬 on it and ask the agent to polish what you sketched or turn it into a proper figure.
 
 ## How the author and the agent share the files
 

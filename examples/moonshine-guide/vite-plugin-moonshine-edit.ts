@@ -155,6 +155,69 @@ export default function moonshineEditPlugin(): Plugin {
         return next
       }
 
+      // Image uploads from the "+" between blocks. Writes public/media/<name>
+      // (served at <base>/media/<name> in dev and in builds) and commits it;
+      // the client then inserts `![alt](media/<name>)` into the markdown.
+      // Same CSRF posture as /save: image/* bodies are not CORS-safelisted,
+      // so a cross-origin page can't send one without a preflight (which
+      // dies on the 405), and browsers' Sec-Fetch-Site is checked too.
+      const mediaRoot = path.resolve(projectRoot, 'public', 'media')
+      const IMAGE_TYPES: Record<string, string> = {
+        'image/png': 'png',
+        'image/jpeg': 'jpg',
+        'image/gif': 'gif',
+        'image/webp': 'webp',
+        'image/svg+xml': 'svg',
+      }
+      server.middlewares.use('/__moonshine/upload', async (req, res) => {
+        const reply = (status: number, body: Record<string, unknown>) => {
+          res.statusCode = status
+          res.setHeader('content-type', 'application/json')
+          res.end(JSON.stringify(body))
+        }
+        if (req.method !== 'POST') return reply(405, { ok: false, error: 'method not allowed' })
+        const ctype = String(req.headers['content-type'] ?? '').toLowerCase().split(';')[0].trim()
+        const ext = IMAGE_TYPES[ctype]
+        if (!ext) return reply(415, { ok: false, error: 'only png, jpeg, gif, webp, svg images' })
+        const fetchSite = req.headers['sec-fetch-site']
+        if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') {
+          return reply(403, { ok: false, error: 'cross-site requests are not allowed' })
+        }
+        try {
+          const chunks: Buffer[] = []
+          let size = 0
+          for await (const chunk of req) {
+            size += (chunk as Buffer).length
+            if (size > 25 * 1024 * 1024) throw new Error('image is larger than 25 MB')
+            chunks.push(chunk as Buffer)
+          }
+          const url = new URL(req.url ?? '', 'http://x')
+          const stem =
+            (url.searchParams.get('name') ?? 'image')
+              .replace(/\.[a-z0-9]+$/i, '')
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/^-+|-+$/g, '')
+              .slice(0, 60) || 'image'
+          await fs.mkdir(mediaRoot, { recursive: true })
+          let name = `${stem}.${ext}`
+          for (let i = 2; ; i++) {
+            try {
+              await fs.access(path.join(mediaRoot, name))
+              name = `${stem}-${i}.${ext}`
+            } catch {
+              break
+            }
+          }
+          const target = path.join(mediaRoot, name)
+          await fs.writeFile(target, Buffer.concat(chunks))
+          await commitSave(target, `media/${name} (image)`)
+          reply(200, { ok: true, path: `media/${name}` })
+        } catch (err) {
+          reply(400, { ok: false, error: err instanceof Error ? err.message : String(err) })
+        }
+      })
+
       server.middlewares.use('/__moonshine/save', async (req, res) => {
         const fail = (status: number, message: string) => {
           res.statusCode = status

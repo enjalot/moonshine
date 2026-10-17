@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
-import ReactMarkdown from 'react-markdown'
+import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkDirective from 'remark-directive'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -17,6 +17,7 @@ import EditableBlock from './EditableBlock'
 import EditableField from './EditableField'
 import EditChrome from './EditChrome'
 import BlockReorderLayer from './BlockReorderLayer'
+import InsertLayer from './InsertLayer'
 import MoonshineFooter from './MoonshineFooter'
 import { EditProvider, fnv1a } from '../lib/EditContext'
 import { FeedbackProvider } from '../lib/FeedbackContext'
@@ -38,6 +39,14 @@ const editableComponents = Object.fromEntries(
     (tag) => [tag, EditableBlock],
   ),
 )
+
+// Images added in the browser live in public/media/ and are written as
+// `media/name.png` in markdown; resolve them against the site base so they
+// work at any route depth and under a Pages subpath.
+function mediaUrl(url: string): string {
+  if (url.startsWith('media/')) return `${import.meta.env.BASE_URL}${url}`
+  return defaultUrlTransform(url)
+}
 
 // Keep the DOM/block correspondence in sync with BlockReorderLayer. These
 // are the article children that represent markdown top-level blocks.
@@ -161,6 +170,7 @@ export default function Article({ article, all }: Props) {
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath, remarkDirective, directiveHandler]}
           rehypePlugins={[rehypeKatex, rehypeTables]}
+          urlTransform={mediaUrl}
           // react-markdown's Components type only enumerates known HTML
           // tag names; our directive handler emits dashed custom tag
           // names (mn-figure, mn-term, mn-inline-viz) that react-markdown
@@ -206,6 +216,7 @@ export default function Article({ article, all }: Props) {
         <MoonshineFooter />
         <EditChrome />
         <BlockReorderLayer containerRef={articleRef} />
+        <InsertLayer containerRef={articleRef} />
       </article>
       </FeedbackProvider>
     </EditProvider>
