@@ -127,7 +127,7 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
       <div class="card-body">
         <div class="card-number">05</div>
         <div class="card-title">The Atlas</div>
-        <p class="card-desc">A parametric UMAP gives every text a permanent address. Combined with SAE, it forms a complete atlas of meaning.</p>
+        <p class="card-desc">A parametric UMAP gives every text a permanent address. Paired with an SAE, it lets you name the regions of the map.</p>
         <div class="card-tags">parametric UMAP &middot; basemap &middot; global features</div>
       </div>
     </a>
@@ -198,7 +198,7 @@ async function init() {
     fetch('data/umap-full.json').then(r => r.json()),
     fetch('data/umap-projections.json').then(r => r.json()),
     fetch('data/clusters.json').then(r => r.json()),
-    fetch('data/basemap.json').then(r => r.json()),
+    fetch('data/atlas-thumb.json').then(r => r.json()),
   ]);
 
   // Header: wide scatter of all 53k jokes, preserving aspect ratio
@@ -315,8 +315,8 @@ async function init() {
   });
 
   // 5: Basemap scatter
-  const bx = basemapData.sample_projections.map(p => p.x);
-  const by = basemapData.sample_projections.map(p => p.y);
+  const bx = basemapData.jokes.map(p => p[0]);
+  const by = basemapData.jokes.map(p => p[1]);
   drawMiniScatter('thumb-5', bx, by, { color: '#6b5b95' });
 }
 
