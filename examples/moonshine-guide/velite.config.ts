@@ -33,6 +33,7 @@ const arrangement = {
       }),
     )
     .optional(),
+  framePad: s.object({ top: s.number(), right: s.number(), bottom: s.number(), left: s.number() }).optional(),
   frame: box.optional(),
 }
 const specSchema = s.object({
@@ -71,7 +72,7 @@ export default defineConfig({
     // Author-owned figure state, baked into the build. Diagrams save
     // their arrangement here from the dev arrange editor (node/group boxes,
     // edge sides, annotations, reader frame, optional narrow layout), and
-    // author-added diagrams also save their spec.
+    // the spec too once the author has edited the structure.
     // Read back via src/lib/bakedFigures.ts. Machine-owned semantics (the
     // DiagramSpec) live in the figure's code and are merged with this by
     // id, so regenerated diagram code never clobbers the author's work.
@@ -84,6 +85,7 @@ export default defineConfig({
           ...arrangement,
           narrow: s.object(arrangement).optional(),
           spec: specSchema.optional(),
+          specFrom: s.string().optional(),
           // Pre-0.8 saves: node positions and a React Flow viewport.
           // Read for compatibility (positions are kept, the viewport is
           // dropped); scripts/upgrade-still.mjs in the moonshine plugin

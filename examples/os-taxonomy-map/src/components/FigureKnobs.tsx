@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useEdit } from '../lib/EditContext'
 import type { ParamHint } from '../figures/registry'
 
@@ -35,6 +35,8 @@ type Props = {
   // Open a comment-to-the-agent box targeting this figure. Omitted when the
   // feedback subsystem is off.
   onComment?: () => void
+  // Figure-level controls (wide, delete) from Figure.tsx.
+  controls?: ReactNode
 }
 
 export default function FigureKnobs({
@@ -52,6 +54,7 @@ export default function FigureKnobs({
   canMoveUp,
   canMoveDown,
   onComment,
+  controls,
 }: Props) {
   const { body, commitBody } = useEdit()
   const [saving, setSaving] = useState(false)
@@ -128,6 +131,7 @@ export default function FigureKnobs({
               </button>
             </span>
           )}
+          {controls}
           {onComment && (
             <button
               type="button"

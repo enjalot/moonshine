@@ -69,7 +69,7 @@ no write endpoints.
 ```
 content/                  ← writers edit only here
   example.md
-  figures/                ← author-saved diagram arrangements (+ specs of "+"-added diagrams)
+  figures/                ← author-saved diagram arrangements (+ specs the author edited or added)
   series/
     index.md
     01-...md
@@ -184,4 +184,6 @@ pattern — the moonshine repo's publish script writes that root file).
   `var(--text-2)`) from `tokens.css`, not hardcoded hex.
 - Wrap heavy figures in `<LazyIsland>` (`<Figure>` already does this).
 - `content/figures/` is the author's arrangement surface. Agents
-  regenerate diagram *specs*, never those files.
+  regenerate diagram *specs*, never the arrangement. If a figure's JSON
+  has a `spec` (the author edited the structure, or added the diagram),
+  that copy is the one drawn: edit it there, only when asked.

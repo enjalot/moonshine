@@ -1,14 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Background,
   BackgroundVariant,
   ConnectionMode,
+  NodeToolbar,
+  Position,
   ReactFlow,
   ReactFlowProvider,
   ViewportPortal,
   useNodesState,
   useReactFlow,
+  useViewport,
   type Connection,
   type FinalConnectionState,
   type Node,
@@ -19,62 +22,88 @@ import '@xyflow/react/dist/base.css'
 import { saveContentFile } from '../../lib/EditContext'
 import { elkLayout, narrowSpec, nodeSize, place, type Placement } from './layout'
 import {
+  DiagramEditContext,
+  DEFAULT_PAD,
   FRAME_ID,
   annotNodeId,
+  contentBounds,
   buildEdges,
   buildNodes,
+  edgeGeometry,
   edgeTypes,
-  frameFor,
   groupNodeId,
+  padBox,
   nodeTypes,
+  sidePoint,
   type AnnotNodeData,
+  type DiagramEditUi,
+  type FrameNodeData,
 } from './flow'
 import {
   edgeKey,
+  specHash,
   type Annotation,
   type Arrangement,
   type BakedDiagram,
   type Box,
   type DiagramSpec,
   type NodeKind,
+  type Pad,
   type Side,
+  type SpecEdge,
 } from './spec'
 
-// Dev-only full-screen arrange editor for a DiagramFigure. Lazy-loaded
-// behind import.meta.env.DEV, so none of it reaches a production build.
+// Dev-only full-screen diagram editor. Lazy-loaded behind
+// import.meta.env.DEV, so none of it reaches a production build.
 //
-//   drag            move (snaps to an 8px grid and to other nodes' edges
-//                   and centers; guides show what it snapped to)
-//   shift-drag      box-select; shift-click adds to the selection
-//   arrow keys      nudge the selection (shift = 10px steps)
-//   corner handles  resize the selected node, group, note, or frame
-//   click an edge   choose which side it leaves from / arrives at
-//   double-click    edit a text or note annotation
-//   ⌘Z / ⇧⌘Z        undo / redo
-//   wide / narrow   two arrangements: the narrow one is what phones get
-//                   when the wide one would shrink labels below the floor
-//                   (see DiagramFigure). Untouched, narrow stays automatic.
+// Direct manipulation first: everything is done on the diagram itself,
+// and the toolbar that appears above a selection holds only what has no
+// gesture (a box's kind and hover text, an arrow's dashing).
 //
-// Spec nodes, groups and edges come from code and can't be deleted here;
-// annotations can (Backspace). For an author-owned diagram (kind=diagram,
-// `authored`), the spec is edited here too: + Box, drag from a side dot
-// to another box to connect, select a box or arrow to edit its label and
-// kind, Backspace deletes. Save writes content/figures/<id>.json.
+//   double-click canvas   new box, label ready to type
+//   B / T / N, then click place a box, a text label, or a note
+//   drag a box's dot      new arrow; drop on empty canvas for a new box
+//   Tab                   new box connected after the selected one
+//   double-click / Enter  edit a box, group, note or arrow label in place
+//   drag an arrow's end   move it to another side, or another box
+//   drag canvas           select; Shift-click adds; Space-drag or
+//                         scroll pans, pinch or ⌘-scroll zooms
+//   arrow keys            nudge (Shift = 10px); drag snaps to an 8px grid
+//                         and to other nodes' edges and centers
+//   Backspace             delete;  ⌘Z / ⇧⌘Z undo / redo;  ⌘S save
+//
+// The reader frame (what readers see) is always on the canvas: the
+// content's bounds (arrows and labels included) plus a margin per side,
+// so it follows the diagram. Dragging an edge or corner sets that side's
+// margin (negative crops); selecting it offers "Fit to content". Wide / Narrow hold two arrangements: the
+// narrow one is what phones get when the wide one would shrink labels
+// below the floor (see DiagramFigure). Untouched, narrow stays automatic.
+//
+// Structure edits (boxes, arrows, labels, kinds) save the whole spec into
+// content/figures/<id>.json, which from then on wins over the spec in
+// code (see spec.ts). Layout-only edits leave a code spec in charge.
 
 type Props = {
   figureId: string
   spec: DiagramSpec
   baked: BakedDiagram | null
   placement: Placement
+  // The spec lives in the JSON already (kind=diagram, or edited before).
   authored?: boolean
+  // The figure code's spec, if any: recorded as `specFrom` when the
+  // structure is first edited here.
+  codeSpec?: DiagramSpec
+  // The figure's width (column or wide) and the drawing width each gives,
+  // so the frame can say what readers will see; setWide saves a change.
+  layout?: { wide: boolean; widths: { column: number; wide: number }; setWide?: (on: boolean) => Promise<void> }
   onClose: () => void
   // Called after a successful save (the "+" uses it to insert the block).
-  onSaved?: () => void | Promise<void>
+  onSaved?: (opts: { wide: boolean }) => void | Promise<void>
 }
 
 export default function DiagramArrange(props: Props) {
   return createPortal(
-    <div className="mn-diagram-editor" role="dialog" aria-label={`Arrange diagram ${props.figureId}`}>
+    <div className="mn-diagram-editor" role="dialog" aria-label={`Edit diagram ${props.figureId}`}>
       <ReactFlowProvider>
         <Arrange {...props} />
       </ReactFlowProvider>
@@ -83,63 +112,96 @@ export default function DiagramArrange(props: Props) {
   )
 }
 
-type Snapshot = { nodes: Node[]; sides: NonNullable<BakedDiagram['edges']>; spec: DiagramSpec }
+type Sides = NonNullable<BakedDiagram['edges']>
+type Snapshot = { nodes: Node[]; sides: Sides; spec: DiagramSpec; pad: Pad }
 type Variant = 'wide' | 'narrow'
-const KINDS: NodeKind[] = ['process', 'data', 'store', 'external', 'decision', 'accent', 'note']
+type Tool = 'select' | 'box' | 'text' | 'note'
+type EndDrag = {
+  key: string
+  end: 'source' | 'target'
+  // The fixed end's box, and the pointer in flow space.
+  anchor: Box
+  pt: [number, number]
+  over: { id: string; side: Side } | null
+}
+
+const KINDS: { kind: NodeKind; name: string }[] = [
+  { kind: 'process', name: 'Process' },
+  { kind: 'accent', name: 'Highlight: the one the prose is about' },
+  { kind: 'data', name: 'Data (dashed)' },
+  { kind: 'store', name: 'Store (pill)' },
+  { kind: 'external', name: 'External (dotted)' },
+  { kind: 'decision', name: 'Decision (double border)' },
+  { kind: 'note', name: 'Note' },
+]
 const SNAP = 6
 // Small diagrams open at about reading size, not blown up to fill the screen.
 const FIT_MAX = 1.25
-const SIDE_OPTIONS: (Side | '')[] = ['', 'top', 'right', 'bottom', 'left']
+const GAP = { RIGHT: 64, DOWN: 56 }
 
-function Arrange({ figureId, spec: specProp, baked, placement, authored, onClose, onSaved }: Props) {
+function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpec, layout, onClose, onSaved }: Props) {
   const rf = useReactFlow()
-  // The spec is fixed unless the author owns it (kind=diagram).
   const [specState, setSpecState] = useState<DiagramSpec>(specProp)
   const specRef = useRef(specState)
   specRef.current = specState
+  const setSpec = setSpecState
   const [variant, setVariant] = useState<Variant>('wide')
   // The narrow arrangement lays the spec out top to bottom.
-  const spec = variant === 'narrow' ? narrowSpec(specState) : specState
-  // Arrangements of the variant not on screen, plus whether narrow was
-  // ever opened (an unopened narrow stays automatic: nothing is saved).
+  const spec = useMemo(() => (variant === 'narrow' ? narrowSpec(specState) : specState), [variant, specState])
+  // Arrangements of the variant not on screen.
   const stash = useRef<Partial<Record<Variant, Arrangement>>>({})
   // Saved narrow arrangements stay; an automatic one is saved only once
   // the author changes something on the narrow tab.
   const [narrowTouched, setNarrowTouched] = useState(Boolean(baked?.narrow))
   const variantRef = useRef(variant)
   variantRef.current = variant
-  const [sides, setSides] = useState<NonNullable<BakedDiagram['edges']>>(() => ({ ...(baked?.edges ?? {}) }))
-  const [guides, setGuides] = useState<{ x?: number; y?: number }>({})
-  const [selectedEdge, setSelectedEdge] = useState<string | null>(null)
-  const [status, setStatus] = useState('')
-  const [busy, setBusy] = useState(false)
-  const undo = useRef<Snapshot[]>([])
-  const redo = useRef<Snapshot[]>([])
-  const nodesRef = useRef<Node[]>([])
-  const draggingRef = useRef(false)
+  const [sides, setSides] = useState<Sides>(() => ({ ...(baked?.edges ?? {}) }))
   const sidesRef = useRef(sides)
   sidesRef.current = sides
+  // The reader frame's margins around the content (see FrameNode).
+  const [pad, setPad] = useState<Pad>(() => padFrom(spec, placement, baked))
+  const padRef = useRef(pad)
+  padRef.current = pad
+  // Content bounds when a frame resize started: margins are measured from it.
+  const resizeBase = useRef<Box | null>(null)
+  const [guides, setGuides] = useState<{ x?: number; y?: number }>({})
+  const [selectedEdge, setSelectedEdge] = useState<string | null>(null)
+  const [editing, setEditing] = useState<string | null>(null)
+  const [editingEdge, setEditingEdge] = useState<string | null>(null)
+  const [tool, setTool] = useState<Tool>('select')
+  const [endDrag, setEndDrag] = useState<EndDrag | null>(null)
+  const [dragging, setDragging] = useState(false)
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [notice, setNotice] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [figWide, setFigWide] = useState(Boolean(layout?.wide))
+  const undo = useRef<Snapshot[]>([])
+  const redo = useRef<Snapshot[]>([])
+  const dirty = useRef(false)
+  const nodesRef = useRef<Node[]>([])
+  const draggingRef = useRef(false)
+
+  const flash = useCallback((msg: string) => {
+    setNotice(msg)
+    window.setTimeout(() => setNotice((m) => (m === msg ? '' : m)), 4000)
+  }, [])
 
   const checkpoint = useCallback(() => {
     undo.current.push({
       nodes: nodesRef.current.map((n) => ({ ...n, data: { ...n.data } })),
       sides: { ...sidesRef.current },
       spec: specRef.current,
+      pad: padRef.current,
     })
     if (undo.current.length > 100) undo.current.shift()
     redo.current = []
+    dirty.current = true
     if (variantRef.current === 'narrow') setNarrowTouched(true)
   }, [])
 
-  const onText = useCallback<NonNullable<AnnotNodeData['onText']>>((id, text) => {
-    checkpoint()
-    setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, text } } : n)))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [checkpoint])
-
   const initial = useMemo(() => {
-    const nodes = buildNodes(spec, placement, baked, { editable: true, connectable: authored, onText })
-    if (baked?.frame) nodes.unshift(frameNode(baked.frame))
+    const nodes = buildNodes(spec, placement, baked, { editable: true })
+    nodes.push(frameNode(padBox(contentBounds(spec, placement, baked), padFrom(spec, placement, baked))))
     return nodes
     // Built once per open; later changes live in editor state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -149,19 +211,13 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, onClose
 
   const edges = useMemo(() => {
     const es = buildEdges(spec, baked, null, sides)
-    return es.map((e) => (e.id === selectedEdge ? { ...e, selected: true, data: { ...e.data!, active: true } } : e))
+    return es.map((e) => (e.id === selectedEdge ? { ...e, selected: true } : e))
   }, [spec, baked, sides, selectedEdge])
 
+  const unplaced = useMemo(() => Object.values(placement.nodes).filter((n) => n.unarranged).length, [placement])
+
   useEffect(() => {
-    const unplaced = Object.values(placement.nodes).filter((n) => n.unarranged).length
-    setStatus(
-      unplaced
-        ? `${unplaced} node${unplaced > 1 ? 's' : ''} new in the spec, placed automatically (dashed): drag into place`
-        : authored
-          ? 'drag a side dot to another box to connect · select a box or arrow to edit it'
-          : 'drag to arrange · shift-drag to select · double-click a note to edit',
-    )
-    requestAnimationFrame(() => rf.fitView({ padding: 0.15, duration: 0, maxZoom: FIT_MAX }))
+    requestAnimationFrame(() => rf.fitView({ padding: 0.2, duration: 0, maxZoom: FIT_MAX }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -176,6 +232,46 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, onClose
     [rf],
   )
 
+  // Current editor positions in the Placement shape (absolute boxes).
+  const currentPlacement = (): Placement => {
+    const out: Placement = { nodes: {}, groups: {} }
+    for (const n of specRef.current.nodes) {
+      const b = absBox(n.id)
+      if (b) out.nodes[n.id] = { ...b, unarranged: false }
+    }
+    for (const g of specRef.current.groups ?? []) {
+      const b = absBox(groupNodeId(g.id))
+      if (b) out.groups[g.id] = b
+    }
+    return out
+  }
+
+  const currentAnnotations = (): Annotation[] => {
+    const out: Annotation[] = []
+    for (const n of nodesRef.current) {
+      if (n.type !== 'annot') continue
+      const b = absBox(n.id)
+      const d = n.data as AnnotNodeData
+      if (b) out.push({ id: n.id.slice(2), kind: d.kind, text: d.text, ...round(b) })
+    }
+    return out
+  }
+
+  // The frame follows the content: its bounds plus the margins.
+  useEffect(() => {
+    if (resizeBase.current) return
+    const id = requestAnimationFrame(() => {
+      const f = round(padBox(bounds(), pad))
+      setNodes((nds) => {
+        const fr = nds.find((n) => n.id === FRAME_ID)
+        if (fr && fr.position.x === f.x && fr.position.y === f.y && fr.width === f.w && fr.height === f.h) return nds
+        return nds.map((n) => (n.id === FRAME_ID ? { ...n, position: { x: f.x, y: f.y }, width: f.w, height: f.h } : n))
+      })
+    })
+    return () => cancelAnimationFrame(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, pad, sides, spec])
+
   // Alignment guides: while one node drags, snap its left/center/right
   // and top/middle/bottom to any other node's within SNAP px.
   const onNodesChange = useCallback(
@@ -184,7 +280,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, onClose
       // (dragging: false) change; never on arrow-key nudges.
       const moving = draggingRef.current ? changes.filter((c) => c.type === 'position' && c.position) : []
       const g: { x?: number; y?: number } = {}
-      if (moving.length === 1) {
+      if (moving.length === 1 && (moving[0] as { id: string }).id !== FRAME_ID) {
         const c = moving[0] as Extract<NodeChange, { type: 'position' }>
         const node = nodesRef.current.find((n) => n.id === c.id)
         const me = absBox(c.id)
@@ -234,69 +330,95 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, onClose
   const restore = (from: Snapshot[], to: Snapshot[]) => {
     const snap = from.pop()
     if (!snap) return
-    to.push({ nodes: nodesRef.current, sides: sidesRef.current, spec: specRef.current })
+    to.push({ nodes: nodesRef.current, sides: sidesRef.current, spec: specRef.current, pad: padRef.current })
     setNodes(snap.nodes)
     setSides(snap.sides)
-    setSpecState(snap.spec)
-  }
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.tagName === 'TEXTAREA') return
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
-        e.preventDefault()
-        if (e.shiftKey) restore(redo.current, undo.current)
-        else restore(undo.current, redo.current)
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const onBeforeDelete: OnBeforeDelete = async ({ nodes: del, edges: delEdges }) => {
-    const ok = del.filter((n) => n.type === 'annot' || n.id === FRAME_ID || (authored && n.type === 'spec'))
-    const okEdges = authored ? delEdges : []
-    if (!ok.length && !okEdges.length) return false
-    checkpoint()
-    if (authored) {
-      const gone = new Set(ok.filter((n) => n.type === 'spec').map((n) => n.id))
-      const goneEdges = new Set(okEdges.map((e) => e.id))
-      setSpecState((sp) => ({
-        ...sp,
-        nodes: sp.nodes.filter((n) => !gone.has(n.id)),
-        edges: sp.edges.filter((e) => !gone.has(e.from) && !gone.has(e.to) && !goneEdges.has(edgeKey(e))),
-      }))
-      if (selectedEdge && goneEdges.has(selectedEdge)) setSelectedEdge(null)
-    }
-    return { nodes: ok, edges: okEdges }
+    setSpec(snap.spec)
+    setPad(snap.pad)
+    setEditing(null)
+    setEditingEdge(null)
+    setSelectedEdge((k) => (k && snap.spec.edges.some((e) => edgeKey(e) === k) ? k : null))
   }
 
-  // ---- authoring (kind=diagram) --------------------------------------
-  const addBox = () => {
-    checkpoint()
-    const c = rf.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 })
+  const clearSelection = () => {
+    setSelectedEdge(null)
+    setNodes((nds) => (nds.some((n) => n.selected) ? nds.map((n) => (n.selected ? { ...n, selected: false } : n)) : nds))
+  }
+
+  // ---- structure -----------------------------------------------------
+  const freshId = (prefix: string, taken: (id: string) => boolean) => {
     let i = 1
-    while (specRef.current.nodes.some((n) => n.id === `n${i}`)) i++
-    const id = `n${i}`
+    while (taken(`${prefix}${i}`)) i++
+    return `${prefix}${i}`
+  }
+
+  // A new box centered on (x, y), optionally connected from another box;
+  // its label opens for typing.
+  const addBox = (x: number, y: number, from?: string) => {
+    checkpoint()
+    const id = freshId('n', (k) => specRef.current.nodes.some((n) => n.id === k))
     const label = 'Box'
     const { w, h } = nodeSize(label)
-    setSpecState((sp) => ({ ...sp, nodes: [...sp.nodes, { id, label }] }))
+    setSpec((sp) => ({
+      ...sp,
+      nodes: [...sp.nodes, { id, label }],
+      edges: from ? [...sp.edges, { from, to: id }] : sp.edges,
+    }))
     setNodes((nds) => [
-      ...nds.map((n) => ({ ...n, selected: false })),
+      ...nds.map((n) => (n.selected ? { ...n, selected: false } : n)),
       {
         id,
         type: 'spec',
-        position: { x: Math.round(c.x - w / 2), y: Math.round(c.y - h / 2) },
+        position: { x: snap8(x - w / 2), y: snap8(y - h / 2) },
         width: w,
         height: h,
         selected: true,
-        data: { label, kind: 'process', editable: true, connectable: true },
+        data: { label, kind: 'process', editable: true },
       },
     ])
+    setSelectedEdge(null)
+    setTool('select')
+    setEditing(id)
+  }
+
+  // Tab: the next box in the flow direction, clear of everything else.
+  const addAfter = (fromId: string) => {
+    const b = absBox(fromId)
+    if (!b) return
+    const { w, h } = nodeSize('Box')
+    const down = (spec.direction ?? 'RIGHT') === 'DOWN'
+    const at: Box = down ? { x: b.x + b.w / 2 - w / 2, y: b.y + b.h + GAP.DOWN, w, h } : { x: b.x + b.w + GAP.RIGHT, y: b.y + b.h / 2 - h / 2, w, h }
+    const others = nodesRef.current.filter((n) => n.type === 'spec' || n.type === 'annot').map((n) => absBox(n.id)).filter(Boolean) as Box[]
+    for (let i = 0; i < 40 && others.some((o) => overlaps(at, o)); i++) {
+      if (down) at.x += w + 24
+      else at.y += h + 24
+    }
+    addBox(at.x + w / 2, at.y + h / 2, fromId)
+  }
+
+  const addAnnotation = (kind: Annotation['kind'], x: number, y: number) => {
+    checkpoint()
+    const id = freshId(`${kind}-`, (k) => nodesRef.current.some((n) => n.id === annotNodeId(k)))
+    const [w, h] = kind === 'note' ? [180, 72] : [160, 32]
+    setNodes((nds) => [
+      ...nds.map((n) => (n.selected ? { ...n, selected: false } : n)),
+      {
+        id: annotNodeId(id),
+        type: 'annot',
+        position: { x: snap8(x - w / 2), y: snap8(y - h / 2) },
+        width: w,
+        height: h,
+        selected: true,
+        data: { kind, text: kind === 'note' ? 'Note' : 'Label', editable: true },
+      },
+    ])
+    setSelectedEdge(null)
+    setTool('select')
+    setEditing(annotNodeId(id))
   }
 
   const updateNode = (id: string, patch: { label?: string; kind?: NodeKind; detail?: string }) => {
-    setSpecState((sp) => ({
+    setSpec((sp) => ({
       ...sp,
       nodes: sp.nodes.map((n) => (n.id === id ? { ...n, ...patch, detail: (patch.detail ?? n.detail) || undefined } : n)),
     }))
@@ -313,52 +435,213 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, onClose
     )
   }
 
-  const updateEdge = (key: string, patch: { label?: string; dashed?: boolean }) => {
-    setSpecState((sp) => ({
+  const updateEdge = (key: string, patch: Partial<SpecEdge>) => {
+    setSpec((sp) => ({
       ...sp,
       edges: sp.edges.map((e) => (edgeKey(e) === key ? { ...e, ...patch, label: (patch.label ?? e.label) || undefined } : e)),
     }))
   }
 
-  // React Flow only connects when the drag ends on a handle; ending
-  // anywhere on a box should work too.
-  const onConnectEnd = (e: MouseEvent | TouchEvent, state: FinalConnectionState) => {
-    if (!authored || state.isValid || !state.fromNode) return
-    const pt = 'changedTouches' in e ? e.changedTouches[0] : e
-    const el = document.elementFromPoint(pt.clientX, pt.clientY)?.closest('.react-flow__node')
-    const to = el?.getAttribute('data-id')
-    if (to && specRef.current.nodes.some((n) => n.id === to)) {
-      onConnect({ source: state.fromNode.id, target: to, sourceHandle: null, targetHandle: null })
+  // Swap an edge for a changed one (new end, or reversed). Its key can
+  // change with it, so the sides it had move to the new key.
+  const replaceEdge = (key: string, next: SpecEdge, nextSides: { source?: Side; target?: Side } | undefined) => {
+    const nk = edgeKey(next)
+    if (nk !== key && specRef.current.edges.some((e) => edgeKey(e) === nk)) {
+      flash('Those boxes are already connected that way.')
+      return false
     }
+    checkpoint()
+    setSpec((sp) => ({ ...sp, edges: sp.edges.map((e) => (edgeKey(e) === key ? next : e)) }))
+    setSides((s) => {
+      const n = { ...s }
+      delete n[key]
+      if (nextSides && (nextSides.source || nextSides.target)) n[nk] = nextSides
+      return n
+    })
+    if (nk !== key) {
+      for (const a of Object.values(stash.current)) {
+        if (a?.edges?.[key]) {
+          a.edges = { ...a.edges, [nk]: a.edges[key] }
+          delete a.edges[key]
+        }
+      }
+    }
+    setSelectedEdge(nk)
+    return true
+  }
+
+  const reverseEdge = (key: string) => {
+    const e = specRef.current.edges.find((x) => edgeKey(x) === key)
+    if (!e) return
+    const s = sidesRef.current[key]
+    replaceEdge(key, { ...e, from: e.to, to: e.from }, s && { source: s.target, target: s.source })
+  }
+
+  const setEdgeSides = (key: string, next: { source?: Side; target?: Side } | undefined) => {
+    checkpoint()
+    setSides((s) => {
+      const n = { ...s }
+      if (next && (next.source || next.target)) n[key] = next
+      else delete n[key]
+      return n
+    })
   }
 
   const onConnect = (c: Connection) => {
-    if (!authored || !c.source || !c.target || c.source === c.target) return
+    if (!c.source || !c.target || c.source === c.target) return
     const key = `${c.source}--${c.target}`
-    if (specRef.current.edges.some((e) => edgeKey(e) === key)) return
+    if (specRef.current.edges.some((e) => edgeKey(e) === key)) {
+      flash('Those boxes are already connected that way.')
+      return
+    }
     checkpoint()
-    setSpecState((sp) => ({ ...sp, edges: [...sp.edges, { from: c.source, to: c.target }] }))
+    setSpec((sp) => ({ ...sp, edges: [...sp.edges, { from: c.source, to: c.target }] }))
+    clearSelection()
     setSelectedEdge(key)
+  }
+
+  // React Flow only connects when the drag ends on a handle. Ending on a
+  // box connects to it; ending on empty canvas makes a new box there.
+  const onConnectEnd = (e: MouseEvent | TouchEvent, state: FinalConnectionState) => {
+    if (state.isValid || !state.fromNode) return
+    const pt = 'changedTouches' in e ? e.changedTouches[0] : e
+    const hit = document.elementFromPoint(pt.clientX, pt.clientY)
+    const to = hit?.closest('.react-flow__node')?.getAttribute('data-id')
+    if (to && specRef.current.nodes.some((n) => n.id === to)) {
+      onConnect({ source: state.fromNode.id, target: to, sourceHandle: null, targetHandle: null })
+    } else if (hit?.closest('.react-flow__pane')) {
+      const p = rf.screenToFlowPosition({ x: pt.clientX, y: pt.clientY })
+      addBox(p.x, p.y, state.fromNode.id)
+    }
+  }
+
+  const onBeforeDelete: OnBeforeDelete = async ({ nodes: del, edges: delEdges }) => {
+    // Groups and the frame stay: deleting a group would take its boxes too.
+    const ok = del.filter((n) => n.type === 'annot' || n.type === 'spec')
+    if (!ok.length && !delEdges.length) return false
+    checkpoint()
+    const gone = new Set(ok.filter((n) => n.type === 'spec').map((n) => n.id))
+    const goneEdges = new Set(delEdges.map((e) => e.id))
+    if (gone.size || goneEdges.size) {
+      setSpec((sp) => ({
+        ...sp,
+        nodes: sp.nodes.filter((n) => !gone.has(n.id)),
+        edges: sp.edges.filter((e) => !gone.has(e.from) && !gone.has(e.to) && !goneEdges.has(edgeKey(e))),
+      }))
+    }
+    if (selectedEdge && goneEdges.has(selectedEdge)) setSelectedEdge(null)
+    return { nodes: ok, edges: delEdges }
+  }
+
+  // ---- in-place text -------------------------------------------------
+  const commitText = (id: string, text: string | null) => {
+    setEditing(null)
+    if (text === null) return
+    const node = nodesRef.current.find((n) => n.id === id)
+    if (!node) return
+    if (node.type === 'spec') {
+      const cur = specRef.current.nodes.find((n) => n.id === id)
+      if (!cur || !text.trim() || text === cur.label) return
+      checkpoint()
+      updateNode(id, { label: text })
+    } else if (node.type === 'group') {
+      const gid = id.slice(2)
+      const cur = specRef.current.groups?.find((g) => g.id === gid)
+      if (!cur || !text.trim() || text === cur.label) return
+      checkpoint()
+      setSpec((sp) => ({ ...sp, groups: sp.groups?.map((g) => (g.id === gid ? { ...g, label: text } : g)) }))
+      setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, label: text } } : n)))
+    } else if (node.type === 'annot') {
+      if (text === (node.data as AnnotNodeData).text) return
+      checkpoint()
+      setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, text } } : n)))
+    }
+  }
+
+  const commitEdgeLabel = (key: string, label: string | null) => {
+    setEditingEdge(null)
+    if (label === null) return
+    const cur = specRef.current.edges.find((e) => edgeKey(e) === key)
+    if (!cur || (cur.label ?? '') === label.trim()) return
+    checkpoint()
+    updateEdge(key, { label: label.trim() })
+  }
+
+  // ---- dragging an arrow's end ----------------------------------------
+  const startEndDrag = (key: string, end: 'source' | 'target', e: ReactPointerEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    const edge = specRef.current.edges.find((x) => edgeKey(x) === key)
+    const anchor = edge && absBox(end === 'source' ? edge.to : edge.from)
+    if (!edge || !anchor) return
+    const p = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY })
+    setEndDrag({ key, end, anchor, pt: [p.x, p.y], over: null })
+  }
+
+  useEffect(() => {
+    if (!endDrag) return
+    const overAt = (x: number, y: number): EndDrag['over'] => {
+      let best: { id: string; side: Side; area: number } | null = null
+      for (const n of specRef.current.nodes) {
+        const b = absBox(n.id)
+        if (!b || x < b.x - 14 || x > b.x + b.w + 14 || y < b.y - 14 || y > b.y + b.h + 14) continue
+        const d: [Side, number][] = [
+          ['left', Math.abs(x - b.x)],
+          ['right', Math.abs(x - b.x - b.w)],
+          ['top', Math.abs(y - b.y)],
+          ['bottom', Math.abs(y - b.y - b.h)],
+        ]
+        const side = d.sort((a, c) => a[1] - c[1])[0][0]
+        if (!best || b.w * b.h < best.area) best = { id: n.id, side, area: b.w * b.h }
+      }
+      return best && { id: best.id, side: best.side }
+    }
+    const move = (ev: PointerEvent) => {
+      const p = rf.screenToFlowPosition({ x: ev.clientX, y: ev.clientY })
+      setEndDrag((d) => d && { ...d, pt: [p.x, p.y], over: overAt(p.x, p.y) })
+    }
+    const up = () => {
+      setEndDrag((d) => {
+        if (d) queueMicrotask(() => dropEnd(d))
+        return null
+      })
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up, { once: true })
+    return () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+    // Re-subscribe only when a drag starts or ends.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Boolean(endDrag)])
+
+  const dropEnd = (d: EndDrag) => {
+    if (!d.over) return
+    const e = specRef.current.edges.find((x) => edgeKey(x) === d.key)
+    if (!e) return
+    const fixed = d.end === 'source' ? e.to : e.from
+    if (d.over.id === fixed) {
+      flash('An arrow needs two different boxes.')
+      return
+    }
+    const next = d.end === 'source' ? { ...e, from: d.over.id } : { ...e, to: d.over.id }
+    const s = { ...(sidesRef.current[d.key] ?? {}), [d.end]: d.over.side }
+    if (next.from === e.from && next.to === e.to) setEdgeSides(d.key, s)
+    else replaceEdge(d.key, next, s)
   }
 
   // ---- wide / narrow ---------------------------------------------------
   // The current editor state as an arrangement (what Save writes).
   const currentArrangement = (): Arrangement => {
     const p = currentPlacement()
-    const annotations: Annotation[] = []
-    for (const n of nodesRef.current) {
-      if (n.type !== 'annot') continue
-      const b = absBox(n.id)
-      const d = n.data as AnnotNodeData
-      if (b) annotations.push({ id: n.id.slice(2), kind: d.kind, text: d.text, ...round(b) })
-    }
-    const frame = nodesRef.current.some((n) => n.id === FRAME_ID) ? absBox(FRAME_ID) : null
+    const annotations = currentAnnotations()
     return {
       nodes: Object.fromEntries(Object.entries(p.nodes).map(([k, b]) => [k, round(b)])),
       groups: Object.fromEntries(Object.entries(p.groups).map(([k, b]) => [k, round(b)])),
       ...(Object.keys(sidesRef.current).length ? { edges: sidesRef.current } : {}),
       ...(annotations.length ? { annotations } : {}),
-      ...(frame ? { frame: round(frame) } : {}),
+      ...(samePad(padRef.current, DEFAULT_PAD) ? {} : { framePad: padRef.current }),
     }
   }
 
@@ -369,77 +652,67 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, onClose
     const s = to === 'narrow' ? narrowSpec(specRef.current) : specRef.current
     const asBaked: BakedDiagram = { figure: figureId, ...(saved ?? {}) }
     const p = await place(s, saved)
-    const next = buildNodes(s, p, asBaked, { editable: true, connectable: authored, onText })
-    if (asBaked.frame) next.unshift(frameNode(asBaked.frame))
+    const next = buildNodes(s, p, asBaked, { editable: true })
+    const nextPad = padFrom(s, p, asBaked)
+    next.push(frameNode(padBox(contentBounds(s, p, asBaked), nextPad)))
     undo.current = []
     redo.current = []
     setNodes(next)
     setSides({ ...(saved?.edges ?? {}) })
+    setPad(nextPad)
     setSelectedEdge(null)
+    setEditing(null)
     setVariant(to)
-    setStatus(
-      to === 'narrow'
-        ? saved === baked?.narrow && saved
-          ? 'narrow arrangement: shown on screens too small for the wide one'
-          : 'narrow arrangement (automatic, top to bottom): arrange it and Save to keep it'
-        : 'wide arrangement',
+    if (to === 'narrow' && !(saved && saved === baked?.narrow) && !stash.current.narrow) {
+      flash('Automatic top-to-bottom layout. Arrange it and save to keep it.')
+    }
+    requestAnimationFrame(() => rf.fitView({ padding: 0.2, duration: 0, maxZoom: FIT_MAX }))
+  }
+
+  // ---- arranging -----------------------------------------------------
+  const setAbs = (id: string, x: number, y: number) => {
+    setNodes((nds) =>
+      nds.map((n) => {
+        if (n.id !== id) return n
+        const parent = n.parentId ? absBox(n.parentId) : null
+        return { ...n, position: { x: Math.round(x - (parent?.x ?? 0)), y: Math.round(y - (parent?.y ?? 0)) } }
+      }),
     )
-    requestAnimationFrame(() => rf.fitView({ padding: 0.15, duration: 0, maxZoom: FIT_MAX }))
   }
 
-  // ---- actions -------------------------------------------------------
-  const addAnnotation = (kind: Annotation['kind']) => {
+  type Align = 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom' | 'hspread' | 'vspread'
+  const align = (how: Align, ids: string[]) => {
+    const boxes = ids.map((id) => [id, absBox(id)] as const).filter((x): x is readonly [string, Box] => Boolean(x[1]))
+    if (boxes.length < 2) return
     checkpoint()
-    const c = rf.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 })
-    let i = 1
-    while (nodesRef.current.some((n) => n.id === annotNodeId(`${kind}-${i}`))) i++
-    const id = `${kind}-${i}`
-    const [w, h] = kind === 'note' ? [180, 72] : [160, 32]
-    setNodes((nds) => [
-      ...nds.map((n) => ({ ...n, selected: false })),
-      {
-        id: annotNodeId(id),
-        type: 'annot',
-        position: { x: Math.round(c.x - w / 2), y: Math.round(c.y - h / 2) },
-        width: w,
-        height: h,
-        selected: true,
-        data: { kind, text: kind === 'note' ? 'Note' : 'Label', editable: true, onText },
-      },
-    ])
-  }
-
-  const toggleFrame = () => {
-    checkpoint()
-    if (nodesRef.current.some((n) => n.id === FRAME_ID)) {
-      setNodes((nds) => nds.filter((n) => n.id !== FRAME_ID))
-      setStatus('reader frame removed: readers see the bounds of everything')
+    const x0 = Math.min(...boxes.map(([, b]) => b.x))
+    const x1 = Math.max(...boxes.map(([, b]) => b.x + b.w))
+    const y0 = Math.min(...boxes.map(([, b]) => b.y))
+    const y1 = Math.max(...boxes.map(([, b]) => b.y + b.h))
+    if (how === 'hspread' || how === 'vspread') {
+      const h = how === 'hspread'
+      const sorted = [...boxes].sort(([, a], [, b]) => (h ? a.x - b.x : a.y - b.y))
+      const total = sorted.reduce((s, [, b]) => s + (h ? b.w : b.h), 0)
+      const gap = ((h ? x1 - x0 : y1 - y0) - total) / (sorted.length - 1)
+      let at = h ? x0 : y0
+      for (const [id, b] of sorted) {
+        setAbs(id, h ? at : b.x, h ? b.y : at)
+        at += (h ? b.w : b.h) + gap
+      }
       return
     }
-    setNodes((nds) => [frameNode(frameFor(spec, currentPlacement(), null)), ...nds])
-    setStatus('drag and resize the frame to crop what readers see')
-  }
-
-  // Current editor positions in the Placement shape (absolute boxes).
-  const currentPlacement = (): Placement => {
-    const out: Placement = { nodes: {}, groups: {} }
-    for (const n of specRef.current.nodes) {
-      const b = absBox(n.id)
-      if (b) out.nodes[n.id] = { ...b, unarranged: false }
+    for (const [id, b] of boxes) {
+      const x = how === 'left' ? x0 : how === 'right' ? x1 - b.w : how === 'hcenter' ? (x0 + x1) / 2 - b.w / 2 : b.x
+      const y = how === 'top' ? y0 : how === 'bottom' ? y1 - b.h : how === 'vcenter' ? (y0 + y1) / 2 - b.h / 2 : b.y
+      setAbs(id, x, y)
     }
-    for (const g of spec.groups ?? []) {
-      const b = absBox(groupNodeId(g.id))
-      if (b) out.groups[g.id] = b
-    }
-    return out
   }
 
   const applyPlacement = (p: Placement, only?: Set<string>) => {
     setNodes((nds) =>
       nds.map((n) => {
         if (n.type === 'group') {
-          const gid = n.id.slice(2)
-          const b = p.groups[gid]
+          const b = p.groups[n.id.slice(2)]
           if (!b || only) return n
           return { ...n, position: { x: b.x, y: b.y }, width: b.w, height: b.h }
         }
@@ -458,11 +731,11 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, onClose
     )
   }
 
-  const autoLayout = async () => {
+  // ELK layout: of the selection when 2+ boxes are selected, else of everything.
+  const tidy = async (ids?: string[]) => {
     checkpoint()
-    const selected = new Set(nodesRef.current.filter((n) => n.selected && n.type === 'spec').map((n) => n.id))
+    const selected = new Set(ids ?? [])
     if (selected.size >= 2) {
-      // Lay out just the selection, keeping it where it was.
       const sub: DiagramSpec = {
         direction: spec.direction,
         nodes: spec.nodes.filter((n) => selected.has(n.id)).map((n) => ({ ...n, group: undefined })),
@@ -479,55 +752,310 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, onClose
         p.nodes[id] = { ...b, x: b.x - nx + ox, y: b.y - ny + oy, unarranged: false }
       }
       applyPlacement(p, selected)
-      setStatus(`laid out ${selected.size} selected nodes`)
     } else {
+      setSides({})
       applyPlacement(await place(spec, null))
-      setStatus('laid out the whole diagram from the spec (annotations kept)')
-      requestAnimationFrame(() => rf.fitView({ padding: 0.15, duration: 200, maxZoom: FIT_MAX }))
+      requestAnimationFrame(() => rf.fitView({ padding: 0.2, duration: 200, maxZoom: FIT_MAX }))
     }
   }
 
-  const setSide = (key: string, end: 'source' | 'target', side: Side | '') => {
+  const fitFrame = () => {
     checkpoint()
-    setSides((s) => {
-      const cur = { ...(s[key] ?? {}) }
-      if (side) cur[end] = side
-      else delete cur[end]
-      const next = { ...s }
-      if (cur.source || cur.target) next[key] = cur
-      else delete next[key]
-      return next
-    })
+    setPad(DEFAULT_PAD)
   }
 
+  const bounds = () => contentBounds(spec, currentPlacement(), { edges: sidesRef.current, annotations: currentAnnotations() })
+
+  // ---- save / close --------------------------------------------------
   const save = async () => {
     setBusy(true)
     try {
       const here = currentArrangement()
       const wide = variant === 'wide' ? here : (stash.current.wide ?? baked ?? {})
       const narrow = variant === 'narrow' ? here : (stash.current.narrow ?? baked?.narrow)
+      // A code spec stays in charge unless the structure actually changed.
+      const ownsSpec = authored || Boolean(baked?.spec) || specHash(specRef.current) !== specHash(specProp)
+      const specFrom = baked?.specFrom ?? (!authored && codeSpec ? specHash(codeSpec) : undefined)
       const bake: BakedDiagram = {
         figure: figureId,
         ...pickArrangement(wide),
         ...(narrowTouched && narrow ? { narrow: pickArrangement(narrow) } : {}),
-        ...(authored ? { spec: specRef.current } : {}),
+        ...(ownsSpec ? { spec: specRef.current, ...(specFrom ? { specFrom } : {}) } : {}),
       }
       await saveContentFile(`figures/${figureId}.json`, JSON.stringify(bake, null, 2))
-      await onSaved?.()
+      if (layout?.setWide && figWide !== layout.wide) await layout.setWide(figWide)
+      await onSaved?.({ wide: figWide })
       onClose()
     } catch (err) {
-      setStatus(`could not save: ${String(err)}`)
+      flash(`Could not save: ${String(err)}`)
     } finally {
       setBusy(false)
     }
   }
 
-  const edgeSpec = selectedEdge ? spec.edges.find((e) => edgeKey(e) === selectedEdge) : null
-  const selectedSpecNodes = nodes.filter((n) => n.selected && n.type === 'spec')
-  const nodeSpec = authored && selectedSpecNodes.length === 1 ? spec.nodes.find((n) => n.id === selectedSpecNodes[0].id) : null
+  const cancel = () => {
+    if (dirty.current && !window.confirm('Discard your changes to this diagram?')) return
+    onClose()
+  }
+
+  // ---- keyboard ------------------------------------------------------
+  const keyRef = useRef<(e: KeyboardEvent) => void>(() => {})
+  keyRef.current = (e: KeyboardEvent) => {
+    const t = e.target as HTMLElement | null
+    if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.isContentEditable)) return
+    const mod = e.metaKey || e.ctrlKey
+    const sel = nodesRef.current.filter((n) => n.selected && n.id !== FRAME_ID)
+    if (mod && e.key.toLowerCase() === 'z') {
+      e.preventDefault()
+      if (e.shiftKey) restore(redo.current, undo.current)
+      else restore(undo.current, redo.current)
+    } else if (mod && e.key.toLowerCase() === 's') {
+      e.preventDefault()
+      void save()
+    } else if (mod && e.key.toLowerCase() === 'a') {
+      e.preventDefault()
+      setSelectedEdge(null)
+      setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id !== FRAME_ID })))
+    } else if (mod || e.altKey) {
+      return
+    } else if (e.key === 'Escape') {
+      if (tool !== 'select') setTool('select')
+      else clearSelection()
+    } else if (e.key === 'Enter') {
+      if (selectedEdge) {
+        e.preventDefault()
+        setEditingEdge(selectedEdge)
+      } else if (sel.length === 1 && sel[0].type !== 'frame') {
+        e.preventDefault()
+        setEditing(sel[0].id)
+      }
+    } else if (e.key === 'Tab' && sel.length === 1 && sel[0].type === 'spec') {
+      e.preventDefault()
+      addAfter(sel[0].id)
+    } else if (!e.shiftKey) {
+      const k = e.key.toLowerCase()
+      const pick: Record<string, Tool> = { v: 'select', b: 'box', r: 'box', t: 'text', n: 'note' }
+      if (pick[k]) setTool(pick[k])
+    }
+  }
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => keyRef.current(e)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // ---- canvas gestures -----------------------------------------------
+  const onPaneClick = (e: React.MouseEvent) => {
+    if (tool === 'select') {
+      setSelectedEdge(null)
+      return
+    }
+    const p = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY })
+    if (tool === 'box') addBox(p.x, p.y)
+    else addAnnotation(tool, p.x, p.y)
+  }
+
+  const onDoubleClick = (e: React.MouseEvent) => {
+    if (!(e.target as HTMLElement).classList.contains('react-flow__pane')) return
+    const p = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY })
+    addBox(p.x, p.y)
+  }
+
+  // ---- what's selected -------------------------------------------------
+  const selection = nodes.filter((n) => n.selected)
+  const selNodes = selection.filter((n) => n.id !== FRAME_ID)
+  const single = selection.length === 1 ? selection[0] : null
+  const singleSpec = single?.type === 'spec' ? specState.nodes.find((n) => n.id === single.id) : undefined
+  const selKey = selection.map((n) => n.id).join(',')
+  useEffect(() => setDetailOpen(false), [selKey])
+
+  const ui = useMemo<DiagramEditUi>(
+    () => ({
+      editing,
+      commitText,
+      selectedEdge,
+      editingEdge,
+      commitEdgeLabel,
+      draggingEdge: endDrag?.key ?? null,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editing, selectedEdge, editingEdge, endDrag?.key, specState, sides],
+  )
+
+  const edgeSpec = selectedEdge ? specState.edges.find((x) => edgeKey(x) === selectedEdge) : undefined
+  const edgeToolbar = edgeSpec && selectedEdge && (
+    <>
+      <button type="button" onClick={() => setEditingEdge(selectedEdge)} title="Double-click the arrow, or Enter">
+        {edgeSpec.label ? 'Edit label' : 'Add label'}
+      </button>
+      <button
+        type="button"
+        aria-pressed={Boolean(edgeSpec.dashed)}
+        onClick={() => {
+          checkpoint()
+          updateEdge(selectedEdge, { dashed: !edgeSpec.dashed })
+        }}
+      >
+        Dashed
+      </button>
+      <button type="button" onClick={() => reverseEdge(selectedEdge)} title="Point the arrow the other way">
+        Reverse
+      </button>
+      {sides[selectedEdge] && (
+        <button type="button" onClick={() => setEdgeSides(selectedEdge, undefined)} title="Let the arrow pick its own sides again">
+          Auto sides
+        </button>
+      )}
+      <Sep />
+      <button type="button" className="is-danger" onClick={() => void rf.deleteElements({ edges: [{ id: selectedEdge }] })} title="Backspace">
+        Delete
+      </button>
+    </>
+  )
+
+  let toolbar: ReactNode = null
+  if (singleSpec && single) {
+    toolbar = (
+      <>
+        <span className="mn-diagram-kinds" role="radiogroup" aria-label="Kind">
+          {KINDS.map(({ kind, name }) => (
+            <button
+              key={kind}
+              type="button"
+              role="radio"
+              aria-checked={(singleSpec.kind ?? 'process') === kind}
+              title={name}
+              aria-label={name}
+              className="mn-diagram-kind"
+              onClick={() => {
+                checkpoint()
+                updateNode(single.id, { kind })
+              }}
+            >
+              <span className={`mn-flow-node mn-flow-node--${kind}`} />
+            </button>
+          ))}
+        </span>
+        <Sep />
+        <button type="button" aria-pressed={detailOpen} onClick={() => setDetailOpen((o) => !o)} title="Shown to readers when they hover the box">
+          {singleSpec.detail ? 'Hover text ✓' : 'Hover text'}
+        </button>
+        <Sep />
+        <button type="button" className="is-danger" onClick={() => void rf.deleteElements({ nodes: [{ id: single.id }] })} title="Backspace">
+          Delete
+        </button>
+        {detailOpen && (
+          <textarea
+            className="mn-diagram-detail nodrag"
+            autoFocus
+            rows={2}
+            placeholder="What readers see when they hover this box"
+            defaultValue={singleSpec.detail ?? ''}
+            onFocus={checkpoint}
+            onChange={(e) => updateNode(single.id, { detail: e.target.value })}
+            onKeyDown={(e) => {
+              e.stopPropagation()
+              if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
+                e.preventDefault()
+                setDetailOpen(false)
+              }
+            }}
+          />
+        )}
+      </>
+    )
+  } else if (single?.type === 'annot') {
+    const d = single.data as AnnotNodeData
+    toolbar = (
+      <>
+        {(['text', 'note'] as const).map((k) => (
+          <button
+            key={k}
+            type="button"
+            aria-pressed={d.kind === k}
+            onClick={() => {
+              if (d.kind === k) return
+              checkpoint()
+              setNodes((nds) => nds.map((n) => (n.id === single.id ? { ...n, data: { ...n.data, kind: k } } : n)))
+            }}
+          >
+            {k === 'text' ? 'Text' : 'Note'}
+          </button>
+        ))}
+        <Sep />
+        <button type="button" className="is-danger" onClick={() => void rf.deleteElements({ nodes: [{ id: single.id }] })}>
+          Delete
+        </button>
+      </>
+    )
+  } else if (single?.type === 'group') {
+    toolbar = (
+      <button type="button" onClick={() => setEditing(single.id)}>
+        Rename group
+      </button>
+    )
+  } else if (single?.type === 'frame') {
+    toolbar = samePad(pad, DEFAULT_PAD) ? (
+      <span className="mn-diagram-toolbar-note">Fits the content. Drag an edge or corner to add room around it, or to crop.</span>
+    ) : (
+      <button type="button" onClick={fitFrame}>
+        Fit to content
+      </button>
+    )
+  } else if (selNodes.length >= 2) {
+    const ids = selNodes.map((n) => n.id)
+    const specIds = selNodes.filter((n) => n.type === 'spec').map((n) => n.id)
+    toolbar = (
+      <>
+        <IconButton label="Align left" onClick={() => align('left', ids)} d="M3 2v12M6 4h7v3H6zM6 9h4v3H6z" />
+        <IconButton label="Align centers" onClick={() => align('hcenter', ids)} d="M8 2v12M4 4h8v3H4zM5.5 9h5v3h-5z" />
+        <IconButton label="Align right" onClick={() => align('right', ids)} d="M13 2v12M3 4h7v3H3zM6 9h4v3H6z" />
+        <Sep />
+        <IconButton label="Align tops" onClick={() => align('top', ids)} d="M2 3h12M4 6v7h3V6zM9 6v4h3V6z" />
+        <IconButton label="Align middles" onClick={() => align('vcenter', ids)} d="M2 8h12M4 4v8h3V4zM9 5.5v5h3v-5z" />
+        <IconButton label="Align bottoms" onClick={() => align('bottom', ids)} d="M2 13h12M4 3v7h3V3zM9 6v4h3V6z" />
+        {ids.length >= 3 && (
+          <>
+            <Sep />
+            <IconButton label="Space evenly across" onClick={() => align('hspread', ids)} d="M2 2v12M14 2v12M6 5h4v6H6z" />
+            <IconButton label="Space evenly down" onClick={() => align('vspread', ids)} d="M2 2h12M2 14h12M5 6h6v4H5z" />
+          </>
+        )}
+        {specIds.length >= 2 && (
+          <>
+            <Sep />
+            <button type="button" onClick={() => void tidy(specIds)} title="Lay out the selected boxes automatically">
+              Tidy
+            </button>
+          </>
+        )}
+      </>
+    )
+  }
+  const showToolbar = toolbar && !editing && !editingEdge && !endDrag && !dragging
+
+  const hint = notice
+    ? notice
+    : endDrag
+      ? 'Drop on the side of a box'
+      : editing || editingEdge
+        ? 'Enter to finish · Shift+Enter for a new line · Esc to cancel'
+        : tool === 'box'
+          ? 'Click to place a box · Esc to cancel'
+          : tool === 'text' || tool === 'note'
+            ? `Click to place a ${tool === 'text' ? 'text label' : 'note'} · Esc to cancel`
+            : selectedEdge
+              ? 'Drag either end to another side or box · double-click to label · Backspace deletes'
+              : singleSpec
+                ? 'Drag a dot to connect, or drop it on empty canvas for a new box · Tab adds the next box · Enter renames'
+                : selNodes.length > 1
+                  ? 'Drag to move together · arrow keys nudge (Shift = 10px)'
+                  : unplaced && !dirty.current
+                    ? `${unplaced} box${unplaced > 1 ? 'es are' : ' is'} new and placed automatically (dashed outline): drag into place`
+                    : 'Double-click the canvas for a new box · drag a box’s dot to connect · drag the canvas to select · scroll or Space-drag to pan'
 
   return (
-    <>
+    <DiagramEditContext.Provider value={ui}>
       <div className="mn-diagram-editor-bar">
         <strong>{figureId}</strong>
         <span className="mn-diagram-variant" role="tablist" aria-label="Arrangement">
@@ -538,59 +1066,80 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, onClose
               role="tab"
               aria-selected={variant === v}
               className={variant === v ? 'is-on' : undefined}
-              title={v === 'wide' ? 'The arrangement readers see when it fits' : 'Shown on screens too narrow for the wide arrangement'}
+              title={v === 'wide' ? 'What readers see when it fits' : 'What phones get when the wide arrangement would shrink labels too far'}
               onClick={() => void switchVariant(v)}
             >
-              {v}
+              {v === 'wide' ? 'Wide' : 'Narrow (phones)'}
             </button>
           ))}
         </span>
-        <span className="mn-diagram-editor-status">{status}</span>
-        <span style={{ flex: 1 }} />
-        {authored && (
-          <button type="button" onClick={addBox} title="Add a box">
-            + Box
-          </button>
+        {layout && (
+          <span className="mn-diagram-variant" role="radiogroup" aria-label="Figure width">
+            {[false, true].map((w) => (
+              <button
+                key={String(w)}
+                type="button"
+                role="radio"
+                aria-checked={figWide === w}
+                className={figWide === w ? 'is-on' : undefined}
+                title={w ? 'Break out of the text column' : 'The width of the text column'}
+                onClick={() => {
+                  if (figWide !== w) dirty.current = true
+                  setFigWide(w)
+                }}
+              >
+                {w ? 'Wide' : 'Column'}
+              </button>
+            ))}
+          </span>
         )}
-        <button type="button" onClick={() => addAnnotation('text')} title="Add a text label">
-          + Text
-        </button>
-        <button type="button" onClick={() => addAnnotation('note')} title="Add a sticky note">
-          + Note
-        </button>
-        <button type="button" onClick={() => void autoLayout()} title="ELK layout: the selection if 2+ nodes are selected, else everything">
-          Auto-layout
-        </button>
-        <button type="button" onClick={toggleFrame} title="Crop what readers see">
-          Frame
-        </button>
-        <button type="button" onClick={() => restore(undo.current, redo.current)} title="Undo (⌘Z)">
-          ↶
-        </button>
-        <button type="button" onClick={() => restore(redo.current, undo.current)} title="Redo (⇧⌘Z)">
-          ↷
-        </button>
-        <button type="button" onClick={onClose} disabled={busy}>
+        <span style={{ flex: 1 }} />
+        <IconButton label="Undo (⌘Z)" onClick={() => restore(undo.current, redo.current)} d="M5 4L2 7l3 3M2 7h8a4 4 0 010 8H8" />
+        <IconButton label="Redo (⇧⌘Z)" onClick={() => restore(redo.current, undo.current)} d="M11 4l3 3-3 3M14 7H6a4 4 0 000 8h2" />
+        <button type="button" onClick={cancel} disabled={busy}>
           Cancel
         </button>
-        <button type="button" className="primary" onClick={() => void save()} disabled={busy}>
+        <button type="button" className="primary" onClick={() => void save()} disabled={busy} title="⌘S">
           {busy ? 'Saving…' : 'Save'}
         </button>
       </div>
-      <div className={`mn-diagram-editor-canvas mn-diagram-arrange${authored ? ' is-authoring' : ''}`}>
+      <div className={`mn-diagram-editor-canvas mn-diagram-arrange is-tool-${tool}`} onDoubleClick={onDoubleClick}>
         <ReactFlow
-          nodes={nodes.map((n) =>
-            ({ ...n, data: { ...n.data, onResizeStart: checkpoint } }),
-          )}
+          nodes={nodes.map((n) => ({
+            ...n,
+            data: {
+              ...n.data,
+              onResizeStart: checkpoint,
+              ...(n.id === FRAME_ID
+                ? {
+                    status: frameStatus(pad),
+                    ...fitNote(Number(n.width ?? 0), layout && (variant === 'narrow' ? null : layout.widths[figWide ? 'wide' : 'column'])),
+                    onResizeStart: () => {
+                      checkpoint()
+                      resizeBase.current = bounds()
+                    },
+                    onResize: (f: Box) => {
+                      const b = resizeBase.current
+                      if (b) setPad(padBetween(b, f))
+                    },
+                    onResizeEnd: () => {
+                      resizeBase.current = null
+                    },
+                  }
+                : {}),
+            },
+          }))}
           edges={edges}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
           onNodeDragStart={() => {
             draggingRef.current = true
+            setDragging(true)
             checkpoint()
           }}
           onNodeDragStop={() => {
+            setDragging(false)
             // Let the drag's final position change (which follows this
             // callback in the same tick) still snap.
             setTimeout(() => {
@@ -598,20 +1147,30 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, onClose
               setGuides({})
             }, 0)
           }}
+          onNodeClick={() => setSelectedEdge(null)}
+          onNodeDoubleClick={(_, n) => n.type !== 'frame' && setEditing(n.id)}
           onBeforeDelete={onBeforeDelete}
           onConnect={onConnect}
           onConnectEnd={onConnectEnd}
           connectionMode={ConnectionMode.Loose}
-          onEdgeClick={(_, e) => setSelectedEdge(e.id)}
-          onPaneClick={() => setSelectedEdge(null)}
+          onEdgeClick={(_, e) => {
+            clearSelection()
+            setSelectedEdge(e.id)
+          }}
+          onEdgeDoubleClick={(_, e) => {
+            setSelectedEdge(e.id)
+            setEditingEdge(e.id)
+          }}
+          onPaneClick={onPaneClick}
+          onSelectionStart={() => setSelectedEdge(null)}
           snapToGrid
           snapGrid={[8, 8]}
-          selectionOnDrag={false}
-          selectionKeyCode="Shift"
-          multiSelectionKeyCode="Shift"
+          selectionOnDrag
+          panOnDrag={[1, 2]}
           panOnScroll
           zoomOnPinch
-          nodesConnectable={Boolean(authored)}
+          zoomOnDoubleClick={false}
+          multiSelectionKeyCode="Shift"
           deleteKeyCode={['Backspace', 'Delete']}
           minZoom={0.2}
           maxZoom={3}
@@ -621,129 +1180,221 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, onClose
           <ViewportPortal>
             {guides.x !== undefined && <div className="mn-flow-guide mn-flow-guide--v" style={{ left: guides.x }} />}
             {guides.y !== undefined && <div className="mn-flow-guide mn-flow-guide--h" style={{ top: guides.y }} />}
+            {endDrag && <EndDragPreview d={endDrag} target={endDrag.over ? absBox(endDrag.over.id) : null} />}
           </ViewportPortal>
+          {showToolbar && (
+            <NodeToolbar
+              nodeId={selection.map((n) => n.id)}
+              isVisible
+              position={single?.type === 'frame' ? Position.Bottom : Position.Top}
+              offset={14}
+              className="mn-diagram-toolbar nodrag"
+            >
+              {toolbar}
+            </NodeToolbar>
+          )}
         </ReactFlow>
-        {edgeSpec && selectedEdge && (
-          <div className="mn-diagram-edge-panel">
-            <code>{selectedEdge}</code>
-            {authored && (
-              <>
-                <label>
-                  label{' '}
-                  <input
-                    value={edgeSpec.label ?? ''}
-                    onFocus={checkpoint}
-                    onChange={(e) => updateEdge(selectedEdge, { label: e.target.value })}
-                    size={12}
-                  />
-                </label>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(edgeSpec.dashed)}
-                    onChange={(e) => {
-                      checkpoint()
-                      updateEdge(selectedEdge, { dashed: e.target.checked })
-                    }}
-                  />{' '}
-                  dashed
-                </label>
-              </>
-            )}
-            <label>
-              leaves from{' '}
-              <select value={sides[selectedEdge]?.source ?? ''} onChange={(e) => setSide(selectedEdge, 'source', e.target.value as Side | '')}>
-                {SIDE_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {o || 'auto'}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              arrives at{' '}
-              <select value={sides[selectedEdge]?.target ?? ''} onChange={(e) => setSide(selectedEdge, 'target', e.target.value as Side | '')}>
-                {SIDE_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {o || 'auto'}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="button" onClick={() => setSelectedEdge(null)}>
-              ×
-            </button>
-          </div>
+        {edgeSpec && selectedEdge && !editingEdge && !endDrag && (
+          <EdgeOverlay
+            geometry={() => {
+              const a = absBox(edgeSpec.from)
+              const b = absBox(edgeSpec.to)
+              if (!a || !b) return null
+              const others = specState.nodes
+                .filter((n) => n.id !== edgeSpec.from && n.id !== edgeSpec.to)
+                .map((n) => absBox(n.id))
+                .filter(Boolean) as Box[]
+              const g = edgeGeometry(a, b, { ...sides[selectedEdge], direction: spec.direction ?? 'RIGHT' }, others)
+              return { ...g, top: Math.min(a.y, b.y, g.ly) }
+            }}
+            onEnd={(end, e) => startEndDrag(selectedEdge, end, e)}
+          >
+            {edgeToolbar}
+          </EdgeOverlay>
         )}
-        {nodeSpec && !edgeSpec && (
-          <div className="mn-diagram-edge-panel">
-            <code>{nodeSpec.id}</code>
-            <label>
-              label{' '}
-              <input
-                value={nodeSpec.label}
-                onFocus={checkpoint}
-                onChange={(e) => updateNode(nodeSpec.id, { label: e.target.value })}
-                onKeyDown={(e) => e.stopPropagation()}
-                size={16}
-              />
-            </label>
-            <label>
-              kind{' '}
-              <select
-                value={nodeSpec.kind ?? 'process'}
-                onChange={(e) => {
-                  checkpoint()
-                  updateNode(nodeSpec.id, { kind: e.target.value as NodeKind })
-                }}
-              >
-                {KINDS.map((k) => (
-                  <option key={k} value={k}>
-                    {k}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label title="Shown to readers on hover">
-              detail{' '}
-              <input
-                value={nodeSpec.detail ?? ''}
-                onFocus={checkpoint}
-                onChange={(e) => updateNode(nodeSpec.id, { detail: e.target.value })}
-                onKeyDown={(e) => e.stopPropagation()}
-                size={18}
-              />
-            </label>
-          </div>
-        )}
+        <div className="mn-diagram-tools" role="toolbar" aria-label="Tools">
+          <ToolButton tool="select" cur={tool} set={setTool} label="Select (V)" d="M4 2l8 6-3.5.8L11 13l-1.8.8-2.4-4.3L4 12z" />
+          <ToolButton tool="box" cur={tool} set={setTool} label="Box (B), or double-click the canvas" d="M2.5 4.5h11v7h-11z" />
+          <ToolButton tool="text" cur={tool} set={setTool} label="Text label (T)" d="M3 3.5h10M8 3.5V13M6 13h4" />
+          <ToolButton tool="note" cur={tool} set={setTool} label="Note (N)" d="M3 3h10v6.5L9.5 13H3zM9.5 13V9.5H13" />
+          <Sep />
+          <button type="button" className="mn-diagram-tools-text" onClick={() => void tidy()} title="Lay out the whole diagram automatically">
+            Tidy all
+          </button>
+        </div>
+        <p className="mn-diagram-hint" aria-live="polite">
+          {hint}
+        </p>
+        <ZoomControls />
       </div>
+    </DiagramEditContext.Provider>
+  )
+}
+
+// The selected arrow's end handles and toolbar, in screen space above
+// everything on the canvas (boxes' connect dots, the frame's dimming).
+type EdgeGeom = { lx: number; top: number; p1: [number, number]; p2: [number, number] }
+function EdgeOverlay({
+  geometry,
+  onEnd,
+  children,
+}: {
+  geometry: () => EdgeGeom | null
+  onEnd: (end: 'source' | 'target', e: ReactPointerEvent) => void
+  children: ReactNode
+}) {
+  const { x, y, zoom } = useViewport()
+  const g = geometry()
+  if (!g) return null
+  const at = ([px, py]: [number, number]) => ({ left: px * zoom + x, top: py * zoom + y })
+  return (
+    <div className="mn-diagram-overlay">
+      {(['source', 'target'] as const).map((end) => (
+        <div
+          key={end}
+          className="mn-flow-edge-end"
+          title={end === 'source' ? 'Drag to move where the arrow starts' : 'Drag to move where the arrow points'}
+          style={at(end === 'source' ? g.p1 : g.p2)}
+          onPointerDown={(e) => onEnd(end, e)}
+        />
+      ))}
+      <div className="mn-diagram-toolbar mn-diagram-toolbar--edge" style={at([g.lx, g.top])}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+// The arrow being re-attached: from its fixed box to the pointer, or to
+// the side of the box it would drop on.
+function EndDragPreview({ d, target }: { d: EndDrag; target: Box | null }) {
+  const [tx, ty] = d.over && target ? sidePoint(target, d.over.side) : d.pt
+  const a = d.anchor
+  const [ax, ay] = edgeOf(a, tx, ty)
+  const x0 = Math.min(ax, tx) - 20
+  const y0 = Math.min(ay, ty) - 20
+  return (
+    <>
+      {target && <div className="mn-flow-drop-box" style={{ left: target.x, top: target.y, width: target.w, height: target.h }} />}
+      <svg className="mn-flow-end-preview" style={{ left: x0, top: y0, width: Math.abs(tx - ax) + 40, height: Math.abs(ty - ay) + 40 }}>
+        <line x1={ax - x0} y1={ay - y0} x2={tx - x0} y2={ty - y0} />
+        <circle cx={tx - x0} cy={ty - y0} r={5} />
+      </svg>
     </>
   )
 }
 
-function frameNode(b: Box): Node {
+// Where the line from a box's center toward (tx, ty) leaves the box.
+function edgeOf(b: Box, tx: number, ty: number): [number, number] {
+  const cx = b.x + b.w / 2
+  const cy = b.y + b.h / 2
+  const dx = tx - cx
+  const dy = ty - cy
+  const s = Math.min(dx ? b.w / 2 / Math.abs(dx) : Infinity, dy ? b.h / 2 / Math.abs(dy) : Infinity, 1)
+  return [cx + dx * s, cy + dy * s]
+}
+
+function ZoomControls() {
+  const rf = useReactFlow()
+  const { zoom } = useViewport()
+  return (
+    <div className="mn-diagram-zoom" role="group" aria-label="Zoom">
+      <button type="button" aria-label="Zoom out" onClick={() => void rf.zoomOut({ duration: 150 })}>
+        −
+      </button>
+      <button type="button" title="Fit the diagram on screen" onClick={() => void rf.fitView({ padding: 0.2, duration: 200, maxZoom: FIT_MAX })}>
+        {Math.round(zoom * 100)}%
+      </button>
+      <button type="button" aria-label="Zoom in" onClick={() => void rf.zoomIn({ duration: 150 })}>
+        +
+      </button>
+    </div>
+  )
+}
+
+function ToolButton({ tool, cur, set, label, d }: { tool: Tool; cur: Tool; set: (t: Tool) => void; label: string; d: string }) {
+  return <IconButton label={label} pressed={tool === cur} onClick={() => set(tool)} d={d} />
+}
+
+function IconButton({ label, onClick, d, pressed }: { label: string; onClick: () => void; d: string; pressed?: boolean }) {
+  return (
+    <button type="button" className="mn-diagram-icon" title={label} aria-label={label} aria-pressed={pressed} onClick={onClick}>
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+        <path d={d} />
+      </svg>
+    </button>
+  )
+}
+
+function Sep() {
+  return <span className="mn-diagram-sep" aria-hidden="true" />
+}
+
+function frameNode(b: Box): Node<FrameNodeData> {
   return {
     id: FRAME_ID,
     type: 'frame',
+    className: 'mn-frame-node',
     position: { x: b.x, y: b.y },
     width: b.w,
     height: b.h,
-    zIndex: -2,
-    data: {},
+    zIndex: 2000,
+    draggable: false,
+    data: { status: 'fit' },
   }
 }
 
+// The margins a saved arrangement asks for. A pre-0.9.1 fixed frame box
+// becomes the margins it implied around today's content.
+function padFrom(spec: DiagramSpec, placement: Placement, baked: BakedDiagram | null): Pad {
+  if (baked?.framePad) return baked.framePad
+  if (baked?.frame) return padBetween(contentBounds(spec, placement, baked), baked.frame)
+  return DEFAULT_PAD
+}
+
+function padBetween(content: Box, frame: Box): Pad {
+  return {
+    top: Math.round(content.y - frame.y),
+    left: Math.round(content.x - frame.x),
+    bottom: Math.round(frame.y + frame.h - (content.y + content.h)),
+    right: Math.round(frame.x + frame.w - (content.x + content.w)),
+  }
+}
+
+const samePad = (a: Pad, b: Pad) => a.top === b.top && a.right === b.right && a.bottom === b.bottom && a.left === b.left
+
+// What readers get when the frame is wider than the figure's drawing
+// width (see DiagramFigure: shrink to the 13px label floor, then the
+// narrow arrangement, then sideways scroll).
+function fitNote(frameW: number, avail: number | null | undefined): Pick<FrameNodeData, 'note' | 'warn'> {
+  if (!avail || !frameW || frameW <= avail) return {}
+  const zoom = avail / frameW
+  if (zoom * 15 >= 13) return { note: `shrinks to ${Math.round(zoom * 100)}% to fit` }
+  return { note: 'too wide to read: readers get the narrow layout', warn: true }
+}
+
+function frameStatus(p: Pad): FrameNodeData['status'] {
+  if (p.top < 0 || p.right < 0 || p.bottom < 0 || p.left < 0) return 'crop'
+  return samePad(p, DEFAULT_PAD) ? 'fit' : 'extra'
+}
+
 function pickArrangement(a: Arrangement): Arrangement {
-  const { nodes, groups, edges, annotations, frame } = a
+  const { nodes, groups, edges, annotations, framePad } = a
   return {
     ...(nodes && Object.keys(nodes).length ? { nodes } : {}),
     ...(groups && Object.keys(groups).length ? { groups } : {}),
-    ...(edges ? { edges } : {}),
-    ...(annotations ? { annotations } : {}),
-    ...(frame ? { frame } : {}),
+    ...(edges && Object.keys(edges).length ? { edges } : {}),
+    ...(annotations?.length ? { annotations } : {}),
+    ...(framePad ? { framePad } : {}),
   }
 }
 
 function round(b: Box): Box {
   return { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.w), h: Math.round(b.h) }
+}
+
+const snap8 = (v: number) => Math.round(v / 8) * 8
+
+function overlaps(a: Box, b: Box, m = 16) {
+  return a.x < b.x + b.w + m && b.x < a.x + a.w + m && a.y < b.y + b.h + m && b.y < a.y + a.h + m
 }

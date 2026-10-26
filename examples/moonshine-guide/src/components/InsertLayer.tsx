@@ -9,7 +9,7 @@ import SourceEditor from './SourceEditor'
 // between two blocks (or after the last) shows a "+"; it inserts
 //
 //   Text     a markdown block, written in place
-//   Diagram  boxes and arrows in the arrange editor →
+//   Diagram  boxes and arrows in the diagram editor →
 //            `:::figure{id=diagram-N kind=diagram}` (spec + arrangement in
 //            content/figures/diagram-N.json)
 //   Image    an upload to public/media/ → `![alt](media/name.png)`
@@ -204,8 +204,11 @@ function Layer({ containerRef }: Props) {
             baked={null}
             placement={diagram.placement}
             authored
+            // A new figure starts at column width (gap.width less the
+            // figure's padding and border).
+            layout={{ wide: false, widths: { column: gap.width - 50, wide: gap.width + 14 } }}
             onClose={close}
-            onSaved={() => insertBlock(gap.index, `:::figure{id=${diagram.id} kind=diagram}\n:::`)}
+            onSaved={({ wide }) => insertBlock(gap.index, `:::figure{id=${diagram.id} kind=diagram${wide ? ' wide' : ''}}\n:::`)}
           />
         </Suspense>
       )}

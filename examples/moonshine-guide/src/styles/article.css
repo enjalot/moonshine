@@ -776,14 +776,6 @@
     linear-gradient(to right, var(--shadow-edge), transparent) left / 0.75rem 100% no-repeat scroll,
     linear-gradient(to left, var(--shadow-edge), transparent) right / 0.75rem 100% no-repeat scroll;
 }
-/* A diagram wider than the column takes the figure gutter, where there is
-   one (the 740px column plus 2rem a side). */
-@media (min-width: 820px) {
-  .figure:has(.mn-diagram-scroll.wants-wide) {
-    margin-left: -2rem;
-    margin-right: -2rem;
-  }
-}
 .mn-diagram-scroll-hint {
   position: sticky;
   left: 0;
@@ -941,6 +933,7 @@
 }
 .mn-flow-annot-edit {
   box-sizing: border-box;
+  display: block;
   width: 100%;
   height: 100%;
   font: inherit;
@@ -950,20 +943,81 @@
   resize: none;
 }
 
+/* Editor only: the reader frame. Its node ignores the pointer except at
+   the border and tab, so the canvas inside stays clickable; outside it is
+   dimmed so the crop is visible. */
+.mn-diagram-arrange .react-flow__node.mn-frame-node {
+  pointer-events: none !important;
+  cursor: default;
+}
+.mn-diagram-arrange .mn-frame-node .react-flow__resize-control {
+  pointer-events: all;
+}
 .mn-flow-frame {
   box-sizing: border-box;
   width: 100%;
   height: 100%;
-  border: 2px dashed var(--accent);
-  border-radius: 4px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 20000px color-mix(in srgb, var(--bg) 62%, transparent);
+}
+/* The frame's edges are always draggable: a 10px invisible grab strip
+   on each side with the visible hairline drawn down its middle, and a
+   handle at each corner. */
+.mn-diagram-arrange .react-flow__resize-control.line.mn-flow-frame-line {
+  --line: color-mix(in srgb, var(--text-2) 45%, transparent);
+  border: none;
+  background: linear-gradient(var(--line), var(--line)) center / 1px 100% no-repeat;
+}
+.mn-diagram-arrange .react-flow__resize-control.line.mn-flow-frame-line.left,
+.mn-diagram-arrange .react-flow__resize-control.line.mn-flow-frame-line.right {
+  width: 10px;
+}
+.mn-diagram-arrange .react-flow__resize-control.line.mn-flow-frame-line.top,
+.mn-diagram-arrange .react-flow__resize-control.line.mn-flow-frame-line.bottom {
+  height: 10px;
+  background-size: 100% 1px;
+}
+.mn-diagram-arrange .react-flow__resize-control.line.mn-flow-frame-line:hover,
+.mn-flow-frame.is-selected .react-flow__resize-control.line.mn-flow-frame-line {
+  --line: var(--accent);
+}
+.mn-flow-frame.is-cropping .react-flow__resize-control.line.mn-flow-frame-line {
+  --line: var(--error);
+}
+.mn-flow-frame-handle {
+  width: 9px !important;
+  height: 9px !important;
+  background: var(--fig-bg) !important;
+  border: 1.5px solid color-mix(in srgb, var(--text-2) 60%, transparent) !important;
+  border-radius: 2px !important;
+}
+.mn-flow-frame-handle:hover,
+.mn-flow-frame.is-selected .mn-flow-frame-handle {
+  border-color: var(--accent) !important;
 }
 .mn-flow-frame-label {
   position: absolute;
-  top: -1.4rem;
-  left: 0;
+  bottom: calc(100% + 4px);
+  left: -1px;
+  padding: 1px 6px;
   font-family: var(--heading-font);
   font-size: 12px;
-  color: var(--accent);
+  white-space: nowrap;
+  color: var(--text-2);
+  border-radius: 3px;
+  pointer-events: all;
+  cursor: move;
+}
+.mn-flow-frame-label .is-warn {
+  color: var(--error);
+}
+.mn-flow-frame.is-cropping .mn-flow-frame-label {
+  color: var(--error);
+}
+.mn-flow-frame-label:hover,
+.mn-flow-frame.is-selected .mn-flow-frame-label {
+  color: #fff;
+  background: var(--accent);
 }
 
 .mn-flow-handle {
@@ -975,23 +1029,75 @@
   border: none;
   pointer-events: none;
 }
-/* kind=diagram editor: side dots to drag a new arrow from. */
-.mn-diagram-arrange.is-authoring .mn-flow-handle--connect {
-  width: 10px;
-  height: 10px;
+/* Editor: side dots to drag a new arrow from, just outside the box. */
+.mn-diagram-arrange .mn-flow-handle--connect {
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   background: var(--accent);
   border: 2px solid var(--fig-bg);
   pointer-events: all;
   cursor: crosshair;
+  transition: opacity 0.12s, transform 0.12s;
 }
-.mn-diagram-arrange.is-authoring .react-flow__node:hover .mn-flow-handle--connect,
-.mn-diagram-arrange.is-authoring .react-flow__node.selected .mn-flow-handle--connect {
+.mn-diagram-arrange .mn-flow-handle--connect.react-flow__handle-top { transform: translate(-50%, -110%); }
+.mn-diagram-arrange .mn-flow-handle--connect.react-flow__handle-bottom { transform: translate(-50%, 110%); }
+.mn-diagram-arrange .mn-flow-handle--connect.react-flow__handle-left { transform: translate(-110%, -50%); }
+.mn-diagram-arrange .mn-flow-handle--connect.react-flow__handle-right { transform: translate(110%, -50%); }
+.mn-diagram-arrange .react-flow__node:hover .mn-flow-handle--connect,
+.mn-diagram-arrange .react-flow__node.selected .mn-flow-handle--connect,
+.mn-diagram-arrange .react-flow__node .mn-flow-handle--connect.connectingfrom {
   opacity: 1;
+}
+.mn-diagram-arrange .mn-flow-handle--connect:hover {
+  box-shadow: 0 0 0 4px var(--accent-light);
 }
 .mn-diagram-arrange .react-flow__connectionline path {
   stroke: var(--accent);
   stroke-width: 1.5;
+}
+/* A box's hover text exists: a small mark, since the editor doesn't show it. */
+.mn-flow-detail-mark {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.6;
+}
+/* In-place text editing (box, group, annotation, arrow labels). */
+.mn-flow-label-edit,
+.mn-flow-edge-label-edit,
+.mn-flow-group-label-edit {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  text-align: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+}
+.mn-flow-group-label-edit {
+  width: auto;
+  min-width: 8rem;
+  text-align: left;
+  background: var(--fig-bg);
+  outline: 1px solid var(--accent);
+}
+.mn-flow-edge-label.is-editing {
+  pointer-events: all;
+  outline: 1px solid var(--accent);
+}
+.mn-flow-edge-label-edit {
+  width: 10rem;
+  text-align: center;
 }
 
 .react-flow__edge-path.mn-flow-edge {
@@ -1058,7 +1164,7 @@
   max-width: 100%;
 }
 
-/* Dev-only full-screen editors (arrange, drawing), portaled to <body>. */
+/* Dev-only full-screen diagram editor, portaled to <body>. */
 .mn-diagram-editor {
   position: fixed;
   inset: 0;
@@ -1159,32 +1265,195 @@
   height: 1px;
   width: 200000px;
 }
-.mn-diagram-edge-panel {
+/* Editor: arrow ends to drag, and the drop preview. */
+.mn-diagram-overlay {
   position: absolute;
-  left: 50%;
-  bottom: 1rem;
-  transform: translateX(-50%);
-  z-index: 5;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+  pointer-events: none;
+}
+.mn-flow-edge-end {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--fig-bg);
+  border: 2px solid var(--accent);
+  pointer-events: all;
+  cursor: grab;
+}
+.mn-flow-edge-end:hover {
+  background: var(--accent);
+}
+.mn-flow-drop-box {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--accent);
+  border-radius: 5px;
+  pointer-events: none;
+}
+.mn-flow-end-preview {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+}
+.mn-flow-end-preview line {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+.mn-flow-end-preview circle {
+  fill: var(--accent);
+}
+
+/* Editor: the toolbar above a selection, the tool palette, hints, zoom. */
+.mn-diagram-toolbar,
+.mn-diagram-tools,
+.mn-diagram-zoom {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
-  padding: 0.45rem 0.8rem;
+  gap: 2px;
+  padding: 3px;
   font-family: var(--heading-font);
-  font-size: 0.85rem;
-  color: var(--text-2);
+  font-size: 13px;
+  color: var(--text);
   background: var(--fig-bg);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  box-shadow: 0 4px 14px var(--shadow-edge);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px var(--shadow-edge);
 }
-.mn-diagram-edge-panel select,
-.mn-diagram-edge-panel input,
-.mn-diagram-edge-panel button {
+.mn-diagram-toolbar {
+  flex-wrap: wrap;
+  max-width: 30rem;
+}
+.mn-diagram-toolbar--edge {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 14px));
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  max-width: none;
+  pointer-events: all;
+}
+.mn-diagram-toolbar button,
+.mn-diagram-tools button,
+.mn-diagram-zoom button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  border-radius: 5px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.mn-diagram-toolbar button:hover,
+.mn-diagram-tools button:hover,
+.mn-diagram-zoom button:hover {
+  background: var(--accent-light);
+}
+.mn-diagram-toolbar button[aria-pressed='true'],
+.mn-diagram-tools button[aria-pressed='true'] {
+  color: #fff;
+  background: var(--accent);
+}
+.mn-diagram-toolbar button.is-danger:hover {
+  color: #fff;
+  background: var(--error, #c0392b);
+}
+.mn-diagram-icon {
+  display: inline-flex;
+  padding: 5px !important;
+}
+.mn-diagram-icon svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.mn-diagram-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 3px 3px;
+  background: var(--border);
+}
+.mn-diagram-toolbar-note {
+  padding: 4px 8px;
+  color: var(--text-2);
+}
+.mn-diagram-kinds {
+  display: inline-flex;
+  gap: 1px;
+}
+.mn-diagram-toolbar .mn-diagram-kind {
+  padding: 5px;
+}
+.mn-diagram-kind .mn-flow-node {
+  display: block;
+  width: 22px;
+  height: 14px;
+  padding: 0;
+  border-width: 1.25px;
+}
+.mn-diagram-kind .mn-flow-node--decision {
+  border-width: 3px;
+}
+.mn-diagram-toolbar .mn-diagram-kind[aria-checked='true'] {
+  background: var(--accent-light);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+.mn-diagram-detail {
+  flex-basis: 100%;
+  box-sizing: border-box;
+  margin: 3px;
+  padding: 5px 7px;
   font: inherit;
   color: var(--text);
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 5px;
+  resize: vertical;
+}
+.mn-diagram-tools {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+}
+.mn-diagram-tools-text {
+  padding: 4px 10px !important;
+}
+.mn-diagram-hint {
+  position: absolute;
+  left: 14px;
+  bottom: 10px;
+  z-index: 5;
+  max-width: calc(100% - 200px);
+  margin: 0;
+  padding: 4px 9px;
+  font-family: var(--heading-font);
+  font-size: 12.5px;
+  color: var(--text-2);
+  background: color-mix(in srgb, var(--fig-bg) 85%, transparent);
+  border-radius: 5px;
+  pointer-events: none;
+}
+.mn-diagram-zoom {
+  position: absolute;
+  right: 14px;
+  bottom: 10px;
+  z-index: 5;
+}
+.mn-diagram-zoom button:nth-child(2) {
+  min-width: 3.4rem;
+  font-variant-numeric: tabular-nums;
+}
+.mn-diagram-arrange.is-tool-box .react-flow__pane,
+.mn-diagram-arrange.is-tool-text .react-flow__pane,
+.mn-diagram-arrange.is-tool-note .react-flow__pane {
+  cursor: crosshair;
 }
 
 /* Dev-only notebook-style "+" between blocks (InsertLayer). */
@@ -1285,6 +1554,28 @@
   cursor: pointer;
 }
 
+.mn-diagram-bar .mn-diagram-bar-delete {
+  margin-left: auto;
+  color: var(--text-2);
+}
+.mn-diagram-bar .mn-diagram-bar-delete:hover {
+  color: var(--error);
+  border-color: var(--error);
+}
+/* Figure-level controls in the Cmd-click panel: wide toggle, delete. */
+.mn-figure-controls {
+  display: inline-flex;
+  gap: 0.3rem;
+}
+.mn-figure-controls button[aria-pressed='true'] {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.mn-figure-controls .mn-figure-delete:hover {
+  color: var(--error);
+  border-color: var(--error);
+}
 .mn-diagram-bar button:first-of-type {
   border-color: var(--accent);
   color: var(--accent);

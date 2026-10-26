@@ -69,6 +69,9 @@ type EditContextValue = {
   // the first block, blocks.length = after the last). Used by the "+"
   // between blocks; same conflict check and undo as any other save.
   insertBlock: (gap: number, text: string) => Promise<void>
+  // Remove the top-level block at `index` (e.g. a figure's delete button);
+  // undoable like any other save.
+  deleteBlock: (index: number) => Promise<void>
 }
 
 const EditContext = createContext<EditContextValue | null>(null)
@@ -113,8 +116,8 @@ async function postSave(payload: Record<string, unknown>): Promise<void> {
 }
 
 // Write a file under content/ outside the body-splice flow — used by
-// dev-only figure affordances (DiagramFigure's arrange mode bakes node
-// positions to content/figures/<id>.json). Same endpoint, same
+// dev-only figure affordances (the diagram editor saves
+// content/figures/<id>.json). Same endpoint, same
 // auto-commit; gated on the same build-time constant so production
 // bundles drop it.
 // Upload an image to public/media/ (dev only); resolves to the
@@ -343,6 +346,11 @@ export function EditProvider({ body, path, children }: ProviderProps) {
       }
       await postSave({ path, body: next, baseHash: fnv1a(body) })
       setLastSavedBody(body)
+    },
+    deleteBlock: async (index) => {
+      if (index < 0 || index >= blocks.length) return
+      const order = blocks.map((_, i) => i).filter((i) => i !== index)
+      await saveReorderedBody(rebuildBody(body, blocks, order))
     },
     moveActiveBlock: async (direction) => {
       if (!activeRange) return
