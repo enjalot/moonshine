@@ -2,25 +2,25 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { ReactFlow, ReactFlowProvider } from '@xyflow/react'
 import '@xyflow/react/dist/base.css'
 import { useFigureHighlight } from '../store'
-import { EDIT_ENABLED } from '../lib/EditContext'
+import { EDIT_ENABLED, saveContentFile } from '../lib/EditContext'
 import { getBakedFigure } from '../lib/bakedFigures'
 import { narrowSpec, place, type Placement } from './diagram/layout'
 import { buildEdges, buildNodes, edgeTypes, frameFor, nodeTypes } from './diagram/flow'
-import type { BakedDiagram, Box, DiagramSpec } from './diagram/spec'
+import { specHash, type BakedDiagram, type Box, type DiagramSpec } from './diagram/spec'
 
 export type { DiagramSpec } from './diagram/spec'
 
 // Editorial diagrams: system diagrams, pipelines, anything node-link.
 //
-// Semantics are machine-owned: a figure file declares a DiagramSpec (node
-// ids, labels, kinds, groups, edges, optional reader-facing `detail`) and
-// passes it here. The arrangement is author-owned: in dev, "arrange" opens
-// a full-screen editor (snap + alignment guides, resize, auto-layout, edge
-// sides, text/note annotations, undo, a crop frame) and Save writes
-// content/figures/<figure-id>.json. Readers get a live React Flow diagram
-// built from both: hovering a node with a `detail` shows it, and
-// :term[word]{to=figure-id.part} highlights a node, group, edge
-// (`from--to`) or annotation.
+// A figure file declares a DiagramSpec (node ids, labels, kinds, groups,
+// edges, optional reader-facing `detail`) and passes it here. In dev,
+// "edit diagram" opens a full-screen editor (diagram/DiagramArrange.tsx)
+// where the author arranges it and can change its structure too; Save
+// writes content/figures/<figure-id>.json. Once the author has edited the
+// structure, the spec saved there is the one drawn (see diagram/spec.ts).
+// Readers get a live React Flow diagram: hovering a node with a `detail`
+// shows it, and :term[word]{to=figure-id.part} highlights a node, group,
+// edge (`from--to`) or annotation.
 //
 // Nodes the author hasn't placed yet (added to the spec later) are laid out
 // by ELK next to their neighbours; ELK only loads when that happens.
@@ -67,7 +67,10 @@ export default function DiagramFigure({ figureId, spec: specProp, nodes: legacyN
     () => (specProp || !legacyNodes ? null : fromLegacy(legacyNodes, legacyEdges ?? [])),
     [specProp, legacyNodes, legacyEdges],
   )
-  const spec = authored ? (saved?.spec ?? EMPTY_SPEC) : (specProp ?? legacy?.spec ?? EMPTY_SPEC)
+  const codeSpec = specProp ?? legacy?.spec
+  const spec = (authored ? saved?.spec : (saved?.spec ?? codeSpec)) ?? EMPTY_SPEC
+  // The author edited the structure, and the code's spec changed after.
+  const drifted = Boolean(!authored && saved?.spec && saved.specFrom && codeSpec && specHash(codeSpec) !== saved.specFrom)
   // Legacy code positions stand in for any node the author never saved.
   const baked = useMemo<BakedDiagram | null>(
     () => (legacy ? { figure: figureId, ...saved, nodes: { ...legacy.positions, ...saved?.nodes } } : saved),
@@ -90,7 +93,7 @@ export default function DiagramFigure({ figureId, spec: specProp, nodes: legacyN
   return (
     <div className="mn-diagram">
       {empty ? (
-        EDIT_ENABLED && <p className="mn-diagram-empty">An empty diagram. Click “arrange” to add boxes.</p>
+        EDIT_ENABLED && <p className="mn-diagram-empty">An empty diagram. Click “edit diagram” to add boxes.</p>
       ) : placement ? (
         <ReaderFlow spec={spec} placement={placement} baked={baked} activePart={activePart} />
       ) : (
@@ -104,8 +107,14 @@ export default function DiagramFigure({ figureId, spec: specProp, nodes: legacyN
             </span>
           )}
           {legacy && <span title="Run scripts/upgrade-still.mjs from the moonshine plugin">old diagram API</span>}
+          {!authored && saved?.spec && codeSpec && (
+            <span title={`The structure was edited in the browser and is saved in content/figures/${figureId}.json; the spec in the figure code is not used.`}>
+              {drifted ? 'figure code changed since the browser edits (not shown)' : 'structure edited in the browser'}
+            </span>
+          )}
+          {drifted && saved && <button type="button" onClick={() => void restoreCodeSpec(saved)}>use code version</button>}
           <button type="button" onClick={() => setArranging(true)}>
-            arrange
+            edit diagram
           </button>
           {arranging && placement && (
             <Suspense fallback={<span>loading editor…</span>}>
@@ -114,7 +123,8 @@ export default function DiagramFigure({ figureId, spec: specProp, nodes: legacyN
                 spec={spec}
                 baked={baked}
                 placement={placement}
-                authored={authored}
+                authored={authored || Boolean(saved?.spec)}
+                codeSpec={codeSpec}
                 onClose={() => setArranging(false)}
               />
             </Suspense>
@@ -245,6 +255,14 @@ function useNarrowView(spec: DiagramSpec, baked: BakedDiagram | null, wanted: bo
     }
   }, [wanted, blocked, auto, spec, baked])
   return wanted && !blocked ? view : null
+}
+
+// Drop the browser-edited structure so the figure code's spec is drawn
+// again (positions are kept by id).
+async function restoreCodeSpec(saved: BakedDiagram & { path?: string }) {
+  if (!window.confirm('Use the figure code’s spec? Boxes and arrows added in the browser that the code lacks will be dropped.')) return
+  const { path: _path, spec: _spec, specFrom: _from, ...rest } = saved
+  await saveContentFile(`figures/${saved.figure}.json`, JSON.stringify(rest, null, 2))
 }
 
 function fromLegacy(nodes: DiagramNode[], edges: DiagramEdge[]) {

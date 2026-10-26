@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from 'react'
+import { createContext, memo, useContext, useEffect, useRef, useState } from 'react'
 import {
   BaseEdge,
   EdgeLabelRenderer,
@@ -29,14 +29,27 @@ export const groupNodeId = (id: string) => `g:${id}`
 export const annotNodeId = (id: string) => `a:${id}`
 export const FRAME_ID = 'frame:crop'
 
+// ---- editor hooks -----------------------------------------------------
+// The dev editor (DiagramArrange) provides this; readers never do, so
+// every editing affordance below is gated on it.
+export type DiagramEditUi = {
+  // The node, group or annotation whose text is being edited in place.
+  editing: string | null
+  commitText: (id: string, text: string | null) => void // null = cancel
+  selectedEdge: string | null
+  editingEdge: string | null
+  commitEdgeLabel: (key: string, label: string | null) => void
+  // The arrow whose end is being dragged (the editor draws it instead).
+  draggingEdge: string | null
+}
+export const DiagramEditContext = createContext<DiagramEditUi | null>(null)
+
 export type SpecNodeData = {
   label: string
   kind: NodeKind
   detail?: string
   active?: boolean
   editable?: boolean
-  // kind=diagram editor: drag from a side dot to another box to connect.
-  connectable?: boolean
   unarranged?: boolean
   onResizeStart?: () => void
 }
@@ -46,7 +59,6 @@ export type AnnotNodeData = {
   text: string
   active?: boolean
   editable?: boolean
-  onText?: (id: string, text: string) => void
   onResizeStart?: () => void
 }
 export type FlowEdgeData = {
@@ -67,9 +79,9 @@ const POS: Record<Side, Position> = {
 }
 
 // Invisible handles on every side: edges are drawn by FlowEdge from node
-// geometry, but React Flow still wants a handle to anchor an edge to. When
-// the author owns the spec, the source handles become visible connect dots
-// (ConnectionMode.Loose lets a drag end on any of them).
+// geometry, but React Flow still wants a handle to anchor an edge to. In
+// the editor the source handles become connect dots (ConnectionMode.Loose
+// lets a drag end on any of them).
 function SideHandles({ connectable }: { connectable?: boolean }) {
   return (
     <>
@@ -90,7 +102,9 @@ function SideHandles({ connectable }: { connectable?: boolean }) {
   )
 }
 
-export const SpecNode = memo(function SpecNode({ data, selected }: NodeProps<Node<SpecNodeData>>) {
+export const SpecNode = memo(function SpecNode({ id, data, selected }: NodeProps<Node<SpecNodeData>>) {
+  const ui = useContext(DiagramEditContext)
+  const editing = ui?.editing === id
   const cls = [
     'mn-flow-node',
     `mn-flow-node--${data.kind}`,
@@ -102,72 +116,97 @@ export const SpecNode = memo(function SpecNode({ data, selected }: NodeProps<Nod
     .join(' ')
   return (
     <div className={cls} tabIndex={data.detail && !data.editable ? 0 : undefined}>
-      {data.editable && <NodeResizer isVisible={selected} onResizeStart={data.onResizeStart} minWidth={64} minHeight={32} lineClassName="mn-flow-resize-line" handleClassName="mn-flow-resize-handle" />}
-      <SideHandles connectable={data.connectable} />
-      <span className="mn-flow-label">{data.label}</span>
+      {data.editable && <NodeResizer isVisible={selected && !editing} onResizeStart={data.onResizeStart} minWidth={64} minHeight={32} lineClassName="mn-flow-resize-line" handleClassName="mn-flow-resize-handle" />}
+      <SideHandles connectable={data.editable} />
+      {editing && ui ? (
+        <InlineText className="mn-flow-label-edit" value={data.label} onDone={(t) => ui.commitText(id, t)} />
+      ) : (
+        <span className="mn-flow-label">{data.label}</span>
+      )}
       {data.detail && !data.editable && (
         <span className="mn-flow-detail" role="tooltip">
           {data.detail}
         </span>
       )}
+      {data.detail && data.editable && <span className="mn-flow-detail-mark" title={`Hover text: ${data.detail}`} />}
     </div>
   )
 })
 
-export const GroupNode = memo(function GroupNode({ data, selected }: NodeProps<Node<GroupNodeData>>) {
+// In-place text editing: Enter (or clicking away) keeps, Shift+Enter is
+// a new line, Escape cancels.
+function InlineText({ value, onDone, className, multiline = true }: { value: string; onDone: (v: string | null) => void; className: string; multiline?: boolean }) {
+  const [draft, setDraft] = useState(value)
+  const ref = useRef<HTMLTextAreaElement>(null)
+  const done = useRef(false)
+  useEffect(() => ref.current?.select(), [])
+  const finish = (v: string | null) => {
+    if (done.current) return
+    done.current = true
+    onDone(v)
+  }
+  return (
+    <textarea
+      ref={ref}
+      className={`${className} nodrag nopan nowheel`}
+      value={draft}
+      rows={Math.max(1, draft.split('\n').length)}
+      aria-label="Edit text"
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => finish(draft)}
+      onPointerDown={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        e.stopPropagation()
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          finish(null)
+        } else if (e.key === 'Enter' && (!multiline || !e.shiftKey)) {
+          e.preventDefault()
+          finish(draft)
+        }
+      }}
+    />
+  )
+}
+export const GroupNode = memo(function GroupNode({ id, data, selected }: NodeProps<Node<GroupNodeData>>) {
+  const ui = useContext(DiagramEditContext)
+  const editing = ui?.editing === id
   return (
     <div className={`mn-flow-group${data.active ? ' is-active' : ''}`}>
       {data.editable && <NodeResizer isVisible={selected} onResizeStart={data.onResizeStart} minWidth={80} minHeight={60} lineClassName="mn-flow-resize-line" handleClassName="mn-flow-resize-handle" />}
-      <span className="mn-flow-group-label">{data.label}</span>
-    </div>
-  )
-})
-
-export const AnnotNode = memo(function AnnotNode({ id, data, selected }: NodeProps<Node<AnnotNodeData>>) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(data.text)
-  const ref = useRef<HTMLTextAreaElement>(null)
-  useEffect(() => setDraft(data.text), [data.text])
-  useEffect(() => {
-    if (editing) ref.current?.select()
-  }, [editing])
-  const commit = () => {
-    setEditing(false)
-    if (draft !== data.text) data.onText?.(id, draft)
-  }
-  return (
-    <div
-      className={`mn-flow-annot mn-flow-annot--${data.kind}${data.active ? ' is-active' : ''}`}
-      onDoubleClick={data.editable ? () => setEditing(true) : undefined}
-    >
-      {data.editable && <NodeResizer isVisible={selected && !editing} onResizeStart={data.onResizeStart} minWidth={40} minHeight={24} lineClassName="mn-flow-resize-line" handleClassName="mn-flow-resize-handle" />}
-      {editing ? (
-        <textarea
-          ref={ref}
-          className="mn-flow-annot-edit nodrag nowheel"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) {
-              e.preventDefault()
-              commit()
-            }
-            e.stopPropagation()
-          }}
-        />
+      {editing && ui ? (
+        <InlineText className="mn-flow-group-label mn-flow-group-label-edit" value={data.label} multiline={false} onDone={(t) => ui.commitText(id, t)} />
       ) : (
-        <span>{data.text}</span>
+        <span className="mn-flow-group-label">{data.label}</span>
       )}
     </div>
   )
 })
 
-export const FrameNode = memo(function FrameNode({ data, selected }: NodeProps<Node<{ onResizeStart?: () => void }>>) {
+export const AnnotNode = memo(function AnnotNode({ id, data, selected }: NodeProps<Node<AnnotNodeData>>) {
+  const ui = useContext(DiagramEditContext)
+  const editing = ui?.editing === id
   return (
-    <div className="mn-flow-frame">
+    <div className={`mn-flow-annot mn-flow-annot--${data.kind}${data.active ? ' is-active' : ''}`}>
+      {data.editable && <NodeResizer isVisible={selected && !editing} onResizeStart={data.onResizeStart} minWidth={40} minHeight={24} lineClassName="mn-flow-resize-line" handleClassName="mn-flow-resize-handle" />}
+      {editing && ui ? <InlineText className="mn-flow-annot-edit" value={data.text} onDone={(t) => ui.commitText(id, t)} /> : <span>{data.text}</span>}
+    </div>
+  )
+})
+
+// The reader frame: what readers see, always present in the editor.
+// Outside it is dimmed. Only its border and tab take the pointer, so the
+// canvas inside stays clickable. Until the author moves or resizes it, it
+// follows the content (`auto`) and nothing is saved.
+export type FrameNodeData = { auto: boolean; onResizeStart?: () => void }
+export const FrameNode = memo(function FrameNode({ data, selected, width, height }: NodeProps<Node<FrameNodeData>>) {
+  return (
+    <div className={`mn-flow-frame${selected ? ' is-selected' : ''}`}>
       <NodeResizer isVisible={selected} onResizeStart={data.onResizeStart} minWidth={80} minHeight={60} lineClassName="mn-flow-resize-line" handleClassName="mn-flow-resize-handle" />
-      <span className="mn-flow-frame-label">reader frame</span>
+      <span className="mn-flow-frame-grip" />
+      <span className="mn-flow-frame-label" title="What readers see. Drag or resize to crop; select it to fit it to the content again.">
+        Reader view{data.auto ? ' · fits content' : ` · ${Math.round(width ?? 0)}×${Math.round(height ?? 0)}`}
+      </span>
     </div>
   )
 })
@@ -179,7 +218,7 @@ function boxOf(n: InternalNode): Box {
   return { x: p.x, y: p.y, w: n.measured.width ?? (n.width as number) ?? 0, h: n.measured.height ?? (n.height as number) ?? 0 }
 }
 
-function sidePoint(b: Box, s: Side): [number, number] {
+export function sidePoint(b: Box, s: Side): [number, number] {
   switch (s) {
     case 'top':
       return [b.x + b.w / 2, b.y]
@@ -193,7 +232,7 @@ function sidePoint(b: Box, s: Side): [number, number] {
 }
 
 // The side of `a` that faces `b`.
-function facing(a: Box, b: Box): Side {
+export function facing(a: Box, b: Box): Side {
   const dx = b.x + b.w / 2 - (a.x + a.w / 2)
   const dy = b.y + b.h / 2 - (a.y + a.h / 2)
   if (Math.abs(dx) / (a.w + b.w) > Math.abs(dy) / (a.h + b.h)) return dx > 0 ? 'right' : 'left'
@@ -222,6 +261,7 @@ function crosses(x1: number, y1: number, x2: number, y2: number, b: Box): boolea
 }
 
 export function FlowEdge({ id, source, target, data, markerEnd }: EdgeProps<Edge<FlowEdgeData>>) {
+  const ui = useContext(DiagramEditContext)
   const s = useInternalNode(source)
   const t = useInternalNode(target)
   // Other spec nodes, for the "does a straight line run through a box"
@@ -238,16 +278,53 @@ export function FlowEdge({ id, source, target, data, markerEnd }: EdgeProps<Edge
   const a = boxOf(s)
   const b = boxOf(t)
 
-  let path: string
-  let lx: number
-  let ly: number
+  const { path, lx, ly } = edgeGeometry(a, b, data, others)
+
+  const selected = ui?.selectedEdge === id
+  const editingLabel = ui?.editingEdge === id
+  if (ui?.draggingEdge === id) return null
+  return (
+    <>
+      <BaseEdge
+        id={id}
+        path={path}
+        markerEnd={markerEnd}
+        interactionWidth={ui ? 16 : 0}
+        className={`mn-flow-edge${data.dashed ? ' is-dashed' : ''}${data.active || selected ? ' is-active' : ''}`}
+      />
+      {(data.label || editingLabel) && (
+        <EdgeLabelRenderer>
+          <div
+            className={`mn-flow-edge-label${data.active || selected ? ' is-active' : ''}${editingLabel ? ' is-editing' : ''}`}
+            style={{ transform: `translate(-50%, -50%) translate(${lx}px, ${ly}px)` }}
+          >
+            {editingLabel && ui ? (
+              <InlineText className="mn-flow-edge-label-edit" value={data.label ?? ''} multiline={false} onDone={(t) => ui.commitEdgeLabel(id, t)} />
+            ) : (
+              data.label
+            )}
+          </div>
+        </EdgeLabelRenderer>
+      )}
+    </>
+  )
+}
+
+// How an edge is drawn between two boxes, shared with the editor (which
+// puts its end handles on p1 / p2).
+export function edgeGeometry(
+  a: Box,
+  b: Box,
+  data: Pick<FlowEdgeData, 'source' | 'target' | 'direction'>,
+  others: Box[],
+): { path: string; lx: number; ly: number; p1: [number, number]; p2: [number, number] } {
   if (data.source || data.target) {
     // Author picked a side: route orthogonally out of it.
     const ss = data.source ?? facing(a, b)
     const ts = data.target ?? facing(b, a)
     const [sx, sy] = sidePoint(a, ss)
     const [tx, ty] = sidePoint(b, ts)
-    ;[path, lx, ly] = getSmoothStepPath({
+    const [path, lx, ly] = getSmoothStepPath({
       sourceX: sx,
       sourceY: sy,
       sourcePosition: POS[ss],
@@ -257,57 +334,42 @@ export function FlowEdge({ id, source, target, data, markerEnd }: EdgeProps<Edge
       borderRadius: 8,
       offset: 18,
     })
-  } else {
-    const [x1, y1] = borderPoint(a, b.x + b.w / 2, b.y + b.h / 2)
-    const [x2, y2] = borderPoint(b, a.x + a.w / 2, a.y + a.h / 2)
-    if (!others.some((o) => crosses(x1, y1, x2, y2, o))) {
-      path = `M ${x1} ${y1} L ${x2} ${y2}`
-      lx = (x1 + x2) / 2
-      ly = (y1 + y2) / 2
-    } else if (data.direction === 'RIGHT') {
-      // Bow under the row the straight line would have crossed.
-      const sx = a.x + a.w / 2
-      const tx = b.x + b.w / 2
-      const lo = Math.min(sx, tx)
-      const hi = Math.max(sx, tx)
-      const floor = Math.max(a.y + a.h, b.y + b.h, ...others.filter((o) => o.x + o.w > lo && o.x < hi).map((o) => o.y + o.h))
-      const y = floor + 28
-      path = `M ${sx} ${a.y + a.h} C ${sx} ${y}, ${tx} ${y}, ${tx} ${b.y + b.h}`
-      lx = (sx + tx) / 2
-      ly = y - 4
-    } else {
-      const sy = a.y + a.h / 2
-      const ty = b.y + b.h / 2
-      const lo = Math.min(sy, ty)
-      const hi = Math.max(sy, ty)
-      const wall = Math.max(a.x + a.w, b.x + b.w, ...others.filter((o) => o.y + o.h > lo && o.y < hi).map((o) => o.x + o.w))
-      const x = wall + 28
-      path = `M ${a.x + a.w} ${sy} C ${x} ${sy}, ${x} ${ty}, ${b.x + b.w} ${ty}`
-      lx = x - 4
-      ly = (sy + ty) / 2
+    return { path, lx, ly, p1: [sx, sy], p2: [tx, ty] }
+  }
+  const [x1, y1] = borderPoint(a, b.x + b.w / 2, b.y + b.h / 2)
+  const [x2, y2] = borderPoint(b, a.x + a.w / 2, a.y + a.h / 2)
+  if (!others.some((o) => crosses(x1, y1, x2, y2, o))) {
+    return { path: `M ${x1} ${y1} L ${x2} ${y2}`, lx: (x1 + x2) / 2, ly: (y1 + y2) / 2, p1: [x1, y1], p2: [x2, y2] }
+  }
+  if (data.direction === 'RIGHT') {
+    // Bow under the row the straight line would have crossed.
+    const sx = a.x + a.w / 2
+    const tx = b.x + b.w / 2
+    const lo = Math.min(sx, tx)
+    const hi = Math.max(sx, tx)
+    const floor = Math.max(a.y + a.h, b.y + b.h, ...others.filter((o) => o.x + o.w > lo && o.x < hi).map((o) => o.y + o.h))
+    const y = floor + 28
+    return {
+      path: `M ${sx} ${a.y + a.h} C ${sx} ${y}, ${tx} ${y}, ${tx} ${b.y + b.h}`,
+      lx: (sx + tx) / 2,
+      ly: y - 4,
+      p1: [sx, a.y + a.h],
+      p2: [tx, b.y + b.h],
     }
   }
-
-  return (
-    <>
-      <BaseEdge
-        id={id}
-        path={path}
-        markerEnd={markerEnd}
-        className={`mn-flow-edge${data.dashed ? ' is-dashed' : ''}${data.active ? ' is-active' : ''}`}
-      />
-      {data.label && (
-        <EdgeLabelRenderer>
-          <div
-            className={`mn-flow-edge-label${data.active ? ' is-active' : ''}`}
-            style={{ transform: `translate(-50%, -50%) translate(${lx}px, ${ly}px)` }}
-          >
-            {data.label}
-          </div>
-        </EdgeLabelRenderer>
-      )}
-    </>
-  )
+  const sy = a.y + a.h / 2
+  const ty = b.y + b.h / 2
+  const lo = Math.min(sy, ty)
+  const hi = Math.max(sy, ty)
+  const wall = Math.max(a.x + a.w, b.x + b.w, ...others.filter((o) => o.y + o.h > lo && o.y < hi).map((o) => o.x + o.w))
+  const x = wall + 28
+  return {
+    path: `M ${a.x + a.w} ${sy} C ${x} ${sy}, ${x} ${ty}, ${b.x + b.w} ${ty}`,
+    lx: x - 4,
+    ly: (sy + ty) / 2,
+    p1: [a.x + a.w, sy],
+    p2: [b.x + b.w, ty],
+  }
 }
 
 export const nodeTypes = { spec: SpecNode, group: GroupNode, annot: AnnotNode, frame: FrameNode }
@@ -319,9 +381,9 @@ export function buildNodes(
   spec: DiagramSpec,
   placement: Placement,
   baked: BakedDiagram | null,
-  opts: { activePart?: string | null; editable?: boolean; connectable?: boolean; onText?: AnnotNodeData['onText'] } = {},
+  opts: { activePart?: string | null; editable?: boolean } = {},
 ): Node[] {
-  const { activePart, editable, connectable } = opts
+  const { activePart, editable } = opts
   const out: Node[] = []
   for (const g of spec.groups ?? []) {
     const b = placement.groups[g.id]
@@ -355,7 +417,6 @@ export function buildNodes(
         detail: n.detail,
         active: activePart === n.id,
         editable,
-        connectable,
         unarranged: editable && b.unarranged,
       },
       selectable: editable,
@@ -369,7 +430,7 @@ export function buildNodes(
       position: { x: a.x, y: a.y },
       width: a.w,
       height: a.h,
-      data: { kind: a.kind, text: a.text, active: activePart === a.id, editable, onText: opts.onText },
+      data: { kind: a.kind, text: a.text, active: activePart === a.id, editable },
       selectable: editable,
       draggable: editable,
     })
