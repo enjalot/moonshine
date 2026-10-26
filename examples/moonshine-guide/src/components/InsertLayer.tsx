@@ -204,8 +204,11 @@ function Layer({ containerRef }: Props) {
             baked={null}
             placement={diagram.placement}
             authored
+            // A new figure starts at column width (gap.width less the
+            // figure's padding and border).
+            layout={{ wide: false, widths: { column: gap.width - 50, wide: gap.width + 14 } }}
             onClose={close}
-            onSaved={() => insertBlock(gap.index, `:::figure{id=${diagram.id} kind=diagram}\n:::`)}
+            onSaved={({ wide }) => insertBlock(gap.index, `:::figure{id=${diagram.id} kind=diagram${wide ? ' wide' : ''}}\n:::`)}
           />
         </Suspense>
       )}

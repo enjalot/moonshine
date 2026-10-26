@@ -15,7 +15,7 @@ import {
   type NodeProps,
 } from '@xyflow/react'
 import type { Placement } from './layout'
-import { edgeKey, type Annotation, type BakedDiagram, type Box, type DiagramSpec, type NodeKind, type Side } from './spec'
+import { edgeKey, type Annotation, type BakedDiagram, type Box, type DiagramSpec, type NodeKind, type Pad, type Side } from './spec'
 
 // Shared React Flow pieces for DiagramFigure (reader, locked) and
 // DiagramArrange (dev editor). Everything is styled from tokens.css via
@@ -194,18 +194,36 @@ export const AnnotNode = memo(function AnnotNode({ id, data, selected }: NodePro
   )
 })
 
-// The reader frame: what readers see, always present in the editor.
-// Outside it is dimmed. Only its border and tab take the pointer, so the
-// canvas inside stays clickable. Until the author moves or resizes it, it
-// follows the content (`auto`) and nothing is saved.
-export type FrameNodeData = { auto: boolean; onResizeStart?: () => void }
-export const FrameNode = memo(function FrameNode({ data, selected, width, height }: NodeProps<Node<FrameNodeData>>) {
+// The reader frame: what readers see, always present in the editor. It
+// is the content's bounds plus a margin per side, so it follows the
+// diagram as it changes; dragging any edge or corner sets that margin.
+// Only the border, handles and tab take the pointer, so the canvas inside
+// stays clickable. Outside it is dimmed.
+export type FrameNodeData = {
+  status: 'fit' | 'extra' | 'crop'
+  // How it fits the figure, from the editor (e.g. "shrinks to 90%").
+  note?: string
+  warn?: boolean
+  onResizeStart?: () => void
+  onResize?: (b: Box) => void
+  onResizeEnd?: () => void
+}
+export const FrameNode = memo(function FrameNode({ data, selected }: NodeProps<Node<FrameNodeData>>) {
   return (
-    <div className={`mn-flow-frame${selected ? ' is-selected' : ''}`}>
-      <NodeResizer isVisible={selected} onResizeStart={data.onResizeStart} minWidth={80} minHeight={60} lineClassName="mn-flow-resize-line" handleClassName="mn-flow-resize-handle" />
-      <span className="mn-flow-frame-grip" />
-      <span className="mn-flow-frame-label" title="What readers see. Drag or resize to crop; select it to fit it to the content again.">
-        Reader view{data.auto ? ' · fits content' : ` · ${Math.round(width ?? 0)}×${Math.round(height ?? 0)}`}
+    <div className={`mn-flow-frame${selected ? ' is-selected' : ''}${data.status === 'crop' ? ' is-cropping' : ''}`}>
+      <NodeResizer
+        isVisible
+        onResizeStart={data.onResizeStart}
+        onResize={(_, p) => data.onResize?.({ x: p.x, y: p.y, w: p.width, h: p.height })}
+        onResizeEnd={data.onResizeEnd}
+        minWidth={40}
+        minHeight={30}
+        lineClassName="mn-flow-frame-line"
+        handleClassName="mn-flow-frame-handle"
+      />
+      <span className="mn-flow-frame-label" title="What readers see. Drag an edge or corner to add room (or crop); click for “Fit to content”.">
+        Reader view{data.status === 'extra' ? ' · extra room' : data.status === 'crop' ? ' · cropping content' : ''}
+        {data.note && <span className={data.warn ? 'is-warn' : undefined}> · {data.note}</span>}
       </span>
     </div>
   )
@@ -472,38 +490,86 @@ export function buildEdges(
     })
 }
 
-// Everything the reader should see: saved frame, else the bounds of all
-// boxes plus a margin.
-export function frameOf(placement: Placement, baked: BakedDiagram | null, margin = 16): Box {
+// What readers see: the bounds of everything drawn (boxes, groups,
+// annotations, arrows and their labels) plus the author's margin on each
+// side. The editor draws the same frame, so it always matches. Margins
+// can be negative, to crop. Saves from before framePad stored a fixed
+// `frame` box; that still wins when present.
+export const DEFAULT_PAD: Pad = { top: 16, right: 16, bottom: 16, left: 16 }
+
+export function frameFor(spec: DiagramSpec, placement: Placement, baked: BakedDiagram | null): Box {
   if (baked?.frame) return baked.frame
-  const boxes: Box[] = [
-    ...Object.values(placement.nodes),
-    ...Object.values(placement.groups),
-    ...(baked?.annotations ?? []),
-  ]
+  return padBox(contentBounds(spec, placement, baked), baked?.framePad ?? DEFAULT_PAD)
+}
+
+export function padBox(b: Box, p: Pad): Box {
+  return { x: b.x - p.left, y: b.y - p.top, w: Math.max(40, b.w + p.left + p.right), h: Math.max(30, b.h + p.top + p.bottom) }
+}
+
+export function contentBounds(spec: DiagramSpec, placement: Placement, baked: Pick<BakedDiagram, 'edges' | 'annotations'> | null): Box {
+  const boxes: Box[] = [...Object.values(placement.nodes), ...Object.values(placement.groups), ...(baked?.annotations ?? [])]
+  const sides = baked?.edges ?? {}
+  const nodes = placement.nodes
+  for (const e of spec.edges) {
+    const a = nodes[e.from]
+    const b = nodes[e.to]
+    if (!a || !b) continue
+    const others = Object.entries(nodes)
+      .filter(([id]) => id !== e.from && id !== e.to)
+      .map(([, o]) => o)
+    const g = edgeGeometry(a, b, { ...sides[edgeKey(e)], direction: spec.direction ?? 'RIGHT' }, others)
+    boxes.push(pathBounds(g.path))
+    if (e.label) {
+      const w = e.label.length * 7 + 14
+      boxes.push({ x: g.lx - w / 2, y: g.ly - 10, w, h: 20 })
+    }
+  }
   if (!boxes.length) return { x: 0, y: 0, w: 100, h: 60 }
-  const x0 = Math.min(...boxes.map((b) => b.x)) - margin
-  const y0 = Math.min(...boxes.map((b) => b.y)) - margin
-  const x1 = Math.max(...boxes.map((b) => b.x + b.w)) + margin
-  const y1 = Math.max(...boxes.map((b) => b.y + b.h)) + margin
+  const x0 = Math.min(...boxes.map((b) => b.x))
+  const y0 = Math.min(...boxes.map((b) => b.y))
+  const x1 = Math.max(...boxes.map((b) => b.x + b.w))
+  const y1 = Math.max(...boxes.map((b) => b.y + b.h))
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
 }
 
-// Default frame that also leaves room for edges that bow around a row
-// (the same crossing test FlowEdge uses).
-export function frameFor(spec: DiagramSpec, placement: Placement, baked: BakedDiagram | null): Box {
-  const f = frameOf(placement, baked)
-  if (baked?.frame) return f
-  const sides = baked?.edges ?? {}
-  const boxes = placement.nodes
-  const bows = spec.edges.some((e) => {
-    const a = boxes[e.from]
-    const b = boxes[e.to]
-    if (!a || !b || sides[edgeKey(e)]) return false
-    const [x1, y1] = borderPoint(a, b.x + b.w / 2, b.y + b.h / 2)
-    const [x2, y2] = borderPoint(b, a.x + a.w / 2, a.y + a.h / 2)
-    return Object.entries(boxes).some(([id, o]) => id !== e.from && id !== e.to && crosses(x1, y1, x2, y2, o))
-  })
-  if (!bows) return f
-  return (spec.direction ?? 'RIGHT') === 'RIGHT' ? { ...f, h: f.h + 40 } : { ...f, w: f.w + 40 }
+// Bounds of an absolute SVG path made of M / L / Q / C commands (what
+// edgeGeometry produces), sampling curves rather than trusting their
+// control points.
+function pathBounds(d: string): Box {
+  const xs: number[] = []
+  const ys: number[] = []
+  const re = /([MLQC])([^MLQC]*)/g
+  let cur: [number, number] = [0, 0]
+  for (let m = re.exec(d); m; m = re.exec(d)) {
+    const n = (m[2].match(/-?[\d.]+(?:e-?\d+)?/g) ?? []).map(Number)
+    const pts: [number, number][] = []
+    for (let i = 0; i + 1 < n.length; i += 2) pts.push([n[i], n[i + 1]])
+    if (!pts.length) continue
+    if (m[1] === 'Q' || m[1] === 'C') {
+      const step = m[1] === 'Q' ? 2 : 3
+      for (let i = 0; i + step - 1 < pts.length; i += step) {
+        const seg = pts.slice(i, i + step)
+        const start = cur
+        for (let t = 0; t <= 1.0001; t += 0.1) {
+          // de Casteljau
+          let layer = [start, ...seg]
+          while (layer.length > 1) layer = layer.slice(1).map((p, j) => [layer[j][0] + (p[0] - layer[j][0]) * t, layer[j][1] + (p[1] - layer[j][1]) * t])
+          xs.push(layer[0][0])
+          ys.push(layer[0][1])
+        }
+        cur = seg[seg.length - 1]
+      }
+    } else {
+      for (const p of pts) {
+        xs.push(p[0])
+        ys.push(p[1])
+        cur = p
+      }
+    }
+  }
+  if (!xs.length) return { x: 0, y: 0, w: 0, h: 0 }
+  // Room for the arrowhead.
+  const x0 = Math.min(...xs) - 6
+  const y0 = Math.min(...ys) - 6
+  return { x: x0, y: y0, w: Math.max(...xs) + 6 - x0, h: Math.max(...ys) + 6 - y0 }
 }

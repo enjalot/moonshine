@@ -69,6 +69,9 @@ type EditContextValue = {
   // the first block, blocks.length = after the last). Used by the "+"
   // between blocks; same conflict check and undo as any other save.
   insertBlock: (gap: number, text: string) => Promise<void>
+  // Remove the top-level block at `index` (e.g. a figure's delete button);
+  // undoable like any other save.
+  deleteBlock: (index: number) => Promise<void>
 }
 
 const EditContext = createContext<EditContextValue | null>(null)
@@ -343,6 +346,11 @@ export function EditProvider({ body, path, children }: ProviderProps) {
       }
       await postSave({ path, body: next, baseHash: fnv1a(body) })
       setLastSavedBody(body)
+    },
+    deleteBlock: async (index) => {
+      if (index < 0 || index >= blocks.length) return
+      const order = blocks.map((_, i) => i).filter((i) => i !== index)
+      await saveReorderedBody(rebuildBody(body, blocks, order))
     },
     moveActiveBlock: async (direction) => {
       if (!activeRange) return

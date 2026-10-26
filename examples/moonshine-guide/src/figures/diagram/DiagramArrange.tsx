@@ -23,14 +23,16 @@ import { saveContentFile } from '../../lib/EditContext'
 import { elkLayout, narrowSpec, nodeSize, place, type Placement } from './layout'
 import {
   DiagramEditContext,
+  DEFAULT_PAD,
   FRAME_ID,
   annotNodeId,
+  contentBounds,
   buildEdges,
   buildNodes,
   edgeGeometry,
   edgeTypes,
-  frameFor,
   groupNodeId,
+  padBox,
   nodeTypes,
   sidePoint,
   type AnnotNodeData,
@@ -46,6 +48,7 @@ import {
   type Box,
   type DiagramSpec,
   type NodeKind,
+  type Pad,
   type Side,
   type SpecEdge,
 } from './spec'
@@ -69,9 +72,10 @@ import {
 //                         and to other nodes' edges and centers
 //   Backspace             delete;  ⌘Z / ⇧⌘Z undo / redo;  ⌘S save
 //
-// The reader frame (what readers see) is always on the canvas. It fits
-// the content until the author drags or resizes it; selecting it offers
-// "Fit to content" to go back. Wide / Narrow hold two arrangements: the
+// The reader frame (what readers see) is always on the canvas: the
+// content's bounds (arrows and labels included) plus a margin per side,
+// so it follows the diagram. Dragging an edge or corner sets that side's
+// margin (negative crops); selecting it offers "Fit to content". Wide / Narrow hold two arrangements: the
 // narrow one is what phones get when the wide one would shrink labels
 // below the floor (see DiagramFigure). Untouched, narrow stays automatic.
 //
@@ -89,9 +93,12 @@ type Props = {
   // The figure code's spec, if any: recorded as `specFrom` when the
   // structure is first edited here.
   codeSpec?: DiagramSpec
+  // The figure's width (column or wide) and the drawing width each gives,
+  // so the frame can say what readers will see; setWide saves a change.
+  layout?: { wide: boolean; widths: { column: number; wide: number }; setWide?: (on: boolean) => Promise<void> }
   onClose: () => void
   // Called after a successful save (the "+" uses it to insert the block).
-  onSaved?: () => void | Promise<void>
+  onSaved?: (opts: { wide: boolean }) => void | Promise<void>
 }
 
 export default function DiagramArrange(props: Props) {
@@ -106,7 +113,7 @@ export default function DiagramArrange(props: Props) {
 }
 
 type Sides = NonNullable<BakedDiagram['edges']>
-type Snapshot = { nodes: Node[]; sides: Sides; spec: DiagramSpec; frameAuto: boolean }
+type Snapshot = { nodes: Node[]; sides: Sides; spec: DiagramSpec; pad: Pad }
 type Variant = 'wide' | 'narrow'
 type Tool = 'select' | 'box' | 'text' | 'note'
 type EndDrag = {
@@ -132,7 +139,7 @@ const SNAP = 6
 const FIT_MAX = 1.25
 const GAP = { RIGHT: 64, DOWN: 56 }
 
-function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpec, onClose, onSaved }: Props) {
+function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpec, layout, onClose, onSaved }: Props) {
   const rf = useReactFlow()
   const [specState, setSpecState] = useState<DiagramSpec>(specProp)
   const specRef = useRef(specState)
@@ -151,9 +158,12 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
   const [sides, setSides] = useState<Sides>(() => ({ ...(baked?.edges ?? {}) }))
   const sidesRef = useRef(sides)
   sidesRef.current = sides
-  const [frameAuto, setFrameAuto] = useState(!baked?.frame)
-  const frameAutoRef = useRef(frameAuto)
-  frameAutoRef.current = frameAuto
+  // The reader frame's margins around the content (see FrameNode).
+  const [pad, setPad] = useState<Pad>(() => padFrom(spec, placement, baked))
+  const padRef = useRef(pad)
+  padRef.current = pad
+  // Content bounds when a frame resize started: margins are measured from it.
+  const resizeBase = useRef<Box | null>(null)
   const [guides, setGuides] = useState<{ x?: number; y?: number }>({})
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
@@ -164,6 +174,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
   const [detailOpen, setDetailOpen] = useState(false)
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
+  const [figWide, setFigWide] = useState(Boolean(layout?.wide))
   const undo = useRef<Snapshot[]>([])
   const redo = useRef<Snapshot[]>([])
   const dirty = useRef(false)
@@ -180,7 +191,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
       nodes: nodesRef.current.map((n) => ({ ...n, data: { ...n.data } })),
       sides: { ...sidesRef.current },
       spec: specRef.current,
-      frameAuto: frameAutoRef.current,
+      pad: padRef.current,
     })
     if (undo.current.length > 100) undo.current.shift()
     redo.current = []
@@ -190,7 +201,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
 
   const initial = useMemo(() => {
     const nodes = buildNodes(spec, placement, baked, { editable: true })
-    nodes.push(frameNode(baked?.frame ?? frameFor(spec, placement, baked && { ...baked, frame: undefined }), !baked?.frame))
+    nodes.push(frameNode(padBox(contentBounds(spec, placement, baked), padFrom(spec, placement, baked))))
     return nodes
     // Built once per open; later changes live in editor state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -246,11 +257,11 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
     return out
   }
 
-  // An automatic frame follows the content as it changes.
+  // The frame follows the content: its bounds plus the margins.
   useEffect(() => {
-    if (!frameAuto) return
+    if (resizeBase.current) return
     const id = requestAnimationFrame(() => {
-      const f = round(frameFor(spec, currentPlacement(), { figure: figureId, edges: sidesRef.current, annotations: currentAnnotations() }))
+      const f = round(padBox(bounds(), pad))
       setNodes((nds) => {
         const fr = nds.find((n) => n.id === FRAME_ID)
         if (fr && fr.position.x === f.x && fr.position.y === f.y && fr.width === f.w && fr.height === f.h) return nds
@@ -259,18 +270,12 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
     })
     return () => cancelAnimationFrame(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, frameAuto, sides, spec])
+  }, [nodes, pad, sides, spec])
 
   // Alignment guides: while one node drags, snap its left/center/right
   // and top/middle/bottom to any other node's within SNAP px.
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      for (const c of changes) {
-        // The author moved or resized the frame: it stops following the content.
-        if ((c.type === 'position' && c.id === FRAME_ID && c.dragging) || (c.type === 'dimensions' && c.id === FRAME_ID && c.resizing)) {
-          setFrameAuto(false)
-        }
-      }
       // Snap while a pointer drag is in progress, including its final
       // (dragging: false) change; never on arrow-key nudges.
       const moving = draggingRef.current ? changes.filter((c) => c.type === 'position' && c.position) : []
@@ -325,11 +330,11 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
   const restore = (from: Snapshot[], to: Snapshot[]) => {
     const snap = from.pop()
     if (!snap) return
-    to.push({ nodes: nodesRef.current, sides: sidesRef.current, spec: specRef.current, frameAuto: frameAutoRef.current })
+    to.push({ nodes: nodesRef.current, sides: sidesRef.current, spec: specRef.current, pad: padRef.current })
     setNodes(snap.nodes)
     setSides(snap.sides)
     setSpec(snap.spec)
-    setFrameAuto(snap.frameAuto)
+    setPad(snap.pad)
     setEditing(null)
     setEditingEdge(null)
     setSelectedEdge((k) => (k && snap.spec.edges.some((e) => edgeKey(e) === k) ? k : null))
@@ -631,13 +636,12 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
   const currentArrangement = (): Arrangement => {
     const p = currentPlacement()
     const annotations = currentAnnotations()
-    const frame = !frameAutoRef.current ? absBox(FRAME_ID) : null
     return {
       nodes: Object.fromEntries(Object.entries(p.nodes).map(([k, b]) => [k, round(b)])),
       groups: Object.fromEntries(Object.entries(p.groups).map(([k, b]) => [k, round(b)])),
       ...(Object.keys(sidesRef.current).length ? { edges: sidesRef.current } : {}),
       ...(annotations.length ? { annotations } : {}),
-      ...(frame ? { frame: round(frame) } : {}),
+      ...(samePad(padRef.current, DEFAULT_PAD) ? {} : { framePad: padRef.current }),
     }
   }
 
@@ -649,12 +653,13 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
     const asBaked: BakedDiagram = { figure: figureId, ...(saved ?? {}) }
     const p = await place(s, saved)
     const next = buildNodes(s, p, asBaked, { editable: true })
-    next.push(frameNode(asBaked.frame ?? frameFor(s, p, { ...asBaked, frame: undefined }), !asBaked.frame))
+    const nextPad = padFrom(s, p, asBaked)
+    next.push(frameNode(padBox(contentBounds(s, p, asBaked), nextPad)))
     undo.current = []
     redo.current = []
     setNodes(next)
     setSides({ ...(saved?.edges ?? {}) })
-    setFrameAuto(!asBaked.frame)
+    setPad(nextPad)
     setSelectedEdge(null)
     setEditing(null)
     setVariant(to)
@@ -756,8 +761,10 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
 
   const fitFrame = () => {
     checkpoint()
-    setFrameAuto(true)
+    setPad(DEFAULT_PAD)
   }
+
+  const bounds = () => contentBounds(spec, currentPlacement(), { edges: sidesRef.current, annotations: currentAnnotations() })
 
   // ---- save / close --------------------------------------------------
   const save = async () => {
@@ -776,7 +783,8 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
         ...(ownsSpec ? { spec: specRef.current, ...(specFrom ? { specFrom } : {}) } : {}),
       }
       await saveContentFile(`figures/${figureId}.json`, JSON.stringify(bake, null, 2))
-      await onSaved?.()
+      if (layout?.setWide && figWide !== layout.wide) await layout.setWide(figWide)
+      await onSaved?.({ wide: figWide })
       onClose()
     } catch (err) {
       flash(`Could not save: ${String(err)}`)
@@ -987,8 +995,8 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
       </button>
     )
   } else if (single?.type === 'frame') {
-    toolbar = frameAuto ? (
-      <span className="mn-diagram-toolbar-note">Fits the content. Drag or resize it to crop what readers see.</span>
+    toolbar = samePad(pad, DEFAULT_PAD) ? (
+      <span className="mn-diagram-toolbar-note">Fits the content. Drag an edge or corner to add room around it, or to crop.</span>
     ) : (
       <button type="button" onClick={fitFrame}>
         Fit to content
@@ -1065,6 +1073,26 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
             </button>
           ))}
         </span>
+        {layout && (
+          <span className="mn-diagram-variant" role="radiogroup" aria-label="Figure width">
+            {[false, true].map((w) => (
+              <button
+                key={String(w)}
+                type="button"
+                role="radio"
+                aria-checked={figWide === w}
+                className={figWide === w ? 'is-on' : undefined}
+                title={w ? 'Break out of the text column' : 'The width of the text column'}
+                onClick={() => {
+                  if (figWide !== w) dirty.current = true
+                  setFigWide(w)
+                }}
+              >
+                {w ? 'Wide' : 'Column'}
+              </button>
+            ))}
+          </span>
+        )}
         <span style={{ flex: 1 }} />
         <IconButton label="Undo (⌘Z)" onClick={() => restore(undo.current, redo.current)} d="M5 4L2 7l3 3M2 7h8a4 4 0 010 8H8" />
         <IconButton label="Redo (⇧⌘Z)" onClick={() => restore(redo.current, undo.current)} d="M11 4l3 3-3 3M14 7H6a4 4 0 000 8h2" />
@@ -1081,14 +1109,24 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
             ...n,
             data: {
               ...n.data,
-              onResizeStart:
-                n.id === FRAME_ID
-                  ? () => {
+              onResizeStart: checkpoint,
+              ...(n.id === FRAME_ID
+                ? {
+                    status: frameStatus(pad),
+                    ...fitNote(Number(n.width ?? 0), layout && (variant === 'narrow' ? null : layout.widths[figWide ? 'wide' : 'column'])),
+                    onResizeStart: () => {
                       checkpoint()
-                      setFrameAuto(false)
-                    }
-                  : checkpoint,
-              ...(n.id === FRAME_ID ? { auto: frameAuto } : {}),
+                      resizeBase.current = bounds()
+                    },
+                    onResize: (f: Box) => {
+                      const b = resizeBase.current
+                      if (b) setPad(padBetween(b, f))
+                    },
+                    onResizeEnd: () => {
+                      resizeBase.current = null
+                    },
+                  }
+                : {}),
             },
           }))}
           edges={edges}
@@ -1292,7 +1330,7 @@ function Sep() {
   return <span className="mn-diagram-sep" aria-hidden="true" />
 }
 
-function frameNode(b: Box, auto: boolean): Node<FrameNodeData> {
+function frameNode(b: Box): Node<FrameNodeData> {
   return {
     id: FRAME_ID,
     type: 'frame',
@@ -1301,18 +1339,53 @@ function frameNode(b: Box, auto: boolean): Node<FrameNodeData> {
     width: b.w,
     height: b.h,
     zIndex: 2000,
-    data: { auto },
+    draggable: false,
+    data: { status: 'fit' },
   }
 }
 
+// The margins a saved arrangement asks for. A pre-0.9.1 fixed frame box
+// becomes the margins it implied around today's content.
+function padFrom(spec: DiagramSpec, placement: Placement, baked: BakedDiagram | null): Pad {
+  if (baked?.framePad) return baked.framePad
+  if (baked?.frame) return padBetween(contentBounds(spec, placement, baked), baked.frame)
+  return DEFAULT_PAD
+}
+
+function padBetween(content: Box, frame: Box): Pad {
+  return {
+    top: Math.round(content.y - frame.y),
+    left: Math.round(content.x - frame.x),
+    bottom: Math.round(frame.y + frame.h - (content.y + content.h)),
+    right: Math.round(frame.x + frame.w - (content.x + content.w)),
+  }
+}
+
+const samePad = (a: Pad, b: Pad) => a.top === b.top && a.right === b.right && a.bottom === b.bottom && a.left === b.left
+
+// What readers get when the frame is wider than the figure's drawing
+// width (see DiagramFigure: shrink to the 13px label floor, then the
+// narrow arrangement, then sideways scroll).
+function fitNote(frameW: number, avail: number | null | undefined): Pick<FrameNodeData, 'note' | 'warn'> {
+  if (!avail || !frameW || frameW <= avail) return {}
+  const zoom = avail / frameW
+  if (zoom * 15 >= 13) return { note: `shrinks to ${Math.round(zoom * 100)}% to fit` }
+  return { note: 'too wide to read: readers get the narrow layout', warn: true }
+}
+
+function frameStatus(p: Pad): FrameNodeData['status'] {
+  if (p.top < 0 || p.right < 0 || p.bottom < 0 || p.left < 0) return 'crop'
+  return samePad(p, DEFAULT_PAD) ? 'fit' : 'extra'
+}
+
 function pickArrangement(a: Arrangement): Arrangement {
-  const { nodes, groups, edges, annotations, frame } = a
+  const { nodes, groups, edges, annotations, framePad } = a
   return {
     ...(nodes && Object.keys(nodes).length ? { nodes } : {}),
     ...(groups && Object.keys(groups).length ? { groups } : {}),
     ...(edges && Object.keys(edges).length ? { edges } : {}),
     ...(annotations?.length ? { annotations } : {}),
-    ...(frame ? { frame } : {}),
+    ...(framePad ? { framePad } : {}),
   }
 }
 

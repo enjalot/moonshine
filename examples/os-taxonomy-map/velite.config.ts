@@ -33,6 +33,7 @@ const arrangement = {
       }),
     )
     .optional(),
+  framePad: s.object({ top: s.number(), right: s.number(), bottom: s.number(), left: s.number() }).optional(),
   frame: box.optional(),
 }
 const specSchema = s.object({

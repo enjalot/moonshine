@@ -776,14 +776,6 @@
     linear-gradient(to right, var(--shadow-edge), transparent) left / 0.75rem 100% no-repeat scroll,
     linear-gradient(to left, var(--shadow-edge), transparent) right / 0.75rem 100% no-repeat scroll;
 }
-/* A diagram wider than the column takes the figure gutter, where there is
-   one (the 740px column plus 2rem a side). */
-@media (min-width: 820px) {
-  .figure:has(.mn-diagram-scroll.wants-wide) {
-    margin-left: -2rem;
-    margin-right: -2rem;
-  }
-}
 .mn-diagram-scroll-hint {
   position: sticky;
   left: 0;
@@ -965,20 +957,43 @@
   box-sizing: border-box;
   width: 100%;
   height: 100%;
-  border: 1px solid color-mix(in srgb, var(--text-2) 45%, transparent);
   border-radius: 2px;
   box-shadow: 0 0 0 20000px color-mix(in srgb, var(--bg) 62%, transparent);
 }
-.mn-flow-frame.is-selected {
-  border-color: var(--accent);
+/* The frame's edges are always draggable: a 10px invisible grab strip
+   on each side with the visible hairline drawn down its middle, and a
+   handle at each corner. */
+.mn-diagram-arrange .react-flow__resize-control.line.mn-flow-frame-line {
+  --line: color-mix(in srgb, var(--text-2) 45%, transparent);
+  border: none;
+  background: linear-gradient(var(--line), var(--line)) center / 1px 100% no-repeat;
 }
-.mn-flow-frame-grip {
-  position: absolute;
-  inset: -5px;
-  border: 5px solid transparent;
-  pointer-events: all;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0, 10px 10px, 10px calc(100% - 10px), calc(100% - 10px) calc(100% - 10px), calc(100% - 10px) 10px, 10px 10px);
-  cursor: move;
+.mn-diagram-arrange .react-flow__resize-control.line.mn-flow-frame-line.left,
+.mn-diagram-arrange .react-flow__resize-control.line.mn-flow-frame-line.right {
+  width: 10px;
+}
+.mn-diagram-arrange .react-flow__resize-control.line.mn-flow-frame-line.top,
+.mn-diagram-arrange .react-flow__resize-control.line.mn-flow-frame-line.bottom {
+  height: 10px;
+  background-size: 100% 1px;
+}
+.mn-diagram-arrange .react-flow__resize-control.line.mn-flow-frame-line:hover,
+.mn-flow-frame.is-selected .react-flow__resize-control.line.mn-flow-frame-line {
+  --line: var(--accent);
+}
+.mn-flow-frame.is-cropping .react-flow__resize-control.line.mn-flow-frame-line {
+  --line: var(--error);
+}
+.mn-flow-frame-handle {
+  width: 9px !important;
+  height: 9px !important;
+  background: var(--fig-bg) !important;
+  border: 1.5px solid color-mix(in srgb, var(--text-2) 60%, transparent) !important;
+  border-radius: 2px !important;
+}
+.mn-flow-frame-handle:hover,
+.mn-flow-frame.is-selected .mn-flow-frame-handle {
+  border-color: var(--accent) !important;
 }
 .mn-flow-frame-label {
   position: absolute;
@@ -992,6 +1007,12 @@
   border-radius: 3px;
   pointer-events: all;
   cursor: move;
+}
+.mn-flow-frame-label .is-warn {
+  color: var(--error);
+}
+.mn-flow-frame.is-cropping .mn-flow-frame-label {
+  color: var(--error);
 }
 .mn-flow-frame-label:hover,
 .mn-flow-frame.is-selected .mn-flow-frame-label {
@@ -1533,6 +1554,28 @@
   cursor: pointer;
 }
 
+.mn-diagram-bar .mn-diagram-bar-delete {
+  margin-left: auto;
+  color: var(--text-2);
+}
+.mn-diagram-bar .mn-diagram-bar-delete:hover {
+  color: var(--error);
+  border-color: var(--error);
+}
+/* Figure-level controls in the Cmd-click panel: wide toggle, delete. */
+.mn-figure-controls {
+  display: inline-flex;
+  gap: 0.3rem;
+}
+.mn-figure-controls button[aria-pressed='true'] {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.mn-figure-controls .mn-figure-delete:hover {
+  color: var(--error);
+  border-color: var(--error);
+}
 .mn-diagram-bar button:first-of-type {
   border-color: var(--accent);
   color: var(--accent);
