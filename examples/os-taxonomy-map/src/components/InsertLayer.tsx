@@ -1,13 +1,17 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { EDIT_ENABLED, uploadImage, useEdit } from '../lib/EditContext'
+import { place, type Placement } from '../figures/diagram/layout'
+import type { DiagramSpec } from '../figures/diagram/spec'
 import SourceEditor from './SourceEditor'
 
 // Dev-only, notebook-style "+" between top-level blocks. Hovering the gap
 // between two blocks (or after the last) shows a "+"; it inserts
 //
 //   Text     a markdown block, written in place
-//   Drawing  a tldraw drawing → `:::figure{id=drawing-N kind=drawing}`
+//   Diagram  boxes and arrows in the arrange editor →
+//            `:::figure{id=diagram-N kind=diagram}` (spec + arrangement in
+//            content/figures/diagram-N.json)
 //   Image    an upload to public/media/ → `![alt](media/name.png)`
 //
 // Everything lands in the markdown through the normal save path (conflict
@@ -18,7 +22,17 @@ import SourceEditor from './SourceEditor'
 // 1:1 with markdown blocks (see BlockReorderLayer). Returns null in
 // production before any hooks, so the whole layer is tree-shaken.
 
-const DrawingEditor = import.meta.env.DEV ? lazy(() => import('../figures/diagram/DrawingEditor')) : null
+const DiagramArrange = import.meta.env.DEV ? lazy(() => import('../figures/diagram/DiagramArrange')) : null
+
+// What a new diagram starts as: two boxes and an arrow to edit.
+const STARTER: DiagramSpec = {
+  direction: 'RIGHT',
+  nodes: [
+    { id: 'n1', label: 'Input' },
+    { id: 'n2', label: 'Output' },
+  ],
+  edges: [{ from: 'n1', to: 'n2' }],
+}
 
 type Props = { containerRef: RefObject<HTMLElement | null> }
 
@@ -37,14 +51,14 @@ function blockEls(container: HTMLElement): HTMLElement[] {
 }
 
 type Gap = { index: number; top: number; left: number; width: number }
-type Mode = null | 'menu' | 'text' | 'drawing' | 'uploading'
+type Mode = null | 'menu' | 'text' | 'diagram' | 'uploading'
 
 function Layer({ containerRef }: Props) {
   const { armed, activeRange, blocks, body, insertBlock } = useEdit()
   const [gap, setGap] = useState<Gap | null>(null)
   const [mode, setMode] = useState<Mode>(null)
   const [error, setError] = useState<string | null>(null)
-  const [drawingId, setDrawingId] = useState<string | null>(null)
+  const [diagram, setDiagram] = useState<{ id: string; placement: Placement } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const composerRef = useRef<HTMLDivElement>(null)
   const modeRef = useRef(mode)
@@ -105,10 +119,11 @@ function Layer({ containerRef }: Props) {
     setGap(null)
   }
 
-  const nextDrawingId = () => {
+  const openDiagram = async () => {
     let i = 1
-    while (body.includes(`id=drawing-${i}`)) i++
-    return `drawing-${i}`
+    while (body.includes(`id=diagram-${i}`)) i++
+    setDiagram({ id: `diagram-${i}`, placement: await place(STARTER, null) })
+    setMode('diagram')
   }
 
   const onImage = async (file: File | undefined) => {
@@ -136,7 +151,7 @@ function Layer({ containerRef }: Props) {
             className="mn-insert-plus"
             aria-label="Insert a block here"
             aria-expanded={mode === 'menu'}
-            title="Insert text, a drawing, or an image here"
+            title="Insert text, a diagram, or an image here"
             onClick={() => setMode((m) => (m ? null : 'menu'))}
           >
             +
@@ -146,15 +161,8 @@ function Layer({ containerRef }: Props) {
               <button type="button" role="menuitem" onClick={() => setMode('text')}>
                 Text
               </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setDrawingId(nextDrawingId())
-                  setMode('drawing')
-                }}
-              >
-                Drawing
+              <button type="button" role="menuitem" onClick={() => void openDiagram()}>
+                Diagram
               </button>
               <button type="button" role="menuitem" onClick={() => fileRef.current?.click()}>
                 Image
@@ -188,12 +196,16 @@ function Layer({ containerRef }: Props) {
           />
         </div>
       )}
-      {mode === 'drawing' && drawingId && DrawingEditor && (
+      {mode === 'diagram' && diagram && DiagramArrange && (
         <Suspense fallback={<span className="mn-insert-menu">loading editor…</span>}>
-          <DrawingEditor
-            figureId={drawingId}
+          <DiagramArrange
+            figureId={diagram.id}
+            spec={STARTER}
+            baked={null}
+            placement={diagram.placement}
+            authored
             onClose={close}
-            onSaved={() => insertBlock(gap.index, `:::figure{id=${drawingId} kind=drawing}\n:::`)}
+            onSaved={() => insertBlock(gap.index, `:::figure{id=${diagram.id} kind=diagram}\n:::`)}
           />
         </Suspense>
       )}

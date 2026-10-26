@@ -5,9 +5,9 @@ import { edgeKey, type Box, type DiagramSpec } from './spec'
 // already arranged. ELK is loaded on demand: readers only pay for it when
 // a diagram has nodes the author has never placed.
 
-// Sized for tldraw's 's' label (about 17px with the article theme) plus
-// its label padding, so labels don't wrap once the author opens the editor.
-const NODE_FONT = "500 17px 'Source Sans 3', system-ui, sans-serif"
+// Measured in the node label's font (.mn-flow-node in article.css: 15px
+// heading font, 500) plus its padding, with slack so labels don't wrap.
+const NODE_FONT = "500 15px 'Source Sans 3', system-ui, sans-serif"
 const PAD = { top: 44, side: 24, bottom: 24 }
 
 let ctx: CanvasRenderingContext2D | null = null
@@ -111,7 +111,8 @@ export function merge(
   for (const n of spec.nodes) {
     const b = saved?.nodes?.[n.id]
     if (b) {
-      nodes[n.id] = { ...b, unarranged: false }
+      // A saved position without a size (pre-0.9 saves) gets the label's.
+      nodes[n.id] = { ...(b.w && b.h ? b : { ...b, ...nodeSize(n.label) }), unarranged: false }
       continue
     }
     const e = elk?.nodes[n.id] ?? { x: 0, y: 0, ...nodeSize(n.label) }
@@ -160,4 +161,10 @@ export async function place(
 ): Promise<Placement> {
   const complete = spec.nodes.every((n) => saved?.nodes?.[n.id])
   return merge(spec, complete ? null : await elkLayout(spec), saved)
+}
+
+// The spec turned a quarter: a RIGHT flow laid out top to bottom. Used
+// for narrow screens when a diagram is too wide to read at full size.
+export function narrowSpec(spec: DiagramSpec): DiagramSpec {
+  return { ...spec, direction: (spec.direction ?? 'RIGHT') === 'RIGHT' ? 'DOWN' : 'RIGHT' }
 }

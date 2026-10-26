@@ -12,6 +12,52 @@ import { defineConfig, s } from 'velite'
 
 const box = s.object({ x: s.number(), y: s.number(), w: s.number(), h: s.number() })
 const side = s.enum(['top', 'right', 'bottom', 'left'])
+const arrangement = {
+  // w/h are optional so pre-0.9 saves (positions only) still load; the
+  // missing size is measured from the label (bakedFigures.ts).
+  nodes: s
+    .record(s.string(), s.object({ x: s.number(), y: s.number(), w: s.number().optional(), h: s.number().optional() }))
+    .optional(),
+  groups: s.record(s.string(), box).optional(),
+  edges: s.record(s.string(), s.object({ source: side.optional(), target: side.optional() })).optional(),
+  annotations: s
+    .array(
+      s.object({
+        id: s.string(),
+        kind: s.enum(['text', 'note']),
+        text: s.string(),
+        x: s.number(),
+        y: s.number(),
+        w: s.number(),
+        h: s.number(),
+      }),
+    )
+    .optional(),
+  frame: box.optional(),
+}
+const specSchema = s.object({
+  direction: s.enum(['RIGHT', 'DOWN']).optional(),
+  groups: s.array(s.object({ id: s.string(), label: s.string() })).optional(),
+  nodes: s.array(
+    s.object({
+      id: s.string(),
+      label: s.string(),
+      kind: s.enum(['process', 'data', 'store', 'external', 'decision', 'accent', 'note']).optional(),
+      group: s.string().optional(),
+      detail: s.string().optional(),
+    }),
+  ),
+  edges: s.array(
+    s.object({
+      id: s.string().optional(),
+      from: s.string(),
+      to: s.string(),
+      label: s.string().optional(),
+      dashed: s.boolean().optional(),
+      animated: s.boolean().optional(),
+    }),
+  ),
+})
 
 export default defineConfig({
   root: 'content',
@@ -24,50 +70,26 @@ export default defineConfig({
   collections: {
     // Author-owned figure state, baked into the build. Diagrams save
     // their arrangement here from the dev arrange editor (node/group boxes,
-    // edge sides, annotations, reader frame); drawings save light/dark SVG.
+    // edge sides, annotations, reader frame, optional narrow layout), and
+    // author-added diagrams also save their spec.
     // Read back via src/lib/bakedFigures.ts. Machine-owned semantics (the
     // DiagramSpec) live in the figure's code and are merged with this by
     // id, so regenerated diagram code never clobbers the author's work.
     figureData: {
       name: 'FigureData',
-      // Top level only: figures/tldraw/*.tldr.json are drawing documents
-      // that must never be bundled for readers.
       pattern: 'figures/*.json',
       schema: s
         .object({
           figure: s.string(),
-          nodes: s.record(s.string(), box).optional(),
-          groups: s.record(s.string(), box).optional(),
-          edges: s
-            .record(
-              s.string(),
-              s.object({ source: side.optional(), target: side.optional() }),
-            )
-            .optional(),
-          annotations: s
-            .array(
-              s.object({
-                id: s.string(),
-                kind: s.enum(['text', 'note']),
-                text: s.string(),
-                x: s.number(),
-                y: s.number(),
-                w: s.number(),
-                h: s.number(),
-              }),
-            )
-            .optional(),
-          frame: box.optional(),
-          parts: s.record(s.string(), box).optional(),
-          svg: s
-            .object({
-              light: s.string(),
-              dark: s.string(),
-              viewBox: s.string(),
-              width: s.number(),
-              height: s.number(),
-            })
-            .optional(),
+          ...arrangement,
+          narrow: s.object(arrangement).optional(),
+          spec: specSchema.optional(),
+          // Pre-0.8 saves: node positions and a React Flow viewport.
+          // Read for compatibility (positions are kept, the viewport is
+          // dropped); scripts/upgrade-still.mjs in the moonshine plugin
+          // rewrites them in the new shape.
+          layout: s.record(s.string(), s.object({ x: s.number(), y: s.number() })).optional(),
+          viewport: s.object({ x: s.number(), y: s.number(), zoom: s.number() }).optional(),
         })
         .transform((data, ctx) => {
           const meta = (ctx as unknown as { meta: { path: string } }).meta

@@ -758,7 +758,7 @@
 
 /* Dev-only diagram arrange bar ---------------------------------------- */
 
-/* Diagrams (DiagramFigure: live React Flow; DrawingFigure: baked SVG) --
+/* Diagrams (DiagramFigure: live React Flow, incl. kind=diagram) -------
    Diagram nodes and edges are drawn from the tokens, so they follow
    light/dark and the article's type with no baking. Readers never get
    pan/zoom: wheel and drag fall through to the page. */
@@ -766,6 +766,31 @@
 .mn-diagram-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+/* Too wide even at the label floor: scroll like a wide table, with the
+   same edge shading (DiagramFigure adds .is-scrolling). */
+.mn-diagram-scroll.is-scrolling {
+  background:
+    linear-gradient(to right, var(--bg) 30%, transparent) left / 2rem 100% no-repeat local,
+    linear-gradient(to left, var(--bg) 30%, transparent) right / 2rem 100% no-repeat local,
+    linear-gradient(to right, var(--shadow-edge), transparent) left / 0.75rem 100% no-repeat scroll,
+    linear-gradient(to left, var(--shadow-edge), transparent) right / 0.75rem 100% no-repeat scroll;
+}
+/* A diagram wider than the column takes the figure gutter, where there is
+   one (the 740px column plus 2rem a side). */
+@media (min-width: 820px) {
+  .figure:has(.mn-diagram-scroll.wants-wide) {
+    margin-left: -2rem;
+    margin-right: -2rem;
+  }
+}
+.mn-diagram-scroll-hint {
+  position: sticky;
+  left: 0;
+  margin: 0.25rem 0 0;
+  font-family: var(--heading-font);
+  font-size: 0.8rem;
+  color: var(--text-2);
 }
 .mn-diagram-flow {
   position: relative;
@@ -950,6 +975,24 @@
   border: none;
   pointer-events: none;
 }
+/* kind=diagram editor: side dots to drag a new arrow from. */
+.mn-diagram-arrange.is-authoring .mn-flow-handle--connect {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--fig-bg);
+  pointer-events: all;
+  cursor: crosshair;
+}
+.mn-diagram-arrange.is-authoring .react-flow__node:hover .mn-flow-handle--connect,
+.mn-diagram-arrange.is-authoring .react-flow__node.selected .mn-flow-handle--connect {
+  opacity: 1;
+}
+.mn-diagram-arrange .react-flow__connectionline path {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
 
 .react-flow__edge-path.mn-flow-edge {
   stroke: var(--text-2);
@@ -992,33 +1035,6 @@
   border-radius: 2px !important;
 }
 
-/* Drawings: both theme SVGs are inlined, CSS shows the matching one. */
-.mn-diagram-baked {
-  position: relative;
-  margin: 0 auto;
-}
-.mn-diagram-baked svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-.mn-diagram-dark {
-  display: none;
-}
-@media (prefers-color-scheme: dark) {
-  .mn-diagram-light {
-    display: none;
-  }
-  .mn-diagram-dark {
-    display: block;
-  }
-}
-.mn-diagram-baked > svg.mn-diagram-overlay {
-  position: absolute;
-  inset: 0;
-  height: 100%;
-  pointer-events: none;
-}
 .mn-diagram-loading {
   min-height: 120px;
 }
@@ -1080,6 +1096,22 @@
   border-color: var(--accent);
   color: #fff;
 }
+/* wide / narrow arrangement tabs in the editor bar */
+.mn-diagram-variant {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.mn-diagram-editor-bar .mn-diagram-variant button {
+  border: none;
+  border-radius: 0;
+}
+.mn-diagram-editor-bar .mn-diagram-variant button.is-on {
+  background: var(--accent-light);
+  color: var(--text);
+}
+
 .mn-diagram-editor-canvas {
   position: relative;
   flex: 1;
@@ -1146,6 +1178,7 @@
   box-shadow: 0 4px 14px var(--shadow-edge);
 }
 .mn-diagram-edge-panel select,
+.mn-diagram-edge-panel input,
 .mn-diagram-edge-panel button {
   font: inherit;
   color: var(--text);

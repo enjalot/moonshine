@@ -11,8 +11,13 @@
 // positions, sizes, which side an edge attaches to, text/note annotations,
 // and the crop frame readers see. Saving writes that ARRANGEMENT to
 // content/figures/<figure-id>.json; readers get a live React Flow diagram
-// built from spec + arrangement. Never hand-edit the JSON; it is the
-// author's surface, like their prose.
+// built from spec + arrangement. Never hand-edit the arrangement; it is
+// the author's surface, like their prose.
+//
+// A diagram the author adds in the browser ("+" → Diagram, built-in
+// `kind=diagram`) has no figure file, so its spec is saved in the same
+// JSON (`spec`). There both sides own it: the author edits it in the
+// editor, and an agent answering a comment may edit `spec` directly.
 
 export type NodeKind = 'process' | 'data' | 'store' | 'external' | 'decision' | 'accent' | 'note'
 
@@ -74,10 +79,15 @@ export type BakedDiagram = {
   annotations?: Annotation[]
   // What readers see, in page space. Defaults to the bounds of everything.
   frame?: Box
-  // Free drawings (kind=drawing figures, tldraw): light/dark SVG in page
-  // coordinates with fonts stripped so labels use the article's own type.
-  svg?: { light: string; dark: string; viewBox: string; width: number; height: number }
-  parts?: Record<string, Box>
+  // Optional second arrangement for narrow screens (see DiagramFigure),
+  // saved from the editor's "narrow" tab. Without one, narrow screens get
+  // an automatic top-to-bottom layout of the spec.
+  narrow?: Arrangement
+  // Author-owned semantics for kind=diagram figures (see above).
+  spec?: DiagramSpec
 }
+
+// The arrangement half of a BakedDiagram, on its own.
+export type Arrangement = Pick<BakedDiagram, 'nodes' | 'groups' | 'edges' | 'annotations' | 'frame'>
 
 export const edgeKey = (e: SpecEdge) => e.id ?? `${e.from}--${e.to}`

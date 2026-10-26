@@ -69,7 +69,7 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
   const pinnedRef = useArticleStore((s) => s.pinnedTermRef)
   const ref = useRef<HTMLElement>(null)
   // Registered figures win; otherwise a built-in kind (author-added
-  // content, e.g. `:::figure{id=sketch-2 kind=drawing}`) needs no entry.
+  // content, e.g. `:::figure{id=diagram-2 kind=diagram}`) needs no entry.
   const entry = id ? (figures[id] ?? builtinFigure(rest.kind)) : null
 
   // Dev-only knob panel state. Overrides apply to the live figure

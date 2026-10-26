@@ -27,7 +27,6 @@
     "remark-gfm": "4.0.1",
     "remark-math": "6.0.0",
     "remark-parse": "11.0.0",
-    "tldraw": "5.5.2",
     "unified": "11.0.5",
     "unist-util-visit": "5.1.0",
     "zustand": "4.5.7"

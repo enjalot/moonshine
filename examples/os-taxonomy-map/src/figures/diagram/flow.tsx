@@ -35,6 +35,8 @@ export type SpecNodeData = {
   detail?: string
   active?: boolean
   editable?: boolean
+  // kind=diagram editor: drag from a side dot to another box to connect.
+  connectable?: boolean
   unarranged?: boolean
   onResizeStart?: () => void
 }
@@ -65,12 +67,21 @@ const POS: Record<Side, Position> = {
 }
 
 // Invisible handles on every side: edges are drawn by FlowEdge from node
-// geometry, but React Flow still wants a handle to anchor an edge to.
-function SideHandles() {
+// geometry, but React Flow still wants a handle to anchor an edge to. When
+// the author owns the spec, the source handles become visible connect dots
+// (ConnectionMode.Loose lets a drag end on any of them).
+function SideHandles({ connectable }: { connectable?: boolean }) {
   return (
     <>
       {SIDES.map((s) => (
-        <Handle key={`s-${s}`} id={s} type="source" position={POS[s]} className="mn-flow-handle" isConnectable={false} />
+        <Handle
+          key={`s-${s}`}
+          id={s}
+          type="source"
+          position={POS[s]}
+          className={connectable ? 'mn-flow-handle mn-flow-handle--connect' : 'mn-flow-handle'}
+          isConnectable={Boolean(connectable)}
+        />
       ))}
       {SIDES.map((s) => (
         <Handle key={`t-${s}`} id={s} type="target" position={POS[s]} className="mn-flow-handle" isConnectable={false} />
@@ -92,7 +103,7 @@ export const SpecNode = memo(function SpecNode({ data, selected }: NodeProps<Nod
   return (
     <div className={cls} tabIndex={data.detail && !data.editable ? 0 : undefined}>
       {data.editable && <NodeResizer isVisible={selected} onResizeStart={data.onResizeStart} minWidth={64} minHeight={32} lineClassName="mn-flow-resize-line" handleClassName="mn-flow-resize-handle" />}
-      <SideHandles />
+      <SideHandles connectable={data.connectable} />
       <span className="mn-flow-label">{data.label}</span>
       {data.detail && !data.editable && (
         <span className="mn-flow-detail" role="tooltip">
@@ -308,9 +319,9 @@ export function buildNodes(
   spec: DiagramSpec,
   placement: Placement,
   baked: BakedDiagram | null,
-  opts: { activePart?: string | null; editable?: boolean; onText?: AnnotNodeData['onText'] } = {},
+  opts: { activePart?: string | null; editable?: boolean; connectable?: boolean; onText?: AnnotNodeData['onText'] } = {},
 ): Node[] {
-  const { activePart, editable } = opts
+  const { activePart, editable, connectable } = opts
   const out: Node[] = []
   for (const g of spec.groups ?? []) {
     const b = placement.groups[g.id]
@@ -344,6 +355,7 @@ export function buildNodes(
         detail: n.detail,
         active: activePart === n.id,
         editable,
+        connectable,
         unarranged: editable && b.unarranged,
       },
       selectable: editable,
