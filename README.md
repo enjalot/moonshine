@@ -34,8 +34,8 @@ While `npm run dev` runs, the rendered article is itself the editing surface, fo
 - **Edit prose in place.** Cmd/Ctrl+click any block to edit its raw markdown in the page; saves splice back into the `.md` by source offset.
 - **Tune figures with knobs.** Cmd/Ctrl+click a figure to open a panel generated from its `DEFAULTS`; "Save to markdown" writes the tweaked values into the directive's attributes.
 - **Reorder sections.** Cmd/Ctrl+drag any block (or use ↑/↓ in the editor) to move it; the markdown is rewritten.
-- **Arrange diagrams.** The agent declares a diagram as a small spec (nodes, edges, groups); the author arranges it in a dev-only editor (snap and alignment guides, resize, auto-layout, edge sides, notes, a crop frame), and readers get a live React Flow diagram. Regenerating the spec never clobbers the arrangement.
-- **Add content with "+".** Hover between blocks to insert text, a drawing (tldraw, baked to SVG), or an uploaded image straight into the markdown; 💬 on it asks the agent to adjust it.
+- **Arrange diagrams.** The agent declares a diagram as a small spec (nodes, edges, groups); the author arranges it in a dev-only editor (snap and alignment guides, resize, auto-layout, edge sides, notes, a crop frame, a separate narrow arrangement for phones), and readers get a live React Flow diagram whose labels never render below 13px. Regenerating the spec never clobbers the arrangement.
+- **Add content with "+".** Hover between blocks to insert text, a diagram (built in the same editor), or an uploaded image straight into the markdown; 💬 on it asks the agent to adjust it.
 - **Git as shared memory.** Every browser save auto-commits with a `moonshine-edit:` prefix, so the agent can see exactly what the author changed and build around their words.
 - **Comments back to the agent.** The 💬 affordance sends feedback ("this is too hand-wavy") into `.feedback/` files that the agent picks up at turn boundaries (Stop hook) or via the idle listener (`/moonshine:moonshine-listen`).
 

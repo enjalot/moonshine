@@ -69,7 +69,7 @@ no write endpoints.
 ```
 content/                  ← writers edit only here
   example.md
-  figures/                ← author-saved arrangements and drawings (*.json, tldraw/)
+  figures/                ← author-saved diagram arrangements (+ specs of "+"-added diagrams)
   series/
     index.md
     01-...md
@@ -87,8 +87,8 @@ src/
     LossLandscape.tsx     ← interactive React-state example (PARAM_HINTS)
     DiagramFigure.tsx     ← DiagramSpec + saved arrangement → live React Flow
     FlowDiagram.tsx       ← example DiagramSpec
-    DrawingFigure.tsx     ← built-in kind=drawing (tldraw, baked SVG)
-    diagram/              ← spec types, ELK layout, React Flow pieces, editors
+    AuthoredDiagram.tsx   ← built-in kind=diagram (spec saved with its arrangement)
+    diagram/              ← spec types, ELK layout, React Flow pieces, the editor
     lib/params.ts         ← attr→number/bool/string coercers
     inline/MiniSpark.tsx  ← inline visual example
   lib/                    ← editing, block geometry, reorder animation, feedback

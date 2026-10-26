@@ -122,11 +122,48 @@ distribution.
 
 `/moonshine:still` copies `template/` into `~/.agent/moonshine/<project>/` at
 bootstrap (excluding `node_modules/`, `.velite/`, `dist/`, `.feedback/`, and
-the runtime-compiled config mirrors — see the rsync in `STILL.md`). Existing
-projects
-do **not** update when the template changes — they own their copy. To bring an
-existing article up to date, copy the changed files under `src/` and the
-configs into the project, or diff against the template and cherry-pick.
+the runtime-compiled config mirrors — see the rsync in `STILL.md`) and
+records the plugin version in `.moonshine-template.json`. Existing projects
+do **not** update when the template changes — they own their copy.
+
+To bring one up to date, run the upgrade script. It reports first and
+changes nothing until `--apply`:
+
+```bash
+node plugins/moonshine/scripts/upgrade-still.mjs ~/.agent/moonshine/<project>
+node plugins/moonshine/scripts/upgrade-still.mjs ~/.agent/moonshine/<project> --apply
+cd ~/.agent/moonshine/<project> && npm install && npm run build
+```
+
+It uses this repo's git history as the list of every template version a
+project could have copied:
+
+- **Template infrastructure** (`src/components`, `src/lib`, `src/styles`,
+  the diagram code, configs, Vite plugins) that is byte-identical to some
+  earlier template version is replaced. Customized files get a three-way
+  merge against the closest earlier version; a conflicted merge is written
+  as `<file>.upgrade-merge` and left for you. Files the template added are
+  copied in; files it deleted are removed only if unchanged.
+- **`package.json`** dependencies and scripts are merged key by key.
+- **Author data that changed shape** is migrated: pre-0.9 diagram saves
+  (`layout` + `viewport`) become `nodes` positions, and the viewport is
+  dropped (its zoom is what shrank labels; sizes are measured from the
+  labels). Even without the script, the reader accepts the old shape.
+- **Figure code on an old API** is reported, not rewritten: a figure still
+  calling `DiagramFigure` with `nodes`/`edges` props keeps rendering
+  through a compatibility layer until someone converts it to a
+  `DiagramSpec`.
+
+Article content, figures, the registry, `moonshine.config.json` and
+`public/` are never touched. Run it on a committed working tree so the
+upgrade lands as one reviewable diff, then check every diagram:
+
+```bash
+node scripts/check-diagrams.mjs http://localhost:5173/  # labels ≥ 13px at 360–1100px
+```
+
+The script needs `playwright-core` (set `PLAYWRIGHT_CORE` to an install if
+it isn't resolvable) and a Chromium from `~/.cache/ms-playwright`.
 
 ## Repo map
 
@@ -144,8 +181,10 @@ plugins/moonshine/
   hooks/            plugin hooks.json (registers the Claude Code Stop hook)
   adapters/         per-harness feedback adapters (claude-code/ first)
   template/         the runnable still project (see below)
+  scripts/          upgrade-still.mjs (bring a project up to the template)
 docs/               published example articles (GitHub Pages)
 examples/           source-backed example projects
+scripts/            publish-example.sh, check-diagrams.mjs
 ```
 
 Skill behavior lives in the markdown files; runtime behavior lives in the

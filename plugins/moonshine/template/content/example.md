@@ -77,6 +77,6 @@ file.
 :::
 
 During `npm run dev`, hovering the gap between two blocks shows a **+**.
-It adds a paragraph, a drawing (a tldraw canvas baked to SVG), or an
-uploaded image right there in the markdown, and 💬 on the new block asks
-the agent to adjust it.
+It adds a paragraph, a diagram (boxes and arrows you build in the same
+editor as the one above), or an uploaded image right there in the
+markdown, and 💬 on the new block asks the agent to adjust it.

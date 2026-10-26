@@ -147,9 +147,7 @@ template/
     example.md
     figures/
       flow-diagram.json      ← author's diagram arrangement (see Diagrams)
-      drawing-1.json         ← a browser-added drawing's baked SVG
-      tldraw/
-        drawing-1.tldr.json  ← its tldraw document (editor only)
+      diagram-1.json         ← a browser-added diagram: spec + arrangement
     series/
       index.md
       01-gradient-descent.md
@@ -171,7 +169,7 @@ template/
       SourceEditor.tsx       ← the raw-markdown textarea (dev only)
       EditChrome.tsx         ← pill, undo toast, draft banner, HUD mount
       BlockReorderLayer.tsx  ← Cmd-drag block reordering (dev only)
-      InsertLayer.tsx        ← the "+" between blocks: text, drawing, image (dev only)
+      InsertLayer.tsx        ← the "+" between blocks: text, diagram, image (dev only)
       AuthorshipHUD.tsx      ← feedback status + listener controls (dev only)
       CommentBox.tsx         ← 💬 comment composer (dev only)
       MoonshineFooter.tsx
@@ -190,15 +188,13 @@ template/
       LossLandscape.tsx      ← interactive React state example
       DiagramFigure.tsx      ← spec + arrangement → live React Flow diagram
       FlowDiagram.tsx        ← example DiagramSpec on DiagramFigure
-      DrawingFigure.tsx      ← built-in kind=drawing: baked tldraw SVG
+      AuthoredDiagram.tsx    ← built-in kind=diagram: spec saved in its JSON
       builtin.ts             ← built-in figure kinds (no registry entry)
       diagram/
         spec.ts              ← DiagramSpec + BakedDiagram types
         layout.ts            ← ELK auto-layout + merge with saved boxes
         flow.tsx             ← React Flow nodes/edges shared by reader + editor
         DiagramArrange.tsx   ← dev-only full-screen arrange editor (lazy)
-        DrawingEditor.tsx    ← dev-only tldraw editor for drawings (lazy)
-        theme.ts             ← tldraw theme matched to tokens.css
       lib/
         params.ts            ← attr→number/bool/string coercers
         lossSurface.ts       ← constants shared between figures
@@ -315,9 +311,9 @@ The figure layer is open. But there are real choices to make per figure:
   arranges it; readers get a live diagram at the article's type size.
   Every node, group and edge has a stable id, so
   `:term[word]{to=diagram-id.node-id}` highlights one part inside the
-  diagram. Choose it whenever you'd reach for Mermaid. Free-hand
-  drawings are the author's: they add them with the **+** between
-  blocks (tldraw, baked to SVG).
+  diagram. Choose it whenever you'd reach for Mermaid. Authors can add
+  their own diagrams with the **+** between blocks, built in the same
+  editor.
 
 - **D3 v7** for custom data visualization — scales, axes, force
   layouts, contours, anything where the existing `VISUALS.md`
@@ -380,16 +376,33 @@ generated code is bad at it. The template splits a diagram in two:
   the side it leaves from or arrives at, **+ Text / + Note** for
   annotations (double-click to edit), **Auto-layout** (ELK; just the
   selection when 2+ nodes are selected), **Frame** to crop what readers
-  see, ⌘Z / ⇧⌘Z. **Save** writes `content/figures/<id>.json` through
-  the same auto-committing save path as prose (last writer wins, no
-  conflict check).
+  see, ⌘Z / ⇧⌘Z. The **wide / narrow** tabs hold two arrangements: wide
+  is what readers normally see; narrow is for screens too small for it
+  (below). **Save** writes `content/figures/<id>.json` through the same
+  auto-committing save path as prose (last writer wins, no conflict
+  check).
 
 Readers get a live React Flow diagram built from both, locked (the wheel
-scrolls the page), drawn from the tokens so it follows light/dark, and
-never scaled above 1, so labels stay at the article's type size. Edges
+scrolls the page), drawn from the tokens so it follows light/dark. Edges
 run border to border, or orthogonally out of an author-chosen side; an
 edge that would cross a node bows around the row. Nodes with `detail`
 show it on hover or focus.
+
+**Readability floor.** Node labels are 15px at full size and never
+render below 13px (the caption size), at any screen width. A diagram
+wider than the column, in order:
+
+1. takes the figure gutter on desktop, like `figure-wide`;
+2. shrinks, but only down to the floor;
+3. switches to its narrow arrangement if that reads larger: the
+   author's saved one, or else an automatic top-to-bottom layout of the
+   spec (only when the diagram has no annotations, whose positions
+   belong to the wide arrangement);
+4. scrolls sideways at the floor, like a wide table, with a hint line.
+
+`scripts/check-diagrams.mjs` in the moonshine repo measures the rendered
+label size at 360–1100px and fails below the floor. A diagram that
+scrolls on phones is a sign to arrange its narrow tab (or to cut nodes).
 
 When the agent changes a spec after the author arranged it, nothing
 breaks: new nodes are laid out by ELK next to their arranged neighbours
@@ -399,8 +412,12 @@ when some node has no saved position.
 
 Rules for agents:
 
-- Never edit `content/figures/*.json` or `content/figures/tldraw/*`.
-  They are the author's surface, like their prose.
+- Never edit the arrangement in `content/figures/*.json` (positions,
+  sizes, sides, annotations, frame, narrow). It is the author's surface,
+  like their prose. The one exception is the `spec` of an author-added
+  `kind=diagram` figure, which you may edit when a comment asks you to
+  (add a box, rename, connect): keep existing ids so the arrangement
+  still applies, and new nodes get placed automatically.
 - Keep diagrams editorial: roughly 3–12 nodes. Past that you're
   building a tool, not an article.
 - For a figure that needs more than node-link (custom node rendering,
@@ -413,13 +430,16 @@ Hovering the gap between two top-level blocks (or after the last) shows
 a **+**, notebook-style. It inserts, at that spot in the markdown:
 
 - **Text**: a block written in place (any markdown, directives included).
-- **Drawing**: opens a full-screen tldraw canvas; Save writes
-  `figures/drawing-N.json` (light/dark SVG, fonts stripped so labels use
-  the article's type) and `figures/tldraw/drawing-N.tldr.json`, then
-  inserts `:::figure{id=drawing-N kind=drawing}`. `kind=drawing` is a
-  built-in figure (`src/figures/builtin.ts`): no registry entry needed.
-  tldraw only loads in dev (it needs a license key on production
-  hosts); readers get the SVG. **draw** under it re-opens the canvas.
+- **Diagram**: opens the arrange editor on a starter diagram (two boxes
+  and an arrow). The author owns the spec here: **+ Box**, drag from a
+  box's side dot to another box to connect, select a box or arrow to
+  edit its label, kind, hover detail, or dashed style, Backspace to
+  delete. Save writes `figures/diagram-N.json` (spec and arrangement
+  together) and inserts `:::figure{id=diagram-N kind=diagram}`.
+  `kind=diagram` is a built-in figure (`src/figures/builtin.ts`): no
+  registry entry or figure file. **arrange** under it re-opens the
+  editor. Readers get the same live diagram, readability floor
+  included, as any `DiagramFigure`.
 - **Image**: uploads to `public/media/` through
   `POST /__moonshine/upload` and inserts `![alt](media/name.png)`;
   `media/` paths resolve against the site base, so they work under a
@@ -427,8 +447,9 @@ a **+**, notebook-style. It inserts, at that spot in the markdown:
 
 All three go through the conflict-checked save path and auto-commit like
 any author edit, so the agent sees them in `git log`. The author can 💬
-on the new block (Cmd/Ctrl+click a drawing for its comment button) to
-ask the agent to restyle, extend, or rebuild it as a proper figure.
+on the new block (Cmd/Ctrl+click a diagram for its comment button) to
+ask the agent to extend or restyle it, or to rebuild it as a coded
+figure.
 Agents treat author-added content like author prose: change it only
 when asked.
 
@@ -639,6 +660,10 @@ Once the outline is agreed:
      --exclude '*.tsbuildinfo' --exclude .feedback
      --exclude vite.config.js --exclude vite.config.d.ts
      --exclude velite.config.js template/ <project-root>/`
+   - Record which template it came from, so a later upgrade knows its
+     starting point: write `<project-root>/.moonshine-template.json`
+     with `{"version": <plugin version>, "commit": <short git sha of the
+     plugin checkout, if any>}`.
    - `git init` the project and make an initial commit ("moonshine still
      scaffold"). The template ships a `.gitignore`. This powers the
      author/agent shared history described in "Git: the Shared Memory"

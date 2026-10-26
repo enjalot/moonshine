@@ -3,9 +3,9 @@ import DiagramFigure, { type DiagramSpec } from './DiagramFigure'
 
 // Diagrams declare a spec: stable ids, labels, kinds, edges. That is the
 // machine-owned half, safe to regenerate. Layout comes from ELK until the
-// author opens "arrange" (dev only), drags things where they belong,
-// draws or annotates on top in tldraw, and saves; readers then get that
-// exact drawing as SVG. Node ids double as term targets: in the example,
+// author opens "arrange" (dev only), drags things where they belong, adds
+// notes, and saves; readers then get a live React Flow diagram with that
+// arrangement. Node ids double as term targets: in the example,
 // `:term[step size]{to=flow-diagram.update}` lights up the update node.
 //
 // Keep diagrams editorial: ~3–12 nodes. Past that you're building a tool,
