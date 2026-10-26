@@ -194,7 +194,7 @@ template/
         spec.ts              ← DiagramSpec + BakedDiagram types
         layout.ts            ← ELK auto-layout + merge with saved boxes
         flow.tsx             ← React Flow nodes/edges shared by reader + editor
-        DiagramArrange.tsx   ← dev-only full-screen arrange editor (lazy)
+        DiagramArrange.tsx   ← dev-only full-screen diagram editor (lazy)
       lib/
         params.ts            ← attr→number/bool/string coercers
         lossSurface.ts       ← constants shared between figures
@@ -369,18 +369,33 @@ generated code is bad at it. The template splits a diagram in two:
   `from--to`; groups and author annotations by their ids). Rename an id
   only when the thing changed.
 
-- **Author-owned arrangement.** In `npm run dev`, **arrange** under the
-  diagram opens a full-screen editor: drag (8px grid, alignment guides
-  against other nodes' edges and centers), shift-drag to box-select,
-  arrow keys to nudge, corner handles to resize, click an edge to pick
-  the side it leaves from or arrives at, **+ Text / + Note** for
-  annotations (double-click to edit), **Auto-layout** (ELK; just the
-  selection when 2+ nodes are selected), **Frame** to crop what readers
-  see, ⌘Z / ⇧⌘Z. The **wide / narrow** tabs hold two arrangements: wide
-  is what readers normally see; narrow is for screens too small for it
-  (below). **Save** writes `content/figures/<id>.json` through the same
+- **Author-owned arrangement.** In `npm run dev`, **edit diagram**
+  under the diagram opens a full-screen editor built on direct
+  manipulation: drag boxes (8px grid, alignment guides), drag the canvas
+  to select, double-click the canvas for a new box, drag a box's side dot
+  to another box to connect (or onto empty canvas for a new connected
+  box), Tab for the next box in the flow, double-click (or Enter) to edit
+  any label in place, drag a selected arrow's end to another side or box.
+  A small toolbar above the selection holds the rest: a box's kind and
+  hover text, an arrow's label, dashing, direction and delete, align and
+  tidy (ELK) for several boxes. **B / T / N** place a box, text label or
+  note; ⌘Z / ⇧⌘Z undo. The **reader frame** (what readers see) is always
+  on the canvas, fitting the content until the author drags or resizes
+  it. **Wide / Narrow (phones)** hold two arrangements: wide is what
+  readers normally see; narrow is for screens too small for it (below).
+  **Save** (⌘S) writes `content/figures/<id>.json` through the same
   auto-committing save path as prose (last writer wins, no conflict
   check).
+
+- **Structure edits move the spec into the JSON.** The author can add,
+  rename, connect, restyle and delete boxes in the editor, on any
+  diagram. Once they do, Save writes the whole spec into
+  `content/figures/<id>.json` (`spec`, plus `specFrom`, a fingerprint of
+  the code spec it started from), and from then on that copy is drawn:
+  the spec in the figure code is ignored. The dev bar says "structure
+  edited in the browser"; if the code spec changes afterwards it says so
+  and offers **use code version** (which drops the JSON copy, keeping
+  positions by id). Layout-only edits leave the code spec in charge.
 
 Readers get a live React Flow diagram built from both, locked (the wheel
 scrolls the page), drawn from the tokens so it follows light/dark. Edges
@@ -402,11 +417,11 @@ wider than the column, in order:
 
 `scripts/check-diagrams.mjs` in the moonshine repo measures the rendered
 label size at 360–1100px and fails below the floor. A diagram that
-scrolls on phones is a sign to arrange its narrow tab (or to cut nodes).
+scrolls on phones is a sign to arrange its Narrow tab (or to cut nodes).
 
 When the agent changes a spec after the author arranged it, nothing
 breaks: new nodes are laid out by ELK next to their arranged neighbours
-(the dev bar says how many; arrange shows them dashed), removed ones
+(the dev bar says how many; the editor shows them dashed), removed ones
 disappear with their edges, changed labels just render. ELK loads only
 when some node has no saved position.
 
@@ -414,10 +429,14 @@ Rules for agents:
 
 - Never edit the arrangement in `content/figures/*.json` (positions,
   sizes, sides, annotations, frame, narrow). It is the author's surface,
-  like their prose. The one exception is the `spec` of an author-added
-  `kind=diagram` figure, which you may edit when a comment asks you to
-  (add a box, rename, connect): keep existing ids so the arrangement
-  still applies, and new nodes get placed automatically.
+  like their prose.
+- Before changing a diagram's spec, check its JSON for `spec`. If it is
+  there (a `kind=diagram` figure, or one whose structure the author
+  edited in the browser), that is the spec readers see: edit it there,
+  not in the figure code, and only when a comment asks you to (add a
+  box, rename, connect). Keep existing ids so the arrangement still
+  applies; new nodes get placed automatically. If there is no `spec` in
+  the JSON, the spec in the figure code is the one to edit.
 - Keep diagrams editorial: roughly 3–12 nodes. Past that you're
   building a tool, not an article.
 - For a figure that needs more than node-link (custom node rendering,
@@ -430,14 +449,12 @@ Hovering the gap between two top-level blocks (or after the last) shows
 a **+**, notebook-style. It inserts, at that spot in the markdown:
 
 - **Text**: a block written in place (any markdown, directives included).
-- **Diagram**: opens the arrange editor on a starter diagram (two boxes
-  and an arrow). The author owns the spec here: **+ Box**, drag from a
-  box's side dot to another box to connect, select a box or arrow to
-  edit its label, kind, hover detail, or dashed style, Backspace to
-  delete. Save writes `figures/diagram-N.json` (spec and arrangement
+- **Diagram**: opens the diagram editor on a starter diagram (two
+  boxes and an arrow), the same editor as every other diagram (see
+  Diagrams). Save writes `figures/diagram-N.json` (spec and arrangement
   together) and inserts `:::figure{id=diagram-N kind=diagram}`.
   `kind=diagram` is a built-in figure (`src/figures/builtin.ts`): no
-  registry entry or figure file. **arrange** under it re-opens the
+  registry entry or figure file. **edit diagram** under it re-opens the
   editor. Readers get the same live diagram, readability floor
   included, as any `DiagramFigure`.
 - **Image**: uploads to `public/media/` through

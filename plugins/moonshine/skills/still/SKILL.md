@@ -11,7 +11,7 @@ Use this skill to bootstrap a structured moonshine project. The user invokes it 
 
 1. **Load context in order.**
    - Read `../moonshine/SKILL.md` for the editorial process and anti-slop rules.
-   - Read `../moonshine/STILL.md` for the project structure, directive grammar, registry pattern, store, and diagram (DiagramSpec + arrange editor) guidance.
+   - Read `../moonshine/STILL.md` for the project structure, directive grammar, registry pattern, store, and diagram (DiagramSpec + diagram editor) guidance.
    - Reference `../moonshine/VISUALS.md` for visualization patterns inside figure components (its "In a still project" preamble covers the substrate differences).
    - The palette and type stack live in the template itself: `src/styles/tokens.css` is the source of truth. `../moonshine/ARTICLE.md` is the shine reference — don't take scaffold or series structure from it.
    - `../moonshine/FEEDBACK.md` when working with the authorship-feedback loop (comments from the rendered page).

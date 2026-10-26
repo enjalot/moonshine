@@ -113,8 +113,8 @@ async function postSave(payload: Record<string, unknown>): Promise<void> {
 }
 
 // Write a file under content/ outside the body-splice flow — used by
-// dev-only figure affordances (DiagramFigure's arrange mode bakes node
-// positions to content/figures/<id>.json). Same endpoint, same
+// dev-only figure affordances (the diagram editor saves
+// content/figures/<id>.json). Same endpoint, same
 // auto-commit; gated on the same build-time constant so production
 // bundles drop it.
 // Upload an image to public/media/ (dev only); resolves to the
