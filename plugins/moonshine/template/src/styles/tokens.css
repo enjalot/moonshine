@@ -19,6 +19,12 @@
   --bg: #fafafa;
   --fig-bg: #ffffff;
   --border: #e2e2e8;
+  /* Table row hover + scroll-edge shadow */
+  --row-hover: rgba(37, 99, 235, 0.04);
+  --shadow-edge: rgba(26, 26, 46, 0.12);
+  /* Diagram notes */
+  --note-bg: #fdf6d8;
+  --note-border: #e6d38a;
   /* Error states (missing figure / unknown inline kind) */
   --error: #883030;
   --error-bg: rgba(255, 200, 200, 0.2);
@@ -34,6 +40,10 @@
     --bg: #1a1a2e;
     --fig-bg: #22223a;
     --border: #3a3a52;
+    --row-hover: rgba(96, 165, 250, 0.06);
+    --shadow-edge: rgba(0, 0, 0, 0.45);
+    --note-bg: #3a3420;
+    --note-border: #6b5d2a;
     --error: #f3a5a5;
     --error-bg: rgba(180, 60, 60, 0.18);
     --error-border: #8a4444;

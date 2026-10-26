@@ -44,7 +44,8 @@ svg text { font-family: var(--heading-font); }
 }
 .feature-bar-row:last-child { border-bottom: none; }
 .feature-bar-label {
-  flex: 0 0 auto; max-width: 50%; color: var(--text);
+  /* Fixed column so every bar starts at the same baseline. */
+  flex: 0 0 13.5rem; max-width: 45%; color: var(--text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .feature-bar-track {
@@ -57,6 +58,14 @@ svg text { font-family: var(--heading-font); }
   transition: width 0.3s ease; min-width: 2px;
 }
 .feature-bar-value { flex: 0 0 auto; min-width: 2.5rem; text-align: right; font-family: var(--mono-font); font-size: 0.8rem; color: var(--text-2); }
+.feature-bar-share { flex: 0 0 auto; min-width: 2.5rem; text-align: right; font-family: var(--mono-font); font-size: 0.8rem; color: var(--text-2); }
+.feature-bar-fill.specific, .swatch.specific { background: #d1495b; }
+.feature-bar-fill.broad, .swatch.broad { background: #b8b8c8; }
+@media (max-width: 520px) {
+  .feature-bar-label { white-space: normal; overflow: visible; line-height: 1.2; }
+}
+.feature-legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-2); }
+.feature-legend .swatch { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 2px; margin-right: 0.35rem; vertical-align: -1px; }
 
 .joke-selector {
   font-family: var(--body-font); font-size: 0.95rem; padding: 0.4rem 0.6rem;
@@ -101,59 +110,74 @@ svg text { font-family: var(--heading-font); }
   </p>
 
   <p>
-    What if we could build a tool that decomposes <em>any</em> text into interpretable features?
-    Not groups specific to this dataset, but a universal vocabulary of concepts that the embedding
-    model recognizes?
+    A different kind of tool decomposes <em>any</em> text the model can embed into interpretable
+    features, using one vocabulary of concepts for every dataset.
   </p>
 
   <p>
-    This is what a <strong>Sparse Autoencoder</strong> (SAE) does. It learns to break an embedding
-    into a small number of active features from a much larger set of possible features. Think of it
-    like a polarizing filter on a microscope: it isolates specific wavelengths of meaning from the
-    full signal.
+    That tool is a <strong>Sparse Autoencoder</strong> (SAE). It learns to break an embedding
+    into a small number of active features chosen from a much larger set of possible features.
   </p>
 
   <h2>Decomposing a joke</h2>
 
   <p>
-    An embedding is a dense vector: all 384 dimensions have nonzero values, and none of them are
-    individually interpretable. An SAE transforms this into a sparse vector: out of thousands of
-    possible features, only a handful are active for any given text. And each feature has a
-    human-readable label.
+    An embedding is a dense vector: all 384 dimensions have nonzero values, and none of them
+    means anything on its own. An SAE turns it into a sparse vector. The one in this article has
+    49,152 features, and exactly 64 of them are active for any text. Each feature has a short
+    label.
   </p>
 
   <p>
-    Pick a joke below and see its features:
+    The SAE was trained on all-MiniLM-L6-v2 embeddings of web text from FineWeb-edu,
+    RedPajama and the Pile. A language model wrote each label after reading the web passages
+    that activate that feature most. No jokes were used in training or labeling. An SAE only
+    works with the embedding model it was trained on, so from here on the jokes are embedded
+    with MiniLM instead of the bge-small model used in Parts 1 to 3. Both models produce
+    384 numbers per text.
+  </p>
+
+  <p>
+    Pick a joke to see its eight strongest features:
   </p>
 
   <div class="figure figure-wide" id="fig-decompose">
     <select id="joke-select" class="joke-selector"></select>
     <div id="joke-text" style="font-style: italic; margin: 0.75rem 0; min-height: 1.5em;"></div>
+    <div class="feature-legend">
+      <span><i class="swatch specific"></i>specific: fires on under 5% of the 52,573 jokes</span>
+      <span><i class="swatch broad"></i>broad: fires on more than that</span>
+    </div>
     <div id="feature-bars" style="margin-top: 0.5rem;"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 1.</span>
-      SAE decomposition of a dad joke. Each bar is an active feature. The length shows activation strength: how strongly this feature responds to the text.
+      The eight strongest of a joke's 64 active SAE features. Bar length is activation; the
+      right-hand column is the share of all 52,573 jokes that activate the feature.
     </div>
   </div>
 
   <p>
-    Look at how the features describe different aspects of the joke. A joke about atoms might
-    activate "science and physics," "wordplay and puns," and "double meaning." These aren't
-    clusters specific to the dad jokes dataset. They're features the SAE learned from a large,
-    diverse training corpus. They apply to any text.
+    The specific features name what the joke is about: atoms and nuclear technology, noodles,
+    bicycles, the moon. Some respond to a single word in its most common web sense. The atoms
+    joke activates "certificate trust validation" because it contains <em>trust</em>, and the
+    scarecrow joke activates "escrow arrangements", most likely because <em>scarecrow</em> and
+    <em>escrow</em> share their last letters.
+  </p>
+
+  <p>
+    None of the features describe the pun. "Two tired" and "impasta" leave no trace in the
+    labels. Of these twelve, only the egg joke activates the humor features, and only because it contains the
+    word <em>jokes</em>. An SAE describes what the embedding encodes, and this embedding encodes
+    the words and topics a joke is built from, not the wordplay.
   </p>
 
   <h2>Shared features across jokes</h2>
 
   <p>
-    The same feature can activate across very different texts. "Wordplay and puns" might light up
-    for a joke about atoms, a joke about noodles, and a joke about bicycles. This is what makes
-    SAE features useful as a <strong>taxonomy</strong>: a shared vocabulary for describing what
-    the model sees in any text.
-  </p>
-
-  <p>
-    Compare two jokes below. Notice which features they share and which are unique to each:
+    Every joke activates exactly 64 features, but they are not drawn from 64 separate topics.
+    Compare two jokes below. The atoms joke and the chemistry joke share "scientific concepts and
+    methods" and "organic chemistry literature", though one mentions atoms and the other a
+    chemical reaction.
   </p>
 
   <div class="figure figure-wide" id="fig-compare">
@@ -172,141 +196,113 @@ svg text { font-family: var(--heading-font); }
     <div id="shared-features" style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border);"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 2.</span>
-      Two jokes decomposed side by side. Features they share appear in both columns. Features unique to each joke reveal what makes them different in the model's eyes.
+      Two jokes decomposed side by side, eight strongest features each. Shared features are
+      listed below the columns.
     </div>
   </div>
+
+  <p>
+    The broad features are shared most often. "Literary scenes and characters" is active for
+    37,469 of the 52,573 jokes, most strongly for jokes told as a story, and "absence and void concepts" for 15,314: any joke built on
+    <em>no</em> or <em>without</em>, such as the bear with no teeth or the restaurant with no
+    atmosphere. Broad features describe the form of a text more than its subject. The next
+    article shows that this difference is visible on a map.
+  </p>
 
   <h2>A global vocabulary</h2>
 
   <p>
-    The crucial difference between SAE features and clusters is scope. Clusters are computed
-    <em>from</em> a dataset and apply only <em>to</em> that dataset. SAE features are trained
-    to match the embedding model itself. They work on any text the model can embed.
+    Clusters are computed <em>from</em> a dataset and apply only <em>to</em> that dataset. SAE
+    features are trained to match the embedding model, so they apply to any text the model can
+    embed. The same 49,152 features describe these jokes, a news archive or a set of research
+    abstracts.
   </p>
 
   <p>
-    This is what we mean by calling the SAE a <strong>global</strong> tool. It provides a
-    consistent set of concepts for describing what the model sees, regardless of what data you're
-    looking at. If clustering is like sorting your desk into piles, the SAE is like having a
-    filing system that works for any document.
+    That makes the SAE a <strong>global</strong> tool: one vocabulary for describing what the
+    model sees, whatever data you are looking at. The labels are a starting point, written from
+    web text. As the trust and escrow features show, a label can read oddly on a new kind of
+    text, and the way to check one is to read the texts that activate it.
   </p>
 
-  <div class="insight">
-    <p>
-      Clustering asks: "what groups exist in this data?"
-      SAE asks: "what concepts does the model recognize in this text?"
-      The first is local. The second is global.
-    </p>
-  </div>
-
   <p>
-    Together, these features form a <strong>taxonomy</strong> of what the embedding model
-    understands. In the <a href="05-the-atlas.html">next article</a>, we'll pair this taxonomy
-    with a global map: a permanent coordinate system where every text has a consistent address.
+    In the <a href="05-the-atlas.html">next article</a>, we pair this vocabulary with a global
+    map: a permanent coordinate system where every text has a consistent address.
   </p>
 
   <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
     <p>Part of <a href="index.html" style="color: var(--text-2);">Latent Verse</a>. Previous: <a href="03-finding-structure.html" style="color: var(--accent);">Finding Structure</a>. Next: <a href="05-the-atlas.html" style="color: var(--accent);">The Atlas</a>.</p>
-    <p style="margin-top: 0.5rem;">SAE concepts from <a href="https://transformer-circuits.pub/" style="color: var(--text-2);">Anthropic's mechanistic interpretability research</a>.</p>
+    <p style="margin-top: 0.5rem;">Features come from <a href="https://huggingface.co/enjalot/sae-all-MiniLM-L6-v2-stagej-49K" style="color: var(--text-2);">sae-all-MiniLM-L6-v2-stagej-49K</a>, a Matryoshka TopK SAE (49,152 features, k=64) trained with <a href="https://github.com/enjalot/latent-sae" style="color: var(--text-2);">latent-sae</a>. Labels were written by qwen2.5-32b from each feature's top web-text exemplars. Jokes are from the dadabase collection, plus seven classics it lacks, embedded with the same model. The approach follows <a href="https://transformer-circuits.pub/2023/monosemantic-features" style="color: var(--text-2);">Towards Monosemanticity</a>.</p>
   </footer>
 </div>
 
 <script>
 function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-// Feature color based on activation (warm scale)
-const featureColor = d3.scaleSequential(d3.interpolateYlOrRd).domain([0, 1]);
+// Share of all jokes that activate a feature. Under 5% reads as specific.
+const SPECIFIC = 0.05;
 
-function renderFeatureBars(containerId, features, featureLabels) {
+function renderFeatureBars(containerId, features, data) {
   const el = document.getElementById(containerId);
-  const maxAct = Math.max(...features.map(f => f.activation));
-
-  el.innerHTML = features.map(f => {
-    const label = featureLabels[String(f.idx)] || `feature ${f.idx}`;
-    const pct = (f.activation / maxAct * 100).toFixed(0);
-    const color = featureColor(f.activation / maxAct);
+  const total = data.provenance.n_jokes;
+  const maxAct = Math.max(...features.map(f => f[1]));
+  el.innerHTML = features.map(([idx, act]) => {
+    const label = data.labels[String(idx)] || `feature ${idx}`;
+    const share = (data.fires[String(idx)] || 0) / total;
+    const cls = share < SPECIFIC ? 'specific' : 'broad';
+    const pct = share < 0.01 ? '<1%' : `${Math.round(share * 100)}%`;
     return `<div class="feature-bar-row">
       <span class="feature-bar-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
       <span class="feature-bar-track">
-        <span class="feature-bar-fill" style="width: ${pct}%; background: ${color};"></span>
+        <span class="feature-bar-fill ${cls}" style="width: ${(act / maxAct * 100).toFixed(0)}%;"></span>
       </span>
-      <span class="feature-bar-value">${f.activation.toFixed(2)}</span>
+      <span class="feature-bar-value">${act.toFixed(2)}</span>
+      <span class="feature-bar-share" title="share of jokes that activate this feature">${pct}</span>
     </div>`;
   }).join('');
 }
 
 async function init() {
-  const saeData = await fetch('data/sae-features.json').then(r => r.json());
-  const featureLabels = saeData.feature_labels;
-  const jokeFeatures = saeData.joke_features;
+  const data = await fetch('data/sae-real.json').then(r => r.json());
+  const jokes = data.jokes;
+  const short = (t, n) => t.length > n ? t.slice(0, n) + '…' : t;
 
-  // Figure 1: Single joke decomposition
+  // Figure 1: single joke decomposition
   const select = document.getElementById('joke-select');
-  jokeFeatures.forEach((jf, i) => {
-    const label = jf.text.length > 60 ? jf.text.slice(0, 60) + '...' : jf.text;
-    select.add(new Option(label, i));
-  });
-
+  jokes.forEach((j, i) => select.add(new Option(short(j.text, 60), i)));
   function updateDecompose() {
-    const idx = +select.value;
-    const jf = jokeFeatures[idx];
-    document.getElementById('joke-text').innerHTML = `"${escapeHtml(jf.text)}"`;
-    renderFeatureBars('feature-bars', jf.features, featureLabels);
+    const j = jokes[+select.value];
+    document.getElementById('joke-text').textContent = `"${j.text}"`;
+    renderFeatureBars('feature-bars', j.features, data);
   }
-
   select.addEventListener('change', updateDecompose);
   updateDecompose();
 
-  // Figure 2: Comparison
+  // Figure 2: comparison
   const selA = document.getElementById('compare-a-select');
   const selB = document.getElementById('compare-b-select');
-  jokeFeatures.forEach((jf, i) => {
-    const label = jf.text.length > 55 ? jf.text.slice(0, 55) + '...' : jf.text;
-    selA.add(new Option(label, i));
-    selB.add(new Option(label, i));
+  jokes.forEach((j, i) => {
+    selA.add(new Option(short(j.text, 55), i));
+    selB.add(new Option(short(j.text, 55), i));
   });
   selA.value = 0; // atoms
   selB.value = 11; // chemistry
 
   function updateCompare() {
-    const iA = +selA.value, iB = +selB.value;
-    const jfA = jokeFeatures[iA], jfB = jokeFeatures[iB];
+    const A = jokes[+selA.value], B = jokes[+selB.value];
+    document.getElementById('compare-a-text').textContent = `"${A.text}"`;
+    document.getElementById('compare-b-text').textContent = `"${B.text}"`;
+    renderFeatureBars('compare-a-bars', A.features, data);
+    renderFeatureBars('compare-b-bars', B.features, data);
 
-    document.getElementById('compare-a-text').innerHTML = `"${escapeHtml(jfA.text)}"`;
-    document.getElementById('compare-b-text').innerHTML = `"${escapeHtml(jfB.text)}"`;
-
-    renderFeatureBars('compare-a-bars', jfA.features, featureLabels);
-    renderFeatureBars('compare-b-bars', jfB.features, featureLabels);
-
-    // Find shared features
-    const aSet = new Set(jfA.features.map(f => f.idx));
-    const bSet = new Set(jfB.features.map(f => f.idx));
+    const aSet = new Set(A.features.map(f => f[0]));
+    const bSet = new Set(B.features.map(f => f[0]));
+    const name = idx => escapeHtml(data.labels[String(idx)] || `feature ${idx}`);
     const shared = [...aSet].filter(idx => bSet.has(idx));
-    const onlyA = [...aSet].filter(idx => !bSet.has(idx));
-    const onlyB = [...bSet].filter(idx => !aSet.has(idx));
-
-    let html = '';
-    if (shared.length > 0) {
-      const sharedLabels = shared.map(idx => featureLabels[String(idx)] || `feature ${idx}`);
-      html += `<div style="font-family: var(--heading-font); font-size: 0.85rem;">
-        <strong>Shared features (${shared.length}):</strong> ${sharedLabels.join(', ')}
-      </div>`;
-    }
-    if (onlyA.length > 0) {
-      const aLabels = onlyA.map(idx => featureLabels[String(idx)] || `feature ${idx}`);
-      html += `<div style="font-family: var(--heading-font); font-size: 0.85rem; margin-top: 0.4rem; color: var(--text-2);">
-        Only in A (${onlyA.length}): ${aLabels.join(', ')}
-      </div>`;
-    }
-    if (onlyB.length > 0) {
-      const bLabels = onlyB.map(idx => featureLabels[String(idx)] || `feature ${idx}`);
-      html += `<div style="font-family: var(--heading-font); font-size: 0.85rem; margin-top: 0.4rem; color: var(--text-2);">
-        Only in B (${onlyB.length}): ${bLabels.join(', ')}
-      </div>`;
-    }
-    document.getElementById('shared-features').innerHTML = html;
+    document.getElementById('shared-features').innerHTML = shared.length
+      ? `<div style="font-family: var(--heading-font); font-size: 0.85rem;"><strong>Shared (${shared.length}):</strong> ${shared.map(name).join(', ')}</div>`
+      : `<div style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">No shared features among the eight strongest.</div>`;
   }
-
   selA.addEventListener('change', updateCompare);
   selB.addEventListener('change', updateCompare);
   updateCompare();

@@ -123,7 +123,7 @@ svg text { font-family: var(--heading-font); }
     In <a href="01-particles-and-forces.html">Part 1</a> we built a fluid simulation
     that computes <span class="t-density">density</span>, <span class="t-pressure">pressure</span>,
     and <span class="t-viscosity">viscosity</span> for each particle by looking at its neighbors.
-    The physics was the interesting part. But the expensive part is something much simpler:
+    The expensive part of that loop is not the physics but something much simpler:
     finding who those neighbors are.
   </p>
   <p>

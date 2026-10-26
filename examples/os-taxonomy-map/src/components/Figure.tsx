@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import { figures } from '../figures/registry'
+import { builtinFigure } from '../figures/builtin'
 import { blockIndexAt } from '../lib/blocks'
 import { useArticleStore, useFigureHighlight } from '../store'
 import { EDIT_ENABLED, fnv1a, useEdit } from '../lib/EditContext'
@@ -67,7 +68,9 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
   // change between `fig.a` and `fig.b`.
   const pinnedRef = useArticleStore((s) => s.pinnedTermRef)
   const ref = useRef<HTMLElement>(null)
-  const entry = id ? figures[id] : null
+  // Registered figures win; otherwise a built-in kind (author-added
+  // content, e.g. `:::figure{id=diagram-2 kind=diagram}`) needs no entry.
+  const entry = id ? (figures[id] ?? builtinFigure(rest.kind)) : null
 
   // Dev-only knob panel state. Overrides apply to the live figure
   // immediately; saving writes them into the directive's attributes,
@@ -267,10 +270,17 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
               </button>
             </span>
           </div>
-          <p className="mn-knobs-empty">
-            Export a <code>DEFAULTS</code> const from the figure file and
-            register it to make this figure tunable.
-          </p>
+          {figures[id] ? (
+            <p className="mn-knobs-empty">
+              Export a <code>DEFAULTS</code> const from the figure file and
+              register it to make this figure tunable.
+            </p>
+          ) : (
+            <p className="mn-knobs-empty">
+              Added in the browser. Use the figure's own controls to edit it,
+              or 💬 to ask the agent to change or build on it.
+            </p>
+          )}
         </div>
       )}
       {(caption || captionContent) && (

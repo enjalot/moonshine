@@ -129,7 +129,7 @@ svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crisp
 </p>
 
 <p>
-  The broader lesson is worth stating clearly. <em>The choice of target geometry is a prior over what your data looks like.</em> Euclidean space is a prior that says the data lives in a flat, isotropic region. Hyperbolic space is a prior that says the data has exponential branching or hierarchical structure. If you know your data matches that prior, the embedding will look much better; if you do not, it will look worse. Matching the prior to the data is the insight that hyperbolic methods drive home.
+  <em>The choice of target geometry is a prior over what your data looks like.</em> Euclidean space is a prior that says the data lives in a flat, isotropic region. Hyperbolic space is a prior that says the data has exponential branching or hierarchical structure. If you know your data matches that prior, the embedding will look much better; if you do not, it will look worse.
 </p>
 
 <h2>Poincaré geodesics, up close</h2>
@@ -147,7 +147,7 @@ svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crisp
 </div>
 
 <p>
-  This bending behavior is worth building intuition for, because it is why hyperbolic embeddings are able to pack so much structure into a small Euclidean-looking area. Outer regions communicate through the interior, so they do not have to be arranged on a line or a curve; they can be placed in angular rings at any depth, with the knowledge that the geometry will route their interactions sensibly.
+  This bending is why hyperbolic embeddings are able to pack so much structure into a small Euclidean-looking area. Outer regions communicate through the interior, so they do not have to be arranged on a line or a curve; they can be placed in angular rings at any depth, with the knowledge that the geometry will route their interactions sensibly.
 </p>
 
 <h2>The cost</h2>
@@ -167,7 +167,7 @@ svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crisp
 </p>
 
 <p>
-  Related ideas include spherical embeddings (for data with a natural rotational symmetry or an intrinsic radius), product spaces (Euclidean times hyperbolic times spherical, for data with mixed structure), and pseudo-Riemannian spaces for relativistic data. None of these are as well-developed as hyperbolic embeddings, but each one represents the same move: match the geometry to the data.
+  Related ideas include spherical embeddings (for data with a natural rotational symmetry or an intrinsic radius), product spaces (Euclidean times hyperbolic times spherical, for data with mixed structure). None of these are as well-developed as hyperbolic embeddings, but each one represents the same move: match the geometry to the data.
 </p>
 
 <p>

@@ -91,11 +91,9 @@ svg text { font-family: var(--heading-font); }
     per query drops by several orders of magnitude.
   </p>
   <p>
-    The remaining question is almost boring to say out loud: how is all of this laid out in
-    storage. If your data fits in RAM, the answer is one thing. If it sits on an SSD, the
+    The remaining question is how all of this is laid out in storage. If your data fits in RAM, the answer is one thing. If it sits on an SSD, the
     answer is another. If you are answering thousands of queries at once and have a GPU to
-    throw at them, the answer is a third thing entirely. The modern ANN story ends in a
-    place that is less about algorithms and more about memory.
+    throw at them, the answer is a third thing entirely.
   </p>
 
   <h2>The Latency Ladder</h2>
@@ -159,7 +157,7 @@ svg text { font-family: var(--heading-font); }
     the disk.
   </p>
   <p>
-    The brutal fact is that a random SSD read takes about a hundred microseconds. That is
+    A random SSD read takes about a hundred microseconds. That is
     a thousand times slower than a random RAM read. A graph-based index that hops through
     a hundred neighbors during a query, which finishes in a millisecond in RAM, would take
     a tenth of a second on disk. That is too slow for interactive use.
@@ -298,11 +296,6 @@ svg text { font-family: var(--heading-font); }
     </div>
   </div>
 
-  <p>
-    A useful mental shortcut: in-memory indexes are bought with RAM, disk-based indexes are
-    bought with engineering, and GPU indexes are bought with batch size. Each one converts
-    a scarce resource into latency.
-  </p>
 
   <h2>Three Ideas, Stacked</h2>
   <p>
@@ -315,10 +308,9 @@ svg text { font-family: var(--heading-font); }
     single box.
   </p>
   <p>
-    The next article is the payoff. Two of the most widely used tools in applied machine
-    learning, UMAP and semantic search, are both built on top of the same ANN primitive
-    we have been developing. They use it in very different ways, and lining them up side by
-    side makes both of them clearer.
+    The last article looks at two of the most widely used tools in applied machine
+    learning, UMAP and semantic search. Both are built on the same ANN primitive, and they
+    use it in very different ways.
   </p>
 
   <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">

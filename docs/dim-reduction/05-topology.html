@@ -70,7 +70,7 @@ svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crisp
 </p>
 
 <p>
-  Topology is a coarser description than geometry, and that coarseness is exactly the point. The same loop can be a circle, an ellipse, or a wildly irregular closed curve, and all three are topologically identical. A topological description is robust to noise and deformation. For ML data that sits on a curved manifold with complicated local structure, a topological summary often captures the part that actually matters and ignores the part that changes every time you retrain.
+  Topology is a coarser description than geometry, on purpose. The same loop can be a circle, an ellipse, or a wildly irregular closed curve, and all three are topologically identical. A topological description is robust to noise and deformation. For ML data that sits on a curved manifold with complicated local structure, a topological summary often captures the part that actually matters and ignores the part that changes every time you retrain.
 </p>
 
 <p>
@@ -188,7 +188,7 @@ svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crisp
 </p>
 
 <p>
-  The cost of using topological methods is that they produce graphs, not scatter plots, and graphs are harder to interpret at a glance. The standard workflow is to use topology as a companion tool: run UMAP for the intuitive picture, run Mapper alongside for the structural validation. When both agree, you know something real is going on. When they disagree, you have learned to pay attention to the disagreement.
+  The cost of using topological methods is that they produce graphs, not scatter plots, and graphs are harder to interpret at a glance. The standard workflow is to use topology as a companion tool: run UMAP for the intuitive picture, run Mapper alongside for the structural validation. Structure that shows up in both is more likely to be real, and a disagreement points at where to look closer.
 </p>
 
 <p>

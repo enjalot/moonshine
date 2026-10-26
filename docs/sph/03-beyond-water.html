@@ -123,8 +123,7 @@ svg text { font-family: var(--heading-font); }
     differences. That gives us something that looks like water.
   </p>
   <p>
-    But the real power of SPH is that the particle framework is not limited to water.
-    By changing the force rules, the same loop of "find neighbors, compute forces, update"
+    The particle framework is not limited to water. By changing the force rules, the same loop of "find neighbors, compute forces, update"
     can produce elastic solids, granular piles, phase transitions, and more. Each section
     below adds a new force or parameter on top of Part 1's foundation.
   </p>
@@ -351,9 +350,9 @@ svg text { font-family: var(--heading-font); }
   </div>
 
   <p>
-    The SPH framework is a toolbox. Pressure and viscosity give you fluids. Add springs for
-    solids, friction for sand, temperature for phase changes, SDFs for obstacles, and emitters
-    for continuous flows. The simulation loop stays the same. Only the forces change.
+    Pressure and viscosity give you fluids. Add springs for solids, friction for sand,
+    temperature for phase changes, SDFs for obstacles, and emitters for continuous flows,
+    all inside the same simulation loop.
     In <a href="04-playground.html">Part 4</a> we combine all of these into an interactive sandbox.
   </p>
 

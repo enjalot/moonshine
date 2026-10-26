@@ -115,21 +115,17 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
     Almost every modern AI application depends on nearest-neighbor search over high-dimensional
     vectors. A semantic search query turns into an embedding and asks the index "what's near me?"
     A recommender asks the same question about a user's latent vector. A dimensionality-reduction
-    method like UMAP builds its whole output from a graph of nearest neighbors. The
-    primitive is everywhere.
+    method like UMAP builds its whole output from a graph of nearest neighbors.
   </p>
 
   <p>
-    But when you try to do this at scale, every naive approach breaks. Exact search becomes
-    too slow. Distances stop being informative. Data stops fitting in memory. The state of
-    the art is a tower of clever workarounds, and the fact that it works at all is a small
-    miracle.
+    At scale, the naive approaches break. Exact search becomes too slow, distances stop being
+    informative, and the data stops fitting in memory.
   </p>
 
   <p>
-    This series builds intuition for how modern ANN systems work. Not through code listings
-    or pseudocode proofs, but through figures you can play with until the tradeoffs feel
-    obvious. The through-line is that modern ANN is three ideas stacked on top of each other:
+    This series builds intuition for how modern ANN systems work with figures you can play
+    with, rather than code listings or proofs. The through-line is that modern ANN is three ideas stacked on top of each other:
   </p>
 
   <div class="three-ideas">

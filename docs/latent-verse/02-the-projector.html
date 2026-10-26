@@ -104,12 +104,10 @@ svg text { font-family: var(--heading-font); }
     resolves the compression from 384 dimensions to 2.
   </p>
 
-  <div class="insight">
-    <p>
-      Trust the neighborhoods, not the distances. If two points are close on a UMAP plot,
-      they're likely similar. If they're far apart, you can't conclude much.
-    </p>
-  </div>
+  <p>
+    So read a UMAP plot by its neighborhoods. If two points are close, they are likely similar.
+    If they are far apart, you can't conclude much.
+  </p>
 
   <h2>Parameters shape what you see</h2>
 
@@ -176,7 +174,7 @@ svg text { font-family: var(--heading-font); }
   <h2>A local map</h2>
 
   <p>
-    There is something important to know about UMAP: it is computed fresh for each dataset.
+    UMAP is computed fresh for each dataset.
     If you add new jokes and re-run UMAP, the whole map reshuffles. The neighborhoods stay
     mostly intact, but the overall layout changes. Your map of 1,000 jokes looks nothing like
     your map of 53,000, even though the same jokes appear in both.

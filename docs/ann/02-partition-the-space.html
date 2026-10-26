@@ -168,9 +168,9 @@ svg text { font-family: var(--heading-font); }
   <p>
     As <code>nprobe</code> grows from 1 toward k, recall climbs toward exact and speed
     degrades toward a linear scan. In between there is a sweet spot where you catch nearly
-    all the true neighbors while still inspecting a small fraction of the database. This
-    tradeoff is so fundamental that every partition-based ANN method has some version of it,
-    even when the "cells" are not literal Voronoi regions.
+    all the true neighbors while still inspecting a small fraction of the database. Every
+    partition-based ANN method has some version of this knob, even when the "cells" are not
+    literal Voronoi regions.
   </p>
 
   <div class="figure figure-wide" id="fig-nprobe">
@@ -208,8 +208,7 @@ svg text { font-family: var(--heading-font); }
     different centroid than to the query's chosen centroid. Geometrically, the bad points
     live in thin slivers along cell boundaries. More clusters means more boundaries, which
     means more slivers, which means you need a higher <code>nprobe</code> to sweep them up.
-    Fewer, bigger clusters hide fewer neighbors but each scan is larger. That is the tuning
-    problem.
+    Fewer, bigger clusters hide fewer neighbors, but each scan is larger.
   </p>
 
   <h2>LSH: Let Randomness Do the Partitioning</h2>
@@ -255,7 +254,7 @@ svg text { font-family: var(--heading-font); }
   </div>
 
   <p>
-    LSH is elegant because it needs no training. The hash function is picked once, at random,
+    LSH needs no training. The hash function is picked once, at random,
     and works for any dataset. It also has provable guarantees: you can bound the probability
     that near points collide and far points do not, given the number of hyperplanes and the
     distance threshold. In practice a single hash table is too noisy, so real LSH uses
@@ -263,10 +262,10 @@ svg text { font-family: var(--heading-font); }
     means more candidates, which means better recall at the cost of more work.
   </p>
   <p>
-    The weakness of LSH is the same as its strength. Because the hyperplanes ignore the
-    data, they waste capacity on empty regions and overfill dense ones. Data-aware methods
+    Ignoring the data is also LSH's weakness. Random hyperplanes waste capacity on empty
+    regions and overfill dense ones. Data-aware methods
     use the structure of the dataset and reach higher recall for the same work. In the last
-    decade LSH has been quietly losing ground to graph methods on the standard benchmarks.
+    decade LSH has lost ground to graph methods on the standard benchmarks.
     It remains useful for theoretical analysis and for settings where the dataset changes
     too fast to retrain centroids.
   </p>
@@ -287,8 +286,7 @@ svg text { font-family: var(--heading-font); }
     multiple layers. The top layer has very few nodes, connected by long edges. The bottom
     layer has every node, connected to its near neighbors. The query descends layer by
     layer: a few long jumps at the top put it in the right neighborhood, then progressively
-    shorter hops zoom in. It is the same trick an airline uses. Hubs plus spokes beats a
-    mesh.
+    shorter hops zoom in, the way an airline routes a long trip through hubs.
   </p>
 
   <div class="figure figure-wide" id="fig-hnsw">
@@ -322,8 +320,8 @@ svg text { font-family: var(--heading-font); }
     dimensions, this can take hours on a single machine. Its memory footprint is also
     substantial, because each vector stores its edge list on top of the vector itself.
     In exchange it gives the best recall-per-query-time among open-source indexes and
-    scales gracefully to tens of millions of vectors. Almost every vector database,
-    lancedb and Weaviate and pgvector included, ships HNSW as a default choice.
+    scales to tens of millions of vectors. Weaviate and Qdrant build HNSW indexes by
+    default, and pgvector offers HNSW alongside IVF.
   </p>
 
   <h2>Tradeoffs</h2>
@@ -339,9 +337,9 @@ svg text { font-family: var(--heading-font); }
     <svg id="tradeoff-svg" style="width:100%; display:block; border-radius:4px;"></svg>
     <div class="figure-caption">
       <span class="figure-label">Figure 5.</span>
-      Queries-per-second against recall at 10, both on log-ish axes. Up and to the right
-      is better: high recall, high throughput. Exact search is the vertical wall on the
-      right, offering perfect recall at a speed ceiling set by the dataset size. HNSW
+      Recall at 10 against queries per second (log scale). Up and to the right is
+      better: high recall, high throughput. Exact search is the dashed line on the
+      left: perfect recall at the lowest throughput, set by the dataset size. HNSW
       sits above the others across most of the plane. IVF is close behind and competitive
       at lower recall targets. LSH lags, especially at high recall.
     </div>

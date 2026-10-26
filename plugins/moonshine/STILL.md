@@ -12,7 +12,7 @@ independently and the article can grow into something substantial.
 
 Use `still` when:
 - The article will keep being edited after first publication.
-- Figures need React state, react-flow diagrams, or other component
+- Figures need React state, hand-arranged diagrams, or other component
   libraries that don't fit cleanly into a single HTML file.
 - Multiple people may edit the prose without touching figure code.
 - The work is a series, or could become one.
@@ -130,7 +130,7 @@ const { activePart } = useFigureHighlight('flow-diagram')
 Figures that don't opt in just ignore the part suffix — the whole-figure
 outline still fires. This is how `GradientField.tsx` (highlights a
 cluster of arrows tagged `partId: 'well'`) and `FlowDiagram.tsx`
-(highlights the React Flow node whose id matches `activePart`) work
+(highlights the diagram node whose spec id matches `activePart`) work
 in the template.
 
 When designing a figure, pick part-ids that read naturally in prose:
@@ -146,7 +146,8 @@ template/
   content/                   ← writers edit only here
     example.md
     figures/
-      flow-diagram.json      ← author-baked diagram layouts (see Diagrams)
+      flow-diagram.json      ← author's diagram arrangement (see Diagrams)
+      diagram-1.json         ← a browser-added diagram: spec + arrangement
     series/
       index.md
       01-gradient-descent.md
@@ -168,6 +169,7 @@ template/
       SourceEditor.tsx       ← the raw-markdown textarea (dev only)
       EditChrome.tsx         ← pill, undo toast, draft banner, HUD mount
       BlockReorderLayer.tsx  ← Cmd-drag block reordering (dev only)
+      InsertLayer.tsx        ← the "+" between blocks: text, diagram, image (dev only)
       AuthorshipHUD.tsx      ← feedback status + listener controls (dev only)
       CommentBox.tsx         ← 💬 comment composer (dev only)
       MoonshineFooter.tsx
@@ -175,7 +177,7 @@ template/
       directive-handler.ts   ← remark plugin: maps directives to tags
       EditContext.tsx        ← edit state + offset-splice save pipeline
       blocks.ts              ← top-level block geometry for reordering
-      bakedFigures.ts        ← loads content/figures/*.json layouts
+      bakedFigures.ts        ← loads content/figures/*.json bakes
       feedback.ts            ← typed client for the feedback endpoints
       FeedbackContext.tsx    ← feedback state (capabilities, comments)
       types.ts
@@ -184,8 +186,15 @@ template/
       Sparkline.tsx          ← D3 example
       GradientField.tsx      ← plain SVG example
       LossLandscape.tsx      ← interactive React state example
-      DiagramFigure.tsx      ← generic React Flow diagram + arrange/bake
-      FlowDiagram.tsx        ← example diagram semantics on DiagramFigure
+      DiagramFigure.tsx      ← spec + arrangement → live React Flow diagram
+      FlowDiagram.tsx        ← example DiagramSpec on DiagramFigure
+      AuthoredDiagram.tsx    ← built-in kind=diagram: spec saved in its JSON
+      builtin.ts             ← built-in figure kinds (no registry entry)
+      diagram/
+        spec.ts              ← DiagramSpec + BakedDiagram types
+        layout.ts            ← ELK auto-layout + merge with saved boxes
+        flow.tsx             ← React Flow nodes/edges shared by reader + editor
+        DiagramArrange.tsx   ← dev-only full-screen arrange editor (lazy)
       lib/
         params.ts            ← attr→number/bool/string coercers
         lossSurface.ts       ← constants shared between figures
@@ -208,7 +217,8 @@ template/
 Three steps, in this order:
 
 1. Drop a React component file in `src/figures/`. It can use D3,
-   React Flow, react-three-fiber, plain SVG, Canvas, WebGL — anything
+   react-three-fiber, plain SVG, Canvas, WebGL, or the template's
+   `DiagramFigure` — anything
    that fits in a React component. Default export, typed
    `(props: FigureProps)`.
 
@@ -296,15 +306,14 @@ either way.
 
 The figure layer is open. But there are real choices to make per figure:
 
-- **React Flow** (`@xyflow/react`) is the preferred choice for
-  node-link diagrams — but don't use it directly: build on the
-  template's `DiagramFigure` (see "Diagrams and Baked Layouts" below),
-  which handles reader lockdown, term highlighting, and author
-  arranging. Unlike Mermaid (which renders to opaque SVG you can't
-  reach into), every React Flow node is a real React component. That
-  means a clicked `:term[word]{to=diagram-id}` can subscribe to the
-  same store and highlight a specific node *inside* the diagram.
-  Choose React Flow whenever you'd reach for Mermaid.
+- **`DiagramFigure`** (React Flow) for node-link, system, and pipeline
+  diagrams (see "Diagrams" below). You declare a small spec; the author
+  arranges it; readers get a live diagram at the article's type size.
+  Every node, group and edge has a stable id, so
+  `:term[word]{to=diagram-id.node-id}` highlights one part inside the
+  diagram. Choose it whenever you'd reach for Mermaid. Authors can add
+  their own diagrams with the **+** between blocks, built in the same
+  editor.
 
 - **D3 v7** for custom data visualization — scales, axes, force
   layouts, contours, anything where the existing `VISUALS.md`
@@ -321,39 +330,128 @@ The figure layer is open. But there are real choices to make per figure:
 - **Canvas / WebGL** when SVG element counts get past ~2,000.
 
 - **Avoid Mermaid.** It's tempting because of the declarative syntax,
-  but the output is opaque to your interaction model. Use React Flow
-  instead.
+  but its output can't be arranged by the author or targeted by terms.
+  A `DiagramSpec` is just as quick to write.
 
-## Diagrams and Baked Layouts
+## Diagrams
 
-Node positions and the viewport framing are exactly the kind of
-many-small-tweaks design work humans are good at and generated code is
-bad at. The template splits the two cleanly:
+Node positions, framing, and the small annotations that make a diagram
+read well are many-small-tweaks design work: people are good at it,
+generated code is bad at it. The template splits a diagram in two:
 
-- **Machine-owned semantics** live in the figure's code: node ids,
-  labels, edges, and fallback positions. See `FlowDiagram.tsx` — it
-  declares `NODES`/`EDGES` and delegates everything else to
-  `DiagramFigure`. Regenerate this file freely.
-- **Author-owned arrangement** lives in
-  `content/figures/<figure-id>.json` (a Velite collection): dragged
-  node positions and the exact viewport. Merged by node id at render
-  time, so a regenerated diagram never clobbers the author's layout,
-  and new nodes fall back to their code positions until arranged.
+- **Machine-owned semantics.** A figure file declares a `DiagramSpec`
+  and hands it to `DiagramFigure`. Regenerate it freely:
 
-The author's loop, during `npm run dev`: click **arrange** under the
-diagram → drag nodes, scroll-zoom, pan to the framing readers should
-get → **Save layout**. The JSON is written through the same
-auto-committing save path as prose, but unlike prose saves it carries
-no conflict check (last writer wins) — one more reason the layout
-files are the author's surface alone. In the built
-article the diagram is locked (no dragging or panning; wheel scrolls
-the page) and renders the author's exact arrangement — baking isn't a
-separate publish step, it's just what saving means.
+  ```tsx
+  const SPEC: DiagramSpec = {
+    direction: 'RIGHT',                         // or 'DOWN'
+    groups: [{ id: 'gpu', label: 'on the GPU box' }],
+    nodes: [
+      { id: 'chunks', label: 'parquet chunks', kind: 'data' },
+      { id: 'embed', label: 'embedder', kind: 'accent', group: 'gpu',
+        detail: 'all-MiniLM-L6-v2, batch 1024' },   // shown on hover
+      { id: 'index', label: 'faiss index', kind: 'store', group: 'gpu' },
+    ],
+    edges: [
+      { from: 'chunks', to: 'embed', animated: true },
+      { from: 'embed', to: 'index', label: 'kNN' },
+    ],
+  }
+  export default function Pipeline({ figureId }: FigureProps) {
+    return <DiagramFigure figureId={figureId} spec={SPEC} />
+  }
+  ```
 
-When you (the agent) build a new diagram: define semantics in a figure
-file on `DiagramFigure`, never edit `content/figures/*.json` yourself
-(that's the author's surface; treat it like author prose), and pick
-node ids that read naturally in `:term[...]{to=fig.node-id}` references.
+  Kinds: `process` (default), `data` (dashed), `store` (pill),
+  `external` (dotted), `decision`, `accent` (tinted, for the node the
+  prose is about), `note`. Ids are stable handles: they key the author's
+  arrangement and are the part ids terms target (edges default to
+  `from--to`; groups and author annotations by their ids). Rename an id
+  only when the thing changed.
+
+- **Author-owned arrangement.** In `npm run dev`, **arrange** under the
+  diagram opens a full-screen editor: drag (8px grid, alignment guides
+  against other nodes' edges and centers), shift-drag to box-select,
+  arrow keys to nudge, corner handles to resize, click an edge to pick
+  the side it leaves from or arrives at, **+ Text / + Note** for
+  annotations (double-click to edit), **Auto-layout** (ELK; just the
+  selection when 2+ nodes are selected), **Frame** to crop what readers
+  see, ⌘Z / ⇧⌘Z. The **wide / narrow** tabs hold two arrangements: wide
+  is what readers normally see; narrow is for screens too small for it
+  (below). **Save** writes `content/figures/<id>.json` through the same
+  auto-committing save path as prose (last writer wins, no conflict
+  check).
+
+Readers get a live React Flow diagram built from both, locked (the wheel
+scrolls the page), drawn from the tokens so it follows light/dark. Edges
+run border to border, or orthogonally out of an author-chosen side; an
+edge that would cross a node bows around the row. Nodes with `detail`
+show it on hover or focus.
+
+**Readability floor.** Node labels are 15px at full size and never
+render below 13px (the caption size), at any screen width. A diagram
+wider than the column, in order:
+
+1. takes the figure gutter on desktop, like `figure-wide`;
+2. shrinks, but only down to the floor;
+3. switches to its narrow arrangement if that reads larger: the
+   author's saved one, or else an automatic top-to-bottom layout of the
+   spec (only when the diagram has no annotations, whose positions
+   belong to the wide arrangement);
+4. scrolls sideways at the floor, like a wide table, with a hint line.
+
+`scripts/check-diagrams.mjs` in the moonshine repo measures the rendered
+label size at 360–1100px and fails below the floor. A diagram that
+scrolls on phones is a sign to arrange its narrow tab (or to cut nodes).
+
+When the agent changes a spec after the author arranged it, nothing
+breaks: new nodes are laid out by ELK next to their arranged neighbours
+(the dev bar says how many; arrange shows them dashed), removed ones
+disappear with their edges, changed labels just render. ELK loads only
+when some node has no saved position.
+
+Rules for agents:
+
+- Never edit the arrangement in `content/figures/*.json` (positions,
+  sizes, sides, annotations, frame, narrow). It is the author's surface,
+  like their prose. The one exception is the `spec` of an author-added
+  `kind=diagram` figure, which you may edit when a comment asks you to
+  (add a box, rename, connect): keep existing ids so the arrangement
+  still applies, and new nodes get placed automatically.
+- Keep diagrams editorial: roughly 3–12 nodes. Past that you're
+  building a tool, not an article.
+- For a figure that needs more than node-link (custom node rendering,
+  live data inside nodes), build on `diagram/flow.tsx`'s pieces rather
+  than starting from raw React Flow.
+
+## Author-Added Content: the "+" Between Blocks (dev only)
+
+Hovering the gap between two top-level blocks (or after the last) shows
+a **+**, notebook-style. It inserts, at that spot in the markdown:
+
+- **Text**: a block written in place (any markdown, directives included).
+- **Diagram**: opens the arrange editor on a starter diagram (two boxes
+  and an arrow). The author owns the spec here: **+ Box**, drag from a
+  box's side dot to another box to connect, select a box or arrow to
+  edit its label, kind, hover detail, or dashed style, Backspace to
+  delete. Save writes `figures/diagram-N.json` (spec and arrangement
+  together) and inserts `:::figure{id=diagram-N kind=diagram}`.
+  `kind=diagram` is a built-in figure (`src/figures/builtin.ts`): no
+  registry entry or figure file. **arrange** under it re-opens the
+  editor. Readers get the same live diagram, readability floor
+  included, as any `DiagramFigure`.
+- **Image**: uploads to `public/media/` through
+  `POST /__moonshine/upload` and inserts `![alt](media/name.png)`;
+  `media/` paths resolve against the site base, so they work under a
+  Pages subpath.
+
+All three go through the conflict-checked save path and auto-commit like
+any author edit, so the agent sees them in `git log`. The author can 💬
+on the new block (Cmd/Ctrl+click a diagram for its comment button) to
+ask the agent to extend or restyle it, or to rebuild it as a coded
+figure.
+Agents treat author-added content like author prose: change it only
+when asked.
 
 ## Velite and Typed Metadata
 
@@ -562,6 +660,10 @@ Once the outline is agreed:
      --exclude '*.tsbuildinfo' --exclude .feedback
      --exclude vite.config.js --exclude vite.config.d.ts
      --exclude velite.config.js template/ <project-root>/`
+   - Record which template it came from, so a later upgrade knows its
+     starting point: write `<project-root>/.moonshine-template.json`
+     with `{"version": <plugin version>, "commit": <short git sha of the
+     plugin checkout, if any>}`.
    - `git init` the project and make an initial commit ("moonshine still
      scaffold"). The template ships a `.gitignore`. This powers the
      author/agent shared history described in "Git: the Shared Memory"
@@ -666,7 +768,8 @@ falls back to frontmatter and loses the session linkage.
   add a directive handler or extend the registry instead.
 - **Don't use MDX.** It would let writers import components, breaking
   the pristine-markdown invariant.
-- **Don't use Mermaid for interactive diagrams.** Use React Flow.
+- **Don't use Mermaid for diagrams.** Declare a `DiagramSpec` on
+  `DiagramFigure` instead.
 - **Don't hardcode colors in figure files.** Reference the CSS custom
   properties (`var(--accent)`, `var(--text-2)`) from `tokens.css`.
 - **Don't mount heavy figures eagerly.** Wrap them in `<LazyIsland>`

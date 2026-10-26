@@ -41,11 +41,33 @@ $$
 
 :::figure{id=flow-diagram}
 One iteration of gradient descent as a small data flow: parameters in,
-loss and gradient computed, parameters updated. Repeat.
+loss and gradient computed, parameters updated. Repeat. The figure file
+declares only the nodes and edges; during `npm run dev`, click arrange to
+position them, pick edge sides, add notes, and crop the frame. Readers get
+the live diagram with that arrangement.
 :::
 
 The full picture is just this loop, run for thousands of iterations
-with a step size that shrinks as the loss flattens.
+with a step size that shrinks as the loss flattens. How much the step
+size matters shows up in a plain table, with no figure needed:
+
+| Step size η | Steps to converge | Final loss | Outcome |
+| --- | --- | --- | --- |
+| 0.01 | 1,840 | 0.0031 | converges slowly |
+| 0.12 | 96 | **0.0004** | converges |
+| 0.45 | 31 | 0.0122 | oscillates, then settles |
+| 0.90 | — | 7.3 × 10³ | diverges |
+
+Number columns are detected and right-aligned with tabular figures, so
+the decimal places line up without any per-table CSS. A table with six
+or more columns breaks out of the text column the way a wide figure does,
+and scrolls sideways on a phone:
+
+| Optimizer | η | β₁ | β₂ | Steps | Wall time | Final loss |
+| --- | --- | --- | --- | --- | --- | --- |
+| SGD | 0.12 | — | — | 96 | 0.8 s | 0.0004 |
+| Momentum | 0.12 | 0.9 | — | 41 | 0.4 s | 0.0002 |
+| Adam | 0.01 | 0.9 | 0.999 | 58 | 0.6 s | 0.0003 |
 
 :::figure{id=sparkline seed=0.7}
 A seeded random walk standing in for a loss curve. The seed is set in
@@ -53,3 +75,8 @@ the directive (`seed=0.7`); during `npm run dev`, Cmd/Ctrl+click the
 figure to dial it with the knob panel and save the value back to this
 file.
 :::
+
+During `npm run dev`, hovering the gap between two blocks shows a **+**.
+It adds a paragraph, a diagram (boxes and arrows you build in the same
+editor as the one above), or an uploaded image right there in the
+markdown, and 💬 on the new block asks the agent to adjust it.

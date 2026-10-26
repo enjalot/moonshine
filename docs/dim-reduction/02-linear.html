@@ -141,7 +141,7 @@ svg .axis-label { font-size: 12px; fill: var(--text-2); font-weight: 600; }
 </p>
 
 <p>
-  PCA cannot do this. The principal components of the mixtures are the directions of highest variance, which have no reason to align with the individual speakers. PCA treats correlation, not the identity of the underlying sources.
+  PCA cannot do this. The principal components of the mixtures are the directions of highest variance, which have no reason to align with the individual speakers. PCA only removes correlation; it has no notion of separate underlying sources.
 </p>
 
 <p>
@@ -165,7 +165,7 @@ svg .axis-label { font-size: 12px; fill: var(--text-2); font-weight: 600; }
 </div>
 
 <p>
-  The key intuition is that the Gaussian distribution is the enemy. If all your sources were Gaussian, you could not recover them: a rotation of Gaussian noise is still Gaussian noise, so there is no way to pick out the original orientation. Non-Gaussianity is what makes the problem solvable.
+  Gaussian sources are the case ICA cannot handle. If all your sources were Gaussian, you could not recover them: a rotation of Gaussian noise is still Gaussian noise, so there is no way to pick out the original orientation. Non-Gaussianity is what makes the problem solvable.
 </p>
 
 <p>
@@ -229,11 +229,11 @@ svg .axis-label { font-size: 12px; fill: var(--text-2); font-weight: 600; }
 <h2>Random projection: almost free, almost faithful</h2>
 
 <p>
-  The last member of the linear family is the most surprising. Instead of carefully choosing <span style="font-family: var(--mono-font); font-size: 0.92em;">W</span> to preserve some property, just draw <span style="font-family: var(--mono-font); font-size: 0.92em;">W</span> at random. Gaussian entries, or even signed sparse entries work fine. Multiply. You are done.
+  The last member of the linear family skips the optimization entirely. Instead of carefully choosing <span style="font-family: var(--mono-font); font-size: 0.92em;">W</span> to preserve some property, just draw <span style="font-family: var(--mono-font); font-size: 0.92em;">W</span> at random. Gaussian entries work, and so do sparse random signs. Then multiply.
 </p>
 
 <p>
-  This sounds like it should not work, and yet it does. The Johnson-Lindenstrauss lemma proves that for any desired precision, a random projection into <span style="font-family: var(--mono-font); font-size: 0.92em;">O(log(n) / ε²)</span> dimensions approximately preserves all pairwise distances in the dataset, regardless of the original dimension. Not because the random projection is smart, but because high-dimensional geometry itself is concentrated enough that a random direction is almost always a reasonable summary.
+  The Johnson-Lindenstrauss lemma proves that for any desired precision, a random projection into <span style="font-family: var(--mono-font); font-size: 0.92em;">O(log(n) / ε²)</span> dimensions approximately preserves all pairwise distances in the dataset, regardless of the original dimension. It works because, in high dimensions, the length of a vector projected onto random directions concentrates tightly around its expected value.
 </p>
 
 <div class="figure" id="fig-jl">

@@ -65,6 +65,10 @@ type EditContextValue = {
   // Move the top-level block containing the open editor up or down,
   // folding in any unsaved textarea draft so edits aren't lost.
   moveActiveBlock: (direction: 'up' | 'down') => Promise<void>
+  // Insert new markdown as its own top-level block at gap `gap` (0 = before
+  // the first block, blocks.length = after the last). Used by the "+"
+  // between blocks; same conflict check and undo as any other save.
+  insertBlock: (gap: number, text: string) => Promise<void>
 }
 
 const EditContext = createContext<EditContextValue | null>(null)
@@ -113,6 +117,20 @@ async function postSave(payload: Record<string, unknown>): Promise<void> {
 // positions to content/figures/<id>.json). Same endpoint, same
 // auto-commit; gated on the same build-time constant so production
 // bundles drop it.
+// Upload an image to public/media/ (dev only); resolves to the
+// markdown-relative path to reference, e.g. `media/diagram.png`.
+export async function uploadImage(file: File): Promise<string> {
+  if (!EDIT_ENABLED) throw new Error('uploads are dev-only')
+  const res = await fetch(`/__moonshine/upload?name=${encodeURIComponent(file.name)}`, {
+    method: 'POST',
+    headers: { 'content-type': file.type || 'application/octet-stream' },
+    body: file,
+  })
+  const data = (await res.json().catch(() => ({}))) as { ok?: boolean; path?: string; error?: string }
+  if (!res.ok || !data.path) throw new Error(data.error ?? `upload failed (${res.status})`)
+  return data.path
+}
+
 export async function saveContentFile(path: string, body: string): Promise<void> {
   if (!EDIT_ENABLED) return
   await postSave({ path, body })
@@ -309,6 +327,22 @@ export function EditProvider({ body, path, children }: ProviderProps) {
       }
       const order = moveOrder(blocks.length, from, to)
       await saveReorderedBody(rebuildBody(body, blocks, order))
+    },
+    insertBlock: async (gap, text) => {
+      const clean = text.replace(/^\n+|\n+$/g, '')
+      if (!clean) return
+      let next: string
+      if (blocks.length === 0) {
+        next = body.replace(/\n+$/, '') + (body.trim() ? '\n\n' : '') + clean
+      } else if (gap < blocks.length) {
+        const pos = blocks[Math.max(0, gap)].start
+        next = body.slice(0, pos) + clean + '\n\n' + body.slice(pos)
+      } else {
+        const pos = blocks[blocks.length - 1].end
+        next = body.slice(0, pos) + '\n\n' + clean + body.slice(pos)
+      }
+      await postSave({ path, body: next, baseHash: fnv1a(body) })
+      setLastSavedBody(body)
     },
     moveActiveBlock: async (direction) => {
       if (!activeRange) return
