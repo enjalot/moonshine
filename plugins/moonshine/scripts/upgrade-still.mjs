@@ -61,7 +61,7 @@ const INFRA = [
   /^src\/figures\/(DiagramFigure|AuthoredDiagram|DrawingFigure)\.tsx$/,
   /^src\/figures\/builtin\.ts$/,
   /^src\/figures\/diagram\//,
-  /^src\/figures\/lib\//,
+  /^src\/figures\/lib\/params\.ts$/,
   /^(vite|velite)\.config\.ts$/,
   /^vite-plugin-[\w-]+\.ts$/,
   /^tsconfig(\.node)?\.json$/,
@@ -87,7 +87,7 @@ if (!existsSync(path.join(PROJECT, 'package.json')) || !existsSync(path.join(PRO
 const git = (...a) => execFileSync('git', ['-C', REPO, ...a], { encoding: 'utf8', maxBuffer: 64 << 20 })
 const projectIsRepo = spawnSync('git', ['-C', PROJECT, 'rev-parse', '--git-dir']).status === 0
 if (apply && projectIsRepo) {
-  const dirty = execFileSync('git', ['-C', PROJECT, 'status', '--porcelain'], { encoding: 'utf8' }).trim()
+  const dirty = execFileSync('git', ['-C', PROJECT, 'status', '--porcelain', '--', '.'], { encoding: 'utf8' }).trim()
   if (dirty) {
     console.error('The project has uncommitted changes. Commit or stash them first, so the upgrade is one reviewable diff.')
     process.exit(1)
