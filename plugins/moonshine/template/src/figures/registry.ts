@@ -74,7 +74,7 @@ export const figures: Record<string, FigureEntry> = {
     defaults: lossLandscapeDefaults,
     paramHints: lossLandscapeHints,
   },
-  'flow-diagram': { component: FlowDiagram, height: 280 },
+  'flow-diagram': { component: FlowDiagram, height: 280, wide: true },
   sparkline: {
     component: Sparkline,
     height: 120,

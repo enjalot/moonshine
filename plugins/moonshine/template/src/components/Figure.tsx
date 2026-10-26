@@ -11,6 +11,7 @@ import { builtinFigure } from '../figures/builtin'
 import { blockIndexAt } from '../lib/blocks'
 import { useArticleStore, useFigureHighlight } from '../store'
 import { EDIT_ENABLED, fnv1a, useEdit } from '../lib/EditContext'
+import { FigureEditContext, type FigureEdit } from '../lib/FigureEditContext'
 import { useFeedback } from '../lib/FeedbackContext'
 import LazyIsland from './LazyIsland'
 import FigureKnobs from './FigureKnobs'
@@ -61,7 +62,7 @@ function splitTitle(children: ReactNode): {
 
 export default function Figure({ id, caption, children, node, ...rest }: Props) {
   const { hovered, pinned } = useFigureHighlight(id)
-  const { body, path, blocks, moveBlock } = useEdit()
+  const { body, path, blocks, moveBlock, deleteBlock, commitBody } = useEdit()
   const { caps, startComment } = useFeedback()
   // Depend on the raw pinned ref, not the boolean: pinning a different
   // part of the same figure should re-scroll, and a boolean wouldn't
@@ -122,9 +123,14 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
   }
 
   const Component = entry.component
+  // Width is always a choice, never a side effect of the content: the
+  // directive's `wide` attribute (`wide`, or `wide=false`), else the
+  // registry entry's default.
+  const wideAttr = (rest as Record<string, string | undefined>).wide
+  const wide = wideAttr === undefined ? Boolean(entry.wide) : wideAttr !== 'false'
   const cls = [
     'figure',
-    entry.wide && 'figure-wide',
+    wide && 'figure-wide',
     // Dev-only marker for the subtle hover hint that this figure has an
     // edit affordance (the knob panel). Never present in static builds.
     EDIT_ENABLED && 'mn-editable-figure',
@@ -148,6 +154,49 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
     canMoveUp: figIndex > 0,
     canMoveDown: figIndex >= 0 && figIndex < blocks.length - 1,
   }
+
+  // In-place figure controls (FigureEditContext), dev only.
+  const figureEdit: FigureEdit | null =
+    EDIT_ENABLED && range
+      ? {
+          id,
+          wide,
+          setWide: async (on) => {
+            if (on === wide) return
+            const slice = body.slice(range[0], range[1])
+            const nl = slice.indexOf('\n')
+            const first = nl === -1 ? slice : slice.slice(0, nl)
+            // Drop any wide attribute, then add one only if it differs from
+            // the registry default.
+            let next = first.replace(/\s+wide(=("[^"]*"|\S+?))?(?=[\s}])/g, '')
+            if (on !== Boolean(entry.wide)) {
+              const attr = on ? 'wide' : 'wide=false'
+              next = /\{[^}]*\}/.test(next) ? next.replace(/\}/, ` ${attr}}`) : `${next}{${attr}}`
+            }
+            await commitBody(range[0], range[1], next + (nl === -1 ? '' : slice.slice(nl)))
+          },
+          remove: async () => {
+            if (figIndex < 0) return
+            if (!window.confirm(`Delete the figure “${id}” from the article? (Undo restores it.)`)) return
+            await deleteBlock(figIndex)
+          },
+        }
+      : null
+  const figureControls = figureEdit && (
+    <span className="mn-figure-controls">
+      <button
+        type="button"
+        aria-pressed={wide}
+        title="Break out of the text column (wider than the prose)"
+        onClick={() => void figureEdit.setWide(!wide)}
+      >
+        Wide
+      </button>
+      <button type="button" className="mn-figure-delete" title="Delete this figure" onClick={() => void figureEdit.remove()}>
+        Delete
+      </button>
+    </span>
+  )
 
   // Open a comment targeting this whole figure. Excerpt prefers the caption
   // (what the reader sees) and falls back to the head of the directive source.
@@ -200,9 +249,11 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
   return (
     <figure ref={ref} id={id} className={cls} onClickCapture={onClickCapture}>
       {figTitle && <div className="figure-title">{figTitle}</div>}
-      <LazyIsland height={entry.height}>
-        <Component figureId={id} {...attrs} {...overrides} />
-      </LazyIsland>
+      <FigureEditContext.Provider value={figureEdit}>
+        <LazyIsland height={entry.height}>
+          <Component figureId={id} {...attrs} {...overrides} />
+        </LazyIsland>
+      </FigureEditContext.Provider>
       {EDIT_ENABLED && knobsOpen && entry.defaults && (
         <FigureKnobs
           figureId={id}
@@ -220,6 +271,7 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
           onSaved={() => setKnobsOpen(false)}
           range={range}
           onComment={onFigureComment}
+          controls={figureControls}
           {...moveProps}
         />
       )}
@@ -250,6 +302,7 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
                   ↓
                 </button>
               </span>
+              {figureControls}
               {onFigureComment && (
                 <button
                   type="button"

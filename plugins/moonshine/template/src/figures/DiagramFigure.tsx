@@ -3,6 +3,7 @@ import { ReactFlow, ReactFlowProvider } from '@xyflow/react'
 import '@xyflow/react/dist/base.css'
 import { useFigureHighlight } from '../store'
 import { EDIT_ENABLED, saveContentFile } from '../lib/EditContext'
+import { useFigureEdit } from '../lib/FigureEditContext'
 import { getBakedFigure } from '../lib/bakedFigures'
 import { narrowSpec, place, type Placement } from './diagram/layout'
 import { buildEdges, buildNodes, edgeTypes, frameFor, nodeTypes } from './diagram/flow'
@@ -27,12 +28,12 @@ export type { DiagramSpec } from './diagram/spec'
 //
 // Readability is a floor, not a hope: node labels are LABEL_PX at full
 // size and never render below MIN_LABEL_PX. In order, a diagram too wide
-// for the column
-//   1. breaks out into the figure gutter on desktop (like .figure-wide),
-//   2. shrinks, down to the floor,
-//   3. switches to its narrow arrangement (saved by the author, or an
+// for its figure (column or wide, the figure's choice, never automatic)
+//   1. shrinks, down to the floor,
+//   2. switches to its narrow arrangement (saved by the author, or an
 //      automatic top-to-bottom layout) if that reads larger,
-//   4. scrolls sideways at the floor, like a wide table.
+//   3. scrolls sideways at the floor, like a wide table.
+// The editor shows the author which of these readers will get.
 // The rendered label size is on the element as data-label-px;
 // scripts/check-diagrams.mjs in the moonshine repo measures it.
 
@@ -78,6 +79,8 @@ export default function DiagramFigure({ figureId, spec: specProp, nodes: legacyN
   )
   const [placement, setPlacement] = useState<Placement | null>(null)
   const [arranging, setArranging] = useState(false)
+  const fig = useFigureEdit()
+  const boxRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     let live = true
@@ -91,7 +94,7 @@ export default function DiagramFigure({ figureId, spec: specProp, nodes: legacyN
   const empty = spec.nodes.length === 0
 
   return (
-    <div className="mn-diagram">
+    <div className="mn-diagram" ref={boxRef}>
       {empty ? (
         EDIT_ENABLED && <p className="mn-diagram-empty">An empty diagram. Click “edit diagram” to add boxes.</p>
       ) : placement ? (
@@ -116,6 +119,11 @@ export default function DiagramFigure({ figureId, spec: specProp, nodes: legacyN
           <button type="button" onClick={() => setArranging(true)}>
             edit diagram
           </button>
+          {fig && (
+            <button type="button" className="mn-diagram-bar-delete" onClick={() => void fig.remove()}>
+              delete
+            </button>
+          )}
           {arranging && placement && (
             <Suspense fallback={<span>loading editor…</span>}>
               <DiagramArrange
@@ -125,6 +133,7 @@ export default function DiagramFigure({ figureId, spec: specProp, nodes: legacyN
                 placement={placement}
                 authored={authored || Boolean(saved?.spec)}
                 codeSpec={codeSpec}
+                layout={figureLayout(boxRef.current, fig)}
                 onClose={() => setArranging(false)}
               />
             </Suspense>
@@ -160,13 +169,6 @@ function ReaderFlow({
   }, [])
 
   const wide = useMemo<View>(() => ({ spec, placement, baked, frame: frameFor(spec, placement, baked) }), [spec, placement, baked])
-  // Sticky: breaking out widens the column, which could make the diagram
-  // fit and flip it back. Once out, it stays out (CSS ignores the class
-  // on screens without a gutter).
-  const [breakout, setBreakout] = useState(false)
-  useEffect(() => {
-    if (width && wide.frame.w > width) setBreakout(true)
-  }, [width, wide.frame.w])
   const needsNarrow = width > 0 && width / wide.frame.w < MIN_ZOOM
   const narrow = useNarrowView(spec, baked, needsNarrow)
 
@@ -192,7 +194,7 @@ function ReaderFlow({
   return (
     <div
       ref={ref}
-      className={`mn-diagram-scroll${scrolls ? ' is-scrolling' : ''}${breakout ? ' wants-wide' : ''}`}
+      className={`mn-diagram-scroll${scrolls ? ' is-scrolling' : ''}`}
       tabIndex={scrolls ? 0 : undefined}
     >
       <div
@@ -263,6 +265,20 @@ async function restoreCodeSpec(saved: BakedDiagram & { path?: string }) {
   if (!window.confirm('Use the figure code’s spec? Boxes and arrows added in the browser that the code lacks will be dropped.')) return
   const { path: _path, spec: _spec, specFrom: _from, ...rest } = saved
   await saveContentFile(`figures/${saved.figure}.json`, JSON.stringify(rest, null, 2))
+}
+
+// The widths this diagram gets as a column or a wide figure, for the
+// editor's preview of what readers will see.
+const WIDE_EXTRA = 64 // .figure-wide: 2rem a side
+function figureLayout(el: HTMLElement | null, fig: ReturnType<typeof useFigureEdit>) {
+  const w = el?.clientWidth ?? 0
+  if (!w) return undefined
+  const wide = Boolean(fig?.wide)
+  return {
+    wide,
+    widths: { column: wide ? w - WIDE_EXTRA : w, wide: wide ? w : w + WIDE_EXTRA },
+    setWide: fig?.setWide,
+  }
 }
 
 function fromLegacy(nodes: DiagramNode[], edges: DiagramEdge[]) {

@@ -229,7 +229,11 @@ Three steps, in this order:
    ```
    `height` reserves vertical space before the figure lazily mounts (no
    layout shift, term-pin scroll lands correctly); `wide` breaks it out
-   of the article column. Inline figures go in `inlineFigures`.
+   of the article column by default. The directive's own `wide` (or
+   `wide=false`) attribute overrides it per use, and is what the
+   author's **Wide** toggle writes. A figure's width is always one of
+   these choices, never a side effect of its content. Inline figures go
+   in `inlineFigures`.
 
 3. Reference the id in markdown:
    ```md
@@ -283,7 +287,10 @@ conflict-checked, auto-committing save path as prose edits), writing
 only values that differ from the defaults. The author dials in `lr` by
 feel; the result lands in markdown where you can read it. Clicks on
 the caption still open the prose editor; figures without registered
-defaults explain how to opt in.
+defaults explain how to opt in. Every figure's panel also has **Wide**
+(toggles the `wide` attribute) and **Delete** (removes the block from
+the markdown; undoable like any save); diagrams show **delete** in the
+bar under them too.
 
 Slider bounds come from the default's order of magnitude, and an
 **integer default infers an integer step** (`rows: 10` slides 9, 10,
@@ -380,9 +387,15 @@ generated code is bad at it. The template splits a diagram in two:
   hover text, an arrow's label, dashing, direction and delete, align and
   tidy (ELK) for several boxes. **B / T / N** place a box, text label or
   note; ⌘Z / ⇧⌘Z undo. The **reader frame** (what readers see) is always
-  on the canvas, fitting the content until the author drags or resizes
-  it. **Wide / Narrow (phones)** hold two arrangements: wide is what
-  readers normally see; narrow is for screens too small for it (below).
+  on the canvas: everything drawn (boxes, arrows, labels, notes) plus a
+  margin per side, so it follows the diagram as it changes. Dragging any
+  frame edge or corner sets that side's margin (negative crops); saved
+  as `framePad`. Its tab says how the diagram fits the figure ("shrinks
+  to 91%", or "too wide to read: readers get the narrow layout").
+  **Wide / Narrow (phones)** hold two arrangements: wide is what readers
+  normally see; narrow is for screens too small for it (below).
+  **Column / Wide** sets the figure's width (the directive's `wide`
+  attribute).
   **Save** (⌘S) writes `content/figures/<id>.json` through the same
   auto-committing save path as prose (last writer wins, no conflict
   check).
@@ -405,15 +418,15 @@ show it on hover or focus.
 
 **Readability floor.** Node labels are 15px at full size and never
 render below 13px (the caption size), at any screen width. A diagram
-wider than the column, in order:
+wider than its figure (column or wide: always a choice, never
+automatic), in order:
 
-1. takes the figure gutter on desktop, like `figure-wide`;
-2. shrinks, but only down to the floor;
-3. switches to its narrow arrangement if that reads larger: the
+1. shrinks, but only down to the floor;
+2. switches to its narrow arrangement if that reads larger: the
    author's saved one, or else an automatic top-to-bottom layout of the
    spec (only when the diagram has no annotations, whose positions
    belong to the wide arrangement);
-4. scrolls sideways at the floor, like a wide table, with a hint line.
+3. scrolls sideways at the floor, like a wide table, with a hint line.
 
 `scripts/check-diagrams.mjs` in the moonshine repo measures the rendered
 label size at 360–1100px and fails below the floor. A diagram that

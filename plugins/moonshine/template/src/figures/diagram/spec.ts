@@ -58,6 +58,9 @@ export type DiagramSpec = {
 
 export type Box = { x: number; y: number; w: number; h: number }
 
+// Margins around everything drawn, giving the reader frame.
+export type Pad = { top: number; right: number; bottom: number; left: number }
+
 export type Side = 'top' | 'right' | 'bottom' | 'left'
 
 // Author-added text on a diagram. `note` is a tinted sticky; `text` is a
@@ -81,7 +84,11 @@ export type BakedDiagram = {
   // Per-edge attachment sides; omitted = border-to-border straight line.
   edges?: Record<string, { source?: Side; target?: Side }>
   annotations?: Annotation[]
-  // What readers see, in page space. Defaults to the bounds of everything.
+  // What readers see: everything drawn plus these margins (default 16
+  // each; negative crops). See frameFor in flow.tsx.
+  framePad?: Pad
+  // Pre-0.9.1: a fixed frame box. Still honored; the editor converts it
+  // to framePad on the next save.
   frame?: Box
   // Optional second arrangement for narrow screens (see DiagramFigure),
   // saved from the editor's "narrow" tab. Without one, narrow screens get
@@ -93,7 +100,7 @@ export type BakedDiagram = {
 }
 
 // The arrangement half of a BakedDiagram, on its own.
-export type Arrangement = Pick<BakedDiagram, 'nodes' | 'groups' | 'edges' | 'annotations' | 'frame'>
+export type Arrangement = Pick<BakedDiagram, 'nodes' | 'groups' | 'edges' | 'annotations' | 'framePad' | 'frame'>
 
 export const edgeKey = (e: SpecEdge) => e.id ?? `${e.from}--${e.to}`
 
