@@ -1,6 +1,6 @@
 {
   "name": "moonshine",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Agent skill for creating interactive technical explanations inspired by Distill.pub",
   "keywords": [
     "claude-code-plugin",

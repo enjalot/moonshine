@@ -58,5 +58,11 @@ export default defineConfig({
     // headers as a DNS-rebinding mitigation; `.local` admits mDNS
     // hostnames like http://my-machine.local:5173.
     allowedHosts: ['.local'],
+    // Watch with fs.watch, not the fsevents module: on macOS, fsevents can
+    // deliver no events at all to a server started outside a GUI login
+    // (over ssh, or by an agent app). Vite then misses velite rebuilds, so
+    // the page keeps a stale body and the next save 409s, and new uploads
+    // in public/media are never served. No effect on Linux.
+    watch: { useFsEvents: false },
   },
 })
