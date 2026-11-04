@@ -1,7 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
-import type { PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, useId, useState } from 'react'
+import { inOrder, param, type Draggable } from 'dragology'
 import type { FigureProps } from '../registry'
-import { isSimActivate, SIM_GESTURE_LABEL } from './gesture'
+import DragFigure from '../drag/DragFigure'
+import { each } from '../drag/each'
+import { drawEdge, drawNode } from '../diagram/draw'
+import { routeEdges } from '../diagram/geometry'
+import type { Box } from '../diagram/spec'
+import { SIM_GESTURE_LABEL } from './gesture'
+import './sims.css'
 
 // A pure, local-state simulation of moonshine's "baked diagram layout".
 //
@@ -12,8 +18,11 @@ import { isSimActivate, SIM_GESTURE_LABEL } from './gesture'
 // a crop frame, when used) into that JSON. Because the two are matched by id, regenerating the spec (an agent
 // rewriting the component) never disturbs the author's layout.
 //
-// No React Flow, no EditContext, no network: a hand-rolled SVG node-link
-// graph plus local state. Deterministic: "regenerate" cycles a fixed list.
+// No EditContext, no network: the real diagram drawing (diagram/draw.tsx)
+// over local state, by declarative dragging (drag/): moving a node is
+// d.vary over its x and y, and "regenerate" just sets the next structure,
+// which Dragology animates to (new labels and edges, the same positions).
+// Deterministic: "regenerate" cycles a fixed list.
 
 type Pos = { x: number; y: number }
 type Node = { id: string; label: string }
@@ -21,8 +30,8 @@ type Structure = { name: string; nodes: Node[]; edges: [string, string][] }
 
 const VB_W = 660
 const VB_H = 300
-const NODE_W = 96
-const NODE_H = 46
+const NODE_W = 110
+const NODE_H = 48
 
 // "Code-default" positions — what the component emits before any author
 // arrangement. Deliberately a plain stack so the author's baked layout reads
@@ -119,55 +128,46 @@ export default function BakedDiagramSim(_props: FigureProps) {
   // null until the author bakes at least once.
   const [baked, setBaked] = useState<Record<string, Pos> | null>(null)
 
-  const svgRef = useRef<SVGSVGElement>(null)
-  // Active drag: which node, and the pointer→origin offset in viewBox units.
-  const dragRef = useRef<{ id: string; dx: number; dy: number } | null>(null)
+  const uid = useId().replace(/:/g, '')
+  const box = (p: Pos): Box => ({ x: p.x - NODE_W / 2, y: p.y - NODE_H / 2, w: NODE_W, h: NODE_H })
 
-  // Single always-on listener pair, gated by dragRef, so cleanup on unmount
-  // is guaranteed regardless of drag state.
-  useEffect(() => {
-    function toSvg(clientX: number, clientY: number): Pos {
-      const svg = svgRef.current
-      if (!svg) return { x: 0, y: 0 }
-      const r = svg.getBoundingClientRect()
-      return {
-        x: ((clientX - r.left) / r.width) * VB_W,
-        y: ((clientY - r.top) / r.height) * VB_H,
-      }
-    }
-    function onMove(e: PointerEvent) {
-      const d = dragRef.current
-      if (!d) return
-      const p = toSvg(e.clientX, e.clientY)
-      const x = Math.max(NODE_W / 2, Math.min(VB_W - NODE_W / 2, p.x - d.dx))
-      const y = Math.max(NODE_H / 2, Math.min(VB_H - NODE_H / 2, p.y - d.dy))
-      setPositions((prev) => ({ ...prev, [d.id]: { x, y } }))
-    }
-    function onUp() {
-      dragRef.current = null
-    }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-    window.addEventListener('blur', onUp)
-    return () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-      window.removeEventListener('blur', onUp)
-    }
-  }, [])
-
-  function startDrag(id: string, e: ReactPointerEvent) {
-    if (!arranging) return
-    e.preventDefault()
-    const svg = svgRef.current
-    if (!svg) return
-    const r = svg.getBoundingClientRect()
-    const px = ((e.clientX - r.left) / r.width) * VB_W
-    const py = ((e.clientY - r.top) / r.height) * VB_H
-    const cur = positions[id] ?? DEFAULT_POS[id] ?? FALLBACK
-    dragRef.current = { id, dx: px - cur.x, dy: py - cur.y }
-    e.currentTarget.setPointerCapture?.(e.pointerId)
-  }
+  // The drawing: the real diagram pieces, positioned from `positions`.
+  // While arranging, each node varies its own x and y, kept on the canvas.
+  const draw = useCallback<Draggable<{ positions: Record<string, Pos> }>>(
+    ({ state, d }) => {
+      const nodes = Object.fromEntries(struct.nodes.map((n) => [n.id, box(state.positions[n.id] ?? DEFAULT_POS[n.id] ?? FALLBACK)]))
+      const spec = { nodes: struct.nodes, edges: struct.edges.map(([from, to]) => ({ from, to })) }
+      const routes = routeEdges(spec, { nodes, groups: {} }, {})
+      const c = { uid }
+      return (
+        <g>
+          {each(spec.edges, (e, i) => {
+            const g = routes.get(`${e.from}--${e.to}`)
+            return g ? drawEdge(c, e, i, g) : null
+          })}
+          {each(struct.nodes, (n) => {
+            const fellBack = !baked?.[n.id] && !DEFAULT_POS[n.id]
+            return drawNode(c, { ...n, kind: 'accent' }, nodes[n.id], {
+              on: fellBack ? 'unarranged' : undefined,
+              props: arranging
+                ? {
+                    dragologyOnDrag: () =>
+                      d.vary(state, [param('positions', n.id, 'x'), param('positions', n.id, 'y')], {
+                        constraint: (s) => [
+                          ...inOrder([NODE_W / 2, s.positions[n.id].x, VB_W - NODE_W / 2]),
+                          ...inOrder([NODE_H / 2, s.positions[n.id].y, VB_H - NODE_H / 2]),
+                        ],
+                      }),
+                  }
+                : undefined,
+            })
+          })}
+        </g>
+      )
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [struct, baked, arranging, uid],
+  )
 
   function saveLayout() {
     const layout: Record<string, Pos> = {}
@@ -199,15 +199,6 @@ export default function BakedDiagramSim(_props: FigureProps) {
       return out
     })
     setStructIdx(next)
-  }
-
-  // Clicking the diagram is a shortcut into arrange mode (same effect as
-  // the "arrange" button); dragging works once arranging.
-  function onSvgPointerDown(e: ReactPointerEvent) {
-    if (!arranging && isSimActivate(e)) {
-      e.preventDefault()
-      setArranging(true)
-    }
   }
 
   // The real file can also carry edge sides, annotations and a crop frame.
@@ -242,75 +233,20 @@ export default function BakedDiagramSim(_props: FigureProps) {
       >
         {/* ---- diagram ---- */}
         <div>
-          <svg
-            ref={svgRef}
-            viewBox={`0 0 ${VB_W} ${VB_H}`}
-            onPointerDown={onSvgPointerDown}
-            style={{
-              width: '100%',
-              height: 'auto',
-              background: 'var(--fig-bg)',
-              border: arranging
-                ? '1px solid var(--accent)'
-                : '1px solid var(--border)',
-              borderRadius: '6px',
-              touchAction: 'none',
-              cursor: arranging ? 'default' : 'pointer',
-            }}
+          {/* Clicking the diagram is a shortcut into arrange mode. */}
+          <div
+            className={`mn-sim-baked${arranging ? ' is-arranging' : ''}`}
+            onClick={() => !arranging && setArranging(true)}
           >
-            {/* edges */}
-            {struct.edges.map(([from, to], i) => {
-              const a = positions[from] ?? DEFAULT_POS[from] ?? FALLBACK
-              const b = positions[to] ?? DEFAULT_POS[to] ?? FALLBACK
-              return (
-                <line
-                  key={`${from}-${to}-${i}`}
-                  x1={a.x}
-                  y1={a.y}
-                  x2={b.x}
-                  y2={b.y}
-                  stroke="var(--text-2)"
-                  strokeWidth={1.5}
-                  opacity={0.55}
-                />
-              )
-            })}
-            {/* nodes */}
-            {struct.nodes.map((n) => {
-              const p = positions[n.id] ?? DEFAULT_POS[n.id] ?? FALLBACK
-              const fellBack = !baked?.[n.id] && !DEFAULT_POS[n.id]
-              return (
-                <g
-                  key={n.id}
-                  transform={`translate(${p.x}, ${p.y})`}
-                  onPointerDown={(e) => startDrag(n.id, e)}
-                  style={{ cursor: arranging ? 'grab' : 'default' }}
-                >
-                  <rect
-                    x={-NODE_W / 2}
-                    y={-NODE_H / 2}
-                    width={NODE_W}
-                    height={NODE_H}
-                    rx={10}
-                    fill="var(--accent-light)"
-                    stroke={fellBack ? 'var(--error)' : 'var(--accent)'}
-                    strokeWidth={fellBack ? 2 : 1.5}
-                    strokeDasharray={fellBack ? '4 3' : undefined}
-                  />
-                  <text
-                    x={0}
-                    y={4}
-                    textAnchor="middle"
-                    fontFamily="var(--heading-font)"
-                    fontSize={14}
-                    fill="var(--text)"
-                  >
-                    {n.label}
-                  </text>
-                </g>
-              )
-            })}
-          </svg>
+            <DragFigure
+              draggable={draw}
+              width={VB_W}
+              height={VB_H}
+              state={{ positions }}
+              onState={(s) => setPositions(s.positions)}
+              label="A small pipeline diagram whose nodes can be dragged into place once arranging."
+            />
+          </div>
 
           {/* control bar — reuses the real arrange/save bar look */}
           <div className="mn-diagram-bar">

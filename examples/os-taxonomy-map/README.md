@@ -92,7 +92,7 @@ src/
     Sparkline.tsx         ← D3 example (registered knobs)
     GradientField.tsx     ← plain SVG example
     LossLandscape.tsx     ← interactive React-state example (PARAM_HINTS)
-    DiagramFigure.tsx     ← generic React Flow diagram + arrange/save
+    DiagramFigure.tsx     ← generic SVG diagram (Dragology) + arrange/save
     FlowDiagram.tsx       ← example diagram semantics on DiagramFigure
     lib/params.ts         ← attr→number/bool/string coercers
     inline/MiniSpark.tsx  ← inline visual example

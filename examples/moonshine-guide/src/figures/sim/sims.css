@@ -1,0 +1,66 @@
+/* Guide simulations drawn by Dragology. ReorderSim: section cards. */
+.mn-sim-card {
+  cursor: grab;
+}
+.mn-sim-card-box {
+  fill: var(--fig-bg);
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.mn-sim-card[data-on~='lifted'] {
+  filter: drop-shadow(0 6px 14px var(--shadow-edge));
+}
+.mn-sim-card[data-on~='lifted'] .mn-sim-card-box {
+  stroke: var(--accent);
+}
+.mn-sim-card-title {
+  font-family: var(--heading-font);
+  font-weight: 700;
+  font-size: 16px;
+  fill: var(--text);
+}
+.mn-sim-card-line {
+  font-family: var(--body-font);
+  font-size: 14px;
+  fill: var(--text-2);
+}
+.mn-sim-card-move {
+  cursor: pointer;
+}
+.mn-sim-card-move rect {
+  fill: var(--bg);
+  stroke: var(--border);
+}
+.mn-sim-card-move:hover rect {
+  stroke: var(--accent);
+}
+.mn-sim-card-move text {
+  font-family: var(--heading-font);
+  font-size: 14px;
+  fill: var(--text);
+}
+.mn-sim-card-move[data-on~='off'] {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* BakedDiagramSim: the real diagram drawing in a bordered canvas. */
+.mn-sim-baked {
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.mn-sim-baked.is-arranging {
+  border-color: var(--accent);
+  cursor: default;
+}
+.mn-sim-baked.is-arranging .mn-dg-node {
+  cursor: grab;
+}
+.mn-sim-baked .mn-dg-node[data-on~='unarranged'] .mn-dg-halo {
+  opacity: 1;
+  stroke: var(--error);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}

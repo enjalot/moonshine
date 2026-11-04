@@ -45,7 +45,7 @@ This panel, like the other editing features, only renders during development, an
 
 ## Rearranging the page
 
-Often we want to move blocks or figures around to reorganize an article. Still supports :term[dragging any block]{to=reorder} up or down. The open editor also carries up and down buttons for moving one step at a time. Reordering rewrites the markdown body.
+Often we want to move blocks or figures around to reorganize an article. Still supports :term[dragging any block]{to=reorder} up or down: the block lifts off the page and the others slide apart to show where it will land. The open editor also carries up and down buttons for moving one step at a time. Reordering rewrites the markdown body.
 
 :::figure{id=reorder}
 Four blocks. The order you leave them in is the order written back to the file.
@@ -63,17 +63,19 @@ A sentence with linked terms beside a small diagram. Each link is just an id in 
 
 ## Diagrams
 
-With all due respect to Mermaid, it is difficult to prompt a good looking SVG diagram. Adjusting nodes and organizing links are still much easier to do manually, so the agent declares a diagram as a small spec (nodes, edges, and groups) rendered with [React Flow](https://reactflow.dev/), and the harness lets you arrange it. The arrangement is saved in a small JSON file next to the article:
+With all due respect to Mermaid, it is difficult to prompt a good looking SVG diagram. Adjusting nodes and organizing links are still much easier to do manually, so the agent declares a diagram as a small spec (nodes, edges, and groups) drawn as SVG, and the harness lets you arrange it. The arrangement is saved in a small JSON file next to the article:
 
 :::figure{id=still-pipeline}
-The still pipeline as a live React Flow diagram, not a simulation. The nodes and edges are declared in `StillPipelineDiagram.tsx`; the arrangement you see was saved to `content/figures/still-pipeline.json` from the editor described below.
+The still pipeline as a live diagram, not a simulation. The nodes and edges are declared in `StillPipelineDiagram.tsx`; the arrangement you see was saved to `content/figures/still-pipeline.json` from the editor described below.
 :::
 
-In development an edit button appears under a diagram. It opens a full-screen editor where you work on the diagram itself: drag boxes (they snap to a grid and to each other's edges), double-click the canvas for a new box, drag from a box's dot to connect it, double-click any label to retype it, drag an arrow's end to another side or box, and add text and sticky notes. A small toolbar above the selection holds the rest. The frame readers see follows the content, and dragging its edges adds room. A second tab holds a narrow arrangement for phones, and a switch sets whether the figure sits in the text column or breaks out wide. Readers get the live diagram with 15px labels that never shrink below 13px: on a narrow screen it switches to the narrow arrangement instead, and only scrolls sideways if that still doesn't fit. Because structure and arrangement are separate, the agent can regenerate the diagram's logic without disturbing where you placed everything:
+In development an edit button appears under a diagram. It opens a full-screen editor where you work on the diagram itself: drag boxes (they snap to a grid and to each other's edges), double-click the canvas for a new box, drag from a box's dot to connect it, double-click any label to retype it, drag an arrow's end and watch it re-route to the nearest side of any box, drop a box inside a group to join it, slide a label along its arrow, and add text and sticky notes. A small toolbar above the selection holds the rest. The frame readers see follows the content, and dragging its edges adds room. A second tab holds a narrow arrangement for phones, and a switch sets whether the figure sits in the text column or breaks out wide. Readers get the live diagram with 15px labels that never shrink below 13px: on a narrow screen it switches to the narrow arrangement instead, and only scrolls sideways if that still doesn't fit. Because structure and arrangement are separate, the agent can regenerate the diagram's logic without disturbing where you placed everything:
 
 :::figure{id=baked-diagram}
 Structure from code, arrangement from JSON. The two halves are merged by node id every time the page renders.
 :::
+
+Every drag in that editor, like the block reordering above, is built with [declarative dragging](https://declarative-dragging.github.io). Instead of handling pointer events, the code says which diagrams a drag can lead to (this arrow attached to any side of any box, this box inside or outside the group) and the library renders those possibilities to work out the motion, snapping and animation. The same toolkit ships in the template for figures that readers drag, so an agent can make a slider snap to the values the prose talks about, or let a reader grab the output of a computation and pull the inputs along with it.
 
 ## Adding your own content
 

@@ -1,12 +1,13 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { ReactFlow, ReactFlowProvider } from '@xyflow/react'
-import '@xyflow/react/dist/base.css'
+import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { scale, translate, type Draggable } from 'dragology'
+import DragRenderer from './drag/Renderer'
 import { useFigureHighlight } from '../store'
 import { EDIT_ENABLED, saveContentFile } from '../lib/EditContext'
 import { useFigureEdit } from '../lib/FigureEditContext'
 import { getBakedFigure } from '../lib/bakedFigures'
 import { narrowSpec, place, type Placement } from './diagram/layout'
-import { buildEdges, buildNodes, edgeTypes, frameFor, nodeTypes } from './diagram/flow'
+import { frameFor } from './diagram/geometry'
+import { drawDiagram } from './diagram/draw'
 import { specHash, type BakedDiagram, type Box, type DiagramSpec } from './diagram/spec'
 
 export type { DiagramSpec } from './diagram/spec'
@@ -19,8 +20,8 @@ export type { DiagramSpec } from './diagram/spec'
 // where the author arranges it and can change its structure too; Save
 // writes content/figures/<figure-id>.json. Once the author has edited the
 // structure, the spec saved there is the one drawn (see diagram/spec.ts).
-// Readers get a live React Flow diagram: hovering a node with a `detail`
-// shows it, and :term[word]{to=figure-id.part} highlights a node, group,
+// Readers get a live SVG diagram, drawn by Dragology (drag/): hovering
+// or focusing a node with a `detail` shows it, and :term[word]{to=figure-id.part} highlights a node, group,
 // edge (`from--to`) or annotation.
 //
 // Nodes the author hasn't placed yet (added to the spec later) are laid out
@@ -37,7 +38,7 @@ export type { DiagramSpec } from './diagram/spec'
 // The rendered label size is on the element as data-label-px;
 // scripts/check-diagrams.mjs in the moonshine repo measures it.
 
-const LABEL_PX = 15 // .mn-flow-node font-size in article.css
+const LABEL_PX = 15 // .mn-dg-label font-size in article.css
 const MIN_LABEL_PX = 13 // the figure-caption size: the smallest text we ship
 const MIN_ZOOM = MIN_LABEL_PX / LABEL_PX
 
@@ -98,7 +99,7 @@ export default function DiagramFigure({ figureId, spec: specProp, nodes: legacyN
       {empty ? (
         EDIT_ENABLED && <p className="mn-diagram-empty">An empty diagram. Click “edit diagram” to add boxes.</p>
       ) : placement ? (
-        <ReaderFlow spec={spec} placement={placement} baked={baked} activePart={activePart} />
+        <ReaderSvg spec={spec} placement={placement} baked={baked} activePart={activePart} />
       ) : (
         <div className="mn-diagram-loading" />
       )}
@@ -145,8 +146,9 @@ export default function DiagramFigure({ figureId, spec: specProp, nodes: legacyN
 }
 
 type View = { spec: DiagramSpec; placement: Placement; baked: BakedDiagram | null; frame: Box }
+type ReaderState = { layout: 'wide' | 'narrow' }
 
-function ReaderFlow({
+function ReaderSvg({
   spec,
   placement,
   baked,
@@ -167,6 +169,8 @@ function ReaderFlow({
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
+  const uid = useId().replace(/:/g, '')
+  const [hover, setHover] = useState<string | null>(null)
 
   const wide = useMemo<View>(() => ({ spec, placement, baked, frame: frameFor(spec, placement, baked) }), [spec, placement, baked])
   const needsNarrow = width > 0 && width / wide.frame.w < MIN_ZOOM
@@ -179,17 +183,41 @@ function ReaderFlow({
   if (needsNarrow && narrow && fit(narrow) > fit(wide)) view = narrow
   const zoom = width ? Math.max(MIN_ZOOM, fit(view)) : 1
   const scrolls = width > 0 && view.frame.w * zoom > width + 0.5
-
-  const nodes = useMemo(() => buildNodes(view.spec, view.placement, view.baked, { activePart }), [view, activePart])
-  const edges = useMemo(() => buildEdges(view.spec, view.baked, activePart), [view, activePart])
-
   const frame = view.frame
   const inner = Math.max(width, Math.ceil(frame.w * zoom))
-  const viewport = {
-    x: -frame.x * zoom + Math.max(0, (inner - frame.w * zoom) / 2),
-    y: -frame.y * zoom,
-    zoom,
-  }
+  const ox = Math.max(0, (inner - frame.w * zoom) / 2)
+
+  // The diagram is drawn by Dragology, so switching between the wide and
+  // narrow arrangements (a phone turning, a window narrowing) animates
+  // every box to its new place instead of jumping. Readers drag nothing.
+  const state = useMemo<ReaderState>(() => ({ layout: view === wide ? 'wide' : 'narrow' }), [view, wide])
+  const draggable = useCallback<Draggable<ReaderState>>(
+    ({ state }) => {
+      const v = state.layout === 'narrow' && narrow ? narrow : wide
+      const z = width ? Math.max(MIN_ZOOM, Math.min(1, width / v.frame.w)) : 1
+      const placed = { nodes: v.placement.nodes, groups: v.placement.groups }
+      return (
+        <g transform={translate(Math.max(0, (inner - v.frame.w * z) / 2), 0) + scale(z) + translate(-v.frame.x, -v.frame.y)}>
+          {drawDiagram({ uid, active: activePart }, v.spec, placed, v.baked, (n) =>
+            n.detail
+              ? {
+                  tabIndex: 0,
+                  'aria-label': `${n.label}: ${n.detail}`,
+                  onPointerEnter: () => setHover(n.id),
+                  onPointerLeave: () => setHover((h) => (h === n.id ? null : h)),
+                  onFocus: () => setHover(n.id),
+                  onBlur: () => setHover((h) => (h === n.id ? null : h)),
+                }
+              : undefined,
+          )}
+        </g>
+      )
+    },
+    [wide, narrow, width, inner, uid, activePart],
+  )
+
+  const tip = hover ? view.spec.nodes.find((n) => n.id === hover) : undefined
+  const tipBox = tip ? view.placement.nodes[tip.id] : undefined
 
   return (
     <div
@@ -205,30 +233,15 @@ function ReaderFlow({
         data-label-px={(LABEL_PX * zoom).toFixed(2)}
         data-layout={view === wide ? 'wide' : 'narrow'}
       >
-        {width > 0 && (
-          <ReactFlowProvider>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              edgeTypes={edgeTypes}
-              viewport={viewport}
-              minZoom={0.05}
-              maxZoom={2}
-              proOptions={{ hideAttribution: true }}
-              nodesDraggable={false}
-              nodesConnectable={false}
-              elementsSelectable={false}
-              nodesFocusable={false}
-              edgesFocusable={false}
-              panOnDrag={false}
-              zoomOnScroll={false}
-              zoomOnPinch={false}
-              zoomOnDoubleClick={false}
-              panOnScroll={false}
-              preventScrolling={false}
-            />
-          </ReactFlowProvider>
+        {width > 0 && <DragRenderer draggable={draggable} state={state} width={inner} height={Math.ceil(frame.h * zoom)} />}
+        {tip?.detail && tipBox && (
+          <span
+            className="mn-dg-detail"
+            role="tooltip"
+            style={{ left: ox + (tipBox.x + tipBox.w / 2 - frame.x) * zoom, top: (tipBox.y + tipBox.h - frame.y) * zoom + 8 }}
+          >
+            {tip.detail}
+          </span>
         )}
       </div>
       {scrolls && <p className="mn-diagram-scroll-hint">scroll sideways for the rest of the diagram →</p>}

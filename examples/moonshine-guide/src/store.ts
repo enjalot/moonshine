@@ -10,7 +10,7 @@ import { create } from 'zustand'
 //
 // Term refs follow the convention `figure-id` or `figure-id.part-id`. The
 // dotted form lets a term highlight a specific element WITHIN a figure
-// (e.g. one node of a React Flow diagram), not just outline the whole
+// (e.g. one node of a diagram), not just outline the whole
 // figure. Use `parseRef` / `useFigureHighlight` to consume.
 //
 // Both `<Term>` and `<Figure>` subscribe. Clicking a term scrolls the
