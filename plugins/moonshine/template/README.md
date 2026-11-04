@@ -84,11 +84,13 @@ src/
     registry.ts           ← id → {component, height, wide, defaults, paramHints}
     Sparkline.tsx         ← D3 example (registered knobs)
     GradientField.tsx     ← plain SVG example
-    LossLandscape.tsx     ← interactive React-state example (PARAM_HINTS)
-    DiagramFigure.tsx     ← DiagramSpec + saved arrangement → live React Flow
+    LossLandscape.tsx     ← draggable figure: pull the path, the start follows
+    StepSize.tsx          ← draggable figure: a slider with detents
+    drag/                 ← declarative dragging (Dragology): README, DragFigure
+    DiagramFigure.tsx     ← DiagramSpec + saved arrangement → live SVG diagram
     FlowDiagram.tsx       ← example DiagramSpec
     AuthoredDiagram.tsx   ← built-in kind=diagram (spec saved with its arrangement)
-    diagram/              ← spec types, ELK layout, React Flow pieces, the editor
+    diagram/              ← spec types, ELK layout, routing, SVG drawing, the editor
     lib/params.ts         ← attr→number/bool/string coercers
     inline/MiniSpark.tsx  ← inline visual example
   lib/                    ← editing, block geometry, reorder animation, feedback
@@ -146,7 +148,8 @@ Too small :inline-viz{kind=mini-spark value=0.15} and you stall.
 
 Inline figures register under `inlineFigures` and render with
 `:inline-viz{kind=my-figure ...attrs}`. For node-link diagrams, build
-on `DiagramFigure` (see `FlowDiagram.tsx`) — never Mermaid.
+on `DiagramFigure` (see `FlowDiagram.tsx`) — never Mermaid. For anything
+a reader drags, use declarative dragging: see `src/figures/drag/README.md`.
 
 ## Single article vs series
 

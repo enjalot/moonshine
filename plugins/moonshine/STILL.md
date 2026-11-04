@@ -185,15 +185,23 @@ template/
       registry.ts            ← id → {component, height, wide, defaults, paramHints}
       Sparkline.tsx          ← D3 example
       GradientField.tsx      ← plain SVG example
-      LossLandscape.tsx      ← interactive React state example
-      DiagramFigure.tsx      ← spec + arrangement → live React Flow diagram
+      LossLandscape.tsx      ← draggable figure: pull the path, the start follows
+      StepSize.tsx           ← draggable figure: a slider with detents
+      DiagramFigure.tsx      ← spec + arrangement → live SVG diagram
       FlowDiagram.tsx        ← example DiagramSpec on DiagramFigure
       AuthoredDiagram.tsx    ← built-in kind=diagram: spec saved in its JSON
       builtin.ts             ← built-in figure kinds (no registry entry)
+      drag/
+        README.md            ← declarative dragging: patterns and rules
+        DragFigure.tsx       ← frame for a draggable figure (scales to the column)
+        Renderer.tsx         ← Dragology's renderer, with moonshine's fixes
+        each.ts              ← lists inside a drawing
       diagram/
         spec.ts              ← DiagramSpec + BakedDiagram types
         layout.ts            ← ELK auto-layout + merge with saved boxes
-        flow.tsx             ← React Flow nodes/edges shared by reader + editor
+        geometry.ts          ← edge routes, groups, the reader frame
+        draw.tsx             ← boxes, groups, arrows, notes as SVG
+        text.ts              ← label measuring and wrapping
         DiagramArrange.tsx   ← dev-only full-screen diagram editor (lazy)
       lib/
         params.ts            ← attr→number/bool/string coercers
@@ -313,7 +321,7 @@ either way.
 
 The figure layer is open. But there are real choices to make per figure:
 
-- **`DiagramFigure`** (React Flow) for node-link, system, and pipeline
+- **`DiagramFigure`** for node-link, system, and pipeline
   diagrams (see "Diagrams" below). You declare a small spec; the author
   arranges it; readers get a live diagram at the article's type size.
   Every node, group and edge has a stable id, so
@@ -327,9 +335,22 @@ The figure layer is open. But there are real choices to make per figure:
   patterns apply. Inside a React component, treat the SVG element as
   D3-owned (use `useRef` + `useEffect`).
 
-- **Plain SVG** for static diagrams or small interactive figures
-  where D3 would be overkill. The `GradientField.tsx` example shows
-  this pattern.
+- **Plain SVG** for static diagrams or small figures where D3 would be
+  overkill. The `GradientField.tsx` example shows this pattern.
+
+- **Declarative dragging** (Dragology, `src/figures/drag/`) for anything
+  a reader drags. Draw the figure as a function of its state, and for
+  each draggable element say which states dragging it can reach:
+  `d.vary(state, param('x'))` for a slider, `d.closest(orders)
+  .withFloating()` for a reorderable list, `d.closest(detents).whenFar(
+  d.vary(...))` for a slider that snaps to the values the prose names.
+  Dragology works out the motion, snapping and drop animation. Its best
+  trick: `d.vary` moves *whatever element is dragged* under the pointer,
+  so readers can drag an output (a point on a computed path, where a
+  step lands) and the inputs follow. `LossLandscape.tsx` and
+  `StepSize.tsx` show both; read `src/figures/drag/README.md` (patterns
+  and rules) before writing one. Prefer it to hand-written pointer
+  handlers and `d3.drag`.
 
 - **react-three-fiber** for 3D. Wrap heavy 3D figures in
   `<LazyIsland>` so they only boot when scrolled to.
@@ -378,11 +399,18 @@ generated code is bad at it. The template splits a diagram in two:
 
 - **Author-owned arrangement.** In `npm run dev`, **edit diagram**
   under the diagram opens a full-screen editor built on direct
-  manipulation: drag boxes (8px grid, alignment guides), drag the canvas
-  to select, double-click the canvas for a new box, drag a box's side dot
-  to another box to connect (or onto empty canvas for a new connected
-  box), Tab for the next box in the flow, double-click (or Enter) to edit
-  any label in place, drag a selected arrow's end to another side or box.
+  manipulation, drawn by Dragology like the reader's diagram: drag boxes
+  (8px grid, alignment guides; dropped inside a group's box, a box joins
+  the group, and the group grows to take it in as you drag), drag the
+  canvas to select, double-click the canvas for a new box, drag a box's
+  side dot to another box to connect (or onto empty canvas for a new
+  connected box), Tab for the next box in the flow, double-click (or
+  Enter) to edit any label in place. Drag a selected arrow's end and the
+  arrow re-routes live to the nearest side of any box; far from every
+  side, it follows the pointer and snaps back if dropped there. Drag a
+  selected arrow's label to slide it along the arrow (saved as
+  `labelAt`). Undo, tidy and align animate from the old diagram to the
+  new.
   A small toolbar above the selection holds the rest: a box's kind and
   hover text, an arrow's label, dashing, direction and delete, align and
   tidy (ELK) for several boxes. **B / T / N** place a box, text label or
@@ -410,8 +438,10 @@ generated code is bad at it. The template splits a diagram in two:
   and offers **use code version** (which drops the JSON copy, keeping
   positions by id). Layout-only edits leave the code spec in charge.
 
-Readers get a live React Flow diagram built from both, locked (the wheel
-scrolls the page), drawn from the tokens so it follows light/dark. Edges
+Readers get a live SVG diagram built from both (drawn by Dragology, so a
+screen that switches between the wide and narrow arrangements sees the
+boxes move to their new places), drawn from the tokens so it follows
+light/dark. Edges
 run border to border, or orthogonally out of an author-chosen side; an
 edge that would cross a node bows around the row. Nodes with `detail`
 show it on hover or focus.
@@ -453,8 +483,9 @@ Rules for agents:
 - Keep diagrams editorial: roughly 3–12 nodes. Past that you're
   building a tool, not an article.
 - For a figure that needs more than node-link (custom node rendering,
-  live data inside nodes), build on `diagram/flow.tsx`'s pieces rather
-  than starting from raw React Flow.
+  live data inside nodes, boxes readers can drag), build on
+  `diagram/draw.tsx` and `diagram/geometry.ts` inside a Dragology
+  drawing (see `src/figures/drag/README.md`) rather than starting over.
 
 ## Author-Added Content: the "+" Between Blocks (dev only)
 
@@ -543,9 +574,9 @@ page — no jumping back to the `.md` file for small wording changes.
   control rail to the right of the editing box) writes the change back
   to the `.md` file; **Esc** cancels.
 - **Reorder sections and figures.** Cmd/Ctrl+drag any block up or down to
-  move it; a drop line shows where it will land, and releasing rewrites
-  the markdown, then the moved blocks settle smoothly into their new
-  positions (respecting reduced-motion preferences). The open editor (and a
+  move it: the block lifts and follows the pointer while the others slide
+  apart to show where it will land (declarative dragging over every
+  possible order), and releasing rewrites the markdown. The open editor (and a
   figure's knob panel) also carry **↑ / ↓** buttons that move the block
   one step. Both act on whole top-level blocks — a paragraph, a heading,
   a `:::figure`, a `$$` math block — so editing a caption and pressing ↓
@@ -585,7 +616,8 @@ The pieces live in `src/lib/EditContext.tsx`, `src/components/
 EditableBlock.tsx`, `EditableField.tsx`, and `SourceEditor.tsx`, wired up
 in `Article.tsx`. Reordering adds `src/lib/blocks.ts` (parses the body
 into top-level block ranges and rebuilds it in a new order) and
-`src/components/BlockReorderLayer.tsx` (the Cmd-drag controller); the
+`src/components/BlockReorderLayer.tsx` (the Cmd-drag controller: it
+draws clones of the blocks in a Dragology overlay for the drag); the
 splice it produces goes through the same conflict-checked save path.
 
 What's editable in place: paragraphs, headings, lists, blockquotes, the

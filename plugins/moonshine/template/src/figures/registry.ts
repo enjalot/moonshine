@@ -10,6 +10,7 @@ import Sparkline, {
   PARAM_HINTS as sparklineHints,
 } from './Sparkline'
 import MiniSpark from './inline/MiniSpark'
+import StepSize, { DEFAULTS as stepSizeDefaults, PARAM_HINTS as stepSizeHints } from './StepSize'
 
 // The registry is the seam between writers and developers. Authors
 // reference figures by id in markdown — never by import. To add a figure:
@@ -73,6 +74,12 @@ export const figures: Record<string, FigureEntry> = {
     height: 350,
     defaults: lossLandscapeDefaults,
     paramHints: lossLandscapeHints,
+  },
+  'step-size': {
+    component: StepSize,
+    height: 330,
+    defaults: stepSizeDefaults,
+    paramHints: stepSizeHints,
   },
   'flow-diagram': { component: FlowDiagram, height: 280, wide: true },
   sparkline: {

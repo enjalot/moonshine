@@ -12,11 +12,12 @@ local slope.
 
 :::figure{id=loss-landscape lr=0.12}
 ### Descending a two-well surface
-A two-well loss surface. Drag or click to set a starting point and
-watch the descent path settle into the nearest minimum. The step size
-here is set right in the markdown (`lr=0.12`) — every figure attribute
-becomes a prop, and the heading on the first line renders as the
-figure's title.
+A two-well loss surface. Drag the starting point and watch the descent
+path settle into the nearest minimum, or grab a dot partway along the
+path and pull it: the start moves to wherever it must be for the path to
+run under your pointer. The step size here is set right in the markdown
+(`lr=0.12`). Every figure attribute becomes a prop, and the heading on
+the first line renders as the figure's title.
 :::
 
 Random search is inefficient because the parameter space is too large.
@@ -38,6 +39,18 @@ optimizers differ from each other. It is the $\eta$ in the update rule:
 $$
 \theta_{t+1} = \theta_t - \eta \, \nabla L(\theta_t)
 $$
+
+:::figure{id=step-size}
+### Four step sizes on one curve
+The same rule on a simpler loss, a parabola. Drag η along the ruler: it
+snaps to the four step sizes in the table below and slides freely between
+them. Or grab the first step and pull it to where you want it to land,
+and the step size follows. Both drags come from one line each: the figure
+says which states dragging can reach, and the library works out the
+motion.
+:::
+
+Each step is a small loop of computation:
 
 :::figure{id=flow-diagram}
 One iteration of gradient descent as a small data flow: parameters in,

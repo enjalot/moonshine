@@ -142,7 +142,7 @@ function goToStep(i) { stages[i](); }
 
 ### Drag
 
-`d3.drag` on SVG elements. Constrain to axis or bounds, dispatch parameter change.
+`d3.drag` on SVG elements. Constrain to axis or bounds, dispatch parameter change. (In a still project, prefer declarative dragging: see `src/figures/drag/README.md` in the template. It gives snapping, detents, reordering and drop animation from a one-line spec, and lets readers drag outputs as well as inputs.)
 
 ```js
 const drag = d3.drag()
