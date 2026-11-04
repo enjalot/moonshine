@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from 'react'
+
 // Text measurement for diagrams drawn in SVG, which has no text wrapping
 // of its own. Fonts match the .mn-dg-* rules in article.css.
 
@@ -40,4 +42,29 @@ export function wrap(text: string, font: string, max: number): string[] {
   if (cache.size > 2000) cache.clear()
   cache.set(key, out)
   return out
+}
+
+// An edge label's width, with its padding (.mn-dg-edge-label).
+export function edgeLabelWidth(label: string): number {
+  return textWidth(label, FONTS.edge) + 14
+}
+
+// Web fonts can arrive after a diagram first measured its text. When any
+// finish loading, measurements are dropped and diagrams that read
+// useFontEpoch() in their drawing redraw.
+let epoch = 0
+const listeners = new Set<() => void>()
+if (typeof document !== 'undefined' && document.fonts) {
+  document.fonts.addEventListener('loadingdone', () => {
+    cache.clear()
+    epoch++
+    listeners.forEach((l) => l())
+  })
+}
+const subscribe = (l: () => void) => {
+  listeners.add(l)
+  return () => listeners.delete(l)
+}
+export function useFontEpoch(): number {
+  return useSyncExternalStore(subscribe, () => epoch, () => 0)
 }

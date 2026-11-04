@@ -3,7 +3,7 @@ import { rotateRad, translate } from 'dragology'
 import { each } from '../drag/each'
 import { routeEdges, type EdgeGeom, type Placed } from './geometry'
 import { edgeKey, type Annotation, type BakedDiagram, type Box, type DiagramSpec, type SpecEdge, type SpecGroup, type SpecNode } from './spec'
-import { FONTS, LINE, textWidth, wrap } from './text'
+import { edgeLabelWidth, FONTS, LINE, wrap } from './text'
 
 // Diagrams drawn as SVG, for readers (DiagramFigure) and the editor
 // (DiagramArrange) alike. Each piece is a plain function from boxes to SVG
@@ -119,9 +119,7 @@ export function drawAnnot(c: DrawCtx, a: Annotation, opts: { on?: string; props?
   )
 }
 
-export function edgeLabelWidth(label: string) {
-  return textWidth(label, FONTS.edge) + 10
-}
+export { edgeLabelWidth }
 
 export function drawEdge(
   c: DrawCtx,
@@ -137,10 +135,10 @@ export function drawEdge(
     <g id={ids.edge(c, i)} className="mn-dg-edge" data-on={flags(e.dashed && 'dashed', e.animated && 'animated', active && 'active', opts.on)} {...opts.props}>
       <path className="mn-dg-edge-hit" d={g.path} />
       <path className="mn-dg-edge-line" d={g.path} />
-      <path className="mn-dg-arrow" d="M 0 0 L -10 -5 L -10 5 Z" transform={translate(g.p2[0], g.p2[1]) + rotateRad(g.angle)} />
+      <path className="mn-dg-arrow" d="M 0 0 L -9 -4.6 L -6.8 0 L -9 4.6 Z" transform={translate(g.p2[0], g.p2[1]) + rotateRad(g.angle)} />
       {label ? (
         <g id={ids.edgeLabel(c, i)} className="mn-dg-edge-label" transform={translate(g.lx, g.ly)} {...opts.labelProps}>
-          <rect x={-lw / 2} y={-10} width={lw} height={20} rx={3} />
+          <rect x={-lw / 2} y={-10} width={lw} height={20} rx={4} />
           <text textAnchor="middle" dominantBaseline="central">
             {label}
           </text>

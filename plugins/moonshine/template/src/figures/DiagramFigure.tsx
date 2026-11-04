@@ -8,6 +8,7 @@ import { getBakedFigure } from '../lib/bakedFigures'
 import { narrowSpec, place, type Placement } from './diagram/layout'
 import { frameFor } from './diagram/geometry'
 import { drawDiagram } from './diagram/draw'
+import { useFontEpoch } from './diagram/text'
 import { specHash, type BakedDiagram, type Box, type DiagramSpec } from './diagram/spec'
 
 export type { DiagramSpec } from './diagram/spec'
@@ -171,6 +172,7 @@ function ReaderSvg({
   }, [])
   const uid = useId().replace(/:/g, '')
   const [hover, setHover] = useState<string | null>(null)
+  const fonts = useFontEpoch()
 
   const wide = useMemo<View>(() => ({ spec, placement, baked, frame: frameFor(spec, placement, baked) }), [spec, placement, baked])
   const needsNarrow = width > 0 && width / wide.frame.w < MIN_ZOOM
@@ -213,7 +215,8 @@ function ReaderSvg({
         </g>
       )
     },
-    [wide, narrow, width, inner, uid, activePart],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [wide, narrow, width, inner, uid, activePart, fonts],
   )
 
   const tip = hover ? view.spec.nodes.find((n) => n.id === hover) : undefined

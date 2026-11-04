@@ -858,8 +858,8 @@
    same edge shading (DiagramFigure adds .is-scrolling). */
 .mn-diagram-scroll.is-scrolling {
   background:
-    linear-gradient(to right, var(--bg) 30%, transparent) left / 2rem 100% no-repeat local,
-    linear-gradient(to left, var(--bg) 30%, transparent) right / 2rem 100% no-repeat local,
+    linear-gradient(to right, var(--fig-bg) 30%, transparent) left / 2rem 100% no-repeat local,
+    linear-gradient(to left, var(--fig-bg) 30%, transparent) right / 2rem 100% no-repeat local,
     linear-gradient(to right, var(--shadow-edge), transparent) left / 0.75rem 100% no-repeat scroll,
     linear-gradient(to left, var(--shadow-edge), transparent) right / 0.75rem 100% no-repeat scroll;
 }

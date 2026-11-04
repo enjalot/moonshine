@@ -64,8 +64,8 @@ export type Pad = { top: number; right: number; bottom: number; left: number }
 export type Side = 'top' | 'right' | 'bottom' | 'left'
 
 // How one edge is drawn: which side of each box it attaches to (omitted =
-// border to border, straight), and where along it the label sits (0..1,
-// default the middle).
+// the router picks), and where along it the label sits (0..1; omitted =
+// the router picks a spot clear of the boxes).
 export type EdgeArrangement = { source?: Side; target?: Side; labelAt?: number }
 
 // Author-added text on a diagram. `note` is a tinted sticky; `text` is a

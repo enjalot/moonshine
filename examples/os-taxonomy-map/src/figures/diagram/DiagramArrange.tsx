@@ -20,6 +20,7 @@ import {
   type EdgeGeom,
 } from './geometry'
 import { elkLayout, narrowSpec, nodeSize, place, type Placement } from './layout'
+import { useFontEpoch } from './text'
 import {
   edgeKey,
   specHash,
@@ -904,7 +905,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
 
   const labelSpec = (d: DragSpecBuilder<Doc>, s: Doc, i: number): DragSpec<Doc> => {
     const key = edgeKey(s.spec.edges[i])
-    const at = s.sides[key]?.labelAt ?? 0.5
+    const at = s.sides[key]?.labelAt ?? edgeEnds(s, i)?.at ?? 0.5
     const base = { ...s, sides: { ...s.sides, [key]: { ...s.sides[key], labelAt: at } } }
     return d.vary(base, param('sides', key, 'labelAt'), { constraint: (p) => inOrder([0.05, p.sides[key].labelAt ?? 0.5, 0.95]) })
   }
@@ -912,20 +913,25 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
   // Where an edge runs in a doc (null if an end is missing).
   const edgeEnds = (s: Doc, i: number): EdgeGeom | null => {
     const e = s.spec.edges[i]
-    return e ? (routeEdges({ ...s.spec, edges: [e] }, { nodes: s.nodes, groups: {} }, s.sides).get(edgeKey(e)) ?? null) : null
+    return e ? (routeEdges(s.spec, { nodes: s.nodes, groups: {} }, s.sides).get(edgeKey(e)) ?? null) : null
   }
 
   // ---- drawing ------------------------------------------------------------
   const single = sel.length === 1 ? sel[0] : null
   const dotsFor = editing || dragging ? null : (hoverNode ?? (single?.kind === 'node' ? single.id : null))
+  const fonts = useFontEpoch()
 
   const draggable = useCallback<Draggable<Doc>>(
     ({ state: s, d, draggedId, isTracking }) => {
       const groups = drawnGroups(s)
       const placed = { nodes: s.nodes, groups }
-      const routes = routeEdges(s.spec, placed, s.sides)
-      // Needed even when Dragology is only tracking, for the frame's grips.
-      const frame = padBox(contentBounds(s.spec, placed, { edges: s.sides, annotations: s.annots }), s.pad)
+      // While Dragology only tracks where a dragged box, group or note
+      // lands, it draws many states per pointer move and the arrows don't
+      // matter: skip routing them. Everything else needs the routes, and
+      // the frame's grips need the frame even when tracking.
+      const lean = isTracking && /^(n|g|a|rs)-/.test(draggedId?.slice(uid.length + 1) ?? '')
+      const routes = lean ? new Map<string, EdgeGeom>() : routeEdges(s.spec, placed, s.sides)
+      const frame = lean ? null : padBox(contentBounds(s.spec, placed, { edges: s.sides, annotations: s.annots }), s.pad)
       const k = view.k
       const handle = 7 / k
       const selected = (kind: Item['kind'], id: string) => sel.some((x) => x.kind === kind && x.id === id)
@@ -1078,7 +1084,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
             const a = s.nodes[draft.from]
             const to = draft.to ? s.nodes[draft.to] : null
             if (!a) return null
-            const g = to ? routeEdges({ ...s.spec, edges: [{ from: draft.from, to: draft.to! }] }, { nodes: s.nodes, groups: {} }, {}).get(`${draft.from}--${draft.to}`) : null
+            const g = to ? routeEdges({ ...s.spec, edges: [...s.spec.edges, { from: draft.from, to: draft.to! }] }, { nodes: s.nodes, groups: {} }, s.sides).get(`${draft.from}--${draft.to}`) : null
             const [ex, ey] = g ? g.p2 : [draft.free.x, draft.free.y]
             return (
               <g dragologyKey="draft">
@@ -1129,7 +1135,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
               {each(guides, (g) => g)}
             </g>
           )}
-          {!isTracking && (
+          {!isTracking && frame && (
             <g dragologyKey="frame">
               <path className="mn-dg-dim" fillRule="evenodd" d={`M ${-1e5} ${-1e5} H ${1e5} V ${1e5} H ${-1e5} Z M ${frame.x} ${frame.y} V ${frame.y + frame.h} H ${frame.x + frame.w} V ${frame.y} Z`} />
               <rect
@@ -1150,7 +1156,8 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
               </text>
             </g>
           )}
-          {frameGrips(uid, frame, handle, (sides) => {
+          {frame &&
+            frameGrips(uid, frame, handle, (sides) => {
               select({ kind: 'frame', id: 'frame' }, false)
               return frameSpec(d, s, sides)
             })}
@@ -1159,7 +1166,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
     },
     // The drawing depends on everything the editor shows.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view, sel, selEdge, editing, dotsFor, unarranged, variant, figWide, tool],
+    [view, sel, selEdge, editing, dotsFor, unarranged, variant, figWide, tool, fonts],
   )
 
   const onDragStatus = useCallback((st: DragStatus<Doc>) => setDragging(st.type === 'dragging'), [])
@@ -1555,7 +1562,7 @@ function TextEditor({ doc, editing, view, onDone }: { doc: Doc; editing: NonNull
   } else {
     const i = Number(editing.id)
     const e = doc.spec.edges[i]
-    const g = e && routeEdges({ ...doc.spec, edges: [e] }, { nodes: doc.nodes, groups: {} }, doc.sides).get(edgeKey(e))
+    const g = e && routeEdges(doc.spec, { nodes: doc.nodes, groups: {} }, doc.sides).get(edgeKey(e))
     if (g) {
       const w = Math.max(120, edgeLabelWidth(e.label ?? '') + 20)
       box = { x: g.lx - w / 2, y: g.ly - 12, w, h: 24 }
