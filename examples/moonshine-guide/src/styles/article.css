@@ -758,6 +758,19 @@
 
 /* Dev-only diagram arrange bar ---------------------------------------- */
 
+/* Dragology sets touch-action: none on its whole svg, which on a phone
+   stops a swipe over a figure (or a diagram readers can't drag at all)
+   from scrolling the page. Only what can be dragged keeps it: Dragology
+   gives those elements cursor: grab. */
+.mn-drag-figure > svg,
+.mn-diagram-flow > svg,
+.mn-reorder-overlay > svg {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+.mn-drag-figure svg [style*='grab'] {
+  touch-action: none;
+}
+
 /* Dev only: a drawing that threw, contained to its figure. */
 .mn-drag-error {
   margin: 0;
