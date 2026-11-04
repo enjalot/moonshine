@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { scale, type Draggable } from 'dragology'
+import { scale, translate, type Draggable } from 'dragology'
 import DraggableRenderer from './Renderer'
 
 // Declarative dragging (Dragology, https://declarative-dragging.github.io)
@@ -48,8 +48,12 @@ export default function DragFigure<T extends object>(props: Props<T>) {
     return () => ro.disconnect()
   }, [])
   const k = avail / width
+  // The leading translate(0, 0) is load-bearing: a floating element gets
+  // a translate prepended, and Dragology only blends transform lists of
+  // the same shape (adjacent translates merge), so the root must start
+  // with one too.
   const scaled = useMemo<Draggable<T>>(
-    () => (p) => <g transform={scale(k)}>{draggable(p)}</g>,
+    () => (p) => <g transform={translate(0, 0) + scale(k)}>{draggable(p)}</g>,
     [draggable, k],
   )
   const common = {

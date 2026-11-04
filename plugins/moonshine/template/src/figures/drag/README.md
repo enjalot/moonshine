@@ -84,6 +84,10 @@ Two ideas make figures better than "move the dot":
   prop of two drawings and throws on two different strings. Put what
   varies in `data-*` attributes (not blended) and style with
   `[data-on~='active']`. Text content may differ.
+- **Clicks inside a draggable** (a button on a card) only work if the
+  draggable element itself has an `onClick` (even `() => undefined`):
+  only then does Dragology wait to see whether a press becomes a drag.
+  Otherwise the drag starts at once and the click is lost.
 - **Children that come and go get `dragologyKey`** (or an id), so the
   others still pair up across states.
 - **`isTracking`**: Dragology sometimes draws a state only to find where
