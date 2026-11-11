@@ -56,6 +56,11 @@
   font-family: var(--mono-font);
   font-size: 0.9rem;
 }
+/* Inline code is 0.9em, which in a 0.85rem caption lands at 12.2px. */
+.figure-caption code,
+.figure-hint code {
+  font-size: 0.8125rem;
+}
 .article pre code {
   background: none;
   padding: 0;
@@ -235,10 +240,9 @@
 /* Interaction hint under a figure's canvas, above the caption. */
 .figure-hint {
   font-family: var(--heading-font);
-  font-size: 0.75rem;
+  font-size: 0.8125rem; /* 13px: the smallest text a reader is given */
   color: var(--text-2);
   margin: 0.35rem 0 0;
-  opacity: 0.8;
 }
 
 .figure-missing {
@@ -344,7 +348,7 @@
 }
 .card-tags {
   font-family: var(--heading-font);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--accent);
   margin-top: 0.6rem;
 }
@@ -373,7 +377,7 @@
   padding-top: 1.25rem;
   border-top: 1px solid var(--border);
   font-family: var(--heading-font);
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
   color: var(--text-2);
 }
 .moonshine-footer p {
@@ -520,7 +524,7 @@
   line-height: 1;
   width: 1.7rem;
   height: 1.7rem;
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
   border: none;
   border-radius: 4px;
@@ -756,6 +760,12 @@
    stops a swipe over a figure (or a diagram readers can't drag at all)
    from scrolling the page. Only what can be dragged keeps it: Dragology
    gives those elements cursor: grab. */
+/* Text inside a DragFigure is scaled with the drawing. Dividing by the
+   scale (set by DragFigure) holds it at 13px on screen at every width. */
+.mn-drag-figure {
+  --mn-fig-text: calc(13px / var(--mn-drag-k, 1));
+}
+
 .mn-drag-figure > svg,
 .mn-diagram-flow > svg,
 .mn-reorder-overlay > svg {
@@ -775,68 +785,6 @@
   background: var(--error-bg);
   border: 1px solid var(--error-border);
   border-radius: 4px;
-}
-
-/* StepSize: gradient descent on a parabola, with an η ruler. */
-.mn-ss-curve {
-  fill: none;
-  stroke: var(--text-2);
-  stroke-width: 1.5;
-}
-.mn-ss-hops {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 1.5;
-  stroke-dasharray: 4 3;
-  opacity: 0.7;
-}
-.mn-ss-iter {
-  fill: var(--accent);
-}
-.mn-ss-handle,
-.mn-ss-start {
-  fill: var(--fig-bg);
-  stroke: var(--accent);
-  stroke-width: 2.5;
-  cursor: grab;
-}
-.mn-ss-start {
-  fill: var(--accent);
-  stroke: var(--fig-bg);
-  stroke-width: 2;
-}
-.mn-ss-note,
-.mn-ss-tick-label,
-.mn-ss-tick-word,
-.mn-ss-knob text {
-  font-family: var(--heading-font);
-  font-size: 13px;
-  fill: var(--text-2);
-}
-.mn-ss-note {
-  font-size: 13.5px;
-}
-.mn-ss-ruler,
-.mn-ss-tick {
-  stroke: var(--text-2);
-  stroke-width: 1.25;
-}
-.mn-ss-tick-word {
-  font-size: 12px;
-  opacity: 0.8;
-}
-.mn-ss-knob {
-  cursor: grab;
-}
-.mn-ss-knob circle {
-  fill: var(--accent);
-  stroke: var(--fig-bg);
-  stroke-width: 2.5;
-}
-.mn-ss-knob text {
-  fill: var(--accent);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Diagrams (DiagramFigure: live SVG drawn by Dragology, incl. kind=diagram)
@@ -862,7 +810,7 @@
   left: 0;
   margin: 0.25rem 0 0;
   font-family: var(--heading-font);
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
   color: var(--text-2);
 }
 .mn-diagram-flow {
@@ -1033,7 +981,7 @@
 }
 .mn-dg-edge-label text {
   font-family: var(--heading-font);
-  font-size: 12.5px;
+  font-size: 13px;
   fill: var(--text-2);
 }
 .mn-dg-edge[data-on~='active'] .mn-dg-edge-label text {
@@ -1100,7 +1048,7 @@
 .mn-diagram-editor-bar button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 /* wide / narrow arrangement tabs in the editor bar */
 .mn-diagram-variant {
@@ -1183,7 +1131,7 @@
 }
 .mn-diagram-toolbar button[aria-pressed='true'],
 .mn-diagram-tools button[aria-pressed='true'] {
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
 }
 .mn-diagram-toolbar button.is-danger:hover {
@@ -1432,7 +1380,7 @@
 }
 .mn-dg-frame-label {
   font-family: var(--heading-font);
-  font-size: 12px;
+  font-size: 13px;
   fill: var(--text-2);
   cursor: pointer;
 }
@@ -1477,7 +1425,7 @@
 }
 .mn-dg-text-edit.is-edge {
   padding: 2px 6px;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 400;
 }
 .mn-diagram-marquee {
@@ -1528,7 +1476,7 @@
   cursor: pointer;
 }
 .mn-insert-plus[aria-expanded='true'] {
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
 }
 .mn-insert-menu {
@@ -1604,7 +1552,7 @@
   gap: 0.3rem;
 }
 .mn-figure-controls button[aria-pressed='true'] {
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
   border-color: var(--accent);
 }

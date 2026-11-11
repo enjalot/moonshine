@@ -112,8 +112,9 @@ function buildArrows(cols: number, rows: number, len: number) {
     for (let i = 0; i < cols; i++) {
       const x = ((i + 0.5) / cols) * w
       const y = ((j + 0.5) / rows) * h
-      const nx = (i / (cols - 1)) * 2 - 1
-      const ny = (j / (rows - 1)) * 2 - 1
+      // Sample the surface where the arrow is drawn: the cell's centre.
+      const nx = ((i + 0.5) / cols) * 2 - 1
+      const ny = ((j + 0.5) / rows) * 2 - 1
 
       // Downhill direction: negative gradient of the shared surface.
       const [gx, gy] = grad(nx, ny)

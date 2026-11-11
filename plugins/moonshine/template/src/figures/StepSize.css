@@ -1,0 +1,64 @@
+/* A figure's own styles live beside it and are imported by the component,
+   not in src/styles/article.css, which belongs to the template. */
+
+/* StepSize: gradient descent on a parabola, with an η ruler. */
+.mn-ss-curve {
+  fill: none;
+  stroke: var(--text-2);
+  stroke-width: 1.5;
+}
+.mn-ss-hops {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  opacity: 0.7;
+}
+.mn-ss-iter {
+  fill: var(--accent);
+}
+.mn-ss-handle,
+.mn-ss-start {
+  fill: var(--fig-bg);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  cursor: grab;
+}
+.mn-ss-start {
+  fill: var(--accent);
+  stroke: var(--fig-bg);
+  stroke-width: 2;
+}
+.mn-ss-note,
+.mn-ss-tick-label,
+.mn-ss-tick-word,
+.mn-ss-knob text {
+  font-family: var(--heading-font);
+  font-size: var(--mn-fig-text);
+  fill: var(--text-2);
+}
+.mn-ss-ruler,
+.mn-ss-tick {
+  stroke: var(--text-2);
+  stroke-width: 1.25;
+}
+.mn-ss-tick-word {
+  opacity: 0.85;
+}
+.mn-ss-knob {
+  cursor: grab;
+}
+.mn-ss-knob circle:not(.mn-ss-hit) {
+  fill: var(--accent);
+  stroke: var(--fig-bg);
+  stroke-width: 2.5;
+}
+.mn-ss-knob text {
+  fill: var(--accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.mn-ss-knob .mn-ss-hit {
+  fill: transparent;
+  stroke: none;
+}

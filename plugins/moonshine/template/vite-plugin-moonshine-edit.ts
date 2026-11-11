@@ -316,7 +316,7 @@ export default function moonshineEditPlugin(): Plugin {
 
             const summary =
               typeof payload.body === 'string'
-                ? `${payload.path} (prose)`
+                ? `${payload.path} (${target.endsWith('.json') ? 'diagram' : 'prose'})`
                 : `${payload.path} (${Object.keys(payload.frontmatter ?? {}).join(', ')})`
             await commitSave(target, summary)
           })

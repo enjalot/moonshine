@@ -4,6 +4,7 @@ import type { FigureProps } from './registry'
 import DragFigure from './drag/DragFigure'
 import { each } from './drag/each'
 import { num } from './lib/params'
+import './StepSize.css'
 
 // Gradient descent on a parabola, f(θ) = aθ², with the step size η on a
 // ruler below. Three drags, each a one-line declaration (drag/README.md):
@@ -30,16 +31,18 @@ export const PARAM_HINTS = {
 }
 
 // The table's step sizes, and what each does on this curve.
-// The last two sit close on the log ruler, so their words lean apart.
+// The last two sit close on the log ruler, so their words lean apart,
+// and the words alternate between two rows: on a phone the text keeps
+// its size while the ruler shrinks, and one row would collide.
 const DETENTS = [
-  { lr: 0.01, word: 'crawls', anchor: 'middle', dx: 0 },
-  { lr: 0.12, word: 'converges', anchor: 'middle', dx: 0 },
-  { lr: 0.45, word: 'oscillates', anchor: 'end', dx: 14 },
-  { lr: 0.9, word: 'diverges', anchor: 'start', dx: -10 },
+  { lr: 0.01, word: 'crawls', anchor: 'middle', dx: 0, row: 0 },
+  { lr: 0.12, word: 'converges', anchor: 'middle', dx: 0, row: 1 },
+  { lr: 0.45, word: 'oscillates', anchor: 'end', dx: 14, row: 0 },
+  { lr: 0.9, word: 'diverges', anchor: 'end', dx: 48, row: 1 },
 ] as const
 const A = 1.6 // curvature: one step lands exactly at the bottom when η = 1/(2a)
 const W = 480
-const H = 300
+const H = 344
 const PLOT = { x0: 40, x1: 440, top: 34, bottom: 186 }
 const TMAX = 1.25
 const sx = (t: number) => PLOT.x0 + ((t + TMAX) / (2 * TMAX)) * (PLOT.x1 - PLOT.x0)
@@ -73,7 +76,7 @@ export default function StepSize(props: FigureProps) {
       return (
         <g>
           <path className="mn-ss-curve" d={curve.map((t, i) => `${i ? 'L' : 'M'}${sx(t).toFixed(1)},${sy(t).toFixed(1)}`).join('')} />
-          <text className="mn-ss-note" transform={translate(PLOT.x1, 16)} textAnchor="end">
+          <text className="mn-ss-note" transform={translate(PLOT.x1, 0)} dy="1.15em" textAnchor="end">
             {`each step: θ ← ${factor.toFixed(2)} θ · ${outcome}`}
           </text>
           {/* Hops between iterates, then the iterates. Steps past the
@@ -83,7 +86,7 @@ export default function StepSize(props: FigureProps) {
             d={shown.map((t, i) => `${i ? 'L' : 'M'}${sx(t).toFixed(1)},${sy(t).toFixed(1)}`).join('')}
           />
           {escaped && shown.length > 0 && (
-            <text dragologyKey="escape" className="mn-ss-note" transform={translate(sx(shown[shown.length - 1]), sy(shown[shown.length - 1]) - 14)} textAnchor="middle">
+            <text dragologyKey="escape" className="mn-ss-note" transform={translate(sx(shown[shown.length - 1]), sy(shown[shown.length - 1]))} dy="-0.9em" textAnchor="middle">
               off the chart ↗
             </text>
           )}
@@ -112,10 +115,10 @@ export default function StepSize(props: FigureProps) {
           {each(DETENTS, (det) => (
             <g transform={translate(rx(Math.log10(det.lr)), RULER.y)}>
               <line className="mn-ss-tick" y1={-6} y2={6} />
-              <text className="mn-ss-tick-label" y={22} textAnchor="middle">
+              <text className="mn-ss-tick-label" dy="1.7em" textAnchor="middle">
                 {String(det.lr)}
               </text>
-              <text className="mn-ss-tick-word" x={det.dx} y={38} textAnchor={det.anchor}>
+              <text className="mn-ss-tick-word" x={det.dx} dy={det.row ? '4.25em' : '3em'} textAnchor={det.anchor}>
                 {det.word}
               </text>
             </g>
@@ -132,8 +135,10 @@ export default function StepSize(props: FigureProps) {
                 .whenFar(varyEta(), { gap: 10 })
             }
           >
+            {/* A finger-sized target around the visible knob. */}
+            <circle className="mn-ss-hit" r={24} />
             <circle r={8} />
-            <text y={-15} textAnchor="middle">
+            <text dy="-1.1em" textAnchor="middle">
               {`η = ${eta < 0.1 ? eta.toFixed(3) : eta.toFixed(2)}`}
             </text>
           </g>

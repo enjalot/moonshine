@@ -90,6 +90,12 @@ and (re)writes the root `docs/404.html` — GitHub Pages only honors a custom
 404 at the site root, so deep links redirect through `?/` and the template's
 `index.html` restores the path before the app boots.
 
+A project whose large assets are hosted elsewhere (the moments map tiles live
+in a storage bucket) records that in `<project>/moonshine.publish.json`:
+`"env"` is exported for the build and `"exclude"` paths are left out of
+`docs/<slug>/`. The script prints the published size and stops above 50 MB
+(`MOONSHINE_PUBLISH_MAX_MB` overrides).
+
 Two manual steps remain: add a card for the example to `docs/index.html`, and
 commit `docs/` on `main`. Shine articles are single HTML files — copy them
 into `docs/<slug>/` directly.
