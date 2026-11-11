@@ -9,49 +9,123 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
+  color-scheme: light dark;
   --article-width: 740px;
   --body-font: 'Source Serif 4', Georgia, serif;
   --heading-font: 'Source Sans 3', system-ui, sans-serif;
   --mono-font: 'Source Code Pro', monospace;
-  --body-size: 1.125rem; --line-height: 1.6;
-  --text: #1a1a2e; --text-2: #4a4a6a; --text-3: #8a8a9e;
-  --accent: #2563eb; --accent-light: #dbeafe;
-  --warm: #ea580c; --warm-light: #ffedd5;
-  --green: #059669; --purple: #7c3aed;
-  --bg: #fafafa; --fig-bg: #ffffff;
-  --border: #e2e2e8; --border-2: #c5c5d1; --muted: #e8e8ee;
-  --c0: #2563eb; --c1: #ea580c; --c2: #059669; --c3: #7c3aed;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --text-3: #6b6b82;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --on-accent: #ffffff;
+  --warm: #c2410c;
+  --warm-light: #ffedd5;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+  --border-2: #c5c5d1;
+  --muted: #e8e8ee;
+  /* categorical colours, in the same order in every figure of the series */
+  --c0: #2563eb;
+  --c1: #c2410c;
+  --c2: #047857;
+  --c3: #7c3aed;
+  --c4: #be185d;
 }
-body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e6dd;
+    --text-2: #b9b9cb;
+    --text-3: #9a9ab0;
+    --accent: #60a5fa;
+    --accent-light: #1e3a5f;
+    --on-accent: #10102a;
+    --warm: #fb923c;
+    --warm-light: #4a2a12;
+    --bg: #1a1a2e;
+    --fig-bg: #22223a;
+    --border: #3a3a52;
+    --border-2: #5a5a74;
+    --muted: #2e2e48;
+    --c0: #60a5fa;
+    --c1: #fb923c;
+    --c2: #34d399;
+    --c3: #a78bfa;
+    --c4: #f472b6;
+  }
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
 .article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
-h1, h2 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
 h1 { font-size: 2.4rem; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
 h2 { font-size: 1.4rem; margin: 3rem 0 1rem; }
-h3 { font-family: var(--heading-font); font-size: 1.1rem; font-weight: 700; margin: 2rem 0 0.75rem; }
+h3 { font-size: 1.1rem; margin: 2rem 0 0.75rem; }
 p { margin: 0 0 1rem; }
 a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-em { font-style: italic; } strong { font-weight: 600; }
-.subtitle { font-family: var(--heading-font); font-size: 1.1rem; color: var(--text-2); line-height: 1.45; margin-bottom: 1rem; font-weight: 400; }
-.series-tag { font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+em { font-style: italic; }
+strong { font-weight: 600; }
+.mono { font-family: var(--mono-font); font-size: 0.92em; }
+
+.subtitle { font-family: var(--heading-font); font-size: 1.1rem; color: var(--text-2); line-height: 1.45; margin-bottom: 1.5rem; font-weight: 400; }
+.series-tag { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.5; }
+.figure svg { display: block; width: 100%; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.5; }
 .figure-label { font-weight: 600; color: var(--text); }
-.controls { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
-.controls input[type="range"] { width: 160px; accent-color: var(--accent); vertical-align: middle; }
-.controls label { display: inline-flex; align-items: center; gap: 0.5rem; }
+
+.controls { display: flex; align-items: center; gap: 0.6rem 1.25rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); }
+.controls input[type="range"] { width: 150px; max-width: 100%; accent-color: var(--accent); vertical-align: middle; }
+.controls label { display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .controls .value { font-family: var(--mono-font); color: var(--text); min-width: 2ch; display: inline-block; }
-.toggle-group { display: inline-flex; border: 1px solid var(--border-2); border-radius: 4px; overflow: hidden; }
-.toggle-group button { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.35rem 0.7rem; background: var(--fig-bg); color: var(--text-2); border: none; border-right: 1px solid var(--border-2); cursor: pointer; }
+.controls button, .toggle-group button { font-family: var(--heading-font); font-size: 0.875rem; padding: 0.4rem 0.75rem; background: var(--fig-bg); color: var(--text-2); cursor: pointer; }
+.controls > button, .controls label > button { border: 1px solid var(--border-2); border-radius: 4px; }
+.controls button:hover { background: var(--muted); }
+.toggle-group { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--border-2); border-radius: 4px; overflow: hidden; }
+.toggle-group button { border: none; border-right: 1px solid var(--border-2); }
 .toggle-group button:last-child { border-right: none; }
-.toggle-group button:hover { background: var(--muted); }
-.toggle-group button.active { background: var(--accent); color: white; }
-svg text { font-family: var(--heading-font); }
-svg .axis text { font-size: 11px; fill: var(--text-2); }
+.toggle-group button.active, .toggle-group button.active:hover { background: var(--accent); color: var(--on-accent); }
+button:focus-visible, input:focus-visible, svg [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.readout { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.5rem; min-height: 1.4em; }
+.readout b { color: var(--text); font-weight: 600; }
+
+svg text { font-family: var(--heading-font); font-size: 13px; fill: var(--text-2); }
+svg .axis text { font-size: 13px; fill: var(--text-2); }
 svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crispEdges; }
+svg .pane-title { font-weight: 700; fill: var(--text); }
+svg .pane-bg { fill: var(--bg); stroke: var(--border); }
+
 .margin-note { font-size: 0.875rem; color: var(--text-2); line-height: 1.5; border-left: 2px solid var(--border-2); padding-left: 0.9rem; margin: 1.25rem 0; }
-@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure { padding: 1rem; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+
+footer { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); }
+footer a { color: var(--text-2); }
+footer a.next { color: var(--accent); }
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .figure { padding: 1rem; }
+  .controls input[type="range"] { width: 120px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }
+}
 </style>
 </head>
 <body>
@@ -61,148 +135,215 @@ svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crisp
   <div class="series-tag">Part 5 of 10 · Preserves connectivity and shape</div>
   <h1>Preserving Topology</h1>
   <p class="subtitle">
-    When the shape of your data matters more than where each point lands, topology offers a different kind of summary. Mapper, Reeb graphs, and persistent homology describe data by what is connected to what, not by where things are.
+    When the shape of the data matters more than where each point lands, topology offers a different kind of summary. Mapper, Reeb graphs, and persistent homology describe data by what is connected to what.
   </p>
 </header>
 
 <p>
-  The methods we have seen so far try to place every data point at a specific location in a plane. Topology takes a different stance: forget the exact positions and keep track of the <em>shape</em>. How many connected pieces does the dataset have? Are there loops? Are there branches? Is there a hole in the middle?
+  The methods so far place every data point at a location in a plane. Topological methods drop the locations and keep track of the <em>shape</em>: how many connected pieces the dataset has, and whether it has loops, branches, or holes.
 </p>
 
 <p>
-  Topology is a coarser description than geometry, on purpose. The same loop can be a circle, an ellipse, or a wildly irregular closed curve, and all three are topologically identical. A topological description is robust to noise and deformation. For ML data that sits on a curved manifold with complicated local structure, a topological summary often captures the part that actually matters and ignores the part that changes every time you retrain.
+  Topology is a coarser description than geometry, on purpose. A circle, an ellipse, and an irregular closed curve are the same loop, so a topological description does not change under noise or deformation. For ML data on a curved manifold with complicated local structure, that can be the part worth keeping: the loop or the branch is still there after a retrain, and the coordinates are not.
 </p>
 
 <p>
-  This article covers Mapper (the most widely used topological DR method), Reeb graphs (a close cousin with a more specific setup), persistent homology (more an evaluator than a DR method, but central to the field), and topological autoencoders (which carry topological constraints into neural networks). None of these methods replaces t-SNE or UMAP as a visualization default. But when used together with the neighbor-based methods, they reveal structure that the others wash out.
+  This article covers Mapper (the most widely used topological method for reducing data), Reeb graphs (the continuous object Mapper approximates), persistent homology (a way to measure which topological features are robust), and topological autoencoders (which carry a topological constraint into a neural network). None of them replaces t-SNE or UMAP as a default view, and they are usually run alongside one.
 </p>
 
-<h2>Mapper: the pipeline</h2>
+<h2>Mapper: filter, cover, cluster</h2>
 
 <p>
-  Mapper, introduced by Singh, Memoli, and Carlsson in 2007, is the topological method you are most likely to encounter in practice. The pipeline has three steps, none of them hard in isolation.
-</p>
-
-<p>
-  First, pick a <strong>filter function</strong> (also called a lens). This is any function from your data to a low-dimensional space, often just the real line. Common choices are a coordinate projection, a density estimate, a distance from a reference point, a PCA component, or a learned embedding. The filter is what you are "looking through" when you examine the data.
+  Mapper, introduced by Singh, Mémoli, and Carlsson in 2007, is the topological method you are most likely to meet in practice. It has three steps.
 </p>
 
 <p>
-  Second, pick a <strong>cover</strong> of the filter's range. Divide the range into overlapping intervals (or rectangles, for a 2D filter). The overlap is important; we will see why in a moment.
+  First, pick a <strong>filter function</strong> (also called a lens): any function from the data to a low-dimensional space, often just the real line. Common choices are one coordinate, a density estimate, the distance from a reference point, a PCA component, or a learned embedding.
 </p>
 
 <p>
-  Third, <strong>cluster within each cover element</strong>. For each interval of the filter, find the subset of data points that map into it. Run a clustering algorithm on just those points, in the original high-dimensional space. Each cluster becomes a node in the Mapper graph. Whenever a point belongs to two overlapping intervals (via the overlap from step 2), its cluster in one interval is connected by an edge to its cluster in the other. The result is a graph that captures the topology of the data through the lens of the filter.
+  Second, pick a <strong>cover</strong> of the filter's range: divide it into intervals that overlap their neighbors (or rectangles, for a 2D filter).
+</p>
+
+<p>
+  Third, <strong>cluster within each interval</strong>. For each interval, take the data points whose filter value falls in it and cluster just those points, in the original high-dimensional space. Each cluster becomes a node of the Mapper graph. A point in the overlap of two intervals belongs to a cluster in each, and those two clusters are joined by an edge. The overlap is what connects the graph.
 </p>
 
 <div class="figure" id="fig-mapper">
   <div class="controls">
     <label>
-      resolution (intervals) <span class="value" id="m-res-val">8</span>
-      <input type="range" id="m-res" min="3" max="20" value="8" step="1">
+      intervals <span class="value" id="m-res-val">9</span>
+      <input type="range" id="m-res" min="3" max="20" value="9" step="1">
     </label>
     <label>
       overlap <span class="value" id="m-ov-val">0.30</span>
       <input type="range" id="m-ov" min="0.05" max="0.6" value="0.3" step="0.01">
     </label>
     <label>
-      filter:
-      <div class="toggle-group" id="m-filter-toggle">
-        <button class="active" data-f="x">horizontal</button>
-        <button data-f="y">vertical</button>
-        <button data-f="r">density</button>
-      </div>
+      filter
+      <span class="toggle-group" id="m-filter" role="group" aria-label="filter function">
+        <button class="active" data-value="x">horizontal position</button>
+        <button data-value="y">vertical position</button>
+        <button data-value="density">density</button>
+      </span>
     </label>
   </div>
-  <svg id="mapper-svg" width="100%" height="420" viewBox="0 0 680 420" preserveAspectRatio="xMidYMid meet"></svg>
+  <svg id="mapper-svg" role="img" aria-label="Two panels. Left: 220 points along a figure-eight lying on its side, colored by horizontal position and divided into nine overlapping vertical bands. Right: the Mapper graph, a chain of nodes that splits into an upper and a lower branch around each of the two loops and rejoins at the crossing in the middle, so the graph has two loops like the data."></svg>
   <div class="figure-caption">
     <span class="figure-label">Figure 1.</span>
-    The Mapper pipeline applied to a figure-8 dataset. Left: the data colored by filter value, with cover intervals shown as vertical (or horizontal) bands. Right: the Mapper graph, where each node is a cluster of points inside one interval and edges connect clusters that share points via the interval overlaps. Changing the filter changes what topology gets revealed.
+    Mapper on a figure-eight. Left: the points colored by filter value, with the cover drawn as overlapping bands. Right: the Mapper graph. With horizontal position as the filter, each band that cuts a loop contains two clusters (the upper and lower arcs), and the graph has two loops joined at the crossing, like the data. Switch to vertical position and each band cuts both loops at once, so a band can hold four clusters and the graph is laid out differently, though it still has two loops. Drop the overlap toward 0.05 and edges start to go missing. The density filter has no direction on the page, so its cover is not drawn.
   </div>
 </div>
 
 <p>
-  The two graph-shape knobs are resolution (how many intervals) and overlap (how much adjacent intervals share). More resolution means finer topological detail but also more noise; more overlap means more edges but may merge features that should be distinct. In practice, the user sweeps these and looks for structure that is stable across settings.
+  The two knobs that shape the graph are the number of intervals and their overlap. More intervals give finer detail and more spurious splits. More overlap gives more edges and can merge features that should be distinct. In practice the user sweeps both and looks for structure that is stable across settings.
 </p>
 
 <p>
-  The filter function is where the creative work happens. The same dataset under different filters reveals different aspects: a height filter on a dataset of head poses reveals the rotation axis; a density filter reveals where the dataset concentrates; a distance-from-center filter reveals radial structure. Filter choice is the lens metaphor taken literally: the Mapper graph is what your data looks like through that particular lens. This has led to some confusion over whether Mapper is "really" dimensionality reduction, because its output is a graph, not a scatter plot. It is; the graph is the embedding, just in a non-standard format.
+  The filter is the main design decision. The same dataset under different filters shows different things: a height filter on a set of head poses can show the rotation axis, a density filter shows where the data concentrates, and a distance-from-center filter shows radial structure. Mapper's output is a graph and not a scatter plot, which has led some to ask whether it is dimensionality reduction at all. We count it as one: the graph is a low-dimensional description of the data.
 </p>
 
 <div class="margin-note">
-  Real Mapper workflows often use a learned lens, for example the activation of a specific neuron or the output of a classifier. The Ayasdi platform built a business on running Mapper with clever lenses on industrial datasets. The choice of lens makes Mapper powerful and makes it an art.
+  Mapper workflows often use a learned lens, for example the activation of one neuron or the output of a classifier. The company Ayasdi built a business on running Mapper with well-chosen lenses on industrial datasets. Choosing the lens is where most of the skill in using Mapper goes.
 </div>
 
-<h2>Reeb graphs: the special case</h2>
+<h2>Reeb graphs: the continuous version</h2>
 
 <p>
-  A Reeb graph is Mapper's continuous cousin. Given a smooth manifold and a scalar function on it (think "height" on a torus), the Reeb graph tracks how the level sets of the function change as you sweep through its values. Components split, merge, appear, and disappear; the graph records these events. Every "branch point" in the graph is a critical point of the function.
+  Given a smooth manifold and a scalar function on it (think of height on a torus), the Reeb graph tracks the level sets of the function as its value sweeps upward. Connected components of the level set split, merge, appear, and disappear, and the graph records those events. Each branch point of the graph is a critical point of the function.
 </p>
 
 <p>
-  Mapper is essentially a discrete, noise-tolerant approximation of the Reeb graph, applied to point cloud data instead of smooth manifolds. The theoretical guarantees come from the Reeb graph side; the practical utility comes from the Mapper side.
+  Mapper is a discrete, noise-tolerant approximation of the Reeb graph for point clouds. The theoretical guarantees come from the Reeb graph, and the practical use comes from Mapper.
 </p>
 
-<h2>Persistent homology: which features are real?</h2>
+<h2>Persistent homology: which features are robust?</h2>
 
 <p>
-  Persistent homology is not a dimensionality reduction method, but it is so central to topological data analysis that it belongs here. The idea: grow a ball around each data point and slowly increase the radius. At small radii, the union of balls is just disconnected dots. As radii grow, balls start to overlap, connected components form, and eventually the whole thing fills in. Along the way, topological features are born and die.
+  Persistent homology is not a dimensionality reduction method, but the rest of topological data analysis leans on it. Grow a ball around each data point and slowly increase the radius. At small radii the union of balls is a set of separate dots. As the radius grows the balls overlap, connected components form, and eventually everything fills in. Along the way topological features are born and die.
 </p>
 
 <p>
-  A connected component is born when a ball first appears and dies when it merges with another component. A loop is born when balls overlap enough to enclose empty space and dies when that empty space gets filled in. A void (a sphere's interior in 3D) is born and dies similarly. The <em>persistence</em> of a feature is the length of the interval between its birth and death.
+  A connected component is born when its ball appears and dies when it merges into another component. A loop is born when the balls close a ring around empty space and dies when that space is filled. The <em>persistence</em> of a feature is the length of the interval between its birth and its death.
 </p>
 
 <div class="figure" id="fig-persistence">
   <div class="controls">
     <label>
-      ball radius <span class="value" id="ph-r-val">0.00</span>
+      ball radius <span class="value" id="ph-r-val">0.150</span>
       <input type="range" id="ph-r" min="0" max="0.4" value="0.15" step="0.005">
     </label>
   </div>
-  <svg id="ph-svg" width="100%" height="340" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid meet"></svg>
+  <svg id="ph-svg" role="img" aria-label="Two panels. Left: 60 points on a noisy circle with a ball drawn around each; at radius 0.15 the balls form a closed ring with a hole in the middle. Right: a barcode. Sixty short bars for connected components, all but one ending below radius 0.06, and one long bar for the loop, running from about 0.06 to about 0.23."></svg>
+  <div class="readout" id="ph-readout" aria-live="polite"></div>
   <div class="figure-caption">
     <span class="figure-label">Figure 2.</span>
-    Persistent homology in action on a noisy circle. As ball radius grows, dots merge into a single connected component (H<sub>0</sub>), then a loop appears as the circle closes (H<sub>1</sub>), and eventually the loop fills in and dies. The right panel shows a "barcode": each bar is one feature's life span. Features that live a long time (long bars) are real; features that die quickly (short bars) are noise.
+    A noisy circle of 60 points. The barcode has one bar per feature, from the radius where it is born to the radius where it dies, and the dashed line marks the slider's radius. The component bars (H<sub>0</sub>) are short: every point has joined one component by a radius of about 0.06. The loop's bar (H<sub>1</sub>) is long: the ring closes at that same radius, and the hole survives until about 0.23, when the balls reach the middle of a circle whose radius is 0.3. The component bars are computed exactly; for the loop we draw only the bar of the large ring and leave out the brief small loops between neighboring points.
   </div>
 </div>
 
 <p>
-  Persistent homology gives you a principled answer to "which features in this dataset are robust?" Long bars in the barcode are features that are stable across scales and therefore probably real; short bars are noise. Libraries like Ripser and Giotto-TDA compute persistence efficiently for reasonably sized datasets. The barcode is not itself a visualization of the data, but it is an auditable summary of the data's shape, which is valuable both as a diagnostic and as a feature vector for downstream tasks.
+  Persistent homology answers "which features of this dataset are robust?" with a rule that can be audited: features with long bars exist across a wide range of scales and are likely to be structure, and features with short bars are likely to be noise. Libraries like Ripser and giotto-tda compute persistence efficiently for moderately sized datasets. The barcode is not a picture of the data, but it is a summary of its shape that can be used as a diagnostic or as a feature vector for downstream tasks.
 </p>
 
-<h2>Topological autoencoders: carrying topology into neural methods</h2>
+<h2>Topological autoencoders: a topological loss for neural networks</h2>
 
 <p>
-  The most recent development in this area is to build topological priors into neural DR methods. Topological autoencoders, introduced by Moor and colleagues in 2020, train an autoencoder with an additional term in the loss that encourages the persistence features of the latent space to match the persistence features of the input space. The result is a learned embedding that does its best to preserve topology, while still being a parametric neural function with all the benefits that come with that (out-of-sample generalization, GPU training, compatibility with downstream neural architectures).
-</p>
-
-<p>
-  Topological autoencoders are not yet a default tool the way UMAP is, but they are a compelling direction because they combine the strengths of two worlds. Neural methods are scalable and flexible but tend to distort topology in unpredictable ways; topological methods are principled but tend to be hard to scale or tune. Putting a topological regularizer on a neural method is a way to get the best of both, when the training is stable enough.
-</p>
-
-<h2>When topology is the right lens</h2>
-
-<p>
-  Topological methods are most useful when the shape of your data is meaningful and when the absolute positions of points are not. Developmental lineages branch and merge; disease progression traces loops (patient gets sick, treatment, remission, possibly relapse); dynamical systems visit a finite set of states with particular transitions. For data like this, a t-SNE or UMAP plot will usually miss the structure because the neighborhood-preserving objective does not know about loops or branches. A Mapper graph, by contrast, makes them visible.
+  Topological autoencoders, introduced by Moor and colleagues in 2020, train an autoencoder with an extra loss term that encourages the persistence features of the latent space to match those of the input space. The result is a learned embedding that tries to preserve topology while remaining a parametric function, with what that brings: new points can be embedded without retraining, training runs on a GPU, and the encoder can be combined with other networks.
 </p>
 
 <p>
-  The cost of using topological methods is that they produce graphs, not scatter plots, and graphs are harder to interpret at a glance. The standard workflow is to use topology as a companion tool: run UMAP for the intuitive picture, run Mapper alongside for the structural validation. Structure that shows up in both is more likely to be real, and a disagreement points at where to look closer.
+  Topological autoencoders are not a default tool the way UMAP is. Their appeal is the combination: neural methods scale and are flexible but can distort topology in ways that are hard to predict, and topological methods are principled but hard to scale and tune. A topological regularizer on a neural method gets some of both when the training is stable enough.
+</p>
+
+<h2>When to use a topological method</h2>
+
+<p>
+  Topological methods are most useful when the shape of the data is meaningful and the positions of individual points are not. Developmental lineages branch and merge; disease progression can trace loops (illness, treatment, remission, sometimes relapse); dynamical systems visit a set of states with particular transitions between them. A t-SNE or UMAP plot of such data can break a loop or a branch into pieces, since nothing in its objective asks for the loop to stay closed. A Mapper graph represents the loop directly.
 </p>
 
 <p>
-  The next article picks up a different kind of thing that gets washed out by the neighborhood family: density. When a method can tell you not just where the clusters are but how tightly packed they are, the workflow opens up in a different direction.
+  The cost is that the output is a graph, and graphs are harder to read at a glance than scatter plots. A common workflow uses topology as a companion: UMAP for the overall picture, Mapper alongside it as a structural check. Structure that shows up in both is more likely to be in the data, and a disagreement points at where to look closer.
 </p>
 
-<footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
-  <p>Part of <a href="index.html" style="color: var(--text-2);">What Dimensionality Reduction Preserves</a>. Previous: <a href="04-local-neighborhoods.html" style="color: var(--accent);">Preserving Local Neighborhoods</a>. Next: <a href="06-density.html" style="color: var(--accent);">Preserving Density</a>.</p>
-  <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+<p>
+  The next article takes up the other thing the neighborhood family discards: density, or how tightly packed each region of the data is.
+</p>
+
+<footer>
+  <p>Part of <a href="index.html">What Dimensionality Reduction Preserves</a>. Previous: <a class="next" href="04-local-neighborhoods.html">Preserving Local Neighborhoods</a>. Next: <a class="next" href="06-density.html">Preserving Density</a>.</p>
+  <p>Built with <a href="https://github.com/enjalot/moonshine">moonshine</a>.</p>
 </footer>
 
 </div>
 
 <script>
+const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const DUR = REDUCED ? 0 : 250;
+
+// Every figure is drawn at the pixel width its container actually has, and redrawn when that
+// width changes, so labels stay the same size on a phone as on a desktop. draw(svg, W) lays the
+// figure out for width W and returns { height } (plus an optional stop() to cancel animation).
+function figure(id, draw) {
+  const node = document.getElementById(id), svg = d3.select(node);
+  let lastW = 0, stop = null;
+  function go() {
+    const W = Math.floor(node.getBoundingClientRect().width);
+    if (!W || W === lastW) return;
+    lastW = W;
+    if (stop) stop();
+    svg.selectAll("*").remove();
+    const res = draw(svg, W);
+    svg.attr("viewBox", `0 0 ${W} ${res.height}`).attr("height", res.height);
+    stop = res.stop || null;
+  }
+  new ResizeObserver(go).observe(node.parentNode);
+  go();
+}
+
+// Run start() the first time the element scrolls into view, so animations play when they can be seen.
+function whenVisible(node, start) {
+  if (!("IntersectionObserver" in window)) { start(); return () => {}; }
+  const io = new IntersectionObserver(entries => {
+    if (entries.some(e => e.isIntersecting)) { io.disconnect(); start(); }
+  }, { threshold: 0.35 });
+  io.observe(node);
+  return () => io.disconnect();
+}
+
+// Mutually exclusive buttons. Calls onChange(value) and marks the pressed button.
+function toggle(groupId, onChange) {
+  const buttons = document.querySelectorAll(`#${groupId} button`);
+  buttons.forEach(btn => {
+    btn.setAttribute("aria-pressed", btn.classList.contains("active"));
+    btn.onclick = () => {
+      buttons.forEach(b => { b.classList.toggle("active", b === btn); b.setAttribute("aria-pressed", b === btn); });
+      onChange(btn.dataset.value);
+    };
+  });
+  return () => document.querySelector(`#${groupId} button.active`).dataset.value;
+}
+
+// A titled panel: returns a <g> whose origin is the panel's top-left drawing corner.
+function pane(svg, x, y, w, h, title, note) {
+  const g = svg.append("g").attr("transform", `translate(${x},${y})`);
+  g.append("text").attr("class", "pane-title").attr("x", 0).attr("y", 13).text(title);
+  if (note) g.append("text").attr("x", 0).attr("y", 30).text(note);
+  const top = note ? 40 : 22;
+  g.append("rect").attr("class", "pane-bg").attr("x", 0).attr("y", top).attr("width", w).attr("height", h - top).attr("rx", 4);
+  const inner = g.append("g").attr("transform", `translate(0,${top})`);
+  inner.w = w; inner.h = h - top;
+  return inner;
+}
+
+// Scales that fit a 2D point set into a w x h box with equal units on both axes.
+function fitScales(pts, w, h, pad = 12) {
+  const xe = d3.extent(pts, p => p[0]), ye = d3.extent(pts, p => p[1]);
+  const s = Math.min((w - 2 * pad) / ((xe[1] - xe[0]) || 1), (h - 2 * pad) / ((ye[1] - ye[0]) || 1));
+  const cx = (xe[0] + xe[1]) / 2, cy = (ye[0] + ye[1]) / 2;
+  return { x: v => w / 2 + (v - cx) * s, y: v => h / 2 - (v - cy) * s, s };
+}
+
 function mulberry32(seed) {
   return function() {
     let t = seed += 0x6D2B79F5;
@@ -216,386 +357,172 @@ function gaussian(rng) {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 
-// ---------- Figure 1: Mapper ----------
+// ---------- Figure 1: Mapper on a figure-eight ----------
 (function() {
-  const svg = d3.select("#mapper-svg");
-  const W = 680, H = 420;
-  const paneW = W / 2;
-
-  // Generate figure-8 data
-  const rng = mulberry32(31);
-  const N = 220;
-  const pts = [];
-  for (let i = 0; i < N; i++) {
-    const t = i / N * 2 * Math.PI;
-    // figure-8: lemniscate of Bernoulli
-    const s = Math.sin(t), c = Math.cos(t);
-    const den = 1 + s * s;
-    const noise = 0.04;
-    pts.push({
-      x: c / den + gaussian(rng) * noise,
-      y: s * c / den + gaussian(rng) * noise,
-      id: i,
-    });
+  const rng = mulberry32(31), N = 220, pts = [];
+  for (let i = 0; i < N; i++) { // lemniscate of Bernoulli with a little noise
+    const t = 2 * Math.PI * i / N, s = Math.sin(t), c = Math.cos(t), den = 1 + s * s;
+    pts.push({ x: c / den + gaussian(rng) * 0.03, y: s * c / den + gaussian(rng) * 0.03 });
   }
-
-  // Add filter values
-  const xExt = d3.extent(pts, d => d.x);
-  const yExt = d3.extent(pts, d => d.y);
-  function computeFilter(name) {
-    if (name === "x") return pts.map(p => p.x);
-    if (name === "y") return pts.map(p => p.y);
-    if (name === "r") {
-      // kernel density estimate at each point
-      return pts.map(p => {
-        let s = 0;
-        for (const q of pts) {
-          const dx = p.x - q.x, dy = p.y - q.y;
-          s += Math.exp(-(dx * dx + dy * dy) / 0.02);
-        }
-        return s;
-      });
-    }
-  }
-
-  const leftG = svg.append("g").attr("transform", `translate(20, 20)`);
-  const rightG = svg.append("g").attr("transform", `translate(${paneW + 20}, 20)`);
-  const lW = paneW - 40, lH = 320;
-
-  const x = d3.scaleLinear().domain([xExt[0] - 0.1, xExt[1] + 0.1]).range([0, lW]);
-  const y = d3.scaleLinear().domain([yExt[0] - 0.1, yExt[1] + 0.1]).range([lH, 0]);
-
-  leftG.append("text").attr("y", -6).style("font-size", "11px").attr("fill", "var(--text-3)")
-    .style("letter-spacing", "0.04em").text("DATA + COVER");
-  rightG.append("text").attr("y", -6).style("font-size", "11px").attr("fill", "var(--text-3)")
-    .style("letter-spacing", "0.04em").text("MAPPER GRAPH");
-
-  const coverG = leftG.append("g");
-  const ptG = leftG.append("g");
-
-  function clusterInInterval(indices, eps) {
-    // simple single-linkage within 2D distance threshold
-    const parent = new Array(indices.length).fill(0).map((_, i) => i);
-    function find(i) { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; }
-    for (let a = 0; a < indices.length; a++) {
-      for (let b = a + 1; b < indices.length; b++) {
-        const p = pts[indices[a]], q = pts[indices[b]];
-        const d = Math.hypot(p.x - q.x, p.y - q.y);
-        if (d < eps) {
-          const pa = find(a), pb = find(b);
-          if (pa !== pb) parent[pa] = pb;
-        }
-      }
+  const xExt = d3.extent(pts, d => d.x), yExt = d3.extent(pts, d => d.y);
+  const filters = {
+    x: pts.map(p => p.x),
+    y: pts.map(p => p.y),
+    density: pts.map(p => d3.sum(pts, q => Math.exp(-((p.x - q.x) ** 2 + (p.y - q.y) ** 2) / 0.02))),
+  };
+  // single-linkage clustering: points closer than eps end up in the same cluster
+  function cluster(indices, eps) {
+    const parent = indices.map((_, i) => i);
+    const find = i => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+    for (let a = 0; a < indices.length; a++) for (let b = a + 1; b < indices.length; b++) {
+      const p = pts[indices[a]], q = pts[indices[b]];
+      if (Math.hypot(p.x - q.x, p.y - q.y) < eps) parent[find(a)] = find(b);
     }
     const groups = new Map();
-    for (let i = 0; i < indices.length; i++) {
-      const r = find(i);
-      if (!groups.has(r)) groups.set(r, []);
-      groups.get(r).push(indices[i]);
-    }
+    indices.forEach((idx, i) => { const r = find(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(idx); });
     return [...groups.values()];
   }
-
-  const resInput = document.getElementById("m-res");
-  const ovInput = document.getElementById("m-ov");
-  const resVal = document.getElementById("m-res-val");
-  const ovVal = document.getElementById("m-ov-val");
-  const filterButtons = document.querySelectorAll("#m-filter-toggle button");
-  let currentFilter = "x";
-
-  function render() {
-    const res = +resInput.value, ov = +ovInput.value;
-    resVal.textContent = res;
-    ovVal.textContent = ov.toFixed(2);
-
-    const filt = computeFilter(currentFilter);
-    const fExt = d3.extent(filt);
-    const fScale = d3.scaleSequential(d3.interpolateViridis).domain(fExt);
-
-    // Points
-    ptG.selectAll("circle").data(pts).join("circle")
-      .attr("cx", d => x(d.x)).attr("cy", d => y(d.y))
-      .attr("r", 2.8).attr("fill", (_, i) => fScale(filt[i])).attr("opacity", 0.9)
-      .attr("stroke", "white").attr("stroke-width", 0.3);
-
-    // Cover bands: vertical if filter is x or density, horizontal if y
-    const vertical = currentFilter !== "y";
-    coverG.selectAll("*").remove();
-
-    const step = (fExt[1] - fExt[0]) / res;
-    const width = step * (1 + ov);
-    const intervals = [];
-    for (let i = 0; i < res; i++) {
-      const a = fExt[0] + i * step - step * ov / 2;
-      const b = a + width;
-      intervals.push([a, b]);
+  function mapper(filt, res, overlap) {
+    const [lo, hi] = d3.extent(filt), step = (hi - lo) / res;
+    const intervals = d3.range(res).map(i => [lo + i * step - step * overlap / 2, lo + (i + 1) * step + step * overlap / 2]);
+    const nodes = [], edges = [];
+    const byInterval = intervals.map((iv, k) => cluster(d3.range(N).filter(i => filt[i] >= iv[0] && filt[i] <= iv[1]), 0.1)
+      .map(members => { const node = { id: nodes.length, interval: k, members: new Set(members) }; nodes.push(node); return node; }));
+    for (let k = 0; k < res - 1; k++) for (const a of byInterval[k]) for (const b of byInterval[k + 1]) {
+      let shared = 0;
+      for (const m of a.members) if (b.members.has(m)) shared++;
+      if (shared > 0) edges.push({ source: a.id, target: b.id, shared });
     }
-
-    // Draw bands (faint)
-    intervals.forEach((iv, idx) => {
-      const color = idx % 2 === 0 ? "var(--accent)" : "var(--warm)";
-      if (currentFilter === "x") {
-        // bands are x-ranges
-        const x1 = x(Math.max(iv[0], fExt[0] - 0.2));
-        const x2 = x(Math.min(iv[1], fExt[1] + 0.2));
-        coverG.append("rect").attr("x", x1).attr("y", 0).attr("width", Math.max(0, x2 - x1))
-          .attr("height", lH).attr("fill", color).attr("opacity", 0.06);
-      } else if (currentFilter === "y") {
-        const y1 = y(Math.min(iv[1], fExt[1] + 0.2));
-        const y2 = y(Math.max(iv[0], fExt[0] - 0.2));
-        coverG.append("rect").attr("x", 0).attr("y", y1).attr("width", lW).attr("height", Math.max(0, y2 - y1))
-          .attr("fill", color).attr("opacity", 0.06);
-      } else {
-        // density filter — show interval bands as vertical too, since there's no spatial axis for density, use color scale strip
-      }
-    });
-
-    // Build the Mapper graph
-    const nodes = [];
-    const edges = [];
-    const eps = 0.06; // cluster threshold in original space
-    const intervalMembers = intervals.map(iv => {
-      const indices = [];
-      for (let i = 0; i < N; i++) if (filt[i] >= iv[0] && filt[i] <= iv[1]) indices.push(i);
-      return indices;
-    });
-    const intervalClusters = intervalMembers.map((mem, idx) => clusterInInterval(mem, eps).map((cluster, cidx) => {
-      const node = { interval: idx, cidx, members: new Set(cluster), id: nodes.length };
-      nodes.push(node);
-      return node;
-    }));
-
-    for (let i = 0; i < intervals.length - 1; i++) {
-      for (const a of intervalClusters[i]) {
-        for (const b of intervalClusters[i + 1]) {
-          let shared = 0;
-          for (const m of a.members) if (b.members.has(m)) shared++;
-          if (shared > 0) edges.push({ source: a.id, target: b.id, w: shared });
-        }
-      }
-    }
-
-    // Layout: position nodes by interval index along x, spread vertically
-    const rW = paneW - 40, rH = 320;
-    rightG.selectAll("*").remove();
-    rightG.append("text").attr("y", -6).style("font-size", "11px").attr("fill", "var(--text-3)")
-      .style("letter-spacing", "0.04em").text("MAPPER GRAPH");
-
-    // Layered layout: when the filter has a spatial axis, pin each node to the filter axis
-    // (interval center) so the graph reads as "topology along the filter". The orthogonal
-    // axis resolves via a soft forceY/forceX toward mean member position + collide for spacing.
-    // For the density filter, fall back to pure force-directed since density has no axis.
-    const layoutRng = mulberry32(17);
     nodes.forEach(n => {
-      const mems = [...n.members];
-      n.avgFilt = mems.reduce((s, i) => s + filt[i], 0) / mems.length;
-      n.avgX = mems.reduce((s, i) => s + pts[i].x, 0) / mems.length;
-      n.avgY = mems.reduce((s, i) => s + pts[i].y, 0) / mems.length;
-      n.fx = null; n.fy = null;
+      const mem = [...n.members];
+      n.filt = d3.mean(mem, i => filt[i]); n.mx = d3.mean(mem, i => pts[i].x); n.my = d3.mean(mem, i => pts[i].y);
     });
-
-    const filtToX = v => 20 + ((v - fExt[0]) / (fExt[1] - fExt[0])) * (rW - 40);
-    const filtToY = v => 20 + (1 - (v - fExt[0]) / (fExt[1] - fExt[0])) * (rH - 40);
-    const dataYToY = v => 20 + (1 - (v - yExt[0]) / (yExt[1] - yExt[0])) * (rH - 40);
-    const dataXToX = v => 20 + ((v - xExt[0]) / (xExt[1] - xExt[0])) * (rW - 40);
-
-    const sim = d3.forceSimulation(nodes)
-      .force("link", d3.forceLink(edges).distance(28).strength(0.3))
-      .force("collide", d3.forceCollide(14));
-
-    if (currentFilter === "x") {
-      nodes.forEach(n => {
-        const iv = intervals[n.interval];
-        n.fx = filtToX((iv[0] + iv[1]) / 2);
-        n.y = dataYToY(n.avgY);
-        n.vx = 0; n.vy = 0;
-      });
-      sim.force("y", d3.forceY(n => dataYToY(n.avgY)).strength(0.25));
-    } else if (currentFilter === "y") {
-      nodes.forEach(n => {
-        const iv = intervals[n.interval];
-        n.fy = filtToY((iv[0] + iv[1]) / 2);
-        n.x = dataXToX(n.avgX);
-        n.vx = 0; n.vy = 0;
-      });
-      sim.force("x", d3.forceX(n => dataXToX(n.avgX)).strength(0.25));
-    } else {
-      // density filter: no spatial axis, use force-directed
-      nodes.forEach(n => {
-        n.x = rW / 2 + (layoutRng() - 0.5) * rW * 0.6;
-        n.y = rH / 2 + (layoutRng() - 0.5) * rH * 0.6;
-        n.vx = 0; n.vy = 0;
-      });
-      sim.force("charge", d3.forceManyBody().strength(-60).distanceMax(90))
-         .force("center", d3.forceCenter(rW / 2, rH / 2).strength(0.15));
-    }
-
-    sim.alpha(1).alphaDecay(0.02).stop();
-    for (let i = 0; i < 400; i++) sim.tick();
-
-    // Safety-net clamp
-    for (const n of nodes) {
-      n.x = Math.max(20, Math.min(rW - 20, n.x));
-      n.y = Math.max(20, Math.min(rH - 20, n.y));
-    }
-
-    rightG.selectAll(".edge").data(edges).enter().append("line")
-      .attr("class", "edge")
-      .attr("x1", e => nodes[e.source.index !== undefined ? e.source.index : e.source].x)
-      .attr("y1", e => nodes[e.source.index !== undefined ? e.source.index : e.source].y)
-      .attr("x2", e => nodes[e.target.index !== undefined ? e.target.index : e.target].x)
-      .attr("y2", e => nodes[e.target.index !== undefined ? e.target.index : e.target].y)
-      .attr("stroke", "var(--text-3)").attr("stroke-width", e => Math.min(3, Math.sqrt(e.w)));
-
-    rightG.selectAll(".mnode").data(nodes).enter().append("circle")
-      .attr("class", "mnode")
-      .attr("cx", n => n.x).attr("cy", n => n.y)
-      .attr("r", n => Math.max(5, Math.min(14, Math.sqrt(n.members.size) * 2.5)))
-      .attr("fill", n => {
-        const avg = [...n.members].reduce((s, i) => s + filt[i], 0) / n.members.size;
-        return fScale(avg);
-      })
-      .attr("stroke", "white").attr("stroke-width", 1.5);
+    return { intervals, nodes, edges, lo, hi };
   }
 
-  resInput.addEventListener("input", render);
-  ovInput.addEventListener("input", render);
-  filterButtons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      filterButtons.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      currentFilter = btn.dataset.f;
-      render();
-    });
+  const resInput = document.getElementById("m-res"), ovInput = document.getElementById("m-ov");
+  const resVal = document.getElementById("m-res-val"), ovVal = document.getElementById("m-ov-val");
+  let current = "x";
+
+  figure("mapper-svg", (svg, W) => {
+    const narrow = W < 500, gap = 14, pw = narrow ? W : (W - gap) / 2, ph = narrow ? 230 : 290;
+    const gL = pane(svg, 0, 0, pw, ph, "data and cover", "colored by filter value");
+    const gR = pane(svg, narrow ? 0 : pw + gap, narrow ? ph + 16 : 0, pw, ph, "Mapper graph", "one node per cluster");
+    const sc = fitScales(pts.map(p => [p.x, p.y]), gL.w, gL.h, 18);
+    const coverG = gL.append("g"), ptG = gL.append("g"), edgeG = gR.append("g"), nodeG = gR.append("g");
+
+    function render() {
+      const res = +resInput.value, ov = +ovInput.value, filt = filters[current];
+      resVal.textContent = res; ovVal.textContent = ov.toFixed(2);
+      const m = mapper(filt, res, ov), color = d3.scaleSequential(d3.interpolateViridis).domain([m.lo, m.hi]);
+      ptG.selectAll("circle").data(pts).join("circle").attr("cx", d => sc.x(d.x)).attr("cy", d => sc.y(d.y)).attr("r", 2.6).attr("fill", (_, i) => color(filt[i]));
+      coverG.selectAll("*").remove();
+      if (current !== "density") m.intervals.forEach((iv, k) => {
+        const band = coverG.append("rect").attr("fill", k % 2 ? "var(--warm)" : "var(--accent)").attr("opacity", 0.13);
+        if (current === "x") band.attr("x", sc.x(iv[0])).attr("width", sc.x(iv[1]) - sc.x(iv[0])).attr("y", 0).attr("height", gL.h);
+        else band.attr("y", sc.y(iv[1])).attr("height", sc.y(iv[0]) - sc.y(iv[1])).attr("x", 0).attr("width", gL.w);
+      });
+      // layout: along the filter's own axis when it has one, otherwise force-directed
+      const pad = 22, fx = v => pad + (v - m.lo) / (m.hi - m.lo) * (gR.w - 2 * pad), fy = v => gR.h - pad - (v - m.lo) / (m.hi - m.lo) * (gR.h - 2 * pad);
+      const ax = v => pad + (v - xExt[0]) / (xExt[1] - xExt[0]) * (gR.w - 2 * pad), ay = v => gR.h - pad - (v - yExt[0]) / (yExt[1] - yExt[0]) * (gR.h - 2 * pad);
+      const mid = n => (m.intervals[n.interval][0] + m.intervals[n.interval][1]) / 2;
+      const links = m.edges.map(e => ({ source: e.source, target: e.target, shared: e.shared }));
+      const sim = d3.forceSimulation(m.nodes).force("link", d3.forceLink(links).distance(24).strength(0.3)).force("collide", d3.forceCollide(11));
+      if (current === "x") { m.nodes.forEach(n => { n.fx = fx(mid(n)); n.y = ay(n.my); }); sim.force("y", d3.forceY(n => ay(n.my)).strength(0.3)); }
+      else if (current === "y") { m.nodes.forEach(n => { n.fy = fy(mid(n)); n.x = ax(n.mx); }); sim.force("x", d3.forceX(n => ax(n.mx)).strength(0.3)); }
+      else {
+        m.nodes.forEach(n => { n.x = ax(n.mx); n.y = ay(n.my); });
+        sim.force("charge", d3.forceManyBody().strength(-50).distanceMax(90)).force("x", d3.forceX(gR.w / 2).strength(0.05)).force("y", d3.forceY(gR.h / 2).strength(0.08));
+      }
+      sim.stop();
+      for (let i = 0; i < 300; i++) sim.tick();
+      m.nodes.forEach(n => { n.x = Math.max(12, Math.min(gR.w - 12, n.x)); n.y = Math.max(12, Math.min(gR.h - 12, n.y)); });
+      edgeG.selectAll("line").data(links).join("line")
+        .attr("x1", e => e.source.x).attr("y1", e => e.source.y).attr("x2", e => e.target.x).attr("y2", e => e.target.y)
+        .attr("stroke", "var(--text-2)").attr("stroke-width", e => Math.min(3, 0.8 + Math.sqrt(e.shared) / 2));
+      nodeG.selectAll("circle").data(m.nodes).join("circle").attr("cx", n => n.x).attr("cy", n => n.y)
+        .attr("r", n => Math.max(4, Math.min(11, Math.sqrt(n.members.size) * 1.7)))
+        .attr("fill", n => color(n.filt)).attr("stroke", "var(--bg)").attr("stroke-width", 1.5);
+    }
+    resInput.oninput = render; ovInput.oninput = render;
+    toggle("m-filter", v => { current = v; render(); });
+    render();
+    return { height: narrow ? 2 * ph + 16 : ph };
   });
-  render();
 })();
 
-// ---------- Figure 2: Persistent homology ----------
+// ---------- Figure 2: persistent homology of a noisy circle ----------
 (function() {
-  const svg = d3.select("#ph-svg");
-  const W = 680, H = 340;
-  const paneW = W / 2;
-
-  // Noisy circle
-  const rng = mulberry32(71);
-  const N = 60;
-  const pts = [];
+  const rng = mulberry32(71), N = 60, RING = 0.3, pts = [];
   for (let i = 0; i < N; i++) {
-    const t = i / N * 2 * Math.PI;
-    pts.push({ x: 0.5 + 0.3 * Math.cos(t) + gaussian(rng) * 0.04, y: 0.5 + 0.3 * Math.sin(t) + gaussian(rng) * 0.04 });
+    const t = 2 * Math.PI * i / N;
+    pts.push([0.5 + RING * Math.cos(t) + gaussian(rng) * 0.03, 0.5 + RING * Math.sin(t) + gaussian(rng) * 0.03]);
   }
-
-  const leftG = svg.append("g").attr("transform", `translate(20, 20)`);
-  const rightG = svg.append("g").attr("transform", `translate(${paneW + 10}, 20)`);
-
-  const lW = paneW - 40, lH = 290;
-  const x = d3.scaleLinear().domain([0, 1]).range([0, lW]);
-  const y = d3.scaleLinear().domain([0, 1]).range([lH, 0]);
-
-  leftG.append("text").attr("y", -6).style("font-size", "11px").attr("fill", "var(--text-3)")
-    .style("letter-spacing", "0.04em").text("DATA + BALLS");
-  rightG.append("text").attr("y", -6).style("font-size", "11px").attr("fill", "var(--text-3)")
-    .style("letter-spacing", "0.04em").text("PERSISTENCE BARCODE (ILLUSTRATIVE)");
-
-  const ballG = leftG.append("g");
-  const edgeG = leftG.append("g");
-  const ptG = leftG.append("g");
-
-  // Pre-compute H0 merges (minimum spanning tree edges by length)
+  const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  // H0, exact: components merge along minimum-spanning-tree edges; two balls of radius r touch at r = d / 2
   const pairs = [];
-  for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
-    pairs.push({ a: i, b: j, d: Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y) });
+  for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) pairs.push({ a: i, b: j, d: dist(pts[i], pts[j]) });
+  pairs.sort((p, q) => p.d - q.d);
+  const parent = d3.range(N), find = i => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+  const h0 = [];
+  for (const p of pairs) { const a = find(p.a), b = find(p.b); if (a !== b) { parent[a] = b; h0.push(p.d / 2); } }
+  // H1, the large ring only. It is born when the widest gap between angular neighbors closes, and dies
+  // when the balls cover the hole: at the largest circumradius among the acute Delaunay triangles.
+  const byAngle = d3.range(N).sort((i, j) => Math.atan2(pts[i][1] - 0.5, pts[i][0] - 0.5) - Math.atan2(pts[j][1] - 0.5, pts[j][0] - 0.5));
+  const birth = d3.max(byAngle, (i, k) => dist(pts[i], pts[byAngle[(k + 1) % N]])) / 2;
+  const tri = d3.Delaunay.from(pts).triangles;
+  let death = 0;
+  for (let t = 0; t < tri.length; t += 3) {
+    const [a, b, c] = [pts[tri[t]], pts[tri[t + 1]], pts[tri[t + 2]]];
+    const la = dist(b, c), lb = dist(a, c), lc = dist(a, b), s = [la, lb, lc].sort((x, y) => x - y);
+    if (s[2] * s[2] >= s[0] * s[0] + s[1] * s[1]) continue; // obtuse: its circumcentre lies outside it
+    const area = Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])) / 2;
+    death = Math.max(death, la * lb * lc / (4 * area));
   }
-  pairs.sort((a, b) => a.d - b.d);
-  const parent = new Array(N).fill(0).map((_, i) => i);
-  function find(i) { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; }
-  // births & deaths: H0 each point born at r=0, dies when merging with another component
-  const h0 = pts.map(() => ({ birth: 0, death: Infinity }));
-  for (const p of pairs) {
-    const r = p.d / 2; // two balls of radius r meet
-    const pa = find(p.a), pb = find(p.b);
-    if (pa !== pb) {
-      // the younger component dies (one with later birth — here both born at 0, so kill higher index)
-      const kill = pa > pb ? pa : pb;
-      const keep = pa > pb ? pb : pa;
-      if (h0[kill].death === Infinity) h0[kill].death = r;
-      parent[pa] = pb;
+  const MAXR = 0.4;
+  const rInput = document.getElementById("ph-r"), rVal = document.getElementById("ph-r-val"), readout = document.getElementById("ph-readout");
+
+  figure("ph-svg", (svg, W) => {
+    const narrow = W < 500, gap = 14, pw = narrow ? W : (W - gap) / 2, ph = narrow ? pw * 0.8 : 300;
+    const gL = pane(svg, 0, 0, pw, ph, "points and balls");
+    const bh = narrow ? 300 : ph;
+    const gR = pane(svg, narrow ? 0 : pw + gap, narrow ? ph + 16 : 0, pw, bh, "barcode");
+    const side = Math.min(gL.w, gL.h), ox = (gL.w - side) / 2, oy = (gL.h - side) / 2;
+    const x = v => ox + v * side, y = v => oy + (1 - v) * side;
+    gL.append("clipPath").attr("id", "ph-clip").append("rect").attr("width", gL.w).attr("height", gL.h);
+    const balls = gL.append("g").attr("clip-path", "url(#ph-clip)").attr("fill", "var(--accent)").attr("fill-opacity", 0.16)
+      .selectAll("circle").data(pts).join("circle").attr("cx", p => x(p[0])).attr("cy", p => y(p[1]));
+    gL.append("g").selectAll("circle").data(pts).join("circle").attr("cx", p => x(p[0])).attr("cy", p => y(p[1])).attr("r", 2.2).attr("fill", "var(--text)");
+
+    const m = { l: 34, r: 10, t: 8, b: 40 }, xr = d3.scaleLinear().domain([0, MAXR]).range([m.l, gR.w - m.r]);
+    gR.append("g").attr("class", "axis").attr("transform", `translate(0,${gR.h - m.b})`).call(d3.axisBottom(xr).ticks(4));
+    gR.append("text").attr("x", (m.l + gR.w - m.r) / 2).attr("y", gR.h - 6).attr("text-anchor", "middle").text("ball radius");
+    const h0h = (gR.h - m.b - m.t) * 0.72, rowH = h0h / N;
+    // one component never dies; the others are drawn longest first
+    const bars = [MAXR].concat(h0.slice().reverse());
+    gR.append("g").selectAll("line").data(bars).join("line").attr("x1", xr(0)).attr("x2", d => xr(d))
+      .attr("y1", (_, i) => m.t + (i + 0.5) * rowH).attr("y2", (_, i) => m.t + (i + 0.5) * rowH)
+      .attr("stroke", "var(--accent)").attr("stroke-width", Math.max(1, rowH * 0.6));
+    gR.append("text").attr("x", 4).attr("y", m.t + 14).attr("fill", "var(--accent)").text("H₀");
+    const loopY = m.t + h0h + (gR.h - m.b - m.t - h0h) / 2;
+    gR.append("line").attr("x1", xr(birth)).attr("x2", xr(death)).attr("y1", loopY).attr("y2", loopY).attr("stroke", "var(--warm)").attr("stroke-width", 5);
+    gR.append("text").attr("x", 4).attr("y", loopY + 4).attr("fill", "var(--warm)").text("H₁");
+    gR.append("text").attr("x", xr((birth + death) / 2)).attr("y", loopY - 10).attr("text-anchor", "middle").attr("fill", "var(--warm)").text("the loop");
+    const cursor = gR.append("line").attr("y1", m.t).attr("y2", gR.h - m.b).attr("stroke", "var(--text)").attr("stroke-dasharray", "4 3");
+
+    function render() {
+      const r = +rInput.value;
+      rVal.textContent = r.toFixed(3);
+      balls.attr("r", r * side);
+      cursor.attr("x1", xr(r)).attr("x2", xr(r));
+      const comps = 1 + h0.filter(d => d > r).length;
+      const loop = r < birth ? "the ring has not closed yet" : r < death ? "the loop is open" : "the loop has been filled in";
+      readout.innerHTML = `At this radius: <b>${comps}</b> connected component${comps === 1 ? "" : "s"}, and <b>${loop}</b>.`;
     }
-  }
-  // Approx H1: loop born when circle closes (roughly gap in point distribution), dies when filled in
-  // For a noisy circle, approx birth ~ mean gap / 2 and death ~ inner radius
-  const ringRad = 0.3;
-  const gaps = [];
-  for (let i = 0; i < N; i++) {
-    const i2 = (i + 1) % N;
-    gaps.push(Math.hypot(pts[i].x - pts[i2].x, pts[i].y - pts[i2].y));
-  }
-  const maxGap = d3.max(gaps);
-  const h1 = [{ birth: maxGap / 2, death: ringRad * 0.9 }];
-
-  const rInput = document.getElementById("ph-r");
-  const rVal = document.getElementById("ph-r-val");
-
-  function render() {
-    const r = +rInput.value;
-    rVal.textContent = r.toFixed(3);
-
-    // balls
-    ballG.selectAll("circle").data(pts).join("circle")
-      .attr("cx", p => x(p.x)).attr("cy", p => y(p.y))
-      .attr("r", lW * r * (x.range()[1] - x.range()[0]) / lW)
-      .attr("fill", "var(--accent)").attr("opacity", 0.12).attr("stroke", "none");
-
-    // edges: draw between points within 2r
-    const activeEdges = pairs.filter(p => p.d < 2 * r);
-    edgeG.selectAll("line").data(activeEdges).join("line")
-      .attr("x1", e => x(pts[e.a].x)).attr("y1", e => y(pts[e.a].y))
-      .attr("x2", e => x(pts[e.b].x)).attr("y2", e => y(pts[e.b].y))
-      .attr("stroke", "var(--accent)").attr("stroke-opacity", 0.35).attr("stroke-width", 0.7);
-
-    // points
-    ptG.selectAll("circle").data(pts).join("circle")
-      .attr("cx", p => x(p.x)).attr("cy", p => y(p.y))
-      .attr("r", 2.5).attr("fill", "var(--text)").attr("opacity", 0.9);
-
-    // Barcode
-    rightG.selectAll("*").remove();
-    rightG.append("text").attr("y", -6).style("font-size", "11px").attr("fill", "var(--text-3)")
-      .style("letter-spacing", "0.04em").text("PERSISTENCE BARCODE");
-
-    const bW = paneW - 30, bH = 290;
-    const xr = d3.scaleLinear().domain([0, 0.4]).range([40, bW - 10]);
-    // axis
-    rightG.append("g").attr("class", "axis").attr("transform", `translate(0, ${bH - 20})`)
-      .call(d3.axisBottom(xr).ticks(5));
-    rightG.append("text").attr("x", bW / 2).attr("y", bH + 8).attr("text-anchor", "middle")
-      .style("font-size", "11px").attr("fill", "var(--text-2)").text("radius r");
-    // bars: H0
-    const sortedH0 = h0.slice().sort((a, b) => (b.death === Infinity ? 0.4 : b.death) - (a.death === Infinity ? 0.4 : a.death));
-    sortedH0.forEach((bar, idx) => {
-      const yy = 18 + idx * 3;
-      const start = xr(bar.birth);
-      const end = xr(bar.death === Infinity ? 0.4 : Math.min(bar.death, 0.4));
-      rightG.append("line").attr("x1", start).attr("x2", end).attr("y1", yy).attr("y2", yy)
-        .attr("stroke", "var(--accent)").attr("stroke-width", 1.4).attr("opacity", 0.7);
-    });
-    // label H0
-    rightG.append("text").attr("x", 10).attr("y", 24).style("font-size", "10px").attr("fill", "var(--accent)").text("H₀");
-    // H1 loop bars
-    h1.forEach((bar, idx) => {
-      const yy = 18 + N * 3 + 16 + idx * 6;
-      rightG.append("line").attr("x1", xr(bar.birth)).attr("x2", xr(bar.death)).attr("y1", yy).attr("y2", yy)
-        .attr("stroke", "var(--warm)").attr("stroke-width", 3).attr("opacity", 0.9);
-    });
-    rightG.append("text").attr("x", 10).attr("y", 18 + N * 3 + 28).style("font-size", "10px").attr("fill", "var(--warm)").text("H₁");
-
-    // Current radius line
-    rightG.append("line").attr("x1", xr(r)).attr("x2", xr(r)).attr("y1", 10).attr("y2", bH - 20)
-      .attr("stroke", "var(--text)").attr("stroke-width", 1).attr("stroke-dasharray", "3 2");
-  }
-  rInput.addEventListener("input", render);
-  render();
+    rInput.oninput = render;
+    render();
+    return { height: narrow ? ph + 16 + bh : ph };
+  });
 })();
 </script>
 </body>

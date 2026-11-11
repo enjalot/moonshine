@@ -11,6 +11,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
+  color-scheme: light dark;
   --article-width: 740px;
   --body-font: 'Source Serif 4', Georgia, serif;
   --heading-font: 'Source Sans 3', system-ui, sans-serif;
@@ -19,16 +20,45 @@
   --line-height: 1.6;
   --text: #1a1a2e;
   --text-2: #4a4a6a;
-  --text-3: #8a8a9e;
+  --text-3: #6b6b82;
   --accent: #2563eb;
   --accent-light: #dbeafe;
-  --warm: #ea580c;
-  --green: #059669;
-  --purple: #7c3aed;
+  --on-accent: #ffffff;
+  --warm: #c2410c;
+  --warm-light: #ffedd5;
   --bg: #fafafa;
   --fig-bg: #ffffff;
   --border: #e2e2e8;
   --border-2: #c5c5d1;
+  --muted: #e8e8ee;
+  /* categorical colours, in the same order in every figure of the series */
+  --c0: #2563eb;
+  --c1: #c2410c;
+  --c2: #047857;
+  --c3: #7c3aed;
+  --c4: #be185d;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e6dd;
+    --text-2: #b9b9cb;
+    --text-3: #9a9ab0;
+    --accent: #60a5fa;
+    --accent-light: #1e3a5f;
+    --on-accent: #10102a;
+    --warm: #fb923c;
+    --warm-light: #4a2a12;
+    --bg: #1a1a2e;
+    --fig-bg: #22223a;
+    --border: #3a3a52;
+    --border-2: #5a5a74;
+    --muted: #2e2e48;
+    --c0: #60a5fa;
+    --c1: #fb923c;
+    --c2: #34d399;
+    --c3: #a78bfa;
+    --c4: #f472b6;
+  }
 }
 
 body {
@@ -42,91 +72,76 @@ body {
 
 .article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
 h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
-h1 { font-size: 2.5rem; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
+h1 { font-size: 2.4rem; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
 h2 { font-size: 1.4rem; margin: 3rem 0 1rem; }
+h3 { font-size: 1.1rem; margin: 2rem 0 0.75rem; }
 p { margin: 0 0 1rem; }
 a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
 em { font-style: italic; }
+strong { font-weight: 600; }
+.mono { font-family: var(--mono-font); font-size: 0.92em; }
 
-.subtitle {
-  font-family: var(--heading-font);
-  font-size: 1.15rem;
-  color: var(--text-2);
-  line-height: 1.45;
-  margin-bottom: 1.5rem;
-  font-weight: 400;
-}
+.subtitle { font-family: var(--heading-font); font-size: 1.1rem; color: var(--text-2); line-height: 1.45; margin-bottom: 1.5rem; font-weight: 400; }
+.series-tag { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
 
-.header-visual {
-  margin: 1rem 0 2rem;
-}
+.figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.figure svg { display: block; width: 100%; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.5; }
+.figure-label { font-weight: 600; color: var(--text); }
 
-.card-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin: 1.5rem 0;
-}
+.controls { display: flex; align-items: center; gap: 0.6rem 1.25rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); }
+.controls input[type="range"] { width: 150px; max-width: 100%; accent-color: var(--accent); vertical-align: middle; }
+.controls label { display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.controls .value { font-family: var(--mono-font); color: var(--text); min-width: 2ch; display: inline-block; }
+.controls button, .toggle-group button { font-family: var(--heading-font); font-size: 0.875rem; padding: 0.4rem 0.75rem; background: var(--fig-bg); color: var(--text-2); cursor: pointer; }
+.controls > button, .controls label > button { border: 1px solid var(--border-2); border-radius: 4px; }
+.controls button:hover { background: var(--muted); }
+.toggle-group { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--border-2); border-radius: 4px; overflow: hidden; }
+.toggle-group button { border: none; border-right: 1px solid var(--border-2); }
+.toggle-group button:last-child { border-right: none; }
+.toggle-group button.active, .toggle-group button.active:hover { background: var(--accent); color: var(--on-accent); }
+button:focus-visible, input:focus-visible, svg [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.card {
-  display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 1.25rem;
-  background: var(--fig-bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 1.1rem 1.25rem;
-  text-decoration: none;
-  color: inherit;
-  transition: border-color 0.15s, transform 0.15s;
-  align-items: center;
-}
-.card:hover { border-color: var(--accent); }
-.card-thumb {
-  width: 100px;
-  height: 60px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.card-num {
-  font-family: var(--mono-font);
-  font-size: 0.78rem;
-  color: var(--text-3);
-  letter-spacing: 0.04em;
-}
-.card-title {
-  font-family: var(--heading-font);
-  font-weight: 700;
-  font-size: 1.15rem;
-  color: var(--text);
-  margin: 0.15rem 0 0.35rem;
-}
-.card-desc {
-  font-family: var(--body-font);
-  font-size: 0.95rem;
-  color: var(--text-2);
-  line-height: 1.45;
-  margin: 0;
-}
-.card-tags {
-  font-family: var(--heading-font);
-  font-size: 0.72rem;
-  color: var(--text-3);
-  margin-top: 0.45rem;
-  letter-spacing: 0.04em;
-}
-.card.capstone {
-  border-top: 3px solid var(--purple);
+.readout { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.5rem; min-height: 1.4em; }
+.readout b { color: var(--text); font-weight: 600; }
+
+svg text { font-family: var(--heading-font); font-size: 13px; fill: var(--text-2); }
+svg .axis text { font-size: 13px; fill: var(--text-2); }
+svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crispEdges; }
+svg .pane-title { font-weight: 700; fill: var(--text); }
+svg .pane-bg { fill: var(--bg); stroke: var(--border); }
+
+.margin-note { font-size: 0.875rem; color: var(--text-2); line-height: 1.5; border-left: 2px solid var(--border-2); padding-left: 0.9rem; margin: 1.25rem 0; }
+
+footer { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); }
+footer a { color: var(--text-2); }
+footer a.next { color: var(--accent); }
+.header-visual { margin: 1rem 0 2rem; }
+.header-visual svg { display: block; width: 100%; }
+.card-list { display: flex; flex-direction: column; gap: 0.5rem; margin: 1.5rem 0; }
+.card { display: grid; grid-template-columns: 110px 1fr; gap: 1.25rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1.1rem 1.25rem; text-decoration: none; color: inherit; align-items: center; }
+.card:hover, .card:focus-visible { border-color: var(--accent); }
+.card-thumb { width: 100px; height: 60px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+.card-thumb svg { width: 100%; height: 100%; }
+.card-num { font-family: var(--mono-font); font-size: 0.8125rem; color: var(--text-3); letter-spacing: 0.04em; }
+.card-title { font-family: var(--heading-font); font-weight: 700; font-size: 1.15rem; color: var(--text); margin: 0.15rem 0 0.35rem; }
+.card-desc { font-size: 0.95rem; color: var(--text-2); line-height: 1.45; margin: 0; }
+.card-tags { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-3); margin-top: 0.45rem; }
+.t-line { stroke: var(--border-2); fill: none; }
+.t-a { fill: var(--c0); } .t-b { fill: var(--c1); } .t-n { fill: var(--text-3); }
+.t-as { stroke: var(--c0); fill: none; } .t-bs { stroke: var(--c1); fill: none; }
+@media (max-width: 640px) {
+  .card { grid-template-columns: 1fr; gap: 0.75rem; }
 }
 
 @media (max-width: 640px) {
-  h1 { font-size: 1.85rem; }
-  .card { grid-template-columns: 1fr; }
-  .card-thumb { width: 100%; height: 50px; }
+  h1 { font-size: 1.75rem; }
+  .figure { padding: 1rem; }
+  .controls input[type="range"] { width: 120px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }
 }
 </style>
 </head>
@@ -134,27 +149,27 @@ em { font-style: italic; }
 <div class="article">
 
 <header>
-  <div style="font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem;">A ten-part series</div>
+  <div class="series-tag">A ten-part series</div>
   <h1>What Dimensionality Reduction Preserves</h1>
   <p class="subtitle">
-    A field guide to the families of methods that turn high-dimensional data into something we can look at, organized by the kind of structure each one protects.
+    A field guide to the methods that turn high-dimensional data into something we can look at, organized by the kind of structure each one protects.
   </p>
 </header>
 
 <div class="header-visual">
-  <svg id="header-svg" width="100%" height="120" viewBox="0 0 680 120" preserveAspectRatio="xMidYMid meet"></svg>
+  <svg id="header-svg" role="img" aria-label="Four small dot drawings: points along a straight line, points along a curve, points in two clusters, and points arranged as a branching tree, labeled linear, manifold, neighborhoods and hierarchy."></svg>
 </div>
 
 <p>
-  Every dimensionality reduction algorithm is a decision about what matters. PCA says variance matters. t-SNE says who-is-near-whom matters. Mapper says shape matters. Poincaré embeddings say hierarchy matters. When you pick a method, you are picking a definition of structure.
+  Every dimensionality reduction algorithm makes a decision about what matters in the data. PCA keeps variance, t-SNE keeps who is near whom, Mapper keeps shape, and Poincaré embeddings keep hierarchy. Choosing a method is choosing which kind of structure the picture will show.
 </p>
 
 <p>
-  The literature usually organizes these methods by how they are computed: eigendecompositions here, gradient descent there, neural networks in a third bucket. That works for implementers. For practitioners choosing a tool, a better axis is what the method is <em>trying</em> to preserve, because that is what tells you whether your data and your question match.
+  The literature usually organizes these methods by how they are computed: eigendecompositions, gradient descent, neural networks. That suits implementers. For someone choosing a tool, it is more useful to ask what the method is <em>trying</em> to preserve, because that is what tells you whether it matches your data and your question.
 </p>
 
 <p>
-  This series walks through the landscape that way. Each article takes a family of methods organized around a single notion of "structure," builds up intuition for what each preserves and what it discards, and shows where the tradeoffs show up in practice. The audience is machine-learning practitioners who work with high-dimensional data every day but want a sharper toolkit for understanding latent spaces, embeddings, and learned representations.
+  This series is organized that way. Each article takes one family of methods built around one notion of structure, shows what the family keeps and what it discards, and runs the methods in the page on small datasets so the trade-offs can be seen. It is written for machine-learning practitioners who work with high-dimensional data and want a clearer basis for choosing and reading projections of latent spaces and embeddings.
 </p>
 
 <h2>Articles</h2>
@@ -162,102 +177,102 @@ em { font-style: italic; }
 <div class="card-list">
 
   <a class="card" href="01-framing.html">
-    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(50,30)"><circle r="22" fill="none" stroke="#c5c5d1" stroke-width="1"/><circle r="14" fill="none" stroke="#c5c5d1" stroke-width="1"/><circle r="6" fill="#2563eb"/></g></svg></div>
+    <div class="card-thumb"><svg viewBox="0 0 100 60" aria-hidden="true"><g transform="translate(50,30)"><circle r="22" class="t-line"/><circle r="14" class="t-line"/><circle r="6" class="t-a"/></g></svg></div>
     <div>
       <div class="card-num">01 · framing</div>
       <div class="card-title">The Geometry of High-Dimensional Data</div>
-      <p class="card-desc">Why high-dimensional space is strange, what "structure" can mean, and how we tell whether a projection is honest.</p>
-      <div class="card-tags">curse of dimensionality · evaluation · taxonomy</div>
+      <p class="card-desc">How distances behave in high dimensions, five kinds of structure one dataset can have, and the measurements used to check a projection.</p>
+      <div class="card-tags">concentration of distances · trustworthiness and continuity · the nine families</div>
     </div>
   </a>
 
   <a class="card" href="02-linear.html">
-    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(12,10)"><line x1="0" y1="40" x2="80" y2="0" stroke="#2563eb" stroke-width="2"/><line x1="0" y1="0" x2="80" y2="40" stroke="#ea580c" stroke-width="1.5" stroke-dasharray="2 2"/><g fill="#8a8a9e"><circle cx="18" cy="28" r="2"/><circle cx="28" cy="22" r="2"/><circle cx="40" cy="18" r="2"/><circle cx="52" cy="16" r="2"/><circle cx="62" cy="10" r="2"/><circle cx="72" cy="8" r="2"/></g></g></svg></div>
+    <div class="card-thumb"><svg viewBox="0 0 100 60" aria-hidden="true"><g transform="translate(12,10)"><line x1="0" y1="40" x2="80" y2="0" class="t-as" stroke-width="2"/><line x1="30" y1="6" x2="50" y2="34" class="t-bs" stroke-width="1.5"/><g class="t-n"><circle cx="18" cy="28" r="2"/><circle cx="28" cy="22" r="2"/><circle cx="40" cy="18" r="2"/><circle cx="52" cy="16" r="2"/><circle cx="62" cy="10" r="2"/><circle cx="72" cy="8" r="2"/></g></g></svg></div>
     <div>
       <div class="card-num">02 · linear</div>
       <div class="card-title">The Linear Family</div>
-      <p class="card-desc">PCA, ICA, NMF, Kernel PCA, random projection. Variance, independence, parts, and why old methods still matter.</p>
-      <div class="card-tags">PCA · ICA · NMF · Kernel PCA · random projection</div>
+      <p class="card-desc">PCA keeps variance, ICA separates independent sources, NMF finds additive parts, kernel PCA handles structure that is linear after a change of coordinates, and random projection keeps distances without optimizing anything.</p>
+      <div class="card-tags">PCA · ICA · NMF · kernel PCA · random projection</div>
     </div>
   </a>
 
   <a class="card" href="03-global-distances.html">
-    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(10,10)"><path d="M 5 20 Q 25 5 45 20 T 80 30" fill="none" stroke="#2563eb" stroke-width="2"/><g fill="#1a1a2e"><circle cx="5" cy="20" r="3"/><circle cx="25" cy="13" r="3"/><circle cx="45" cy="20" r="3"/><circle cx="64" cy="30" r="3"/><circle cx="80" cy="30" r="3"/></g></g></svg></div>
+    <div class="card-thumb"><svg viewBox="0 0 100 60" aria-hidden="true"><g transform="translate(10,10)"><path d="M 5 20 Q 25 5 45 20 T 80 30" class="t-as" stroke-width="2"/><g class="t-n"><circle cx="5" cy="20" r="3"/><circle cx="25" cy="13" r="3"/><circle cx="45" cy="20" r="3"/><circle cx="64" cy="30" r="3"/><circle cx="80" cy="30" r="3"/></g></g></svg></div>
     <div>
       <div class="card-num">03 · global distances</div>
       <div class="card-title">Preserving Global Distances</div>
-      <p class="card-desc">Classical MDS, Sammon mapping, Isomap, diffusion maps. From Euclidean to geodesic to diffusion distance.</p>
-      <div class="card-tags">MDS · Sammon · Isomap · diffusion maps</div>
+      <p class="card-desc">Four methods that reproduce a distance matrix and differ in how distance is measured: straight-line, reweighted toward short distances, along a neighbor graph, or by a random walk.</p>
+      <div class="card-tags">MDS · Sammon mapping · Isomap · diffusion maps</div>
     </div>
   </a>
 
   <a class="card" href="04-local-neighborhoods.html">
-    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(10,8)"><g stroke="#c5c5d1" stroke-width="0.6" fill="none"><line x1="15" y1="15" x2="25" y2="22"/><line x1="25" y1="22" x2="20" y2="35"/><line x1="20" y1="35" x2="14" y2="28"/><line x1="14" y1="28" x2="15" y2="15"/><line x1="55" y1="20" x2="65" y2="12"/><line x1="65" y1="12" x2="72" y2="22"/><line x1="72" y1="22" x2="60" y2="32"/><line x1="60" y1="32" x2="55" y2="20"/></g><g fill="#2563eb"><circle cx="15" cy="15" r="2.5"/><circle cx="25" cy="22" r="2.5"/><circle cx="20" cy="35" r="2.5"/><circle cx="14" cy="28" r="2.5"/></g><g fill="#ea580c"><circle cx="55" cy="20" r="2.5"/><circle cx="65" cy="12" r="2.5"/><circle cx="72" cy="22" r="2.5"/><circle cx="60" cy="32" r="2.5"/></g></g></svg></div>
+    <div class="card-thumb"><svg viewBox="0 0 100 60" aria-hidden="true"><g transform="translate(10,8)"><g class="t-line" stroke-width="0.8"><line x1="15" y1="15" x2="25" y2="22"/><line x1="25" y1="22" x2="20" y2="35"/><line x1="20" y1="35" x2="14" y2="28"/><line x1="14" y1="28" x2="15" y2="15"/><line x1="55" y1="20" x2="65" y2="12"/><line x1="65" y1="12" x2="72" y2="22"/><line x1="72" y1="22" x2="60" y2="32"/><line x1="60" y1="32" x2="55" y2="20"/></g><g class="t-a"><circle cx="15" cy="15" r="2.5"/><circle cx="25" cy="22" r="2.5"/><circle cx="20" cy="35" r="2.5"/><circle cx="14" cy="28" r="2.5"/></g><g class="t-b"><circle cx="55" cy="20" r="2.5"/><circle cx="65" cy="12" r="2.5"/><circle cx="72" cy="22" r="2.5"/><circle cx="60" cy="32" r="2.5"/></g></g></svg></div>
     <div>
       <div class="card-num">04 · local neighborhoods</div>
       <div class="card-title">Preserving Local Neighborhoods</div>
-      <p class="card-desc">t-SNE, UMAP, and the neighbor-graph family. How "who is near whom" became the dominant paradigm.</p>
+      <p class="card-desc">How t-SNE and UMAP turn a neighbor graph into attraction and repulsion, what the neighborhood size changes, and what can and cannot be read from the resulting plot. Both run in the page and are scored against PCA and Isomap.</p>
       <div class="card-tags">LLE · Laplacian eigenmaps · t-SNE · UMAP · PaCMAP · TriMap</div>
     </div>
   </a>
 
   <a class="card" href="05-topology.html">
-    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(10,10)" fill="none" stroke="#7c3aed" stroke-width="1.5"><circle cx="20" cy="20" r="10"/><circle cx="55" cy="15" r="7"/><circle cx="70" cy="30" r="10"/><line x1="30" y1="19" x2="48" y2="16"/><line x1="60" y1="20" x2="63" y2="23"/></g></svg></div>
+    <div class="card-thumb"><svg viewBox="0 0 100 60" aria-hidden="true"><g transform="translate(10,10)" class="t-as" stroke-width="1.5"><circle cx="20" cy="20" r="10"/><circle cx="55" cy="15" r="7"/><circle cx="70" cy="30" r="10"/><line x1="30" y1="19" x2="48" y2="16"/><line x1="60" y1="20" x2="63" y2="23"/></g></svg></div>
     <div>
       <div class="card-num">05 · topology</div>
       <div class="card-title">Preserving Topology</div>
-      <p class="card-desc">Mapper, Reeb graphs, topological autoencoders. When shape matters more than position.</p>
-      <div class="card-tags">Mapper · Reeb graphs · topological autoencoders</div>
+      <p class="card-desc">Mapper summarizes data as a graph of overlapping clusters, and persistent homology measures which loops and components survive across scales.</p>
+      <div class="card-tags">Mapper · Reeb graphs · persistent homology · topological autoencoders</div>
     </div>
   </a>
 
   <a class="card" href="06-density.html">
-    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(10,8)"><g><circle cx="25" cy="25" r="18" fill="#dbeafe"/><circle cx="25" cy="25" r="12" fill="#bfdbfe"/><circle cx="25" cy="25" r="6" fill="#2563eb"/></g><g><circle cx="65" cy="25" r="14" fill="#ffedd5" opacity="0.7"/><circle cx="65" cy="25" r="4" fill="#ea580c"/></g></g></svg></div>
+    <div class="card-thumb"><svg viewBox="0 0 100 60" aria-hidden="true"><g transform="translate(10,8)"><circle cx="25" cy="25" r="18" class="t-a" opacity="0.15"/><circle cx="25" cy="25" r="12" class="t-a" opacity="0.3"/><circle cx="25" cy="25" r="6" class="t-a"/><circle cx="65" cy="25" r="14" class="t-b" opacity="0.2"/><circle cx="65" cy="25" r="4" class="t-b"/></g></svg></div>
     <div>
       <div class="card-num">06 · density</div>
       <div class="card-title">Preserving Density</div>
-      <p class="card-desc">densMAP and PHATE. Why most methods flatten density, and what the exceptions buy you.</p>
+      <p class="card-desc">Why t-SNE and UMAP draw tight and diffuse clusters at the same size, how densMAP's extra term restores the difference, and how PHATE keeps a branching trajectory in one piece.</p>
       <div class="card-tags">densMAP · PHATE · potential distance</div>
     </div>
   </a>
 
   <a class="card" href="07-discrete-grids.html">
-    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(15,8)" fill="#dbeafe" stroke="#2563eb" stroke-width="1"><rect x="0" y="0" width="12" height="12"/><rect x="14" y="0" width="12" height="12"/><rect x="28" y="0" width="12" height="12"/><rect x="42" y="0" width="12" height="12"/><rect x="56" y="0" width="12" height="12"/><rect x="0" y="14" width="12" height="12" fill="#bfdbfe"/><rect x="14" y="14" width="12" height="12" fill="#93c5fd"/><rect x="28" y="14" width="12" height="12" fill="#60a5fa"/><rect x="42" y="14" width="12" height="12" fill="#bfdbfe"/><rect x="56" y="14" width="12" height="12"/><rect x="0" y="28" width="12" height="12"/><rect x="14" y="28" width="12" height="12" fill="#60a5fa"/><rect x="28" y="28" width="12" height="12" fill="#2563eb"/><rect x="42" y="28" width="12" height="12" fill="#93c5fd"/><rect x="56" y="28" width="12" height="12"/></g></svg></div>
+    <div class="card-thumb"><svg viewBox="0 0 100 60" aria-hidden="true"><g transform="translate(15,8)" class="t-a"><rect x="0" y="0" width="12" height="12" opacity="0.15"/><rect x="14" y="0" width="12" height="12" opacity="0.15"/><rect x="28" y="0" width="12" height="12" opacity="0.15"/><rect x="42" y="0" width="12" height="12" opacity="0.15"/><rect x="56" y="0" width="12" height="12" opacity="0.15"/><rect x="0" y="14" width="12" height="12" opacity="0.3"/><rect x="14" y="14" width="12" height="12" opacity="0.5"/><rect x="28" y="14" width="12" height="12" opacity="0.7"/><rect x="42" y="14" width="12" height="12" opacity="0.3"/><rect x="56" y="14" width="12" height="12" opacity="0.15"/><rect x="0" y="28" width="12" height="12" opacity="0.15"/><rect x="14" y="28" width="12" height="12" opacity="0.7"/><rect x="28" y="28" width="12" height="12"/><rect x="42" y="28" width="12" height="12" opacity="0.5"/><rect x="56" y="28" width="12" height="12" opacity="0.15"/></g></svg></div>
     <div>
       <div class="card-num">07 · discrete grids</div>
       <div class="card-title">Self-Organizing Maps</div>
-      <p class="card-desc">When you want the output to be a grid, not a cloud. Competitive learning, neighborhood functions, U-matrices.</p>
-      <div class="card-tags">SOM · Kohonen · U-matrix · GNG</div>
+      <p class="card-desc">A method whose output is a grid of cells: how competitive learning orders the grid, how to read its U-matrix, and when a grid is the output you need.</p>
+      <div class="card-tags">SOM · best matching unit · U-matrix</div>
     </div>
   </a>
 
   <a class="card" href="08-hierarchy.html">
-    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(50,30)"><circle r="26" fill="none" stroke="#c5c5d1" stroke-width="1"/><g fill="none" stroke="#7c3aed" stroke-width="1.2"><path d="M 0 0 Q -6 -5 -12 -12"/><path d="M 0 0 Q 6 -5 12 -12"/><path d="M 0 0 Q -2 10 -8 18"/><path d="M 0 0 Q 2 10 8 18"/><path d="M 0 0 Q -12 -4 -20 -5"/><path d="M 0 0 Q 12 -4 20 -5"/></g><g fill="#7c3aed"><circle r="2.5"/><circle cx="-12" cy="-12" r="2"/><circle cx="12" cy="-12" r="2"/><circle cx="-8" cy="18" r="2"/><circle cx="8" cy="18" r="2"/><circle cx="-20" cy="-5" r="2"/><circle cx="20" cy="-5" r="2"/></g></g></svg></div>
+    <div class="card-thumb"><svg viewBox="0 0 100 60" aria-hidden="true"><g transform="translate(50,30)"><circle r="26" class="t-line"/><g class="t-as" stroke-width="1.2"><path d="M 0 0 Q -6 -5 -12 -12"/><path d="M 0 0 Q 6 -5 12 -12"/><path d="M 0 0 Q -2 10 -8 18"/><path d="M 0 0 Q 2 10 8 18"/><path d="M 0 0 Q -12 -4 -20 -5"/><path d="M 0 0 Q 12 -4 20 -5"/></g><g class="t-a"><circle r="2.5"/><circle cx="-12" cy="-12" r="2"/><circle cx="12" cy="-12" r="2"/><circle cx="-8" cy="18" r="2"/><circle cx="8" cy="18" r="2"/><circle cx="-20" cy="-5" r="2"/><circle cx="20" cy="-5" r="2"/></g></g></svg></div>
     <div>
       <div class="card-num">08 · hierarchy</div>
       <div class="card-title">Hyperbolic Embeddings</div>
-      <p class="card-desc">When your data is tree-shaped, Euclidean space cramps it. Hyperbolic geometry does not.</p>
-      <div class="card-tags">Poincaré · Lorentz · hyperbolic</div>
+      <p class="card-desc">A tree outgrows the room a flat plane has for it. The Poincaré disk has exponentially more room toward its edge, and its shortest paths bend toward the center the way paths in a tree pass through the root.</p>
+      <div class="card-tags">Poincaré disk · geodesics · Poincaré embeddings</div>
     </div>
   </a>
 
   <a class="card" href="09-learned.html">
-    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(10,10)"><g stroke="#c5c5d1" stroke-width="0.6" fill="none"><line x1="0" y1="5" x2="25" y2="20"/><line x1="0" y1="15" x2="25" y2="20"/><line x1="0" y1="25" x2="25" y2="20"/><line x1="0" y1="35" x2="25" y2="20"/><line x1="25" y1="20" x2="55" y2="20"/><line x1="55" y1="20" x2="80" y2="5"/><line x1="55" y1="20" x2="80" y2="15"/><line x1="55" y1="20" x2="80" y2="25"/><line x1="55" y1="20" x2="80" y2="35"/></g><g fill="#2563eb"><circle cx="25" cy="20" r="3"/><circle cx="55" cy="20" r="3"/></g><g fill="#8a8a9e"><circle cx="0" cy="5" r="2"/><circle cx="0" cy="15" r="2"/><circle cx="0" cy="25" r="2"/><circle cx="0" cy="35" r="2"/><circle cx="80" cy="5" r="2"/><circle cx="80" cy="15" r="2"/><circle cx="80" cy="25" r="2"/><circle cx="80" cy="35" r="2"/></g></g></svg></div>
+    <div class="card-thumb"><svg viewBox="0 0 100 60" aria-hidden="true"><g transform="translate(10,10)"><g class="t-line" stroke-width="0.8"><line x1="0" y1="5" x2="25" y2="20"/><line x1="0" y1="15" x2="25" y2="20"/><line x1="0" y1="25" x2="25" y2="20"/><line x1="0" y1="35" x2="25" y2="20"/><line x1="25" y1="20" x2="55" y2="20"/><line x1="55" y1="20" x2="80" y2="5"/><line x1="55" y1="20" x2="80" y2="15"/><line x1="55" y1="20" x2="80" y2="25"/><line x1="55" y1="20" x2="80" y2="35"/></g><g class="t-a"><circle cx="25" cy="20" r="3"/><circle cx="55" cy="20" r="3"/></g><g class="t-n"><circle cx="0" cy="5" r="2"/><circle cx="0" cy="15" r="2"/><circle cx="0" cy="25" r="2"/><circle cx="0" cy="35" r="2"/><circle cx="80" cy="5" r="2"/><circle cx="80" cy="15" r="2"/><circle cx="80" cy="25" r="2"/><circle cx="80" cy="35" r="2"/></g></g></svg></div>
     <div>
       <div class="card-num">09 · learned</div>
       <div class="card-title">Learned Representations</div>
-      <p class="card-desc">Autoencoders, VAE, scVI, parametric UMAP. When the dimensionality reduction is itself a trained neural function.</p>
-      <div class="card-tags">autoencoder · VAE · scVI · parametric UMAP · IVIS</div>
+      <p class="card-desc">When the reduction is a neural network, the training objective decides what is preserved. An autoencoder trains in the page next to PCA, followed by VAEs, parametric UMAP, and scVI.</p>
+      <div class="card-tags">autoencoder · VAE · parametric UMAP · scVI</div>
     </div>
   </a>
 
-  <a class="card capstone" href="10-capstone.html">
-    <div class="card-thumb"><svg viewBox="0 0 100 60" width="100%" height="100%"><g transform="translate(50,30)" fill="none" stroke="#7c3aed" stroke-width="1.2"><path d="M -25 0 Q -15 -20 0 -15 Q 15 -10 25 5 Q 15 20 -5 18 Q -20 15 -25 0 Z"/><g stroke-dasharray="2 2"><line x1="-30" y1="-25" x2="30" y2="25"/><line x1="30" y1="-25" x2="-30" y2="25"/></g></g></svg></div>
+  <a class="card" href="10-capstone.html">
+    <div class="card-thumb"><svg viewBox="0 0 100 60" aria-hidden="true"><g transform="translate(14,9)" class="t-a"><rect x="0" y="0" width="12" height="12"/><rect x="15" y="0" width="12" height="12" opacity="0.2"/><rect x="30" y="0" width="12" height="12" opacity="0.2"/><rect x="45" y="0" width="12" height="12"/><rect x="60" y="0" width="12" height="12" opacity="0.2"/><rect x="0" y="15" width="12" height="12" opacity="0.2"/><rect x="15" y="15" width="12" height="12"/><rect x="30" y="15" width="12" height="12" opacity="0.2"/><rect x="45" y="15" width="12" height="12" opacity="0.2"/><rect x="60" y="15" width="12" height="12"/><rect x="0" y="30" width="12" height="12" opacity="0.2"/><rect x="15" y="30" width="12" height="12" opacity="0.2"/><rect x="30" y="30" width="12" height="12"/><rect x="45" y="30" width="12" height="12" opacity="0.2"/><rect x="60" y="30" width="12" height="12" opacity="0.2"/></g></svg></div>
     <div>
       <div class="card-num">10 · capstone</div>
       <div class="card-title">Opportunities &amp; Open Problems</div>
-      <p class="card-desc">Where current methods fail for understanding ML latent spaces, and directions the families in this series suggest but have not yet taken.</p>
-      <div class="card-tags">evaluation · composition · domain-specific priors</div>
+      <p class="card-desc">Five of the methods scored on one dataset with the measurements from article 1, a rating of all nine families, and the gaps that remain for understanding the latent spaces of large models.</p>
+      <div class="card-tags">measured comparison · evaluation · composition · domain-specific priors</div>
     </div>
   </a>
 
@@ -266,81 +281,128 @@ em { font-style: italic; }
 <h2>How to read</h2>
 
 <p>
-  Articles are self-contained and can be read in any order, but the progression does matter. Each family tends to fix something that the previous family struggled with, and the framing article sets up the shared vocabulary. If you are new to this territory, read in sequence. If you are here for one method, jump directly to its article and let the prose pull in what it needs.
+  Each article can be read on its own, but the order matters. Each family addresses something the previous one could not do, and the first article sets up the vocabulary and the measurements the others use. If the territory is new to you, read in sequence. If you are here for one method, go straight to its article.
 </p>
 
 <p>
-  The literature backing these articles lives at <a href="https://github.com/enjalot/latent-labs/tree/main/research">latent-labs/research</a>, a set of paper summaries across the methods covered here and the surrounding areas (clustering, evaluation, topological data analysis, embedding tools). The articles treat that as the grounding rather than reproducing it.
+  The figures run the algorithms in your browser on a few hundred points: PCA, MDS, Isomap, t-SNE, UMAP, densMAP, Mapper, a self-organizing map, and a small autoencoder. Where a figure simplifies a method, its caption says how.
 </p>
 
-<footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
-  <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+<p>
+  The literature behind these articles is summarized at <a href="https://github.com/enjalot/latent-labs/tree/main/research">latent-labs/research</a>, a set of paper notes covering these methods and the areas around them (clustering, evaluation, topological data analysis, embedding tools).
+</p>
+
+<footer>
+  <p>Built with <a href="https://github.com/enjalot/moonshine">moonshine</a>.</p>
 </footer>
 
 </div>
 
 <script>
-// Header visual: a static silhouette of a projection transforming across the series
+const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const DUR = REDUCED ? 0 : 250;
+
+// Every figure is drawn at the pixel width its container actually has, and redrawn when that
+// width changes, so labels stay the same size on a phone as on a desktop. draw(svg, W) lays the
+// figure out for width W and returns { height } (plus an optional stop() to cancel animation).
+function figure(id, draw) {
+  const node = document.getElementById(id), svg = d3.select(node);
+  let lastW = 0, stop = null;
+  function go() {
+    const W = Math.floor(node.getBoundingClientRect().width);
+    if (!W || W === lastW) return;
+    lastW = W;
+    if (stop) stop();
+    svg.selectAll("*").remove();
+    const res = draw(svg, W);
+    svg.attr("viewBox", `0 0 ${W} ${res.height}`).attr("height", res.height);
+    stop = res.stop || null;
+  }
+  new ResizeObserver(go).observe(node.parentNode);
+  go();
+}
+
+// Run start() the first time the element scrolls into view, so animations play when they can be seen.
+function whenVisible(node, start) {
+  if (!("IntersectionObserver" in window)) { start(); return () => {}; }
+  const io = new IntersectionObserver(entries => {
+    if (entries.some(e => e.isIntersecting)) { io.disconnect(); start(); }
+  }, { threshold: 0.35 });
+  io.observe(node);
+  return () => io.disconnect();
+}
+
+// Mutually exclusive buttons. Calls onChange(value) and marks the pressed button.
+function toggle(groupId, onChange) {
+  const buttons = document.querySelectorAll(`#${groupId} button`);
+  buttons.forEach(btn => {
+    btn.setAttribute("aria-pressed", btn.classList.contains("active"));
+    btn.onclick = () => {
+      buttons.forEach(b => { b.classList.toggle("active", b === btn); b.setAttribute("aria-pressed", b === btn); });
+      onChange(btn.dataset.value);
+    };
+  });
+  return () => document.querySelector(`#${groupId} button.active`).dataset.value;
+}
+
+// A titled panel: returns a <g> whose origin is the panel's top-left drawing corner.
+function pane(svg, x, y, w, h, title, note) {
+  const g = svg.append("g").attr("transform", `translate(${x},${y})`);
+  g.append("text").attr("class", "pane-title").attr("x", 0).attr("y", 13).text(title);
+  if (note) g.append("text").attr("x", 0).attr("y", 30).text(note);
+  const top = note ? 40 : 22;
+  g.append("rect").attr("class", "pane-bg").attr("x", 0).attr("y", top).attr("width", w).attr("height", h - top).attr("rx", 4);
+  const inner = g.append("g").attr("transform", `translate(0,${top})`);
+  inner.w = w; inner.h = h - top;
+  return inner;
+}
+
+// Scales that fit a 2D point set into a w x h box with equal units on both axes.
+function fitScales(pts, w, h, pad = 12) {
+  const xe = d3.extent(pts, p => p[0]), ye = d3.extent(pts, p => p[1]);
+  const s = Math.min((w - 2 * pad) / ((xe[1] - xe[0]) || 1), (h - 2 * pad) / ((ye[1] - ye[0]) || 1));
+  const cx = (xe[0] + xe[1]) / 2, cy = (ye[0] + ye[1]) / 2;
+  return { x: v => w / 2 + (v - cx) * s, y: v => h / 2 - (v - cy) * s, s };
+}
+
+function mulberry32(seed) {
+  return function() {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function gaussian(rng) {
+  const u = 1 - rng(), v = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// Header visual: four of the structures the series is organized around.
 (function() {
-  const svg = d3.select("#header-svg");
-  const W = 680, H = 120;
-  const g = svg.append("g").attr("transform", `translate(0, 10)`);
-
-  // Generate points that morph: from a linear 1D arrangement (left) through a curve (middle) to scattered clusters (right)
-  // Just show three frames.
-  const rng = (seed => { let s = seed; return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; }; })(13);
-
-  const frames = [
-    // Linear line (PCA-like)
-    { x: 60, label: "linear", pts: d3.range(30).map(i => ({ x: i * 3.5 - 50, y: (rng() - 0.5) * 6 })) },
-    // Curved manifold (manifold methods)
-    { x: 230, label: "manifold", pts: d3.range(30).map(i => {
-        const t = i / 29; const a = (t - 0.5) * 2.8;
-        return { x: a * 40, y: -Math.sin(a) * 20 };
-      }) },
-    // Two clusters (local neighborhoods)
-    { x: 400, label: "neighborhoods", pts: d3.range(30).map(i => {
-        const c = i < 15 ? -1 : 1;
-        return { x: c * 25 + (rng() - 0.5) * 20, y: (rng() - 0.5) * 35 };
-      }) },
-    // Tree-ish (hierarchy)
-    { x: 570, label: "hierarchy", pts: [] },
-  ];
-  // Build a simple tree for the last frame
-  const treePts = [];
-  function tree(x, y, depth, angle, spread) {
-    treePts.push({ x, y });
+  const rng = mulberry32(13);
+  const tree = [];
+  (function grow(x, y, depth, angle, spread) {
+    tree.push([x, y]);
     if (depth === 0) return;
     const len = 10 + depth * 3;
-    const a1 = angle - spread, a2 = angle + spread;
-    const x1 = x + Math.cos(a1) * len, y1 = y + Math.sin(a1) * len;
-    const x2 = x + Math.cos(a2) * len, y2 = y + Math.sin(a2) * len;
-    tree(x1, y1, depth - 1, a1, spread * 0.7);
-    tree(x2, y2, depth - 1, a2, spread * 0.7);
-  }
-  tree(0, -24, 3, Math.PI / 2, 0.7);
-  frames[3].pts = treePts;
-
-  frames.forEach(f => {
-    const gg = g.append("g").attr("transform", `translate(${f.x}, 45)`);
-    gg.selectAll("circle").data(f.pts).join("circle")
-      .attr("cx", d => d.x).attr("cy", d => d.y).attr("r", 2.2)
-      .attr("fill", "var(--accent)").attr("opacity", 0.7);
-    gg.append("text").attr("y", 52).attr("text-anchor", "middle")
-      .attr("fill", "var(--text-3)")
-      .style("font-family", "var(--heading-font)")
-      .style("font-size", "11px")
-      .style("letter-spacing", "0.04em")
-      .text(f.label);
+    [angle - spread, angle + spread].forEach(a => grow(x + Math.cos(a) * len, y + Math.sin(a) * len, depth - 1, a, spread * 0.7));
+  })(0, -24, 3, Math.PI / 2, 0.7);
+  const frames = [
+    { label: "linear", pts: d3.range(30).map(i => [i * 3.5 - 50, (rng() - 0.5) * 6]) },
+    { label: "manifold", pts: d3.range(30).map(i => { const a = (i / 29 - 0.5) * 2.8; return [a * 40, -Math.sin(a) * 20]; }) },
+    { label: "neighborhoods", pts: d3.range(30).map(i => [(i < 15 ? -25 : 25) + (rng() - 0.5) * 20, (rng() - 0.5) * 35]) },
+    { label: "hierarchy", pts: tree },
+  ];
+  figure("header-svg", (svg, W) => {
+    const cols = W < 500 ? 2 : 4, cw = W / cols, rh = 112;
+    frames.forEach((f, k) => {
+      const g = svg.append("g").attr("transform", `translate(${(k % cols + 0.5) * cw},${Math.floor(k / cols) * rh + 46})`);
+      g.selectAll("circle").data(f.pts).join("circle").attr("cx", d => d[0]).attr("cy", d => d[1]).attr("r", 2.2).attr("fill", "var(--accent)").attr("opacity", 0.8);
+      g.append("text").attr("y", 56).attr("text-anchor", "middle").text(f.label);
+    });
+    return { height: Math.ceil(frames.length / cols) * rh };
   });
-
-  // Arrows between frames
-  for (let i = 0; i < frames.length - 1; i++) {
-    const x1 = frames[i].x + 50, x2 = frames[i + 1].x - 50;
-    g.append("line").attr("x1", x1).attr("x2", x2).attr("y1", 45).attr("y2", 45)
-      .attr("stroke", "var(--border-2)").attr("stroke-width", 1)
-      .attr("stroke-dasharray", "3 3");
-  }
 })();
 </script>
 </body>

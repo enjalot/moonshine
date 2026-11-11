@@ -9,219 +9,353 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
+  color-scheme: light dark;
   --article-width: 740px;
   --body-font: 'Source Serif 4', Georgia, serif;
   --heading-font: 'Source Sans 3', system-ui, sans-serif;
   --mono-font: 'Source Code Pro', monospace;
-  --body-size: 1.125rem; --line-height: 1.6;
-  --text: #1a1a2e; --text-2: #4a4a6a; --text-3: #8a8a9e;
-  --accent: #2563eb; --accent-light: #dbeafe;
-  --warm: #ea580c; --warm-light: #ffedd5;
-  --green: #059669; --purple: #7c3aed;
-  --bg: #fafafa; --fig-bg: #ffffff;
-  --border: #e2e2e8; --border-2: #c5c5d1; --muted: #e8e8ee;
-  --c0: #2563eb; --c1: #ea580c; --c2: #059669; --c3: #7c3aed; --c4: #db2777;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --text-3: #6b6b82;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --on-accent: #ffffff;
+  --warm: #c2410c;
+  --warm-light: #ffedd5;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+  --border-2: #c5c5d1;
+  --muted: #e8e8ee;
+  /* categorical colours, in the same order in every figure of the series */
+  --c0: #2563eb;
+  --c1: #c2410c;
+  --c2: #047857;
+  --c3: #7c3aed;
+  --c4: #be185d;
 }
-body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e6dd;
+    --text-2: #b9b9cb;
+    --text-3: #9a9ab0;
+    --accent: #60a5fa;
+    --accent-light: #1e3a5f;
+    --on-accent: #10102a;
+    --warm: #fb923c;
+    --warm-light: #4a2a12;
+    --bg: #1a1a2e;
+    --fig-bg: #22223a;
+    --border: #3a3a52;
+    --border-2: #5a5a74;
+    --muted: #2e2e48;
+    --c0: #60a5fa;
+    --c1: #fb923c;
+    --c2: #34d399;
+    --c3: #a78bfa;
+    --c4: #f472b6;
+  }
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
 .article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
-h1, h2 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
 h1 { font-size: 2.4rem; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
 h2 { font-size: 1.4rem; margin: 3rem 0 1rem; }
-h3 { font-family: var(--heading-font); font-size: 1.1rem; font-weight: 700; margin: 2rem 0 0.75rem; }
+h3 { font-size: 1.1rem; margin: 2rem 0 0.75rem; }
 p { margin: 0 0 1rem; }
 a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-em { font-style: italic; } strong { font-weight: 600; }
-.subtitle { font-family: var(--heading-font); font-size: 1.1rem; color: var(--text-2); line-height: 1.45; margin-bottom: 1rem; font-weight: 400; }
-.series-tag { font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+em { font-style: italic; }
+strong { font-weight: 600; }
+.mono { font-family: var(--mono-font); font-size: 0.92em; }
+
+.subtitle { font-family: var(--heading-font); font-size: 1.1rem; color: var(--text-2); line-height: 1.45; margin-bottom: 1.5rem; font-weight: 400; }
+.series-tag { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.5; }
+.figure svg { display: block; width: 100%; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.5; }
 .figure-label { font-weight: 600; color: var(--text); }
-.controls { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
-.controls input[type="range"] { width: 160px; accent-color: var(--accent); vertical-align: middle; }
-.controls label { display: inline-flex; align-items: center; gap: 0.5rem; }
+
+.controls { display: flex; align-items: center; gap: 0.6rem 1.25rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); }
+.controls input[type="range"] { width: 150px; max-width: 100%; accent-color: var(--accent); vertical-align: middle; }
+.controls label { display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .controls .value { font-family: var(--mono-font); color: var(--text); min-width: 2ch; display: inline-block; }
-.controls button { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.35rem 0.8rem; background: var(--fig-bg); color: var(--text-2); border: 1px solid var(--border-2); border-radius: 4px; cursor: pointer; }
+.controls button, .toggle-group button { font-family: var(--heading-font); font-size: 0.875rem; padding: 0.4rem 0.75rem; background: var(--fig-bg); color: var(--text-2); cursor: pointer; }
+.controls > button, .controls label > button { border: 1px solid var(--border-2); border-radius: 4px; }
 .controls button:hover { background: var(--muted); }
-.controls button.primary { background: var(--accent); color: white; border-color: var(--accent); }
-.toggle-group { display: inline-flex; border: 1px solid var(--border-2); border-radius: 4px; overflow: hidden; }
-.toggle-group button { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.35rem 0.7rem; background: var(--fig-bg); color: var(--text-2); border: none; border-right: 1px solid var(--border-2); cursor: pointer; border-radius: 0; }
+.toggle-group { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--border-2); border-radius: 4px; overflow: hidden; }
+.toggle-group button { border: none; border-right: 1px solid var(--border-2); }
 .toggle-group button:last-child { border-right: none; }
-.toggle-group button:hover { background: var(--muted); }
-.toggle-group button.active { background: var(--accent); color: white; }
-svg text { font-family: var(--heading-font); }
-svg .axis text { font-size: 11px; fill: var(--text-2); }
+.toggle-group button.active, .toggle-group button.active:hover { background: var(--accent); color: var(--on-accent); }
+button:focus-visible, input:focus-visible, svg [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.readout { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.5rem; min-height: 1.4em; }
+.readout b { color: var(--text); font-weight: 600; }
+
+svg text { font-family: var(--heading-font); font-size: 13px; fill: var(--text-2); }
+svg .axis text { font-size: 13px; fill: var(--text-2); }
 svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crispEdges; }
+svg .pane-title { font-weight: 700; fill: var(--text); }
+svg .pane-bg { fill: var(--bg); stroke: var(--border); }
+
 .margin-note { font-size: 0.875rem; color: var(--text-2); line-height: 1.5; border-left: 2px solid var(--border-2); padding-left: 0.9rem; margin: 1.25rem 0; }
-.comp-label { font-family: var(--heading-font); font-size: 0.82rem; color: var(--text-2); font-weight: 600; }
-@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure { padding: 1rem; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+
+footer { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); }
+footer a { color: var(--text-2); }
+footer a.next { color: var(--accent); }
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .figure { padding: 1rem; }
+  .controls input[type="range"] { width: 120px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }
+}
 </style>
 </head>
 <body>
 <div class="article">
 
 <header>
-  <div class="series-tag">Part 4 of 10 · Preserves who-is-near-whom</div>
+  <div class="series-tag">Part 4 of 10 · Preserves who is near whom</div>
   <h1>Preserving Local Neighborhoods</h1>
   <p class="subtitle">
-    The dominant modern family, including t-SNE and UMAP, gives up on preserving distances and focuses on preserving neighbor lists. The tradeoff has reshaped what DR visualizations can do, and introduced a new category of mistakes to make with them.
+    t-SNE, UMAP, and their relatives give up on preserving distances and preserve neighbor lists instead. That trade produces the cluster plots these methods are known for, and it limits what can be read from them.
   </p>
 </header>
 
 <p>
-  Preserving distances is the most honest thing a projection can try to do, but it is also the most constraining. If a dataset lives on a curved manifold, every nonlinear method in article 3 had to work hard to measure distance correctly (geodesically, diffusively, through a graph). What if we simply gave up on distances and cared only about <em>who is a neighbor of whom</em>?
+  Preserving distances is a demanding goal. For data on a curved manifold, every method in article 3 had to work to measure distance correctly (along a graph, by a random walk) before it could try to reproduce it. The methods in this article drop the distances and keep only <em>who is a neighbor of whom</em>.
 </p>
 
 <p>
-  That move, from distance preservation to neighborhood preservation, defines the modern era of dimensionality reduction. A scatter plot that gets neighbor lists right will cluster tightly, show cluster structure clearly, and be visually striking. A scatter plot that gets distances right tends to look smooth and featureless. For visualization, the neighborhood-preserving methods won.
+  A scatter plot that gets neighbor lists right shows clusters as tight, well-separated groups. One that gets distances right tends to look smoother, with clusters less sharply set apart. For visualization, the neighborhood-preserving methods have become the default.
 </p>
 
 <p>
-  The cost is that such plots tell you almost nothing about global geometry. The distance between two clusters in a t-SNE plot is not meaningful. The size of one cluster relative to another is not meaningful. Both follow from the objective. If you treat a t-SNE or UMAP plot as if its global coordinates mattered, you will reliably fool yourself. 
+  The cost is that such plots say very little about global geometry. The distance between two clusters in a t-SNE plot is not meaningful, and neither is the size of one cluster relative to another. Both follow from the objective, which has no term for either. Reading a t-SNE or UMAP plot as if its global coordinates mattered is the most common way to be misled by one.
 </p>
 
 <h2>From neighbors to forces</h2>
 
 <p>
-  The core mechanism shared by every method in this family can be stated in one sentence: pull near neighbors together, push everyone else apart. The details change from method to method — how the push and the pull are defined, what counts as a neighbor, what the distribution of forces looks like at long range — but the shared shape is the same. The figure below shows the mechanism in its simplest form.
+  The methods in this family share one mechanism: pull each point toward its near neighbors, and push it away from everything else. They differ in how the pull and the push are defined, what counts as a neighbor, and how the forces fall off with distance. Figure 1 shows the mechanism with the simplest forces we could pick.
 </p>
 
 <div class="figure" id="fig-forces">
   <div class="controls">
     <label>
       neighbors per point (k) <span class="value" id="f-k-val">6</span>
-      <input type="range" id="f-k" min="2" max="20" value="6" step="1">
-    </label>
-    <label>
-      repulsion <span class="value" id="f-rep-val">-30</span>
-      <input type="range" id="f-rep" min="-100" max="-5" value="-30" step="1">
+      <input type="range" id="f-k" min="2" max="40" value="6" step="1">
     </label>
     <button id="f-reset">restart</button>
   </div>
-  <svg id="forces-svg" width="100%" height="360" viewBox="0 0 680 360" preserveAspectRatio="xMidYMid meet"></svg>
+  <svg id="forces-svg" role="img" aria-label="Ninety points in five colors start mixed together in the middle. Springs between each point and its nearest neighbors pull the five colors into five separate groups while repulsion between all points spreads the groups apart."></svg>
   <div class="figure-caption">
     <span class="figure-label">Figure 1.</span>
-    A high-dimensional dataset with five clusters, laid out by an attract-repel simulation. Attractive forces act only between each point and its k nearest neighbors in the original space; repulsive forces act between every pair. This is a simplified version of what t-SNE and UMAP do, and the qualitative behavior is very similar: clusters tighten, separate, and become visible.
+    Ninety points from five clusters in 30 dimensions, started in a random heap. Each point is tied by a spring to its k nearest neighbors in the original space, and every pair of points repels. With k = 6 the five clusters pull apart within a few seconds. This is a cartoon of the family, with springs of fixed length and repulsion between all pairs; t-SNE and UMAP use different force laws, and Figures 2 and 3 run the real algorithms.
   </div>
 </div>
 
 <p>
-  Watch what happens when you increase k: neighborhoods overlap more, and the clusters stop separating cleanly because too many cross-cluster points become "neighbors." Reduce k too far, and the graph becomes fragmented, with each cluster breaking into sub-pieces. The right window of k depends on the data. This is the single most important hyperparameter in this family, and it has different names in different methods: <em>perplexity</em> in t-SNE, <em>n_neighbors</em> in UMAP, but the knob does the same job.
+  Raise k past the size of a cluster (18 points) and each point's neighbor list starts to include points from other clusters, so springs tie the clusters to each other and they stop separating cleanly. Drop k to 2 and the springs no longer hold a cluster together as one piece. This neighborhood size is usually the most consequential hyperparameter in the family. t-SNE calls it <em>perplexity</em> and UMAP calls it <em>n_neighbors</em>.
 </p>
 
-<h2>LLE and Laplacian eigenmaps: the spectral roots</h2>
+<h2>LLE and Laplacian eigenmaps: the spectral predecessors</h2>
 
 <p>
-  Before t-SNE, the first attempts to do neighborhood-preserving DR were spectral. Locally Linear Embedding, Roweis and Saul's 2000 paper, noticed that in a smooth manifold, each point can be approximated as a weighted average of its neighbors. LLE solves a system to find those weights, then finds low-dimensional coordinates in which each point is the same weighted average of its (now 2D) neighbors. The result preserves local geometry by construction.
-</p>
-
-<p>
-  Laplacian Eigenmaps, Belkin and Niyogi's 2003 paper, works from a graph Laplacian. Build the kNN graph, weight edges by similarity, and find the smallest nonzero eigenvectors of the graph Laplacian. Those eigenvectors are the embedding coordinates. Points that share many neighbors end up close; points that are disconnected in the graph can end up anywhere.
+  The first neighborhood-preserving methods were spectral. Locally Linear Embedding (Roweis and Saul, 2000) observes that on a smooth manifold each point is approximately a weighted average of its neighbors. LLE solves for those weights, then finds low-dimensional coordinates in which each point is the same weighted average of the same neighbors.
 </p>
 
 <p>
-  Both are clean, elegant, and have closed-form solutions. Both also tend to produce embeddings that are overly smooth, with clusters bleeding into each other rather than separating. They set up the problem that the next generation of methods would solve by switching to probabilistic and optimization-based approaches.
-</p>
-
-<h2>t-SNE: a probabilistic lens on neighbors</h2>
-
-<p>
-  t-SNE, introduced by van der Maaten and Hinton in 2008, reframes the problem probabilistically. For each pair of points in the original space, compute a conditional probability: given point <span style="font-family: var(--mono-font); font-size: 0.92em;">i</span>, the probability that <span style="font-family: var(--mono-font); font-size: 0.92em;">j</span> is its neighbor, under a Gaussian centered at <span style="font-family: var(--mono-font); font-size: 0.92em;">i</span>. The variance of each Gaussian is tuned so that the <em>perplexity</em> (a smooth analog of the number of effective neighbors) matches a user-specified value. This gives a probability distribution over neighbors for each point.
+  Laplacian eigenmaps (Belkin and Niyogi, 2003) build the neighbor graph, weight its edges by similarity, and use the eigenvectors of the graph Laplacian with the smallest nonzero eigenvalues as embedding coordinates. Points that share many neighbors end up close. Nothing in the objective keeps unconnected points apart, apart from a normalization that stops everything from collapsing to one point.
 </p>
 
 <p>
-  In the low-dimensional space, t-SNE uses a Student's t-distribution to define the same kind of probabilities. It then minimizes the KL divergence between the high-D and low-D distributions. Two key design choices make t-SNE characteristic. First, using a t-distribution in low dimensions rather than another Gaussian gives the embedding heavier tails; this fights the "crowding problem" where everything tries to collapse into the middle. Second, minimizing KL rather than a symmetric divergence means t-SNE punishes putting close neighbors far apart much more than it punishes putting far points close; this is why t-SNE clusters are tight and well-separated, often misleadingly so.
+  Both have closed-form solutions, and both tend to produce smooth embeddings in which clusters run into each other. The next generation of methods added an explicit push between non-neighbors and switched from eigendecomposition to iterative optimization.
+</p>
+
+<h2>t-SNE: neighbors as probabilities</h2>
+
+<p>
+  t-SNE (van der Maaten and Hinton, 2008) describes neighborhoods as probability distributions. For each point <span class="mono">i</span> it places a Gaussian at <span class="mono">i</span> and reads off the probability that each other point <span class="mono">j</span> is its neighbor. The width of each Gaussian is tuned separately so that the <em>perplexity</em> of the distribution, a smooth count of effective neighbors, matches a value the user sets.
+</p>
+
+<p>
+  In the low-dimensional layout, t-SNE defines the same kind of probabilities with a Student's t-distribution, and it moves the points to minimize the KL divergence between the two sets of probabilities. Two design choices give t-SNE its character. The t-distribution has heavier tails than a Gaussian, which counters the "crowding problem" in which everything tries to collapse toward the middle. And the KL divergence is asymmetric: it penalizes placing true neighbors far apart much more than it penalizes placing non-neighbors close, which is one reason t-SNE's clusters come out tight and well separated even when the data's are not.
 </p>
 
 <div class="margin-note">
-  The "crowding problem" is a consequence of the volumes of balls growing very differently in high versus low dimensions. A Gaussian falls off too quickly in 2D to accommodate all the neighbors that fit around a point in 50D. The t-distribution's heavier tails leave room for more of them.
+  The crowding problem comes from how differently volume grows in high and low dimensions. Around a point in 50 dimensions there is room for many neighbors that are all at about the same distance from it and from each other; in 2D there is not. The t-distribution's heavy tails let moderately distant points sit much farther away in the layout, which makes room for the close ones.
 </div>
 
-<h2>UMAP: fuzzy simplicial sets, attract and repel</h2>
+<h2>UMAP: a weighted neighbor graph, attracted and repelled</h2>
 
 <p>
-  UMAP, McInnes and Healy's 2018 method, arrives at a similar place from a different direction. Its theoretical story is about fuzzy simplicial sets from algebraic topology, which sounds exotic but operationally reduces to "build a weighted neighbor graph with locally-adaptive radii." The weights represent fuzzy membership: how strongly does <span style="font-family: var(--mono-font); font-size: 0.92em;">j</span> count as a neighbor of <span style="font-family: var(--mono-font); font-size: 0.92em;">i</span>, given that <span style="font-family: var(--mono-font); font-size: 0.92em;">i</span>'s nearest neighbor is treated as distance 1 and others are scaled accordingly?
+  UMAP (McInnes, Healy, and Melville, 2018) arrives at a similar place from a different direction. Its derivation uses fuzzy simplicial sets from algebraic topology. The computation is a weighted k-nearest-neighbor graph in which every point has its own distance scale. For a point <span class="mono">i</span>, the distance to its nearest neighbor, <span class="mono">ρ<sub>i</sub></span>, is subtracted from all of its neighbor distances, so its nearest neighbor always gets membership 1. What remains is divided by a bandwidth <span class="mono">σ<sub>i</sub></span>, chosen so that the memberships <span class="mono">exp(−(d − ρ<sub>i</sub>) / σ<sub>i</sub>)</span> of its k neighbors add up to <span class="mono">log<sub>2</sub> k</span>. Every point ends up with a neighborhood of the same total weight, whether it sits in a dense region or a sparse one. Because <span class="mono">i</span>'s membership for <span class="mono">j</span> and <span class="mono">j</span>'s for <span class="mono">i</span> usually differ, the two are combined with a fuzzy union, <span class="mono">a + b − ab</span>.
 </p>
 
 <p>
-  The low-dimensional graph uses a parametric family of similarity curves, and UMAP optimizes cross-entropy between the high-D and low-D fuzzy graphs. Edges with strong membership in the high-D graph create attractive forces in the layout; non-edges (sampled) create repulsive forces. This directly maps to the pull-and-push picture in Figure 1.
+  In the layout, the similarity of two points at distance <span class="mono">d</span> is <span class="mono">1 / (1 + a d<sup>2b</sup>)</span>, a heavy-tailed curve whose constants <span class="mono">a</span> and <span class="mono">b</span> are fit from the <em>min_dist</em> setting (with both equal to 1 it is t-SNE's kernel). UMAP's stated objective is the cross-entropy between the graph weights and these similarities, and it is optimized by stochastic gradient descent: each graph edge is sampled in proportion to its weight and pulls its two points together, and for every sampled edge a few randomly chosen points are pushed away from one of its ends. That is the pull and push of Figure 1 with specific force laws.
 </p>
 
 <p>
-  UMAP is typically faster than t-SNE because it uses stochastic gradient descent with negative sampling (O(n) per epoch) rather than a denser gradient, and because its nearest-neighbor stage uses approximate methods. It also tends to preserve slightly more global structure than t-SNE, making inter-cluster distances a bit more meaningful (though still not <em>actually</em> meaningful).
+  Two common claims about UMAP need qualifying. The first is speed. One epoch costs in proportion to the number of graph edges, about <span class="mono">n · k</span>, and the neighbor search is approximate. Early t-SNE computed all <span class="mono">n²</span> interactions, but current implementations (Barnes-Hut, FIt-SNE, openTSNE) approximate them and handle millions of points, so which is faster depends on the implementations being compared. The second is global structure. UMAP is often said to preserve more of it than t-SNE. Kobak and Linderman (2021) traced that difference, in the comparisons they reanalyzed, to initialization: UMAP started from a spectral layout of its graph and t-SNE from random positions, and when both were given an informative start they did about equally well. Neither objective has a term for the distance between far-apart points.
 </p>
 
-<h2>The n_neighbors knob, and what "local" means</h2>
+<div class="margin-note">
+  The sampled push is also not the exact gradient of the cross-entropy. Damrich and Hamprecht (2021) showed that drawing a fixed number of negative samples per edge makes the repulsion much weaker than the stated loss implies, which is part of why UMAP's clusters are so compact.
+</div>
+
+<h2>What n_neighbors changes</h2>
 
 <p>
-  The hyperparameter that names this family (n_neighbors, perplexity, k) is the most consequential setting in practice. It controls the radius of the local neighborhood: how far do you have to go before a point stops counting as "near"?
+  The neighborhood size (n_neighbors, perplexity, k) sets how far the graph can see. A point's edges reach only its k nearest neighbors, so any structure larger than that is represented only through chains of overlapping neighborhoods, or not at all.
 </p>
 
 <div class="figure" id="fig-perplexity">
-  <div class="controls">
-    <label>
-      n_neighbors <span class="value" id="p-k-val">15</span>
-      <input type="range" id="p-k" min="3" max="60" value="15" step="1">
-    </label>
-  </div>
-  <svg id="perp-svg" width="100%" height="320" viewBox="0 0 680 320" preserveAspectRatio="xMidYMid meet"></svg>
+  <svg id="perp-svg" role="img" aria-label="Three UMAP layouts of the same 126 points, which form three families of three sub-clusters each. With n_neighbors 4 the layout is a scatter of small islands with little visible grouping. With 15 the islands of each family sit near each other. With 40 each family is one group of three touching sub-clusters, and the three families are far apart."></svg>
   <div class="figure-caption">
     <span class="figure-label">Figure 2.</span>
-    A multi-scale dataset (three large super-clusters, each containing three sub-clusters), projected by an attract-repel layout with different n_neighbors. Small k emphasizes the sub-cluster structure; large k averages over it and reveals only the super-clusters. There is no "right" value; different k answer different questions about the data.
+    UMAP on a dataset with structure at two scales: three families (hue), each made of three sub-clusters of 14 points (shade). At n_neighbors = 4 almost no edge leaves a sub-cluster, and the layout is a scatter of small islands whose arrangement says little about which belong together. At 15 the graph reaches across sub-clusters and each family's islands sit together. At 40 each family is drawn as one group and the families are pushed far apart. The three layouts answer different questions about the same data.
   </div>
 </div>
 
 <p>
-  Small k makes the method aggressive about fine-scale structure: it will separate anything that is even slightly a sub-cluster. Large k averages over local fluctuations and emphasizes larger-scale organization. Data with structure at multiple scales (which is most real data) looks different at different k, and there is no universal right answer. The best practice is to run the method at several k and see which views are consistent across settings and which only appear at specific ones. Structure that shows up only at one k is suspicious.
+  A small k makes the method attend to fine-scale structure, and it will separate anything that is even slightly a sub-cluster. A large k averages over that and shows larger-scale organization. Most real data has structure at more than one scale, so it looks different at different k, and no single value is correct. A reasonable practice is to run several values and trust what persists: structure that appears at only one setting deserves suspicion.
 </p>
 
-<h2>PaCMAP, TriMap, LargeVis: what came next</h2>
+<h2>PaCMAP, TriMap, LargeVis: variations on the objective</h2>
 
 <p>
-  After UMAP, several methods tried to push the family further. PaCMAP (Wang and Rudin, 2021) argues that t-SNE and UMAP are two-term objectives (attract near, repel everything else) that fail at multi-scale structure, and introduces a three-term objective with "mid-near" pairs pulling with moderate strength. This gives noticeably better preservation of global structure in practice. TriMap (Amid and Warmuth, 2019) replaces pair-based objectives with <em>triplet</em> constraints: for anchor point <span style="font-family: var(--mono-font); font-size: 0.92em;">a</span>, near point <span style="font-family: var(--mono-font); font-size: 0.92em;">n</span>, and far point <span style="font-family: var(--mono-font); font-size: 0.92em;">f</span>, require the embedding to place <span style="font-family: var(--mono-font); font-size: 0.92em;">n</span> closer to <span style="font-family: var(--mono-font); font-size: 0.92em;">a</span> than <span style="font-family: var(--mono-font); font-size: 0.92em;">f</span> is. LargeVis (Tang et al., 2016) predates UMAP and shares much of its architecture, but was optimized for very large datasets.
+  Several methods adjust the same recipe. LargeVis (Tang et al., 2016) predates UMAP and shares much of its design: an approximate neighbor graph laid out by sampled attraction and repulsion, built for very large datasets. TriMap (Amid and Warmuth, 2019) replaces pairs with <em>triplets</em>: for an anchor <span class="mono">a</span>, a near point <span class="mono">n</span>, and a far point <span class="mono">f</span>, the embedding should place <span class="mono">n</span> closer to <span class="mono">a</span> than <span class="mono">f</span> is. PaCMAP (Wang and colleagues, 2021) argues that attracting near pairs and repelling the rest is not enough to arrange structure at several scales, and adds a third kind of pair, "mid-near" pairs, that attract with moderate strength early in the optimization. Its authors report better preservation of global structure than t-SNE or UMAP.
 </p>
 
 <p>
-  These methods are close cousins of t-SNE and UMAP, not revolutions. They chip away at known weaknesses, especially around preserving global structure. For most ML-adjacent workflows, UMAP remains the default, with t-SNE close behind, and the alternatives used when the default produces something visibly wrong for your data.
+  These are close relatives of t-SNE and UMAP that work on known weaknesses, mostly around global structure. In ML practice UMAP remains the usual default with t-SNE close behind, and the alternatives are reached for when the default gives something visibly wrong.
 </p>
 
-<h2>Why the same data looks different under different methods</h2>
+<h2>One dataset under four methods</h2>
 
 <p>
-  Running several methods on the same dataset is a good way to calibrate what is signal and what is artifact. Where all methods agree, you can be confident the structure is real. Where they disagree, you have found a place where the methods' different priors matter.
+  Running several methods on the same data is a good way to separate signal from artifact. Where the methods agree, the structure is probably in the data. Where they disagree, the difference comes from what each method assumes. Figure 3 does this with the swiss roll from article 3, now with its points gathered into five clusters along the ribbon, and scores each result with the measures from article 1.
 </p>
 
 <div class="figure" id="fig-compare">
-  <svg id="compare-svg" width="100%" height="340" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid meet"></svg>
+  <svg id="compare-svg" role="img" aria-label="Four scatter plots of the same 200 points in five clusters, with three scores under each. PCA shows the clusters along an arc, overlapping their neighbors. Isomap shows them in a row along a band. t-SNE and UMAP each show compact groups with gaps between most of them."></svg>
   <div class="figure-caption">
     <span class="figure-label">Figure 3.</span>
-    The same five-cluster dataset projected by PCA, Isomap, a t-SNE-like neighbor-graph layout, and a UMAP-like layout. PCA preserves global distances but does not separate clusters. Isomap unrolls the global geometry. The neighbor-based methods produce tighter clusters with better separation but give up global faithfulness. The cluster <em>shapes</em> are largely artifacts of the optimization; only the membership is meaningful.
+    Five clusters along a swiss roll in 3D, embedded by PCA, Isomap (k = 10), t-SNE (perplexity 20), and UMAP (n_neighbors = 15). Under each panel: trustworthiness and continuity at 10 neighbors, and the rank correlation between original and embedded distances. PCA looks down the axis of the roll and sees an arc, with some false neighbors where clusters overlap in its view, so its trustworthiness is the lowest. Isomap straightens the arc into a band with the clusters in order. t-SNE and UMAP pull each cluster into a compact group and keep neighborhoods as well as Isomap does, and UMAP has the lowest distance score of the four. Where they put the groups relative to each other, and the shape of each group, come from the optimization; only the membership should be read.
   </div>
 </div>
 
-<h2>Reading these plots honestly</h2>
+<div class="margin-note">
+  The t-SNE and UMAP in this article are the real algorithms, run in your browser on a few hundred points: exact nearest neighbors, the published gradients, and a PCA initialization for both. Library implementations differ in ways that matter at scale and not here. umap-learn finds neighbors approximately and starts from a spectral layout, and fast t-SNE implementations approximate the repulsion.
+</div>
+
+<h2>What a neighbor plot lets you conclude</h2>
 
 <p>
-  A practitioner habit worth developing: when looking at a t-SNE or UMAP plot, ask what you are allowed to conclude. You can usually conclude that points in the same visual cluster are neighbors in the original space. You can often conclude that points in different visual clusters are not neighbors. You <em>cannot</em> conclude anything about the shapes, sizes, or relative positions of clusters, or about the distance between any two specific points, or about whether a "gap" in the plot corresponds to a gap in the data.
+  When looking at a t-SNE or UMAP plot, it helps to ask what you are allowed to conclude. You can usually conclude that points in the same visual cluster are neighbors in the original space, and often that points in different visual clusters are not. You <em>cannot</em> conclude anything from the shapes, sizes, or relative positions of clusters, from the distance between two specific points, or from a gap in the plot, which may or may not be a gap in the data.
 </p>
 
 <p>
-  Read this way, the neighborhood-preserving family is the default visualization for language model embeddings, image features, single-cell sequencing, and more. The most common misuse of these methods is to read the visual output as if it were a map.
+  Read that way, these methods are a reasonable default for language model embeddings, image features, and single-cell data. The common misuse is to read the output as a map, with distances and areas that mean something.
 </p>
 
 <p>
-  The next articles push on the family's limitations. Article 5 looks at methods that preserve <em>topology</em> rather than geometry, giving up point positions altogether and asking only about connectivity. Article 6 looks at methods that preserve <em>density</em>, which most of this family deliberately flattens.
+  The next two articles take up two things this family discards. Article 5 covers methods that preserve <em>topology</em>: they give up point positions altogether and keep only connectivity. Article 6 covers methods that preserve <em>density</em>, which the per-point distance scales of t-SNE and UMAP remove by design.
 </p>
 
-<footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
-  <p>Part of <a href="index.html" style="color: var(--text-2);">What Dimensionality Reduction Preserves</a>. Previous: <a href="03-global-distances.html" style="color: var(--accent);">Preserving Global Distances</a>. Next: <a href="05-topology.html" style="color: var(--accent);">Preserving Topology</a>.</p>
-  <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+<footer>
+  <p>Part of <a href="index.html">What Dimensionality Reduction Preserves</a>. Previous: <a class="next" href="03-global-distances.html">Preserving Global Distances</a>. Next: <a class="next" href="05-topology.html">Preserving Topology</a>.</p>
+  <p>Built with <a href="https://github.com/enjalot/moonshine">moonshine</a>.</p>
 </footer>
 
 </div>
 
 <script>
+const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const DUR = REDUCED ? 0 : 250;
+
+// Every figure is drawn at the pixel width its container actually has, and redrawn when that
+// width changes, so labels stay the same size on a phone as on a desktop. draw(svg, W) lays the
+// figure out for width W and returns { height } (plus an optional stop() to cancel animation).
+function figure(id, draw) {
+  const node = document.getElementById(id), svg = d3.select(node);
+  let lastW = 0, stop = null;
+  function go() {
+    const W = Math.floor(node.getBoundingClientRect().width);
+    if (!W || W === lastW) return;
+    lastW = W;
+    if (stop) stop();
+    svg.selectAll("*").remove();
+    const res = draw(svg, W);
+    svg.attr("viewBox", `0 0 ${W} ${res.height}`).attr("height", res.height);
+    stop = res.stop || null;
+  }
+  new ResizeObserver(go).observe(node.parentNode);
+  go();
+}
+
+// Run start() the first time the element scrolls into view, so animations play when they can be seen.
+function whenVisible(node, start) {
+  if (!("IntersectionObserver" in window)) { start(); return () => {}; }
+  const io = new IntersectionObserver(entries => {
+    if (entries.some(e => e.isIntersecting)) { io.disconnect(); start(); }
+  }, { threshold: 0.35 });
+  io.observe(node);
+  return () => io.disconnect();
+}
+
+// Mutually exclusive buttons. Calls onChange(value) and marks the pressed button.
+function toggle(groupId, onChange) {
+  const buttons = document.querySelectorAll(`#${groupId} button`);
+  buttons.forEach(btn => {
+    btn.setAttribute("aria-pressed", btn.classList.contains("active"));
+    btn.onclick = () => {
+      buttons.forEach(b => { b.classList.toggle("active", b === btn); b.setAttribute("aria-pressed", b === btn); });
+      onChange(btn.dataset.value);
+    };
+  });
+  return () => document.querySelector(`#${groupId} button.active`).dataset.value;
+}
+
+// A titled panel: returns a <g> whose origin is the panel's top-left drawing corner.
+function pane(svg, x, y, w, h, title, note) {
+  const g = svg.append("g").attr("transform", `translate(${x},${y})`);
+  g.append("text").attr("class", "pane-title").attr("x", 0).attr("y", 13).text(title);
+  if (note) g.append("text").attr("x", 0).attr("y", 30).text(note);
+  const top = note ? 40 : 22;
+  g.append("rect").attr("class", "pane-bg").attr("x", 0).attr("y", top).attr("width", w).attr("height", h - top).attr("rx", 4);
+  const inner = g.append("g").attr("transform", `translate(0,${top})`);
+  inner.w = w; inner.h = h - top;
+  return inner;
+}
+
+// Scales that fit a 2D point set into a w x h box with equal units on both axes.
+function fitScales(pts, w, h, pad = 12) {
+  const xe = d3.extent(pts, p => p[0]), ye = d3.extent(pts, p => p[1]);
+  const s = Math.min((w - 2 * pad) / ((xe[1] - xe[0]) || 1), (h - 2 * pad) / ((ye[1] - ye[0]) || 1));
+  const cx = (xe[0] + xe[1]) / 2, cy = (ye[0] + ye[1]) / 2;
+  return { x: v => w / 2 + (v - cx) * s, y: v => h / 2 - (v - cy) * s, s };
+}
+
 function mulberry32(seed) {
   return function() {
     let t = seed += 0x6D2B79F5;
@@ -235,296 +369,408 @@ function gaussian(rng) {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 
-// Generate high-dimensional clustered data
-function makeClusters(seed, n_per, k_clusters, dim, sep) {
-  const rng = mulberry32(seed);
-  const centers = [];
-  for (let c = 0; c < k_clusters; c++) {
-    const ctr = new Array(dim);
-    for (let d = 0; d < dim; d++) ctr[d] = gaussian(rng) * sep;
-    centers.push(ctr);
+// Pairwise Euclidean distances between the rows of X.
+function distMatrix(X) {
+  const n = X.length, D = Array.from({ length: n }, () => new Float64Array(n));
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    let s = 0;
+    for (let a = 0; a < X[i].length; a++) { const d = X[i][a] - X[j][a]; s += d * d; }
+    D[i][j] = D[j][i] = Math.sqrt(s);
   }
-  const pts = [];
-  for (let c = 0; c < k_clusters; c++) {
-    for (let i = 0; i < n_per; i++) {
-      const p = new Array(dim);
-      for (let d = 0; d < dim; d++) p[d] = centers[c][d] + gaussian(rng) * 1.0;
-      pts.push({ v: p, c, id: pts.length });
-    }
-  }
-  return pts;
+  return D;
+}
+// For each point, the indices of the other points sorted by distance (nearest first).
+function neighborOrder(D) {
+  return D.map((row, i) => {
+    const idx = [];
+    for (let j = 0; j < row.length; j++) if (j !== i) idx.push(j);
+    return idx.sort((a, b) => row[a] - row[b]);
+  });
 }
 
-function kNN(pts, k) {
-  const n = pts.length;
-  const adj = [];
+// Leading eigenvectors of a symmetric matrix by power iteration with deflation.
+function topEig(M, dim, seed = 1) {
+  const n = M.length, rng = mulberry32(seed), vecs = [], vals = [];
+  for (let c = 0; c < dim; c++) {
+    let v = Array.from({ length: n }, () => rng() - 0.5), lam = 0;
+    for (let it = 0; it < 300; it++) {
+      const w = new Array(n).fill(0);
+      for (let i = 0; i < n; i++) { let s = 0; const Mi = M[i]; for (let j = 0; j < n; j++) s += Mi[j] * v[j]; w[i] = s; }
+      for (const u of vecs) { let p = 0; for (let i = 0; i < n; i++) p += w[i] * u[i]; for (let i = 0; i < n; i++) w[i] -= p * u[i]; }
+      let nrm = 0; for (let i = 0; i < n; i++) nrm += w[i] * w[i];
+      nrm = Math.sqrt(nrm) || 1;
+      let diff = 0;
+      for (let i = 0; i < n; i++) { const x = w[i] / nrm; diff += Math.abs(x - v[i]); v[i] = x; }
+      lam = nrm;
+      if (diff < 1e-10) break;
+    }
+    vecs.push(v); vals.push(lam);
+  }
+  return { vecs, vals };
+}
+
+// PCA: centre the data, eigendecompose the covariance matrix, project onto the leading components.
+function pca(X, dim = 2) {
+  const n = X.length, d = X[0].length, mean = new Array(d).fill(0);
+  for (const x of X) for (let a = 0; a < d; a++) mean[a] += x[a] / n;
+  const C = Array.from({ length: d }, () => new Array(d).fill(0));
+  for (const x of X) for (let a = 0; a < d; a++) for (let b = 0; b < d; b++) C[a][b] += (x[a] - mean[a]) * (x[b] - mean[b]) / (n - 1);
+  const { vecs, vals } = topEig(C, Math.min(dim, d), 3);
+  let total = 0; for (let a = 0; a < d; a++) total += C[a][a];
+  const Y = X.map(x => vecs.map(v => { let s = 0; for (let a = 0; a < d; a++) s += (x[a] - mean[a]) * v[a]; return s; }));
+  return { Y, components: vecs, mean, explained: vals.map(l => l / total) };
+}
+
+// Classical (Torgerson) MDS: double-centre the squared distances and take the leading eigenvectors.
+function classicalMDS(D, dim = 2) {
+  const n = D.length, B = Array.from({ length: n }, () => new Float64Array(n));
+  const rowMean = new Float64Array(n); let grand = 0;
+  for (let i = 0; i < n; i++) { for (let j = 0; j < n; j++) rowMean[i] += D[i][j] * D[i][j] / n; grand += rowMean[i] / n; }
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) B[i][j] = -0.5 * (D[i][j] * D[i][j] - rowMean[i] - rowMean[j] + grand);
+  const { vecs, vals } = topEig(B, dim, 5);
+  return Array.from({ length: n }, (_, i) => vecs.map((v, c) => v[i] * Math.sqrt(Math.max(vals[c], 0))));
+}
+
+// Graph geodesics: connect each point to its k nearest neighbours (edges kept in both directions),
+// then take all-pairs shortest paths (Floyd-Warshall). Unreachable pairs stay Infinity.
+function graphGeodesics(D, k) {
+  const n = D.length, order = neighborOrder(D);
+  const G = Array.from({ length: n }, () => new Float64Array(n).fill(Infinity));
+  const edges = [];
   for (let i = 0; i < n; i++) {
-    const arr = [];
-    for (let j = 0; j < n; j++) {
-      if (i === j) continue;
-      let d = 0;
-      for (let a = 0; a < pts[i].v.length; a++) d += (pts[i].v[a] - pts[j].v[a]) ** 2;
-      arr.push({ j, d });
+    G[i][i] = 0;
+    for (const j of order[i].slice(0, k)) {
+      if (G[i][j] === Infinity) edges.push([i, j]);
+      G[i][j] = G[j][i] = D[i][j];
     }
-    arr.sort((a, b) => a.d - b.d);
-    adj.push(arr.slice(0, k).map(e => e.j));
   }
-  return adj;
+  const W = G.map(r => Float64Array.from(r));
+  for (let m = 0; m < n; m++) { const Gm = G[m]; for (let i = 0; i < n; i++) { const gim = G[i][m]; if (gim === Infinity) continue; const Gi = G[i]; for (let j = 0; j < n; j++) { const s = gim + Gm[j]; if (s < Gi[j]) Gi[j] = s; } } }
+  return { G, W, edges };
+}
+// Isomap: classical MDS on the graph geodesics.
+function isomap(D, k, dim = 2) {
+  const { G } = graphGeodesics(D, k);
+  let max = 0;
+  for (const r of G) for (const v of r) if (v !== Infinity && v > max) max = v;
+  for (const r of G) for (let j = 0; j < r.length; j++) if (r[j] === Infinity) r[j] = max * 1.5; // disconnected pieces: park them far apart
+  return classicalMDS(G, dim);
 }
 
-// ---------- Figure 1: Force-based layout ----------
-(function() {
-  const svg = d3.select("#forces-svg");
-  const W = 680, H = 360;
-  const g = svg.append("g");
-
-  const pts = makeClusters(42, 18, 5, 30, 5);
-  const N = pts.length;
-
-  const colors = ["var(--c0)", "var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)"];
-
-  const linkG = g.append("g");
-  const nodeG = g.append("g");
-
-  const kInput = document.getElementById("f-k");
-  const repInput = document.getElementById("f-rep");
-  const kVal = document.getElementById("f-k-val");
-  const repVal = document.getElementById("f-rep-val");
-  const resetBtn = document.getElementById("f-reset");
-
-  function seedPositions() {
-    const r = mulberry32(7);
-    pts.forEach((p, i) => {
-      p.x = W / 2 + (r() - 0.5) * 60;
-      p.y = H / 2 + (r() - 0.5) * 60;
-      p.vx = 0; p.vy = 0;
-      p.index = i;
-    });
+// Exact t-SNE (van der Maaten & Hinton 2008): Gaussian conditional probabilities calibrated to a
+// perplexity, symmetrised; Student-t similarities in 2D; gradient descent on KL(P || Q) with
+// momentum, per-coordinate gains and early exaggeration. O(n^2) per step, fine for a few hundred points.
+function tsne(D, { perplexity = 30, iters = 500, init, seed = 1 } = {}) {
+  const n = D.length, P = Array.from({ length: n }, () => new Float64Array(n));
+  const target = Math.log(perplexity);
+  for (let i = 0; i < n; i++) {
+    let lo = 0, hi = Infinity, beta = 1;
+    const row = new Float64Array(n);
+    for (let t = 0; t < 60; t++) {
+      let sum = 0, h = 0;
+      for (let j = 0; j < n; j++) { row[j] = j === i ? 0 : Math.exp(-beta * D[i][j] * D[i][j]); sum += row[j]; }
+      sum = sum || 1e-300;
+      for (let j = 0; j < n; j++) { const p = row[j] / sum; if (p > 1e-12) h -= p * Math.log(p); row[j] = p; }
+      if (Math.abs(h - target) < 1e-5) break;
+      if (h > target) { lo = beta; beta = hi === Infinity ? beta * 2 : (beta + hi) / 2; }
+      else { hi = beta; beta = (beta + lo) / 2; }
+    }
+    for (let j = 0; j < n; j++) P[i][j] = row[j];
   }
-
-  seedPositions();
-
-  const sim = d3.forceSimulation(pts)
-    .force("link", d3.forceLink([]).id(d => d.id).distance(30).strength(0.6))
-    .force("charge", d3.forceManyBody().strength(+repInput.value).distanceMax(140))
-    .force("center", d3.forceCenter(W / 2, H / 2).strength(0.08))
-    .force("collide", d3.forceCollide(4))
-    .alphaDecay(0.02);
-
-  sim.on("tick", () => {
-    linkG.selectAll("line")
-      .attr("x1", d => d.source.x).attr("y1", d => d.source.y)
-      .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
-    nodeG.selectAll("circle")
-      .attr("cx", d => d.x).attr("cy", d => d.y);
-  });
-
-  function update(alpha) {
-    const k = +kInput.value;
-    const rep = +repInput.value;
-    kVal.textContent = k;
-    repVal.textContent = rep;
-
-    const adj = kNN(pts, k);
-    const links = [];
-    for (let i = 0; i < N; i++) for (const j of adj[i]) if (i < j) links.push({ source: i, target: j });
-
-    sim.force("link").links(links);
-    sim.force("charge").strength(rep);
-
-    linkG.selectAll("line").data(links).join("line")
-      .attr("stroke", "var(--border-2)").attr("stroke-opacity", 0.4).attr("stroke-width", 0.6);
-
-    nodeG.selectAll("circle").data(pts).join("circle")
-      .attr("r", 4).attr("fill", d => colors[d.c]).attr("opacity", 0.85)
-      .attr("stroke", "white").attr("stroke-width", 0.6);
-
-    sim.alpha(alpha).restart();
-  }
-
-  kInput.addEventListener("input", () => update(0.5));
-  repInput.addEventListener("input", () => update(0.3));
-  resetBtn.addEventListener("click", () => { seedPositions(); update(1); });
-  update(1);
-})();
-
-// ---------- Figure 2: perplexity / n_neighbors ----------
-(function() {
-  const svg = d3.select("#perp-svg");
-  const W = 680, H = 320;
-  const g = svg.append("g");
-
-  // Multi-scale data: 3 super clusters, each with 3 sub-clusters
-  const rng = mulberry32(9);
-  const dim = 20;
-  const pts = [];
-  for (let sc = 0; sc < 3; sc++) {
-    // super cluster center
-    const super_ctr = new Array(dim);
-    for (let d = 0; d < dim; d++) super_ctr[d] = gaussian(rng) * 6;
-    for (let sub = 0; sub < 3; sub++) {
-      const sub_ctr = new Array(dim);
-      for (let d = 0; d < dim; d++) sub_ctr[d] = super_ctr[d] + gaussian(rng) * 1.5;
-      for (let i = 0; i < 12; i++) {
-        const p = new Array(dim);
-        for (let d = 0; d < dim; d++) p[d] = sub_ctr[d] + gaussian(rng) * 0.3;
-        pts.push({ v: p, super: sc, sub: sc * 3 + sub, id: pts.length });
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const p = Math.max((P[i][j] + P[j][i]) / (2 * n), 1e-12); P[i][j] = P[j][i] = p; }
+  const rng = mulberry32(seed);
+  let sd = 0; if (init) { for (const p of init) sd += p[0] * p[0]; sd = Math.sqrt(sd / n) || 1; }
+  const Y = Array.from({ length: n }, (_, i) => init ? [init[i][0] / sd * 1e-4, init[i][1] / sd * 1e-4] : [gaussian(rng) * 1e-4, gaussian(rng) * 1e-4]);
+  const V = Y.map(() => [0, 0]), gains = Y.map(() => [1, 1]), Q = Array.from({ length: n }, () => new Float64Array(n));
+  const lr = Math.max(n / 12, 50), exagIters = Math.min(250, Math.floor(iters / 4));
+  for (let it = 0; it < iters; it++) {
+    const exag = it < exagIters ? 12 : 1, mom = it < exagIters ? 0.5 : 0.8;
+    let Z = 0;
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const dx = Y[i][0] - Y[j][0], dy = Y[i][1] - Y[j][1]; const q = 1 / (1 + dx * dx + dy * dy); Q[i][j] = Q[j][i] = q; Z += 2 * q; }
+    for (let i = 0; i < n; i++) {
+      let gx = 0, gy = 0;
+      for (let j = 0; j < n; j++) { if (j === i) continue; const q = Q[i][j], m = 4 * (exag * P[i][j] - q / Z) * q; gx += m * (Y[i][0] - Y[j][0]); gy += m * (Y[i][1] - Y[j][1]); }
+      const g = [gx, gy];
+      for (let c = 0; c < 2; c++) {
+        gains[i][c] = Math.max(0.01, Math.sign(g[c]) !== Math.sign(V[i][c]) ? gains[i][c] + 0.2 : gains[i][c] * 0.8);
+        V[i][c] = mom * V[i][c] - lr * gains[i][c] * g[c];
       }
     }
+    for (let i = 0; i < n; i++) { Y[i][0] += V[i][0]; Y[i][1] += V[i][1]; }
   }
-  const N = pts.length;
-  const superColors = ["var(--c0)", "var(--c1)", "var(--c2)"];
+  return Y;
+}
 
-  const linkG = g.append("g");
-  const nodeG = g.append("g");
-
-  const kInput = document.getElementById("p-k");
-  const kVal = document.getElementById("p-k-val");
-
-  function seedPositions() {
-    const r = mulberry32(11);
-    pts.forEach((p, i) => {
-      p.x = W / 2 + (r() - 0.5) * 60;
-      p.y = H / 2 + (r() - 0.5) * 60;
-      p.vx = 0; p.vy = 0;
-      p.index = i;
-    });
+// UMAP's graph (McInnes, Healy & Melville 2018). For each point: rho = distance to its nearest
+// neighbour, sigma = the scale at which the memberships exp(-(d - rho) / sigma) of its k neighbours
+// sum to log2(k). The two directions of each edge are combined with the fuzzy union a + b - ab.
+function umapGraph(D, k) {
+  const n = D.length, order = neighborOrder(D), M = Array.from({ length: n }, () => new Map());
+  const target = Math.log2(k);
+  for (let i = 0; i < n; i++) {
+    const nb = order[i].slice(0, k), rho = D[i][nb[0]];
+    let lo = 0, hi = Infinity, sigma = 1;
+    for (let t = 0; t < 64; t++) {
+      let s = 0;
+      for (const j of nb) s += Math.exp(-Math.max(0, D[i][j] - rho) / sigma);
+      if (Math.abs(s - target) < 1e-5) break;
+      if (s > target) { hi = sigma; sigma = (lo + hi) / 2; }
+      else { lo = sigma; sigma = hi === Infinity ? sigma * 2 : (lo + hi) / 2; }
+    }
+    for (const j of nb) M[i].set(j, Math.exp(-Math.max(0, D[i][j] - rho) / sigma));
   }
+  const edges = [];
+  for (let i = 0; i < n; i++) for (const [j, a] of M[i]) {
+    const b = M[j].get(i) || 0;
+    if (b > 0 && j < i) continue; // a mutual edge is added once, from its lower index
+    edges.push({ i, j, w: a + b - a * b });
+  }
+  return edges;
+}
+// UMAP's layout: stochastic gradient descent on the fuzzy cross-entropy. Each edge is sampled in
+// proportion to its weight and pulls its two ends together; each sampled edge also pushes its head
+// away from `negRate` random points. a and b are umap-learn's curve fit for min_dist = 0.1.
+// With dens = { lambda, frac }, the last `frac` of the epochs add densMAP's term (Narayan, Berger &
+// Cho 2021), ported from umap-learn: it rewards correlation between each point's log local radius
+// in the input and in the embedding.
+function umapLayout(D, edges, { epochs = 400, init, seed = 1, negRate = 5, a = 1.577, b = 0.8951, dens = null, onEpoch = null } = {}) {
+  const n = D.length, rng = mulberry32(seed);
+  let lo = Infinity, hi = -Infinity;
+  for (const p of init) for (const v of p) { if (v < lo) lo = v; if (v > hi) hi = v; }
+  const Y = init.map(p => [10 * (p[0] - lo) / (hi - lo) + gaussian(rng) * 1e-4, 10 * (p[1] - lo) / (hi - lo) + gaussian(rng) * 1e-4]);
+  // both directions of every edge, as in umap-learn's symmetric graph
+  const E = [];
+  for (const e of edges) { E.push({ i: e.i, j: e.j, w: e.w }); E.push({ i: e.j, j: e.i, w: e.w }); }
+  const wMax = Math.max(...E.map(e => e.w));
+  for (const e of E) { e.per = wMax / e.w; e.next = e.per; e.perNeg = e.per / negRate; e.nextNeg = e.perNeg; }
+  const clip = v => v > 4 ? 4 : v < -4 ? -4 : v;
+  // densMAP bookkeeping
+  let R = null, muSum = null, muTot = 0;
+  const reSum = new Float64Array(n), phiSum = new Float64Array(n);
+  if (dens) {
+    const ro = new Float64Array(n); muSum = new Float64Array(n);
+    for (const e of E) { ro[e.i] += e.w * D[e.i][e.j] ** 2; muSum[e.i] += e.w; }
+    let m = 0, v = 0;
+    for (let i = 0; i < n; i++) { ro[i] = Math.log(1e-8 + ro[i] / muSum[i]); m += ro[i] / n; muTot += muSum[i]; }
+    for (let i = 0; i < n; i++) v += (ro[i] - m) ** 2 / n;
+    R = Array.from(ro, x => (x - m) / Math.sqrt(v));
+  }
+  for (let ep = 1; ep <= epochs; ep++) {
+    const alpha = 1 - (ep - 1) / epochs;
+    const densOn = dens && ep / epochs > 1 - dens.frac;
+    let reStd = 0, reMean = 0, reCov = 0;
+    if (densOn) {
+      reSum.fill(0); phiSum.fill(0);
+      for (const e of E) {
+        const d2 = (Y[e.i][0] - Y[e.j][0]) ** 2 + (Y[e.i][1] - Y[e.j][1]) ** 2, phi = 1 / (1 + a * Math.pow(d2, b));
+        reSum[e.i] += phi * d2; phiSum[e.i] += phi;
+      }
+      for (let i = 0; i < n; i++) { reSum[i] = Math.log(1e-8 + reSum[i] / phiSum[i]); reMean += reSum[i] / n; }
+      let v = 0;
+      for (let i = 0; i < n; i++) { v += (reSum[i] - reMean) ** 2 / n; reCov += reSum[i] * R[i] / (n - 1); }
+      reStd = Math.sqrt(v + 0.1);
+    }
+    for (const e of E) {
+      if (e.next > ep) continue;
+      const yi = Y[e.i], yj = Y[e.j];
+      let dx = yi[0] - yj[0], dy = yi[1] - yj[1], d2 = dx * dx + dy * dy;
+      let coef = d2 > 0 ? -2 * a * b * Math.pow(d2, b - 1) / (a * Math.pow(d2, b) + 1) : 0;
+      let gx = clip(coef * dx), gy = clip(coef * dy);
+      if (densOn && d2 > 0) {
+        const phi = 1 / (1 + a * Math.pow(d2, b)), dphi = a * b * Math.pow(d2, b - 1) / (1 + a * Math.pow(d2, b));
+        const drj = phi / phiSum[e.j] * ((1 - b * (1 - phi)) / Math.exp(reSum[e.j]) + dphi);
+        const dri = phi / phiSum[e.i] * ((1 - b * (1 - phi)) / Math.exp(reSum[e.i]) + dphi);
+        const wj = R[e.j] - reCov * (reSum[e.j] - reMean) / (reStd * reStd);
+        const wi = R[e.i] - reCov * (reSum[e.i] - reMean) / (reStd * reStd);
+        const cor = dens.lambda * muTot * (wj * drj + wi * dri) / (e.w * reStd) / n;
+        gx += clip(2 * cor * dx); gy += clip(2 * cor * dy);
+      }
+      yi[0] += alpha * gx; yi[1] += alpha * gy; yj[0] -= alpha * gx; yj[1] -= alpha * gy;
+      e.next += e.per;
+      const nNeg = Math.floor((ep - e.nextNeg) / e.perNeg);
+      for (let s = 0; s < nNeg; s++) {
+        const k = Math.floor(rng() * n);
+        if (k === e.i) continue;
+        dx = yi[0] - Y[k][0]; dy = yi[1] - Y[k][1]; d2 = dx * dx + dy * dy;
+        if (d2 === 0) continue;
+        coef = 2 * b / ((0.001 + d2) * (a * Math.pow(d2, b) + 1));
+        yi[0] += alpha * clip(coef * dx); yi[1] += alpha * clip(coef * dy);
+      }
+      e.nextNeg += nNeg * e.perNeg;
+    }
+    if (onEpoch) onEpoch(ep, Y);
+  }
+  return Y;
+}
+function umap(D, { k = 15, ...opts } = {}) { return umapLayout(D, umapGraph(D, k), opts); }
 
-  seedPositions();
+// Trustworthiness and continuity (Venna & Kaski 2001) at neighbourhood size k.
+// Trustworthiness falls when the embedding invents neighbours; continuity falls when it loses them.
+function trustCont(Dhi, Dlo, k) {
+  const n = Dhi.length, oh = neighborOrder(Dhi), ol = neighborOrder(Dlo);
+  const rank = o => o.map(list => { const r = new Int32Array(n); list.forEach((j, pos) => { r[j] = pos + 1; }); return r; });
+  const rh = rank(oh), rl = rank(ol);
+  let t = 0, c = 0;
+  for (let i = 0; i < n; i++) {
+    for (const j of ol[i].slice(0, k)) if (rh[i][j] > k) t += rh[i][j] - k;
+    for (const j of oh[i].slice(0, k)) if (rl[i][j] > k) c += rl[i][j] - k;
+  }
+  const norm = 2 / (n * k * (2 * n - 3 * k - 1));
+  return { trust: 1 - norm * t, cont: 1 - norm * c };
+}
+function pearson(x, y) {
+  const n = x.length; let mx = 0, my = 0;
+  for (let i = 0; i < n; i++) { mx += x[i] / n; my += y[i] / n; }
+  let sxy = 0, sxx = 0, syy = 0;
+  for (let i = 0; i < n; i++) { sxy += (x[i] - mx) * (y[i] - my); sxx += (x[i] - mx) ** 2; syy += (y[i] - my) ** 2; }
+  return sxy / Math.sqrt(sxx * syy);
+}
+function ranks(x) {
+  const idx = Array.from(x, (_, i) => i).sort((a, b) => x[a] - x[b]), r = new Float64Array(x.length);
+  idx.forEach((i, pos) => { r[i] = pos; });
+  return r;
+}
+// Spearman rank correlation between all pairwise distances before and after.
+function distanceCorr(Dhi, Dlo) {
+  const a = [], b = [];
+  for (let i = 0; i < Dhi.length; i++) for (let j = i + 1; j < Dhi.length; j++) { a.push(Dhi[i][j]); b.push(Dlo[i][j]); }
+  return pearson(ranks(a), ranks(b));
+}
+// Local radius of each point: mean squared distance to its k nearest neighbours, each space using
+// its own neighbours. densityCorr is the Pearson correlation of the log radii before and after.
+function localRadius(D, k) {
+  const order = neighborOrder(D);
+  return order.map((list, i) => { let s = 0; for (const j of list.slice(0, k)) s += D[i][j] ** 2; return Math.log(s / k + 1e-12); });
+}
+function densityCorr(Dhi, Dlo, k) { return pearson(localRadius(Dhi, k), localRadius(Dlo, k)); }
 
-  const sim = d3.forceSimulation(pts)
-    .force("link", d3.forceLink([]).id(d => d.id).distance(25).strength(0.8))
-    .force("charge", d3.forceManyBody().strength(-28).distanceMax(120))
-    .force("center", d3.forceCenter(W / 2, H / 2).strength(0.08))
-    .force("collide", d3.forceCollide(3.5))
-    .alphaDecay(0.025);
+const CLUSTER_COLORS = ["var(--c0)", "var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)"];
 
-  sim.on("tick", () => {
-    linkG.selectAll("line")
-      .attr("x1", d => d.source.x).attr("y1", d => d.source.y)
-      .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
-    nodeG.selectAll("circle").attr("cx", d => d.x).attr("cy", d => d.y);
+// ---------- Figure 1: the attract-repel cartoon ----------
+(function() {
+  // five Gaussian clusters of 18 points in 30 dimensions
+  const rng = mulberry32(42), X = [], label = [];
+  for (let c = 0; c < 5; c++) {
+    const centre = Array.from({ length: 30 }, () => gaussian(rng) * 5);
+    for (let i = 0; i < 18; i++) { X.push(centre.map(v => v + gaussian(rng))); label.push(c); }
+  }
+  const order = neighborOrder(distMatrix(X)), N = X.length;
+  const kInput = document.getElementById("f-k"), kVal = document.getElementById("f-k-val");
+
+  figure("forces-svg", (svg, W) => {
+    const H = W < 500 ? 300 : 360, scale = Math.min(1, W / 520);
+    const nodes = X.map((_, i) => ({ id: i, c: label[i] }));
+    const linkG = svg.append("g"), nodeG = svg.append("g");
+    const circles = nodeG.selectAll("circle").data(nodes).join("circle").attr("r", 4).attr("fill", d => CLUSTER_COLORS[d.c]);
+    let lines = linkG.selectAll("line");
+    function paint() {
+      lines.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+      circles.attr("cx", d => d.x).attr("cy", d => d.y);
+    }
+    const sim = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink([]).distance(26 * scale).strength(0.6))
+      .force("charge", d3.forceManyBody().strength(-30 * scale).distanceMax(140))
+      .force("x", d3.forceX(W / 2).strength(0.04)).force("y", d3.forceY(H / 2).strength(0.06))
+      .force("collide", d3.forceCollide(4.5))
+      .alphaDecay(0.012).velocityDecay(0.5).on("tick", paint).stop();
+    function heap() {
+      const r = mulberry32(7);
+      nodes.forEach(p => { p.x = W / 2 + (r() - 0.5) * 70; p.y = H / 2 + (r() - 0.5) * 70; p.vx = 0; p.vy = 0; });
+    }
+    function setK() {
+      const k = +kInput.value;
+      kVal.textContent = k;
+      const links = [];
+      for (let i = 0; i < N; i++) for (const j of order[i].slice(0, k)) if (i < j || !order[j].slice(0, k).includes(i)) links.push({ source: i, target: j });
+      sim.force("link").links(links);
+      lines = linkG.selectAll("line").data(links).join("line").attr("stroke", "var(--text-3)").attr("stroke-opacity", 0.35).attr("stroke-width", 0.7);
+    }
+    function run(alpha) {
+      if (REDUCED) { sim.alpha(alpha); for (let i = 0; i < 400; i++) sim.tick(); paint(); }
+      else sim.alpha(alpha).restart();
+    }
+    heap(); setK(); paint();
+    const cancel = whenVisible(svg.node(), () => run(1));
+    kInput.oninput = () => { setK(); run(0.6); };
+    document.getElementById("f-reset").onclick = () => { heap(); run(1); };
+    return { height: H, stop: () => { sim.stop(); cancel(); } };
   });
-
-  function update(alpha) {
-    const k = +kInput.value;
-    kVal.textContent = k;
-    const adj = kNN(pts, k);
-    const links = [];
-    for (let i = 0; i < N; i++) for (const j of adj[i]) if (i < j) links.push({ source: i, target: j });
-
-    sim.force("link").links(links);
-
-    linkG.selectAll("line").data(links).join("line")
-      .attr("stroke", "var(--border-2)").attr("stroke-opacity", 0.3).attr("stroke-width", 0.5);
-    nodeG.selectAll("circle").data(pts).join("circle")
-      .attr("r", 3.5).attr("fill", d => superColors[d.super])
-      .attr("stroke", "white").attr("stroke-width", 0.5).attr("opacity", 0.9);
-
-    sim.alpha(alpha).restart();
-  }
-
-  kInput.addEventListener("input", () => update(0.5));
-  update(1);
 })();
 
-// ---------- Figure 3: method comparison ----------
+// ---------- Figure 2: UMAP at three neighborhood sizes ----------
 (function() {
-  const svg = d3.select("#compare-svg");
-  const W = 680, H = 340;
+  // three families, each with three sub-clusters of 14 points, in 10 dimensions
+  const rng = mulberry32(9), X = [], fam = [], sub = [];
+  for (let f = 0; f < 3; f++) {
+    const famCentre = Array.from({ length: 10 }, () => gaussian(rng) * 3);
+    for (let s = 0; s < 3; s++) {
+      const centre = famCentre.map(v => v + gaussian(rng) * 0.45);
+      for (let i = 0; i < 14; i++) { X.push(centre.map(v => v + gaussian(rng) * 0.3)); fam.push(f); sub.push(s); }
+    }
+  }
+  const D = distMatrix(X), init = pca(X, 2).Y;
+  const ks = [4, 15, 40], notes = ["scattered islands", "islands grouped by family", "three families"];
+  let layouts = null;
 
-  // Generate a five-cluster swiss-roll-like dataset in 3D, flattened
-  const rng = mulberry32(55);
-  const pts = [];
-  const K = 5;
-  const perCluster = 40;
-  for (let c = 0; c < K; c++) {
+  figure("perp-svg", (svg, W) => {
+    if (!layouts) layouts = ks.map(k => umap(D, { k, init, epochs: 500, seed: 3 }));
+    const cols = W < 500 ? 1 : 3, gap = 14, pw = (W - gap * (cols - 1)) / cols, ph = W < 500 ? 240 : 260;
+    ks.forEach((k, idx) => {
+      const g = pane(svg, (idx % cols) * (pw + gap), Math.floor(idx / cols) * (ph + 14), pw, ph, `n_neighbors = ${k}`, notes[idx]);
+      const sc = fitScales(layouts[idx], g.w, g.h, 16);
+      g.selectAll("circle").data(layouts[idx]).join("circle").attr("cx", d => sc.x(d[0])).attr("cy", d => sc.y(d[1])).attr("r", 2.6)
+        .attr("fill", (_, i) => CLUSTER_COLORS[fam[i]]).attr("fill-opacity", (_, i) => [1, 0.6, 0.3][sub[i]])
+        .attr("stroke", (_, i) => CLUSTER_COLORS[fam[i]]).attr("stroke-width", 0.8);
+    });
+    return { height: Math.ceil(ks.length / cols) * (ph + 14) - 14 };
+  });
+})();
+
+// ---------- Figure 3: four methods on one dataset ----------
+(function() {
+  // five clusters of 40 points along a swiss roll in 3D
+  const rng = mulberry32(55), X = [], label = [];
+  for (let c = 0; c < 5; c++) {
     const theta0 = 1.5 + c * 0.9;
-    for (let i = 0; i < perCluster; i++) {
-      const theta = theta0 + gaussian(rng) * 0.25;
-      const h = gaussian(rng) * 2;
-      const x = theta * Math.cos(theta) + gaussian(rng) * 0.3;
-      const y = h;
-      const z = theta * Math.sin(theta) + gaussian(rng) * 0.3;
-      pts.push({ x, y, z, theta, c, id: pts.length });
+    for (let i = 0; i < 40; i++) {
+      const theta = theta0 + gaussian(rng) * 0.16, h = gaussian(rng) * 1.5;
+      X.push([theta * Math.cos(theta) + gaussian(rng) * 0.3, h, theta * Math.sin(theta) + gaussian(rng) * 0.3]);
+      label.push(c);
     }
   }
-  const N = pts.length;
-  const colors = ["var(--c0)", "var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)"];
-
-  // PCA in 3D: just use top 2 dims (x, z projection — the first two PCs of swiss roll)
-  function pcaEmb() {
-    // center
-    const mx = d3.mean(pts, d => d.x), my = d3.mean(pts, d => d.y), mz = d3.mean(pts, d => d.z);
-    // Use principal directions roughly along x and z (since y is the axis of roll height)
-    return pts.map(p => [p.x - mx, p.z - mz]);
+  const D = distMatrix(X);
+  let results = null;
+  function compute() {
+    const P = pca(X, 2).Y;
+    const methods = [
+      { title: "PCA", note: "keeps variance", Y: P },
+      { title: "Isomap", note: "keeps graph distances", Y: isomap(D, 10) },
+      { title: "t-SNE", note: "keeps neighbors", Y: tsne(D, { perplexity: 20, iters: 500, init: P }) },
+      { title: "UMAP", note: "keeps neighbors", Y: umap(D, { k: 15, init: P, epochs: 400 }) },
+    ];
+    methods.forEach(m => {
+      const Dl = distMatrix(m.Y), tc = trustCont(D, Dl, 10);
+      m.scores = [["trustworthiness", tc.trust], ["continuity", tc.cont], ["distances", distanceCorr(D, Dl)]];
+    });
+    return methods;
   }
 
-  // Isomap approximation: unroll by angle parameter
-  function isomapEmb() {
-    return pts.map(p => [p.theta, p.y]);
-  }
-
-  // t-SNE-like layout: run force simulation with kNN in 3D
-  function forceEmb(k, charge, iters, seed) {
-    const data = pts.map(p => ({ id: p.id, x: 0, y: 0, c: p.c }));
-    const rng = mulberry32(seed);
-    data.forEach(d => { d.x = gaussian(rng) * 10; d.y = gaussian(rng) * 10; });
-    const links = [];
-    const adj = [];
-    for (let i = 0; i < N; i++) {
-      const arr = [];
-      for (let j = 0; j < N; j++) {
-        if (i === j) continue;
-        const d = Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y, pts[i].z - pts[j].z);
-        arr.push({ j, d });
-      }
-      arr.sort((a, b) => a.d - b.d);
-      adj.push(arr.slice(0, k).map(e => e.j));
-      for (const e of arr.slice(0, k)) if (i < e.j) links.push({ source: i, target: e.j });
-    }
-    const sim = d3.forceSimulation(data)
-      .force("link", d3.forceLink(links).id(d => d.id).distance(6).strength(0.8))
-      .force("charge", d3.forceManyBody().strength(charge).distanceMax(45))
-      .force("center", d3.forceCenter(0, 0).strength(0.05))
-      .force("collide", d3.forceCollide(2))
-      .alpha(1).alphaDecay(0.015).stop();
-    for (let i = 0; i < iters; i++) sim.tick();
-    return data.map(d => [d.x, d.y]);
-  }
-
-  const embs = [
-    { title: "PCA", note: "linear · preserves variance", emb: pcaEmb() },
-    { title: "Isomap", note: "preserves geodesic distance", emb: isomapEmb() },
-    { title: "t-SNE-like", note: "tight clusters · heavy repulsion", emb: forceEmb(10, -60, 400, 101) },
-    { title: "UMAP-like", note: "balanced · moderate k", emb: forceEmb(15, -30, 400, 202) },
-  ];
-
-  const paneW = W / 4;
-  const paneH = H - 20;
-  const padX = 18, padY = 36;
-
-  embs.forEach((E, k) => {
-    const panG = svg.append("g").attr("transform", `translate(${k * paneW}, 0)`);
-    panG.append("text").attr("x", paneW / 2).attr("y", 16).attr("text-anchor", "middle")
-      .style("font-size", "12px").style("font-weight", 700).attr("fill", "var(--text)").text(E.title);
-    panG.append("text").attr("x", paneW / 2).attr("y", 30).attr("text-anchor", "middle")
-      .style("font-size", "10px").attr("fill", "var(--text-3)").text(E.note);
-
-    const ex = d3.extent(E.emb, d => d[0]);
-    const ey = d3.extent(E.emb, d => d[1]);
-    const ePadX = Math.max(0.1, (ex[1] - ex[0]) * 0.1);
-    const ePadY = Math.max(0.1, (ey[1] - ey[0]) * 0.1);
-    const xs = d3.scaleLinear().domain([ex[0] - ePadX, ex[1] + ePadX]).range([padX, paneW - padX]);
-    const ys = d3.scaleLinear().domain([ey[0] - ePadY, ey[1] + ePadY]).range([paneH - 8, padY]);
-
-    panG.append("rect").attr("x", padX - 4).attr("y", padY - 6).attr("width", paneW - 2 * padX + 8)
-      .attr("height", paneH - padY + 4).attr("fill", "var(--bg)").attr("stroke", "var(--border)").attr("rx", 4);
-
-    panG.selectAll("circle").data(E.emb).join("circle")
-      .attr("cx", d => xs(d[0])).attr("cy", d => ys(d[1]))
-      .attr("r", 2.6).attr("fill", (_, i) => colors[pts[i].c]).attr("opacity", 0.85);
+  figure("compare-svg", (svg, W) => {
+    if (!results) results = compute();
+    const cols = W < 500 ? 2 : 4, gap = 12, pw = (W - gap * (cols - 1)) / cols, ph = pw + 40, scoreH = 62;
+    results.forEach((m, idx) => {
+      const x0 = (idx % cols) * (pw + gap), y0 = Math.floor(idx / cols) * (ph + scoreH + 12);
+      const g = pane(svg, x0, y0, pw, ph, m.title, m.note);
+      const sc = fitScales(m.Y, g.w, g.h);
+      g.selectAll("circle").data(m.Y).join("circle").attr("cx", d => sc.x(d[0])).attr("cy", d => sc.y(d[1])).attr("r", 2.4)
+        .attr("fill", (_, i) => CLUSTER_COLORS[label[i]]).attr("opacity", 0.85);
+      m.scores.forEach(([name, v], r) => {
+        const t = svg.append("text").attr("x", x0).attr("y", y0 + ph + 18 + r * 18);
+        t.append("tspan").text(name + " ");
+        t.append("tspan").attr("fill", "var(--text)").style("font-family", "var(--mono-font)").style("font-weight", 500).text(v.toFixed(2));
+      });
+    });
+    return { height: Math.ceil(results.length / cols) * (ph + scoreH + 12) - 12 };
   });
 })();
 </script>

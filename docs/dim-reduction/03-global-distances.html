@@ -9,49 +9,123 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
+  color-scheme: light dark;
   --article-width: 740px;
   --body-font: 'Source Serif 4', Georgia, serif;
   --heading-font: 'Source Sans 3', system-ui, sans-serif;
   --mono-font: 'Source Code Pro', monospace;
-  --body-size: 1.125rem; --line-height: 1.6;
-  --text: #1a1a2e; --text-2: #4a4a6a; --text-3: #8a8a9e;
-  --accent: #2563eb; --accent-light: #dbeafe;
-  --warm: #ea580c; --warm-light: #ffedd5;
-  --green: #059669; --purple: #7c3aed;
-  --bg: #fafafa; --fig-bg: #ffffff;
-  --border: #e2e2e8; --border-2: #c5c5d1; --muted: #e8e8ee;
-  --c0: #2563eb; --c1: #ea580c; --c2: #059669; --c3: #7c3aed;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --text-3: #6b6b82;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --on-accent: #ffffff;
+  --warm: #c2410c;
+  --warm-light: #ffedd5;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+  --border-2: #c5c5d1;
+  --muted: #e8e8ee;
+  /* categorical colours, in the same order in every figure of the series */
+  --c0: #2563eb;
+  --c1: #c2410c;
+  --c2: #047857;
+  --c3: #7c3aed;
+  --c4: #be185d;
 }
-body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e6dd;
+    --text-2: #b9b9cb;
+    --text-3: #9a9ab0;
+    --accent: #60a5fa;
+    --accent-light: #1e3a5f;
+    --on-accent: #10102a;
+    --warm: #fb923c;
+    --warm-light: #4a2a12;
+    --bg: #1a1a2e;
+    --fig-bg: #22223a;
+    --border: #3a3a52;
+    --border-2: #5a5a74;
+    --muted: #2e2e48;
+    --c0: #60a5fa;
+    --c1: #fb923c;
+    --c2: #34d399;
+    --c3: #a78bfa;
+    --c4: #f472b6;
+  }
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
 .article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
-h1, h2 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
 h1 { font-size: 2.4rem; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
 h2 { font-size: 1.4rem; margin: 3rem 0 1rem; }
-h3 { font-family: var(--heading-font); font-size: 1.1rem; font-weight: 700; margin: 2rem 0 0.75rem; }
+h3 { font-size: 1.1rem; margin: 2rem 0 0.75rem; }
 p { margin: 0 0 1rem; }
 a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-em { font-style: italic; } strong { font-weight: 600; }
-.subtitle { font-family: var(--heading-font); font-size: 1.1rem; color: var(--text-2); line-height: 1.45; margin-bottom: 1rem; font-weight: 400; }
-.series-tag { font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+em { font-style: italic; }
+strong { font-weight: 600; }
+.mono { font-family: var(--mono-font); font-size: 0.92em; }
+
+.subtitle { font-family: var(--heading-font); font-size: 1.1rem; color: var(--text-2); line-height: 1.45; margin-bottom: 1.5rem; font-weight: 400; }
+.series-tag { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.5; }
+.figure svg { display: block; width: 100%; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.5; }
 .figure-label { font-weight: 600; color: var(--text); }
-.controls { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
-.controls input[type="range"] { width: 160px; accent-color: var(--accent); vertical-align: middle; }
-.controls label { display: inline-flex; align-items: center; gap: 0.5rem; }
+
+.controls { display: flex; align-items: center; gap: 0.6rem 1.25rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); }
+.controls input[type="range"] { width: 150px; max-width: 100%; accent-color: var(--accent); vertical-align: middle; }
+.controls label { display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .controls .value { font-family: var(--mono-font); color: var(--text); min-width: 2ch; display: inline-block; }
-.toggle-group { display: inline-flex; border: 1px solid var(--border-2); border-radius: 4px; overflow: hidden; }
-.toggle-group button { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.35rem 0.7rem; background: var(--fig-bg); color: var(--text-2); border: none; border-right: 1px solid var(--border-2); cursor: pointer; }
+.controls button, .toggle-group button { font-family: var(--heading-font); font-size: 0.875rem; padding: 0.4rem 0.75rem; background: var(--fig-bg); color: var(--text-2); cursor: pointer; }
+.controls > button, .controls label > button { border: 1px solid var(--border-2); border-radius: 4px; }
+.controls button:hover { background: var(--muted); }
+.toggle-group { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--border-2); border-radius: 4px; overflow: hidden; }
+.toggle-group button { border: none; border-right: 1px solid var(--border-2); }
 .toggle-group button:last-child { border-right: none; }
-.toggle-group button:hover { background: var(--muted); }
-.toggle-group button.active { background: var(--accent); color: white; }
-svg text { font-family: var(--heading-font); }
-svg .axis text { font-size: 11px; fill: var(--text-2); }
+.toggle-group button.active, .toggle-group button.active:hover { background: var(--accent); color: var(--on-accent); }
+button:focus-visible, input:focus-visible, svg [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.readout { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.5rem; min-height: 1.4em; }
+.readout b { color: var(--text); font-weight: 600; }
+
+svg text { font-family: var(--heading-font); font-size: 13px; fill: var(--text-2); }
+svg .axis text { font-size: 13px; fill: var(--text-2); }
 svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crispEdges; }
+svg .pane-title { font-weight: 700; fill: var(--text); }
+svg .pane-bg { fill: var(--bg); stroke: var(--border); }
+
 .margin-note { font-size: 0.875rem; color: var(--text-2); line-height: 1.5; border-left: 2px solid var(--border-2); padding-left: 0.9rem; margin: 1.25rem 0; }
-@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure { padding: 1rem; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+
+footer { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); }
+footer a { color: var(--text-2); }
+footer a.next { color: var(--accent); }
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .figure { padding: 1rem; }
+  .controls input[type="range"] { width: 120px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }
+}
 </style>
 </head>
 <body>
@@ -61,163 +135,227 @@ svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crisp
   <div class="series-tag">Part 3 of 10 · Preserves pairwise and geodesic distances</div>
   <h1>Preserving Global Distances</h1>
   <p class="subtitle">
-    If we want the picture to tell us how far apart things are, we need a method that respects distances. But what counts as "distance" is itself a choice, and the methods in this article give four different answers.
+    If we want the picture to tell us how far apart things are, we need a method that respects distances. But what counts as "distance" is itself a choice, and the four methods in this article make it four different ways.
   </p>
 </header>
 
 <p>
-  Linear methods force the data into a flat subspace. That works when the data is already flat, but most interesting data is not. A ribbon of points that curls through three-dimensional space cannot be laid out on a plane by any rotation. The distances <em>through</em> the ribbon are much longer than the distances <em>through empty space</em>, and it is the distances through the ribbon that carry the meaning.
+  Linear methods force the data into a flat subspace. That works when the data is already flat, but a ribbon of points that curls through three-dimensional space cannot be laid out on a plane by any rotation. The distance between two points <em>along</em> the ribbon can be much longer than the distance between them <em>through empty space</em>, and it is usually the distance along the ribbon that we care about.
 </p>
 
 <p>
-  This article is about methods that take distances seriously, and the key move each of them makes is redefining what distance means. Classical multidimensional scaling starts from a given distance matrix and asks for a low-dimensional arrangement that reproduces it. Sammon mapping adjusts the emphasis so that small distances are preserved more faithfully than large ones. Isomap replaces straight-line distance with the distance <em>along the data</em>. Diffusion maps replace it with the distance traveled by a random walk. Each one is a different definition of "far."
+  Each method here starts from a matrix of pairwise distances and looks for a low-dimensional layout that reproduces it. Classical multidimensional scaling takes the distances as given. Sammon mapping reweights them so that small distances are preserved more faithfully than large ones. Isomap replaces straight-line distance with distance <em>along the data</em>. Diffusion maps replace it with a distance defined by a random walk.
 </p>
 
 <h2>Classical MDS: given the distances, recover the points</h2>
 
 <p>
-  The oldest member of the family, classical multidimensional scaling, takes a distance matrix as input. You hand it the pairwise distances between <span style="font-family: var(--mono-font); font-size: 0.92em;">n</span> items, and it returns a set of coordinates in <span style="font-family: var(--mono-font); font-size: 0.92em;">k</span> dimensions whose pairwise distances match your input as closely as possible.
+  The oldest member of the family, classical multidimensional scaling, takes a distance matrix as input. You hand it the pairwise distances between <span class="mono">n</span> items, and it returns coordinates in <span class="mono">k</span> dimensions whose pairwise distances match the input as closely as possible.
 </p>
 
 <p>
-  You can think of MDS as the answer to a natural geometric question: given how far apart your items should be, where should they go? The classical solution is a double-centering of the squared distance matrix followed by an eigendecomposition, very much in the same family of tools as PCA. In fact, when the input distances are Euclidean distances of the original data, classical MDS <em>is</em> PCA, just reached from a different starting point. MDS is the more general tool because the input distances do not have to come from any embedding at all: they might be perceptual distances between colors, edit distances between strings, or any pairwise similarity you can encode.
+  The classical solution double-centers the squared distance matrix and takes its leading eigenvectors, the same tools as PCA. When the input distances are Euclidean distances between data points, classical MDS gives the same embedding as PCA, reached from the distances instead of the coordinates. MDS is the more general tool because its input does not have to come from coordinates at all: it can be perceptual distances between colors, edit distances between strings, or any other pairwise dissimilarity.
+</p>
+
+<p>
+  A close relative, metric MDS, drops the eigendecomposition and minimizes <em>stress</em>, the sum of squared differences between input and embedded distances, by gradient descent. Figure 1 uses that version, started from the classical solution, because the next method is a small change to it. The data is four rings in three dimensions, which cannot be flattened into a plane without changing some distances, so the method has to decide which errors to accept.
 </p>
 
 <div class="figure" id="fig-mds">
   <div class="controls">
-    <label>
-      stress emphasis
-      <span class="value" id="mds-weight-val">MDS</span>
-    </label>
-    <label>
-      <input type="range" id="mds-weight" min="0" max="1" value="0" step="0.05">
-    </label>
-    <label>
-      dataset:
-      <div class="toggle-group" id="mds-data-toggle">
-        <button class="active" data-set="three">three clusters</button>
-        <button data-set="line">line</button>
-        <button data-set="triangle">triangle</button>
-      </div>
-    </label>
+    <div class="toggle-group" id="mds-toggle" role="group" aria-label="stress weighting">
+      <button class="active" data-value="mds">metric MDS</button>
+      <button data-value="sammon">Sammon mapping</button>
+    </div>
   </div>
-  <svg id="mds-svg" width="100%" height="320" viewBox="0 0 680 320" preserveAspectRatio="xMidYMid meet"></svg>
+  <svg id="mds-svg" role="img" aria-label="Three panels. Four rings of points at the corners of a tetrahedron in three dimensions. Their two-dimensional embedding: under metric MDS some rings are squashed into flat loops, under Sammon mapping they stay open. A Shepard diagram of embedded against original distance for every pair, with short within-ring pairs at lower left and long between-ring pairs at upper right."></svg>
+  <div class="readout" id="mds-readout" aria-live="polite"></div>
   <div class="figure-caption">
     <span class="figure-label">Figure 1.</span>
-    Left: the original data with pairwise distances drawn as gray lines, thickness inversely proportional to distance. Right: an embedding found by minimizing a stress objective. The slider blends between classical MDS (uniform weighting of all distance errors) and Sammon mapping (weighting errors on short distances more than errors on long ones).
+    Four rings at the corners of a tetrahedron, embedded in the plane. In the Shepard diagram each dot is a pair of points, and dots on the diagonal are pairs whose distance survived. Under metric MDS the within-ring pairs (lower left) scatter widely and some rings are squashed nearly flat. Switch to Sammon mapping and the rings open up again, while the between-ring pairs (upper right) are about as far off as before.
   </div>
 </div>
 
 <p>
-  Classical MDS tries to match all pairwise distances with equal emphasis. That is a reasonable goal only when the data is roughly flat. When it is not, classical MDS ends up compromising every distance and getting none of them right. The next member of the family pushes on this.
+  Stress treats every pair alike: an error of one unit costs the same whether the pair was one unit apart or ten. With far more long pairs than short ones, the layout is decided by the long pairs, and the short distances inside each ring absorb the error.
 </p>
 
 <h2>Sammon mapping: some distances matter more</h2>
 
 <p>
-  Sammon mapping, introduced by John Sammon Jr. in 1969, starts from the observation that not all distance errors are equally bad. If two items are supposed to be 10 units apart and the embedding places them at 11, that is a minor error. If they are supposed to be 0.5 units apart and the embedding places them at 1.5, the topology is wrong: what should have been near neighbors have been pulled apart.
+  Sammon mapping, introduced by John Sammon Jr. in 1969, starts from the observation that not all distance errors are equally bad. If two items are supposed to be 10 units apart and the embedding places them at 11, that is a minor error. If they are supposed to be 0.5 units apart and the embedding places them at 1.5, near neighbors have been pulled apart.
 </p>
 
 <p>
-  Sammon's stress function divides each squared distance error by the original distance itself, giving small distances higher weight. The effect is that the optimizer fights hard to get local relationships right, tolerating larger errors in the global layout when necessary. If you slide the weighting control in Figure 1, you can watch the embedding shift: under classical MDS, far-apart items have their distances respected at the cost of the close-together ones; under Sammon, the reverse.
+  Sammon's stress divides each squared distance error by the original distance, which gives small distances more weight. The optimizer then works harder to get local relationships right and tolerates error in the global layout when it has to. In Figure 1 the mean error on the shortest quarter of pairs roughly halves when you switch to Sammon mapping, and the error on the longest quarter hardly moves, because for these rings the long pairs were already as good as a plane allows.
 </p>
 
 <p>
-  Sammon mapping is a bridge from the MDS family to the neighbor-based family we will see in article 4. Once you notice that local relationships matter more than global ones for most real data, you are halfway to t-SNE.
+  Sammon mapping sits between the MDS family and the neighbor-based family of article 4. Once local relationships are weighted more than global ones, the next step is to drop the global ones entirely, which is roughly what t-SNE does.
 </p>
 
-<h2>Isomap: distances through the data, not through empty space</h2>
+<h2>Isomap: measuring distance along the data</h2>
 
 <p>
-  Even Sammon mapping computes distances as Euclidean distances in the original coordinate space. That is a problem for curved data. Consider the classic example: a two-dimensional ribbon rolled up into three dimensions, the Swiss roll. Two points at opposite ends of the ribbon are far apart along the ribbon, but they might be close to each other through the empty air in the middle of the roll. Any method that uses Euclidean distance will treat them as neighbors and fold the ribbon back on itself.
-</p>
-
-<p>
-  Isomap, introduced by Tenenbaum, de Silva, and Langford in 2000, fixes this by redefining distance as shortest path in a k-nearest-neighbor graph. Build a graph where each point connects only to its <span style="font-family: var(--mono-font); font-size: 0.92em;">k</span> closest neighbors. The distance between two points is the total length of the shortest path through the graph between them. For a swiss roll with reasonable point density, this <em>geodesic</em> distance respects the curvature: two points at opposite ends of the ribbon are far apart even if they sit next to each other in three dimensions, because the shortest path has to walk all the way along the ribbon.
+  Sammon mapping still measures distance in a straight line through the original space, and that is a problem for curved data. The classic example is the swiss roll, a two-dimensional ribbon rolled up in three dimensions. Two points on adjacent layers of the roll are far apart along the ribbon but close through the air between the layers. A method that uses straight-line distance treats them as neighbors and folds the ribbon onto itself.
 </p>
 
 <p>
-  Feed the geodesic distance matrix into MDS and you have Isomap. The embedding now tries to preserve distances along the manifold, which is usually what we meant by "distance" in the first place.
+  Isomap, introduced by Tenenbaum, de Silva, and Langford in 2000, redefines distance as the shortest path in a nearest-neighbor graph. Each point is connected to its <span class="mono">k</span> closest neighbors, and the distance between two points is the length of the shortest path between them through the graph. On a well-sampled swiss roll this <em>geodesic</em> distance follows the ribbon: the shortest path between two layers has to walk around the roll.
+</p>
+
+<p>
+  Isomap is classical MDS applied to the matrix of geodesic distances.
 </p>
 
 <div class="figure" id="fig-isomap">
   <div class="controls">
-    <div class="toggle-group" id="iso-view-toggle">
-      <button class="active" data-view="swiss">3D swiss roll</button>
-      <button data-view="unrolled">Isomap unrolled</button>
-    </div>
     <label>
-      pick two points to measure: click on the left panel
+      neighbors per point (k) <span class="value" id="iso-k-val">6</span>
+      <input type="range" id="iso-k" min="3" max="12" value="6" step="1">
     </label>
+    <button id="iso-pair">another pair</button>
   </div>
-  <svg id="iso-svg" width="100%" height="360" viewBox="0 0 680 360" preserveAspectRatio="xMidYMid meet"></svg>
+  <svg id="iso-svg" role="img" aria-label="Two panels. Left: a swiss roll of 200 points in three dimensions, colored from purple at the inner end to yellow at the outer end, with its nearest-neighbor graph. Two marked points on adjacent layers are joined by a short dashed straight line and by a long path through the graph that goes around the roll. Right: the Isomap embedding, a flat rectangle with the colors in order from one side to the other."></svg>
+  <div class="readout" id="iso-readout" aria-live="polite"></div>
   <div class="figure-caption">
     <span class="figure-label">Figure 2.</span>
-    Click two points on the swiss roll. The straight line (orange) is the Euclidean distance, which cuts through empty space. The path along the graph (blue) is the geodesic distance, which respects the surface. Switch to the unrolled view to see what Isomap recovers when it lays these same points out in 2D.
+    Left: a swiss roll and its k-nearest-neighbor graph, colored by position along the ribbon. The dashed line is the straight-line distance between the two marked points and the solid path is the shortest route through the graph. Right: Isomap's embedding, which at k = 6 is the unrolled ribbon. Raise k to 8 and two edges jump between layers (drawn in orange); the shortest path takes the jump, the graph distance drops to the straight-line distance, and the embedding folds over. Click two points, or use the button, to measure a different pair.
   </div>
 </div>
 
 <p>
-  Isomap's weakness is the same graph that makes it work. If the sampling is too sparse, the shortest-path approximation becomes unreliable. If <span style="font-family: var(--mono-font); font-size: 0.92em;">k</span> is chosen too large, <em>shortcut edges</em> appear: an edge connecting points that are close in 3D but far along the manifold, which crash the geodesic computation back toward a Euclidean one. The method is at its best on densely sampled, smooth manifolds and gets shakier as those assumptions weaken.
+  The graph that makes Isomap work is also its weak point. If the sampling is too sparse, shortest paths are a poor approximation of distance along the surface. If <span class="mono">k</span> is too large, <em>shortcut edges</em> appear between points that are close in 3D but far along the manifold, and a single shortcut shortens every path that can use it. Isomap is at its best on densely sampled, smooth manifolds and gets less reliable as those assumptions weaken.
 </p>
 
 <div class="margin-note">
-  The "right" <span style="font-family: var(--mono-font); font-size: 0.92em;">k</span> for Isomap depends on the intrinsic dimension and the sampling density of the data. Too small and the graph becomes disconnected. Too large and shortcut edges distort the geodesic. There is no universal rule; picking <span style="font-family: var(--mono-font); font-size: 0.92em;">k</span> is the main piece of craft in using Isomap.
+  A workable <span class="mono">k</span> for Isomap depends on the intrinsic dimension and the sampling density of the data. Too small and the graph breaks into disconnected pieces; too large and shortcut edges distort the geodesics. In Figure 2 the first shortcuts appear at k = 8. Choosing <span class="mono">k</span> is the main piece of craft in using Isomap.
 </div>
 
-<h2>Diffusion maps: distance as a probability of connection</h2>
+<h2>Diffusion maps: distance from a random walk</h2>
 
 <p>
-  Isomap measures distance as the shortest path through a single chain of neighbors. But what if we care about <em>how many paths</em> there are between two points, not just the length of the shortest one? Two regions that are connected by many independent paths should feel "closer" than two regions that are connected by only one thin bridge, even if the single thin bridge is shorter.
+  Isomap measures distance as the length of one shortest path. Diffusion maps ask <em>how many paths</em> connect two points. Two regions connected by many independent paths should count as closer than two regions connected by one thin bridge, even if the bridge is short.
 </p>
 
 <p>
-  Diffusion maps, developed by Coifman and Lafon in 2006, formalize this intuition by defining distance through a random walk. Imagine releasing a cloud of walkers at one point. They wander around the kNN graph, stepping to random neighbors with probabilities weighted by similarity. After a few steps, the cloud has spread: some of it has reached point B, more of it has reached point C. The <em>diffusion distance</em> between two points is the difference between where the walker goes from one vs. where it goes from the other, averaged over all possible destinations.
+  Diffusion maps, developed by Coifman and Lafon in 2006, define distance through a random walk. Release a cloud of walkers at one point and let them wander the neighbor graph, stepping to a neighbor with probability weighted by similarity. After a few steps the cloud has spread out. The <em>diffusion distance</em> between two points compares the two clouds released from them: it is small when the walkers from both points end up in the same places with the same probabilities.
 </p>
 
 <p>
-  Diffusion distance is robust to noise (a single bad edge has little effect if there are many good ones) and sensitive to bottlenecks (two well-connected regions linked by a thin bridge are treated as further apart than their graph distance suggests).
+  Diffusion distance is robust to noise, since one bad edge has little effect when there are many good ones, and sensitive to bottlenecks, since two well-connected regions joined by a thin bridge are treated as farther apart than their graph distance suggests.
 </p>
 
 <div class="figure" id="fig-diffusion">
   <div class="controls">
     <label>
-      diffusion steps <span class="value" id="diff-t-val">4</span>
-      <input type="range" id="diff-t" min="0" max="30" value="4" step="1">
+      steps <span class="value" id="diff-t-val">4</span>
+      <input type="range" id="diff-t" min="0" max="200" value="4" step="1">
     </label>
     <label>
-      click a node to seed the walk
+      start the walk in
+      <span class="toggle-group" id="diff-seed" role="group" aria-label="where the walk starts">
+        <button class="active" data-value="left">the left cluster</button>
+        <button data-value="bridge">the bridge</button>
+      </span>
     </label>
   </div>
-  <svg id="diff-svg" width="100%" height="360" viewBox="0 0 680 360" preserveAspectRatio="xMidYMid meet"></svg>
+  <svg id="diff-svg" role="img" aria-label="A graph of two clusters of 20 nodes joined by a chain of three bridge nodes. Nodes are shaded by how much of a random walk's probability they hold. After 4 steps from a node in the left cluster, nearly all of the probability is still in the left cluster."></svg>
+  <div class="readout" id="diff-readout" aria-live="polite"></div>
   <div class="figure-caption">
     <span class="figure-label">Figure 3.</span>
-    A dumbbell graph: two dense clusters joined by a narrow bridge. A random walker seeded at the highlighted node spreads probability mass to neighbors, then to neighbors-of-neighbors, and so on. After few steps, most of the mass stays within the starting cluster; after many steps, it leaks across the bridge. Diffusion distance captures this asymmetry, treating points in the same cluster as close and points on opposite sides of the bridge as far.
+    Two clusters joined by a narrow bridge. Nodes are shaded by the probability that a walker who started at the ringed node is there after the given number of steps. After 4 steps from inside the left cluster the walk has covered that cluster and almost none of it has crossed. It takes several dozen steps for a noticeable share to reach the right side, although the bridge is only four edges long. Click any node to start the walk there.
   </div>
 </div>
 
 <p>
-  Diffusion maps have been influential in single-cell biology, where they handle branching developmental trajectories gracefully, and in analysis of dynamical systems, where the random walk is a natural model of how the system transitions between states. They are also one of the theoretical linchpins for understanding the broader family of spectral methods, because the diffusion operator's eigenvectors are exactly the embedding coordinates.
+  Diffusion maps have been influential in single-cell biology, where they handle branching developmental trajectories well, and in the analysis of dynamical systems, where a random walk is a natural model of how a system moves between states. They are also central to the theory of spectral methods: the embedding coordinates are the leading eigenvectors of the random walk's transition matrix, each scaled by its eigenvalue raised to the number of steps.
 </p>
 
-<h2>What the distance-preserving family gets and misses</h2>
+<h2>Where distance preservation works and where it struggles</h2>
 
 <p>
-  All four methods take distances as their primary object and try to reproduce them in two or three dimensions. Their family resemblance is strong: each one is essentially MDS applied to a cleverer distance matrix. The progression, from Euclidean to weighted-Euclidean to geodesic to diffusion, is a progression of increasingly realistic definitions of what "close" means.
+  All four methods take distances as their primary object and try to reproduce them in two or three dimensions, and each is close to MDS applied to a different distance matrix: Euclidean, reweighted Euclidean, geodesic, diffusion.
 </p>
 
 <p>
-  What the family shares, for better and worse, is a commitment to distance as the governing concept. When distance is a meaningful quantity (spatial data, feature vectors with calibrated scales, perceptual studies), this family is strong. When distance is not meaningful, or when the interesting structure is in <em>who is near whom</em> rather than <em>how far apart</em>, the distance-based methods start to struggle. The next article is about methods that give up on preserving distances and focus on preserving neighbor lists instead, the shift behind t-SNE and UMAP.
+  When distance is a meaningful quantity (spatial data, feature vectors with calibrated scales, perceptual studies), this family is strong. When the interesting structure is in <em>who is near whom</em> and not in <em>how far apart</em>, there is no reason to spend the two dimensions of the page on reproducing long distances. The next article is about methods that give up on preserving distances and preserve neighbor lists instead, which is the shift behind t-SNE and UMAP.
 </p>
 
-<footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
-  <p>Part of <a href="index.html" style="color: var(--text-2);">What Dimensionality Reduction Preserves</a>. Previous: <a href="02-linear.html" style="color: var(--accent);">The Linear Family</a>. Next: <a href="04-local-neighborhoods.html" style="color: var(--accent);">Preserving Local Neighborhoods</a>.</p>
-  <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+<footer>
+  <p>Part of <a href="index.html">What Dimensionality Reduction Preserves</a>. Previous: <a class="next" href="02-linear.html">The Linear Family</a>. Next: <a class="next" href="04-local-neighborhoods.html">Preserving Local Neighborhoods</a>.</p>
+  <p>Built with <a href="https://github.com/enjalot/moonshine">moonshine</a>.</p>
 </footer>
 
 </div>
 
 <script>
+const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const DUR = REDUCED ? 0 : 250;
+
+// Every figure is drawn at the pixel width its container actually has, and redrawn when that
+// width changes, so labels stay the same size on a phone as on a desktop. draw(svg, W) lays the
+// figure out for width W and returns { height } (plus an optional stop() to cancel animation).
+function figure(id, draw) {
+  const node = document.getElementById(id), svg = d3.select(node);
+  let lastW = 0, stop = null;
+  function go() {
+    const W = Math.floor(node.getBoundingClientRect().width);
+    if (!W || W === lastW) return;
+    lastW = W;
+    if (stop) stop();
+    svg.selectAll("*").remove();
+    const res = draw(svg, W);
+    svg.attr("viewBox", `0 0 ${W} ${res.height}`).attr("height", res.height);
+    stop = res.stop || null;
+  }
+  new ResizeObserver(go).observe(node.parentNode);
+  go();
+}
+
+// Run start() the first time the element scrolls into view, so animations play when they can be seen.
+function whenVisible(node, start) {
+  if (!("IntersectionObserver" in window)) { start(); return () => {}; }
+  const io = new IntersectionObserver(entries => {
+    if (entries.some(e => e.isIntersecting)) { io.disconnect(); start(); }
+  }, { threshold: 0.35 });
+  io.observe(node);
+  return () => io.disconnect();
+}
+
+// Mutually exclusive buttons. Calls onChange(value) and marks the pressed button.
+function toggle(groupId, onChange) {
+  const buttons = document.querySelectorAll(`#${groupId} button`);
+  buttons.forEach(btn => {
+    btn.setAttribute("aria-pressed", btn.classList.contains("active"));
+    btn.onclick = () => {
+      buttons.forEach(b => { b.classList.toggle("active", b === btn); b.setAttribute("aria-pressed", b === btn); });
+      onChange(btn.dataset.value);
+    };
+  });
+  return () => document.querySelector(`#${groupId} button.active`).dataset.value;
+}
+
+// A titled panel: returns a <g> whose origin is the panel's top-left drawing corner.
+function pane(svg, x, y, w, h, title, note) {
+  const g = svg.append("g").attr("transform", `translate(${x},${y})`);
+  g.append("text").attr("class", "pane-title").attr("x", 0).attr("y", 13).text(title);
+  if (note) g.append("text").attr("x", 0).attr("y", 30).text(note);
+  const top = note ? 40 : 22;
+  g.append("rect").attr("class", "pane-bg").attr("x", 0).attr("y", top).attr("width", w).attr("height", h - top).attr("rx", 4);
+  const inner = g.append("g").attr("transform", `translate(0,${top})`);
+  inner.w = w; inner.h = h - top;
+  return inner;
+}
+
+// Scales that fit a 2D point set into a w x h box with equal units on both axes.
+function fitScales(pts, w, h, pad = 12) {
+  const xe = d3.extent(pts, p => p[0]), ye = d3.extent(pts, p => p[1]);
+  const s = Math.min((w - 2 * pad) / ((xe[1] - xe[0]) || 1), (h - 2 * pad) / ((ye[1] - ye[0]) || 1));
+  const cx = (xe[0] + xe[1]) / 2, cy = (ye[0] + ye[1]) / 2;
+  return { x: v => w / 2 + (v - cx) * s, y: v => h / 2 - (v - cy) * s, s };
+}
+
 function mulberry32(seed) {
   return function() {
     let t = seed += 0x6D2B79F5;
@@ -231,487 +369,326 @@ function gaussian(rng) {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 
-// Matrix helpers
-function matMul(A, B) {
-  const n = A.length, m = B[0].length, p = B.length;
-  const C = Array.from({ length: n }, () => new Array(m).fill(0));
-  for (let i = 0; i < n; i++)
-    for (let j = 0; j < m; j++)
-      for (let k = 0; k < p; k++) C[i][j] += A[i][k] * B[k][j];
-  return C;
-}
-function transpose(A) {
-  const n = A.length, m = A[0].length;
-  const T = Array.from({ length: m }, () => new Array(n).fill(0));
-  for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) T[j][i] = A[i][j];
-  return T;
-}
-
-// Tiny MDS/Sammon via gradient descent.
-// D: n x n target distance matrix.
-// alpha: 0 = MDS (uniform), 1 = Sammon (1/D_ij weighting).
-function mdsLike(D, alpha = 0, dim = 2, iters = 200, seed = 5) {
-  const n = D.length;
-  const rng = mulberry32(seed);
-  const X = Array.from({ length: n }, () => Array.from({ length: dim }, () => gaussian(rng) * 0.5));
-  const lr = 0.02;
-
-  for (let it = 0; it < iters; it++) {
-    const grad = Array.from({ length: n }, () => new Array(dim).fill(0));
-    for (let i = 0; i < n; i++) {
-      for (let j = 0; j < n; j++) {
-        if (i === j) continue;
-        let d = 0;
-        for (let k = 0; k < dim; k++) d += (X[i][k] - X[j][k]) ** 2;
-        d = Math.sqrt(d) + 1e-9;
-        const target = D[i][j];
-        const weight = alpha === 0 ? 1 : (alpha * (1 / (target + 1e-6)) + (1 - alpha) * 1);
-        const diff = (d - target) / d * weight;
-        for (let k = 0; k < dim; k++) grad[i][k] += diff * (X[i][k] - X[j][k]);
-      }
-    }
-    for (let i = 0; i < n; i++) for (let k = 0; k < dim; k++) X[i][k] -= lr * grad[i][k];
+// Pairwise Euclidean distances between the rows of X.
+function distMatrix(X) {
+  const n = X.length, D = Array.from({ length: n }, () => new Float64Array(n));
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    let s = 0;
+    for (let a = 0; a < X[i].length; a++) { const d = X[i][a] - X[j][a]; s += d * d; }
+    D[i][j] = D[j][i] = Math.sqrt(s);
   }
+  return D;
+}
+// For each point, the indices of the other points sorted by distance (nearest first).
+function neighborOrder(D) {
+  return D.map((row, i) => {
+    const idx = [];
+    for (let j = 0; j < row.length; j++) if (j !== i) idx.push(j);
+    return idx.sort((a, b) => row[a] - row[b]);
+  });
+}
 
-  // Center
-  const mean = new Array(dim).fill(0);
-  for (let i = 0; i < n; i++) for (let k = 0; k < dim; k++) mean[k] += X[i][k] / n;
-  for (let i = 0; i < n; i++) for (let k = 0; k < dim; k++) X[i][k] -= mean[k];
+// Leading eigenvectors of a symmetric matrix by power iteration with deflation.
+function topEig(M, dim, seed = 1) {
+  const n = M.length, rng = mulberry32(seed), vecs = [], vals = [];
+  for (let c = 0; c < dim; c++) {
+    let v = Array.from({ length: n }, () => rng() - 0.5), lam = 0;
+    for (let it = 0; it < 300; it++) {
+      const w = new Array(n).fill(0);
+      for (let i = 0; i < n; i++) { let s = 0; const Mi = M[i]; for (let j = 0; j < n; j++) s += Mi[j] * v[j]; w[i] = s; }
+      for (const u of vecs) { let p = 0; for (let i = 0; i < n; i++) p += w[i] * u[i]; for (let i = 0; i < n; i++) w[i] -= p * u[i]; }
+      let nrm = 0; for (let i = 0; i < n; i++) nrm += w[i] * w[i];
+      nrm = Math.sqrt(nrm) || 1;
+      let diff = 0;
+      for (let i = 0; i < n; i++) { const x = w[i] / nrm; diff += Math.abs(x - v[i]); v[i] = x; }
+      lam = nrm;
+      if (diff < 1e-10) break;
+    }
+    vecs.push(v); vals.push(lam);
+  }
+  return { vecs, vals };
+}
 
+// Classical (Torgerson) MDS: double-centre the squared distances and take the leading eigenvectors.
+function classicalMDS(D, dim = 2) {
+  const n = D.length, B = Array.from({ length: n }, () => new Float64Array(n));
+  const rowMean = new Float64Array(n); let grand = 0;
+  for (let i = 0; i < n; i++) { for (let j = 0; j < n; j++) rowMean[i] += D[i][j] * D[i][j] / n; grand += rowMean[i] / n; }
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) B[i][j] = -0.5 * (D[i][j] * D[i][j] - rowMean[i] - rowMean[j] + grand);
+  const { vecs, vals } = topEig(B, dim, 5);
+  return Array.from({ length: n }, (_, i) => vecs.map((v, c) => v[i] * Math.sqrt(Math.max(vals[c], 0))));
+}
+
+// Graph geodesics: connect each point to its k nearest neighbours (edges kept in both directions),
+// then take all-pairs shortest paths (Floyd-Warshall). Unreachable pairs stay Infinity.
+function graphGeodesics(D, k) {
+  const n = D.length, order = neighborOrder(D);
+  const G = Array.from({ length: n }, () => new Float64Array(n).fill(Infinity));
+  const edges = [];
+  for (let i = 0; i < n; i++) {
+    G[i][i] = 0;
+    for (const j of order[i].slice(0, k)) {
+      if (G[i][j] === Infinity) edges.push([i, j]);
+      G[i][j] = G[j][i] = D[i][j];
+    }
+  }
+  const W = G.map(r => Float64Array.from(r));
+  for (let m = 0; m < n; m++) { const Gm = G[m]; for (let i = 0; i < n; i++) { const gim = G[i][m]; if (gim === Infinity) continue; const Gi = G[i]; for (let j = 0; j < n; j++) { const s = gim + Gm[j]; if (s < Gi[j]) Gi[j] = s; } } }
+  return { G, W, edges };
+}
+// Isomap: classical MDS on the graph geodesics.
+function isomap(D, k, dim = 2) {
+  const { G } = graphGeodesics(D, k);
+  let max = 0;
+  for (const r of G) for (const v of r) if (v !== Infinity && v > max) max = v;
+  for (const r of G) for (let j = 0; j < r.length; j++) if (r[j] === Infinity) r[j] = max * 1.5; // disconnected pieces: park them far apart
+  return classicalMDS(G, dim);
+}
+
+// Metric MDS by gradient descent on stress = sum_ij w_ij (d_ij - D_ij)^2, with backtracking steps.
+// weight(D_ij) = 1 gives raw stress; weight = 1 / D_ij gives Sammon's stress.
+function stressMDS(D, { weight = () => 1, init, iters = 300 } = {}) {
+  const n = D.length;
+  let X = init.map(p => p.slice());
+  const Wt = D.map(r => Array.from(r, v => v > 0 ? weight(v) : 0));
+  function stress(X) {
+    let s = 0;
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const d = Math.hypot(X[i][0] - X[j][0], X[i][1] - X[j][1]); s += Wt[i][j] * (d - D[i][j]) ** 2; }
+    return s;
+  }
+  let cur = stress(X), step = 0.5 / n;
+  for (let it = 0; it < iters; it++) {
+    const g = X.map(() => [0, 0]);
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+      if (i === j) continue;
+      const dx = X[i][0] - X[j][0], dy = X[i][1] - X[j][1], d = Math.hypot(dx, dy) + 1e-12;
+      const c = 2 * Wt[i][j] * (d - D[i][j]) / d;
+      g[i][0] += c * dx; g[i][1] += c * dy;
+    }
+    for (let tries = 0; tries < 30; tries++) {
+      const Xn = X.map((p, i) => [p[0] - step * g[i][0], p[1] - step * g[i][1]]);
+      const s = stress(Xn);
+      if (s < cur) { X = Xn; cur = s; step *= 1.3; break; }
+      step *= 0.5;
+    }
+  }
   return X;
 }
 
-// --------- Figure 1: MDS/Sammon ---------
+// Oblique view of 3D points, used for both 3D panels in this article.
+function view3d(p, angle = 0.35, tilt = 0.6) {
+  const c = Math.cos(angle), s = Math.sin(angle);
+  return [p[0] * c - p[2] * s, p[1] * Math.cos(tilt) - (p[0] * s + p[2] * c) * Math.sin(tilt)];
+}
+
+// ---------- Figure 1: metric MDS vs Sammon mapping ----------
 (function() {
-  const svg = d3.select("#mds-svg");
-  const W = 680, H = 320;
-  const m = { top: 20, right: 16, bottom: 16, left: 16 };
-  const paneW = (W - 40) / 2;
-  const leftG = svg.append("g").attr("transform", `translate(${m.left},${m.top})`);
-  const rightG = svg.append("g").attr("transform", `translate(${m.left + paneW + 24},${m.top})`);
-
-  leftG.append("text").attr("y", -6).style("font-size", "11px").attr("fill", "var(--text-3)")
-    .style("letter-spacing", "0.04em").text("ORIGINAL DATA");
-  rightG.append("text").attr("y", -6).style("font-size", "11px").attr("fill", "var(--text-3)")
-    .style("letter-spacing", "0.04em").text("EMBEDDING");
-
-  const datasets = {
-    three: (() => {
-      const rng = mulberry32(3);
-      const pts = [];
-      const centers = [[-2.5, -1], [2, -1.5], [0, 2]];
-      for (let c = 0; c < 3; c++) {
-        for (let i = 0; i < 8; i++) {
-          pts.push([centers[c][0] + gaussian(rng) * 0.4, centers[c][1] + gaussian(rng) * 0.4, c]);
-        }
-      }
-      return pts;
-    })(),
-    line: (() => {
-      const rng = mulberry32(4);
-      return d3.range(20).map(i => [i * 0.3 - 2.7, gaussian(rng) * 0.15, 0]);
-    })(),
-    triangle: (() => {
-      const rng = mulberry32(5);
-      const pts = [];
-      for (let i = 0; i < 24; i++) {
-        const a = Math.PI * 2 * (i / 24);
-        pts.push([Math.cos(a) * 2 + gaussian(rng) * 0.2, Math.sin(a) * 2 + gaussian(rng) * 0.2, 0]);
-      }
-      return pts;
-    })(),
+  // four rings of 14 points, centred on the corners of a tetrahedron, each in a random plane
+  const rng = mulberry32(3), X = [], ring = [];
+  [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]].forEach((corner, c) => {
+    let u = [gaussian(rng), gaussian(rng), gaussian(rng)], w = [gaussian(rng), gaussian(rng), gaussian(rng)];
+    const nu = Math.hypot(...u); u = u.map(v => v / nu);
+    const d = u[0] * w[0] + u[1] * w[1] + u[2] * w[2]; w = w.map((v, i) => v - d * u[i]);
+    const nw = Math.hypot(...w); w = w.map(v => v / nw);
+    for (let i = 0; i < 14; i++) {
+      const a = 2 * Math.PI * i / 14;
+      X.push([0, 1, 2].map(k => corner[k] * 2.2 + 0.9 * (Math.cos(a) * u[k] + Math.sin(a) * w[k])));
+      ring.push(c);
+    }
+  });
+  const n = X.length, D = distMatrix(X), start = classicalMDS(D, 2);
+  const emb = {
+    mds: stressMDS(D, { init: start, iters: 400 }),
+    sammon: stressMDS(D, { init: start, iters: 400, weight: d => 1 / d }),
   };
+  const pairs = [];
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) pairs.push({ i, j, d: D[i][j], same: ring[i] === ring[j] });
+  const sorted = pairs.slice().sort((a, b) => a.d - b.d), q = Math.floor(pairs.length / 4);
+  const relErr = (Y, list) => d3.mean(list, p => Math.abs(Math.hypot(Y[p.i][0] - Y[p.j][0], Y[p.i][1] - Y[p.j][1]) - p.d) / p.d);
+  const colors = ["var(--c0)", "var(--c1)", "var(--c2)", "var(--c3)"];
+  const ringPath = (pts, c) => { const idx = d3.range(n).filter(i => ring[i] === c); return "M" + idx.map(i => pts[i].join(",")).join("L") + "Z"; };
+  const readout = document.getElementById("mds-readout");
 
-  const weightInput = document.getElementById("mds-weight");
-  const weightVal = document.getElementById("mds-weight-val");
-  const dataButtons = document.querySelectorAll("#mds-data-toggle button");
+  figure("mds-svg", (svg, W) => {
+    const narrow = W < 500, gap = 14;
+    const pw = narrow ? (W - gap) / 2 : (W - 2 * gap) / 3, ph = narrow ? 190 : 250;
+    const gData = pane(svg, 0, 0, pw, ph, "the data", "in 3D");
+    const gEmb = pane(svg, pw + gap, 0, pw, ph, "embedding", "in 2D");
+    const sw = narrow ? W : pw, sh = narrow ? 250 : ph;
+    const gShep = pane(svg, narrow ? 0 : 2 * (pw + gap), narrow ? ph + 16 : 0, sw, sh, "Shepard diagram", "embedded vs original distance");
 
-  let currentSet = "three";
+    const flat = X.map(p => view3d(p)), sc = fitScales(flat, gData.w, gData.h);
+    const fp = flat.map(p => [sc.x(p[0]), sc.y(p[1])]);
+    colors.forEach((col, c) => gData.append("path").attr("d", ringPath(fp, c)).attr("fill", "none").attr("stroke", col).attr("stroke-opacity", 0.5));
+    gData.selectAll("circle").data(fp).join("circle").attr("cx", d => d[0]).attr("cy", d => d[1]).attr("r", 3).attr("fill", (_, i) => colors[ring[i]]);
 
-  function render() {
-    const alpha = +weightInput.value;
-    weightVal.textContent = alpha < 0.1 ? "MDS" : alpha > 0.9 ? "Sammon" : `blend ${alpha.toFixed(2)}`;
+    const embPaths = colors.map(col => gEmb.append("path").attr("fill", "none").attr("stroke", col).attr("stroke-opacity", 0.5));
+    const embPts = gEmb.selectAll("circle").data(d3.range(n)).join("circle").attr("r", 3).attr("fill", i => colors[ring[i]]);
 
-    const pts = datasets[currentSet];
-    // Scale original
-    const xExt = d3.extent(pts, d => d[0]);
-    const yExt = d3.extent(pts, d => d[1]);
-    const cls = d => d[2];
-    const padX = (xExt[1] - xExt[0]) * 0.15;
-    const padY = (yExt[1] - yExt[0]) * 0.15;
-    const ox = d3.scaleLinear().domain([xExt[0] - padX, xExt[1] + padX]).range([0, paneW]);
-    const oy = d3.scaleLinear().domain([yExt[0] - padY, yExt[1] + padY]).range([H - m.top - m.bottom, 0]);
+    const m = { l: 30, b: 22, t: 8, r: 8 }, max = d3.max(pairs, p => p.d) * 1.25;
+    const x = d3.scaleLinear().domain([0, max]).range([m.l, gShep.w - m.r]), y = d3.scaleLinear().domain([0, max]).range([gShep.h - m.b, m.t]);
+    gShep.append("g").attr("class", "axis").attr("transform", `translate(0,${gShep.h - m.b})`).call(d3.axisBottom(x).ticks(4));
+    gShep.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4));
+    gShep.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(max)).attr("y2", y(max)).attr("stroke", "var(--text-3)").attr("stroke-dasharray", "4 4");
+    const dots = gShep.append("g").selectAll("circle").data(pairs).join("circle").attr("r", 1.6)
+      .attr("fill", p => p.same ? "var(--accent)" : "var(--text-3)").attr("opacity", p => p.same ? 0.9 : 0.45).attr("cx", p => x(p.d));
+    gShep.append("text").attr("x", x(2.3)).attr("y", y(0.9)).attr("fill", "var(--accent)").text("within a ring");
+    gShep.append("text").attr("x", x(max) - 2).attr("y", y(3)).attr("text-anchor", "end").text("between rings");
 
-    // Draw lines (distances) lightly
-    leftG.selectAll(".dline").remove();
-    const pairs = [];
-    for (let i = 0; i < pts.length; i++)
-      for (let j = i + 1; j < pts.length; j++)
-        pairs.push([i, j, Math.hypot(pts[i][0] - pts[j][0], pts[i][1] - pts[j][1])]);
-    const maxD = d3.max(pairs, p => p[2]);
-    leftG.selectAll(".dline").data(pairs).enter().append("line")
-      .attr("class", "dline")
-      .attr("x1", p => ox(pts[p[0]][0])).attr("y1", p => oy(pts[p[0]][1]))
-      .attr("x2", p => ox(pts[p[1]][0])).attr("y2", p => oy(pts[p[1]][1]))
-      .attr("stroke", "var(--text-3)")
-      .attr("stroke-opacity", p => 0.03 + 0.18 * (1 - p[2] / maxD))
-      .attr("stroke-width", p => 0.3 + 1.2 * (1 - p[2] / maxD));
-
-    // Points
-    const colors = ["var(--c0)", "var(--c1)", "var(--c2)"];
-    leftG.selectAll("circle").data(pts, (d, i) => i).join("circle")
-      .attr("cx", d => ox(d[0])).attr("cy", d => oy(d[1]))
-      .attr("r", 4).attr("fill", d => colors[cls(d)]).attr("opacity", 0.8)
-      .attr("stroke", "white").attr("stroke-width", 0.7);
-
-    // Compute embedding
-    const n = pts.length;
-    const D = Array.from({ length: n }, () => new Array(n).fill(0));
-    for (let i = 0; i < n; i++)
-      for (let j = 0; j < n; j++)
-        D[i][j] = Math.hypot(pts[i][0] - pts[j][0], pts[i][1] - pts[j][1]);
-    const emb = mdsLike(D, alpha, 2, 260, 11);
-
-    const exExt = d3.extent(emb, d => d[0]);
-    const eyExt = d3.extent(emb, d => d[1]);
-    const padXE = Math.max(0.1, (exExt[1] - exExt[0]) * 0.15);
-    const padYE = Math.max(0.1, (eyExt[1] - eyExt[0]) * 0.15);
-    const ex = d3.scaleLinear().domain([exExt[0] - padXE, exExt[1] + padXE]).range([0, paneW]);
-    const ey = d3.scaleLinear().domain([eyExt[0] - padYE, eyExt[1] + padYE]).range([H - m.top - m.bottom, 0]);
-
-    rightG.selectAll("circle").data(emb, (d, i) => i).join(
-      enter => enter.append("circle").attr("r", 4).attr("stroke", "white").attr("stroke-width", 0.7),
-      update => update,
-      exit => exit.remove()
-    )
-      .transition().duration(250)
-      .attr("cx", d => ex(d[0])).attr("cy", d => ey(d[1]))
-      .attr("fill", (_, i) => colors[cls(pts[i])])
-      .attr("opacity", 0.85);
-  }
-
-  weightInput.addEventListener("input", render);
-  dataButtons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      dataButtons.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      currentSet = btn.dataset.set;
-      render();
-    });
+    function render(which) {
+      const Y = emb[which], s2 = fitScales(Y, gEmb.w, gEmb.h), ep = Y.map(p => [s2.x(p[0]), s2.y(p[1])]);
+      embPts.transition().duration(DUR * 2).attr("cx", i => ep[i][0]).attr("cy", i => ep[i][1]);
+      embPaths.forEach((path, c) => path.transition().duration(DUR * 2).attr("d", ringPath(ep, c)));
+      dots.transition().duration(DUR * 2).attr("cy", p => y(Math.hypot(Y[p.i][0] - Y[p.j][0], Y[p.i][1] - Y[p.j][1])));
+      readout.innerHTML = `Mean error as a share of the original distance: <b>${(100 * relErr(Y, sorted.slice(0, q))).toFixed(0)}%</b> on the shortest quarter of pairs, <b>${(100 * relErr(Y, sorted.slice(-q))).toFixed(0)}%</b> on the longest quarter.`;
+    }
+    const current = toggle("mds-toggle", render);
+    render(current());
+    return { height: narrow ? ph + 16 + sh : ph };
   });
-  render();
 })();
 
-// --------- Figure 2: Isomap (swiss roll) ---------
+// ---------- Figure 2: Isomap on a swiss roll ----------
 (function() {
-  const svg = d3.select("#iso-svg");
-  const W = 680, H = 360;
-  const g = svg.append("g");
-
-  // Generate swiss roll: parameter t in [1.5, 4.5π] for angle, h in [0, 10] for height
-  const rng = mulberry32(9);
-  const N = 180;
-  const data3d = [];
+  const rng = mulberry32(9), N = 200, pts = [];
   for (let i = 0; i < N; i++) {
-    const t = 1.5 + 4.5 * Math.PI * rng();
-    const h = rng() * 8;
-    const x = t * Math.cos(t);
-    const y = h;
-    const z = t * Math.sin(t);
-    data3d.push({ x, y, z, t, h, i });
+    const t = 1.5 * Math.PI + 2 * Math.PI * rng(), h = rng() * 18;
+    // arc is the distance along the spiral, so (arc, h) are the ribbon's own flat coordinates
+    pts.push({ v: [t * Math.cos(t), h, t * Math.sin(t)], t, arc: 0.5 * (t * Math.sqrt(1 + t * t) + Math.asinh(t)), h });
   }
+  const D = distMatrix(pts.map(p => p.v));
+  const ribbon = (i, j) => Math.hypot(pts[i].arc - pts[j].arc, pts[i].h - pts[j].h);
+  const color = d3.scaleSequential(d3.interpolateViridis).domain(d3.extent(pts, p => p.arc));
+  // pairs worth measuring: close through the air, far along the ribbon
+  const cand = [];
+  for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) if (D[i][j] > 4) cand.push([i, j, ribbon(i, j) / D[i][j]]);
+  cand.sort((a, b) => b[2] - a[2]);
+  const presets = [];
+  for (const c of cand) { if (presets.every(p => D[p[0]][c[0]] > 6 && D[p[1]][c[1]] > 6)) presets.push([c[0], c[1]]); if (presets.length === 5) break; }
+  let preset = 0, sel = presets[0].slice();
+  const kInput = document.getElementById("iso-k"), kVal = document.getElementById("iso-k-val"), readout = document.getElementById("iso-readout");
 
-  // Project to 2D for display (simple isometric)
-  const angle = 0.35, tilt = 0.6;
-  const sx = Math.cos(angle), sz = Math.sin(angle);
-  function project(p) {
-    return {
-      px: p.x * sx - p.z * sz,
-      py: p.y * Math.cos(tilt) - (p.x * sz + p.z * sx) * Math.sin(tilt),
-    };
-  }
-  data3d.forEach(p => { const pr = project(p); p.px = pr.px; p.py = pr.py; });
+  figure("iso-svg", (svg, W) => {
+    const narrow = W < 500, gap = 14, pw = narrow ? W : (W - gap) / 2, ph = narrow ? 270 : 320;
+    const gL = pane(svg, 0, 0, pw, ph, "swiss roll in 3D", "with its neighbor graph");
+    const gR = pane(svg, narrow ? 0 : pw + gap, narrow ? ph + 16 : 0, pw, ph, "Isomap embedding", "classical MDS on graph distances");
+    const flat = pts.map(p => view3d(p.v, 0.35, 1.0)), sc = fitScales(flat, gL.w, gL.h), fp = flat.map(p => [sc.x(p[0]), sc.y(p[1])]);
+    const edgeG = gL.append("g"), pathG = gL.append("g"), ptL = gL.append("g"), ptR = gR.append("g"), selR = gR.append("g");
+    let geo = null, Y = null, ep = null;
 
-  const xExt = d3.extent(data3d, d => d.px);
-  const yExt = d3.extent(data3d, d => d.py);
-  const pad = 1.5;
-  const paneW = (W - 40) / 2;
-  const paneH = H - 60;
-
-  const xScaleL = d3.scaleLinear().domain([xExt[0] - pad, xExt[1] + pad]).range([10, 10 + paneW]);
-  const yScaleL = d3.scaleLinear().domain([yExt[0] - pad, yExt[1] + pad]).range([paneH + 20, 30]);
-
-  // kNN graph (k=6)
-  const K = 6;
-  const edges = [];
-  const adj = Array.from({ length: N }, () => []);
-  for (let i = 0; i < N; i++) {
-    const arr = data3d.map((p, j) => ({ j, d: Math.hypot(p.x - data3d[i].x, p.y - data3d[i].y, p.z - data3d[i].z) }))
-      .filter(e => e.j !== i)
-      .sort((a, b) => a.d - b.d).slice(0, K);
-    for (const e of arr) {
-      adj[i].push({ j: e.j, d: e.d });
-      if (i < e.j) edges.push({ a: i, b: e.j, d: e.d });
-    }
-  }
-
-  // Dijkstra from source
-  function dijkstra(src) {
-    const dist = new Array(N).fill(Infinity);
-    const prev = new Array(N).fill(-1);
-    dist[src] = 0;
-    const visited = new Array(N).fill(false);
-    for (let it = 0; it < N; it++) {
-      let u = -1, best = Infinity;
-      for (let i = 0; i < N; i++) if (!visited[i] && dist[i] < best) { best = dist[i]; u = i; }
-      if (u < 0) break;
-      visited[u] = true;
-      for (const { j, d } of adj[u]) {
-        if (dist[u] + d < dist[j]) { dist[j] = dist[u] + d; prev[j] = u; }
+    function path(a, b) { // walk from a to b along edges that stay on a shortest path
+      if (geo.G[a][b] === Infinity) return null;
+      const out = [a]; let cur = a;
+      while (cur !== b && out.length < N) {
+        let next = -1;
+        for (let j = 0; j < N; j++) if (j !== cur && geo.W[cur][j] !== Infinity && Math.abs(geo.W[cur][j] + geo.G[j][b] - geo.G[cur][b]) < 1e-9) { next = j; break; }
+        if (next < 0) return null;
+        out.push(next); cur = next;
       }
+      return out;
     }
-    return { dist, prev };
-  }
-
-  // Precompute full geodesic matrix & 2D embedding via MDS on it.
-  const Dgeo = Array.from({ length: N }, () => new Array(N).fill(0));
-  for (let i = 0; i < N; i++) {
-    const { dist } = dijkstra(i);
-    for (let j = 0; j < N; j++) Dgeo[i][j] = isFinite(dist[j]) ? dist[j] : 100;
-  }
-
-  // Classical MDS via gradient descent (simple)
-  const emb = mdsLike(Dgeo, 0, 2, 300, 7);
-
-  // Color by angle parameter t (the intrinsic "unrolled x")
-  const tExt = d3.extent(data3d, d => d.t);
-  const color = d3.scaleSequential(d3.interpolateViridis).domain(tExt);
-
-  // State: selected two points
-  let sel = [null, null];
-  const mainG = g.append("g");
-  const bgG = mainG.append("g");
-  const pathG = mainG.append("g");
-  const ptG = mainG.append("g");
-
-  // Right panel
-  const rightG = g.append("g");
-  const ex = d3.extent(emb, d => d[0]), ey = d3.extent(emb, d => d[1]);
-  const epx = (ex[1] - ex[0]) * 0.1, epy = (ey[1] - ey[0]) * 0.1;
-  const xEmb = d3.scaleLinear().domain([ex[0] - epx, ex[1] + epx]).range([paneW + 30, W - 10]);
-  const yEmb = d3.scaleLinear().domain([ey[0] - epy, ey[1] + epy]).range([paneH + 20, 30]);
-  rightG.append("text").attr("x", paneW + 30).attr("y", 18).style("font-size", "11px")
-    .attr("fill", "var(--text-3)").style("letter-spacing", "0.04em").text("UNROLLED (ISOMAP)");
-  mainG.append("text").attr("x", 10).attr("y", 18).style("font-size", "11px")
-    .attr("fill", "var(--text-3)").style("letter-spacing", "0.04em").text("SWISS ROLL IN 3D");
-
-  function render() {
-    // Draw edges of graph on swiss roll (subset for clarity)
-    bgG.selectAll("line").data(edges).join("line")
-      .attr("x1", e => xScaleL(data3d[e.a].px)).attr("y1", e => yScaleL(data3d[e.a].py))
-      .attr("x2", e => xScaleL(data3d[e.b].px)).attr("y2", e => yScaleL(data3d[e.b].py))
-      .attr("stroke", "var(--text-3)").attr("stroke-opacity", 0.15).attr("stroke-width", 0.5);
-
-    // Points on left
-    ptG.selectAll("circle").data(data3d).join("circle")
-      .attr("cx", d => xScaleL(d.px)).attr("cy", d => yScaleL(d.py))
-      .attr("r", 3.5).attr("fill", d => color(d.t))
-      .attr("stroke", (d, i) => sel.includes(i) ? "var(--text)" : "white")
-      .attr("stroke-width", (d, i) => sel.includes(i) ? 2 : 0.6)
-      .attr("cursor", "pointer")
-      .on("click", (_, d) => {
-        if (sel[0] === null || sel[0] === d.i) sel[0] = d.i;
-        else if (sel[1] === null || sel[1] === d.i) sel[1] = d.i;
-        else { sel[0] = sel[1]; sel[1] = d.i; }
-        render();
-      });
-
-    // Paths
-    pathG.selectAll("*").remove();
-    if (sel[0] !== null && sel[1] !== null) {
-      const a = data3d[sel[0]], b = data3d[sel[1]];
-      // Straight line (Euclidean) in display
-      pathG.append("line")
-        .attr("x1", xScaleL(a.px)).attr("y1", yScaleL(a.py))
-        .attr("x2", xScaleL(b.px)).attr("y2", yScaleL(b.py))
-        .attr("stroke", "var(--warm)").attr("stroke-width", 2).attr("stroke-dasharray", "4 2");
-
-      // Geodesic path via dijkstra from sel[0]
-      const { prev } = dijkstra(sel[0]);
-      let cur = sel[1], path = [cur];
-      while (prev[cur] !== -1 && cur !== sel[0]) { cur = prev[cur]; path.push(cur); }
-      const line = d3.line().x(i => xScaleL(data3d[i].px)).y(i => yScaleL(data3d[i].py)).curve(d3.curveLinear);
-      pathG.append("path").attr("d", line(path))
-        .attr("stroke", "var(--accent)").attr("stroke-width", 2.5).attr("fill", "none");
-
-      // Labels showing the two distances
-      const eucD = Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
-      let geoD = 0;
-      for (let k = 0; k < path.length - 1; k++) {
-        const p1 = data3d[path[k]], p2 = data3d[path[k + 1]];
-        geoD += Math.hypot(p1.x - p2.x, p1.y - p2.y, p1.z - p2.z);
-      }
-      const labelY = H - 22;
-      pathG.append("rect").attr("x", 10).attr("y", labelY - 14).attr("width", 200).attr("height", 20)
-        .attr("fill", "white").attr("stroke", "var(--border)").attr("rx", 3);
-      pathG.append("text").attr("x", 16).attr("y", labelY).style("font-size", "11px")
-        .attr("fill", "var(--warm)").text(`Euclidean: ${eucD.toFixed(1)}`);
-      pathG.append("text").attr("x", 110).attr("y", labelY).style("font-size", "11px")
-        .attr("fill", "var(--accent)").text(`geodesic: ${geoD.toFixed(1)}`);
+    function drawSelection() {
+      const [a, b] = sel;
+      pathG.selectAll("*").remove(); selR.selectAll("*").remove();
+      ptL.selectAll("circle").attr("stroke", (_, i) => sel.includes(i) ? "var(--text)" : "none").attr("r", (_, i) => sel.includes(i) ? 5.5 : 3.2);
+      ptR.selectAll("circle").attr("stroke", (_, i) => sel.includes(i) ? "var(--text)" : "none").attr("r", (_, i) => sel.includes(i) ? 5.5 : 3.2);
+      if (a == null || b == null) { readout.textContent = "Click a second point."; return; }
+      const route = path(a, b);
+      if (route) pathG.append("path").attr("d", "M" + route.map(i => fp[i].join(",")).join("L")).attr("fill", "none").attr("stroke", "var(--text)").attr("stroke-width", 2.5).attr("stroke-linejoin", "round");
+      pathG.append("line").attr("x1", fp[a][0]).attr("y1", fp[a][1]).attr("x2", fp[b][0]).attr("y2", fp[b][1]).attr("stroke", "var(--text)").attr("stroke-width", 2).attr("stroke-dasharray", "5 4");
+      selR.append("line").attr("x1", ep[a][0]).attr("y1", ep[a][1]).attr("x2", ep[b][0]).attr("y2", ep[b][1]).attr("stroke", "var(--text)").attr("stroke-width", 1.5);
+      readout.innerHTML = `Between the marked points: <b>${D[a][b].toFixed(1)}</b> in a straight line, ` +
+        (route ? `<b>${geo.G[a][b].toFixed(1)}</b> through the graph, ` : `<b>no path</b> through the graph (it is disconnected), `) +
+        `<b>${ribbon(a, b).toFixed(1)}</b> along the true ribbon.`;
     }
-
-    // Right panel: unrolled embedding
-    rightG.selectAll("circle").data(emb).join("circle")
-      .attr("cx", d => xEmb(d[0])).attr("cy", d => yEmb(d[1]))
-      .attr("r", 3.5).attr("fill", (_, i) => color(data3d[i].t))
-      .attr("stroke", (_, i) => sel.includes(i) ? "var(--text)" : "white")
-      .attr("stroke-width", (_, i) => sel.includes(i) ? 2 : 0.6);
-    // Line in right panel between sel
-    rightG.selectAll(".esel").remove();
-    if (sel[0] !== null && sel[1] !== null) {
-      rightG.append("line").attr("class", "esel")
-        .attr("x1", xEmb(emb[sel[0]][0])).attr("y1", yEmb(emb[sel[0]][1]))
-        .attr("x2", xEmb(emb[sel[1]][0])).attr("y2", yEmb(emb[sel[1]][1]))
-        .attr("stroke", "var(--accent)").attr("stroke-width", 2);
+    function render() {
+      const k = +kInput.value;
+      kVal.textContent = k;
+      geo = graphGeodesics(D, k);
+      Y = isomap(D, k);
+      const s2 = fitScales(Y, gR.w, gR.h); ep = Y.map(p => [s2.x(p[0]), s2.y(p[1])]);
+      // an edge is a shortcut when the ribbon distance between its ends is much longer than the edge
+      edgeG.selectAll("line").data(geo.edges).join("line")
+        .attr("x1", e => fp[e[0]][0]).attr("y1", e => fp[e[0]][1]).attr("x2", e => fp[e[1]][0]).attr("y2", e => fp[e[1]][1])
+        .each(function(e) {
+          const shortcut = ribbon(e[0], e[1]) > 2.5 * D[e[0]][e[1]];
+          d3.select(this).attr("stroke", shortcut ? "var(--warm)" : "var(--text-3)").attr("stroke-width", shortcut ? 1.6 : 0.6).attr("stroke-opacity", shortcut ? 0.9 : 0.4);
+        });
+      ptL.selectAll("circle").data(pts).join("circle").attr("cx", (_, i) => fp[i][0]).attr("cy", (_, i) => fp[i][1])
+        .attr("fill", p => color(p.arc)).attr("stroke-width", 2).style("cursor", "pointer")
+        .on("click", (_, p) => { const i = pts.indexOf(p); sel = sel[1] == null && sel[0] !== i ? [sel[0], i] : [i, null]; drawSelection(); });
+      ptR.selectAll("circle").data(pts).join("circle").attr("fill", p => color(p.arc)).attr("stroke-width", 2)
+        .transition().duration(DUR * 2).attr("cx", (_, i) => ep[i][0]).attr("cy", (_, i) => ep[i][1]);
+      drawSelection();
     }
-  }
-
-  const viewButtons = document.querySelectorAll("#iso-view-toggle button");
-  viewButtons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      viewButtons.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      const view = btn.dataset.view;
-      mainG.attr("opacity", view === "swiss" ? 1 : 0.35);
-      rightG.attr("opacity", view === "unrolled" ? 1 : 0.6);
-    });
+    kInput.oninput = render;
+    document.getElementById("iso-pair").onclick = () => { preset = (preset + 1) % presets.length; sel = presets[preset].slice(); drawSelection(); };
+    render();
+    return { height: narrow ? 2 * ph + 16 : ph };
   });
-
-  // Seed with two interesting points
-  sel[0] = 20; sel[1] = 150;
-  render();
 })();
 
-// --------- Figure 3: Diffusion Map ---------
+// ---------- Figure 3: a random walk on a dumbbell graph ----------
 (function() {
-  const svg = d3.select("#diff-svg");
-  const W = 680, H = 360;
-  const g = svg.append("g");
-
-  // Build a dumbbell graph with two clusters and a bridge
-  const rng = mulberry32(21);
-  const nodes = [];
-  for (let i = 0; i < 20; i++) {
-    nodes.push({
-      id: i, group: 0,
-      x: 150 + gaussian(rng) * 40,
-      y: 180 + gaussian(rng) * 60,
-    });
-  }
-  for (let i = 0; i < 20; i++) {
-    nodes.push({
-      id: 20 + i, group: 2,
-      x: 530 + gaussian(rng) * 40,
-      y: 180 + gaussian(rng) * 60,
-    });
-  }
-  // Bridge nodes
-  nodes.push({ id: 40, group: 1, x: 280, y: 180 });
-  nodes.push({ id: 41, group: 1, x: 340, y: 180 });
-  nodes.push({ id: 42, group: 1, x: 400, y: 180 });
-
-  // Clamp inside plotting area
-  nodes.forEach(n => { n.x = Math.max(40, Math.min(W - 40, n.x)); n.y = Math.max(40, Math.min(H - 40, n.y)); });
-
-  const N = nodes.length;
-
-  // Edges: kNN within each cluster + explicit bridge
-  const edges = [];
-  function addEdge(a, b) {
-    if (a < b) edges.push({ a, b }); else if (b < a) edges.push({ a: b, b: a });
-  }
-  // Connect within clusters (k=4)
-  for (let gr = 0; gr <= 2; gr++) {
+  // node positions in a 680 x 300 box; two clusters of 20 and a three-node bridge
+  const rng = mulberry32(21), nodes = [];
+  for (let i = 0; i < 20; i++) nodes.push({ id: i, group: 0, x: 150 + gaussian(rng) * 42, y: 150 + gaussian(rng) * 55 });
+  for (let i = 0; i < 20; i++) nodes.push({ id: 20 + i, group: 2, x: 530 + gaussian(rng) * 42, y: 150 + gaussian(rng) * 55 });
+  [280, 340, 400].forEach((x, i) => nodes.push({ id: 40 + i, group: 1, x, y: 150 }));
+  nodes.forEach(n => { n.x = Math.max(30, Math.min(650, n.x)); n.y = Math.max(24, Math.min(276, n.y)); });
+  const N = nodes.length, d = (a, b) => Math.hypot(nodes[a].x - nodes[b].x, nodes[a].y - nodes[b].y);
+  const edgeSet = new Set(), addEdge = (a, b) => { if (a !== b) edgeSet.add(a < b ? `${a}-${b}` : `${b}-${a}`); };
+  [0, 2].forEach(gr => { // inside each cluster, every node joins its 3 nearest
     const members = nodes.filter(n => n.group === gr).map(n => n.id);
-    for (const i of members) {
-      const arr = members.map(j => ({ j, d: Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y) }))
-        .filter(e => e.j !== i).sort((a, b) => a.d - b.d).slice(0, 3);
-      for (const e of arr) addEdge(i, e.j);
-    }
-  }
-  // Bridge: connect bridge nodes to each other and to closest of both clusters
+    members.forEach(i => members.filter(j => j !== i).sort((a, b) => d(i, a) - d(i, b)).slice(0, 3).forEach(j => addEdge(i, j)));
+  });
   addEdge(40, 41); addEdge(41, 42);
-  // Connect bridge node 40 to two nearest left-cluster nodes
-  const leftSorted = nodes.filter(n => n.group === 0).map(n => n.id)
-    .sort((a, b) => Math.hypot(nodes[40].x - nodes[a].x, nodes[40].y - nodes[a].y) - Math.hypot(nodes[40].x - nodes[b].x, nodes[40].y - nodes[b].y));
-  addEdge(40, leftSorted[0]); addEdge(40, leftSorted[1]);
-  const rightSorted = nodes.filter(n => n.group === 2).map(n => n.id)
-    .sort((a, b) => Math.hypot(nodes[42].x - nodes[a].x, nodes[42].y - nodes[a].y) - Math.hypot(nodes[42].x - nodes[b].x, nodes[42].y - nodes[b].y));
-  addEdge(42, rightSorted[0]); addEdge(42, rightSorted[1]);
+  const nearest = (to, gr) => nodes.filter(n => n.group === gr).map(n => n.id).sort((a, b) => d(to, a) - d(to, b));
+  nearest(40, 0).slice(0, 2).forEach(j => addEdge(40, j));
+  nearest(42, 2).slice(0, 2).forEach(j => addEdge(42, j));
+  const edges = [...edgeSet].map(s => s.split("-").map(Number));
+  // transition matrix: step to a neighbor with probability proportional to exp(-length / 60)
+  const P = Array.from({ length: N }, () => new Float64Array(N));
+  edges.forEach(([a, b]) => { P[a][b] = P[b][a] = Math.exp(-d(a, b) / 60); });
+  P.forEach(row => { const s = d3.sum(row); for (let j = 0; j < N; j++) row[j] /= s; });
 
-  // Deduplicate edges
-  const edgeSet = new Set(edges.map(e => `${e.a}-${e.b}`));
-  const finalEdges = [...edgeSet].map(s => { const [a, b] = s.split("-").map(Number); return { a, b }; });
+  const tInput = document.getElementById("diff-t"), tVal = document.getElementById("diff-t-val"), readout = document.getElementById("diff-readout");
+  const seeds = { left: 2, bridge: 41 };
+  let source = seeds.left;
 
-  // Build transition matrix P: row-stochastic adjacency
-  const adjW = Array.from({ length: N }, () => new Array(N).fill(0));
-  for (const e of finalEdges) {
-    const d = Math.hypot(nodes[e.a].x - nodes[e.b].x, nodes[e.a].y - nodes[e.b].y);
-    const w = Math.exp(-d / 60);
-    adjW[e.a][e.b] += w;
-    adjW[e.b][e.a] += w;
-  }
-  const P = Array.from({ length: N }, () => new Array(N).fill(0));
-  for (let i = 0; i < N; i++) {
-    const row = adjW[i];
-    const s = d3.sum(row);
-    if (s > 0) for (let j = 0; j < N; j++) P[i][j] = row[j] / s;
-  }
+  figure("diff-svg", (svg, W) => {
+    const H = W < 500 ? 240 : 300, sx = W / 680, sy = H / 300;
+    const px = n => n.x * sx, py = n => n.y * sy;
+    svg.append("g").selectAll("line").data(edges).join("line")
+      .attr("x1", e => px(nodes[e[0]])).attr("y1", e => py(nodes[e[0]])).attr("x2", e => px(nodes[e[1]])).attr("y2", e => py(nodes[e[1]]))
+      .attr("stroke", "var(--border-2)");
+    const r = W < 500 ? 6 : 8;
+    const circles = svg.append("g").selectAll("g").data(nodes).join("g").attr("transform", n => `translate(${px(n)},${py(n)})`).style("cursor", "pointer")
+      .on("click", (_, n) => { source = n.id; render(); });
+    circles.append("circle").attr("r", r).attr("fill", "var(--fig-bg)").attr("stroke", "var(--text-3)");
+    const fills = circles.append("circle").attr("r", r).attr("fill", "var(--accent)");
+    const ring = svg.append("circle").attr("r", r + 4).attr("fill", "none").attr("stroke", "var(--warm)").attr("stroke-width", 2.5).attr("pointer-events", "none");
 
-  // Draw edges + nodes
-  const edgeG = g.append("g");
-  const nodeG = g.append("g");
-
-  edgeG.selectAll("line").data(finalEdges).join("line")
-    .attr("x1", e => nodes[e.a].x).attr("y1", e => nodes[e.a].y)
-    .attr("x2", e => nodes[e.b].x).attr("y2", e => nodes[e.b].y)
-    .attr("stroke", "var(--border-2)").attr("stroke-width", 1);
-
-  let source = 2;
-  const tInput = document.getElementById("diff-t");
-  const tVal = document.getElementById("diff-t-val");
-
-  function step() {
-    const t = +tInput.value;
-    tVal.textContent = t;
-
-    // Compute P^t applied to a delta at source
-    let p = new Array(N).fill(0);
-    p[source] = 1;
-    for (let s = 0; s < t; s++) {
-      const next = new Array(N).fill(0);
-      for (let i = 0; i < N; i++) {
-        if (p[i] === 0) continue;
-        for (let j = 0; j < N; j++) next[j] += p[i] * P[i][j];
+    function render() {
+      const t = +tInput.value;
+      tVal.textContent = t;
+      let p = new Float64Array(N); p[source] = 1;
+      for (let s = 0; s < t; s++) {
+        const next = new Float64Array(N);
+        for (let i = 0; i < N; i++) if (p[i] > 0) for (let j = 0; j < N; j++) next[j] += p[i] * P[i][j];
+        p = next;
       }
-      p = next;
+      const maxP = d3.max(p);
+      fills.attr("fill-opacity", n => Math.sqrt(p[n.id] / maxP));
+      ring.attr("cx", px(nodes[source])).attr("cy", py(nodes[source]));
+      const share = gr => 100 * d3.sum(nodes.filter(n => n.group === gr), n => p[n.id]);
+      readout.innerHTML = `After ${t} step${t === 1 ? "" : "s"}: <b>${share(0).toFixed(0)}%</b> of the walk is in the left cluster, <b>${share(1).toFixed(0)}%</b> on the bridge, <b>${share(2).toFixed(0)}%</b> in the right cluster.`;
     }
-
-    const maxP = d3.max(p);
-    const color = d3.scaleSequential(d3.interpolateBlues).domain([0, maxP || 1]);
-
-    nodeG.selectAll("circle").data(nodes, n => n.id).join("circle")
-      .attr("cx", n => n.x).attr("cy", n => n.y)
-      .attr("r", n => n.id === source ? 9 : 6)
-      .attr("fill", n => n.id === source ? "var(--warm)" : color(p[n.id]))
-      .attr("stroke", n => n.id === source ? "var(--warm)" : "var(--text-3)")
-      .attr("stroke-width", n => n.id === source ? 3 : 0.8)
-      .attr("cursor", "pointer")
-      .on("click", (_, n) => { source = n.id; step(); });
-  }
-
-  tInput.addEventListener("input", step);
-  step();
+    tInput.oninput = render;
+    toggle("diff-seed", v => { source = seeds[v]; render(); });
+    render();
+    return { height: H };
+  });
 })();
 </script>
 </body>
