@@ -142,6 +142,8 @@ export function themeColors(el: Element): Theme {
   }
 }
 
+export type LabelBox = { l: number; r: number; t: number; b: number }
+
 export function drawHaloText(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -153,6 +155,10 @@ export function drawHaloText(
     color?: string
     align?: CanvasTextAlign
     halo?: string
+    // Boxes of labels already drawn this frame. A label that would land
+    // on one is moved a line down or up until it is clear, and its own
+    // box is added. On a phone the hand-placed offsets collide.
+    avoid?: LabelBox[]
   } = {},
 ): void {
   const { weight = 600, color = '#1a1a2e', align = 'center', halo } = opts
@@ -165,7 +171,22 @@ export function drawHaloText(
   const cw = ctx.canvas.width / dpr
   const tw = ctx.measureText(text).width
   const left = align === 'left' ? x : align === 'right' ? x - tw : x - tw / 2
-  if (tw + 8 <= cw) x += Math.max(4 - left, 0) + Math.min(cw - 4 - (left + tw), 0)
+  const shift = tw + 8 <= cw ? Math.max(4 - left, 0) + Math.min(cw - 4 - (left + tw), 0) : 0
+  x += shift
+  if (opts.avoid) {
+    const l = left + shift - 3
+    const r = l + tw + 6
+    const line = size + 4
+    const hits = (yy: number) =>
+      opts.avoid!.some((b) => l < b.r && b.l < r && yy - line / 2 < b.b && b.t < yy + line / 2)
+    for (const step of [0, 1, -1, 2, -2, 3, -3]) {
+      if (!hits(y + step * line)) {
+        y += step * line
+        break
+      }
+    }
+    opts.avoid.push({ l, r, t: y - line / 2, b: y + line / 2 })
+  }
   ctx.textAlign = align
   ctx.textBaseline = 'middle'
   ctx.lineWidth = 3.5
