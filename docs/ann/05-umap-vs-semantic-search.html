@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UMAP vs Semantic Search — Approximate Nearest Neighbors</title>
+<title>UMAP vs Semantic Search | Approximate Nearest Neighbors</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
@@ -24,13 +24,40 @@
   --bg: #fafafa;
   --fig-bg: #ffffff;
   --border: #e2e2e8;
+  --plot-bg: #fafafa;
+  --grid: #ececf1;
+  --muted: #cbd5e1;
+  --on-color: #ffffff;
 
+  /* ANN series palette: one color per role, the same in every chapter */
   --c-query: #db2777;
   --c-db: #64748b;
-  --c-neighbor: #f59e0b;
+  --c-neighbor: #d97706;
   --c-partition: #0d9488;
   --c-compress: #7c3aed;
   --c-hardware: #ea580c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e6dd;
+    --text-2: #a9a9bd;
+    --accent: #7fb2ff;
+    --accent-light: #1e2a44;
+    --bg: #16161f;
+    --fig-bg: #1f1f2c;
+    --border: #3a3a52;
+    --plot-bg: #191924;
+    --grid: #2b2b3d;
+    --muted: #4a4f63;
+    --on-color: #16161f;
+    --c-query: #f472b6;
+    --c-db: #94a3b8;
+    --c-neighbor: #fbbf24;
+    --c-partition: #2dd4bf;
+    --c-compress: #a78bfa;
+    --c-hardware: #fb923c;
+  }
 }
 
 body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
@@ -42,21 +69,34 @@ h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
 h3 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
 p { margin: 0 0 1rem; }
 a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+code { font-family: var(--mono-font); font-size: 0.9em; }
+.subtitle { font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2); }
+.part-of { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem; }
+.note { font-size: 0.95rem; color: var(--text-2); border-left: 2px solid var(--border); padding-left: 0.9rem; margin: 1.25rem 0; }
 
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .figure-wide { margin-left: -2rem; margin-right: -2rem; }
 .figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.45; }
 .figure-label { font-weight: 600; color: var(--text); }
+.plot { width: 100%; min-width: 0; }
+.plot svg { display: block; border-radius: 4px; max-width: 100%; }
+.plot svg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; align-items: start; }
 
-.controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
-.controls input[type="range"] { width: 160px; accent-color: var(--accent); }
-.controls label { display: flex; align-items: center; gap: 0.5rem; }
-.controls .val { font-family: var(--mono-font); color: var(--text); min-width: 2.5em; display: inline-block; text-align: right; }
-.controls button { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.25rem 0.7rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text-2); cursor: pointer; }
-.controls button:hover { background: var(--bg); color: var(--text); }
-.controls select { font-family: var(--heading-font); font-size: 0.85rem; padding: 0.25rem 0.5rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text); }
+.controls { display: flex; align-items: center; gap: 0.6rem 1rem; flex-wrap: wrap; margin-bottom: 0.9rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.controls input[type="range"] { width: 150px; max-width: 42vw; accent-color: var(--accent); }
+.controls label { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.controls .val { font-family: var(--mono-font); color: var(--text); min-width: 2.5em; display: inline-block; }
+.controls button, .controls select { font-family: var(--heading-font); font-size: 0.85rem; padding: 0.3rem 0.7rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text); cursor: pointer; }
+.controls button:hover { background: var(--bg); }
+.controls button[aria-pressed="true"] { background: var(--text); color: var(--fig-bg); border-color: var(--text); }
+.hint { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin: 0 0 0.6rem; }
 
-svg text { font-family: var(--heading-font); }
+.readout { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.6rem; min-height: 2.6em; line-height: 1.45; }
+.readout b { font-family: var(--mono-font); font-weight: 500; color: var(--text); }
+
+/* inherited, so a fill or font-size attribute on an individual element still wins */
+.plot svg { font-family: var(--heading-font); font-size: 13px; fill: var(--text-2); color: var(--text-2); }
 
 .t-query { color: var(--c-query); font-weight: 600; }
 .t-db { color: var(--c-db); font-weight: 600; }
@@ -65,331 +105,291 @@ svg text { font-family: var(--heading-font); }
 .t-compress { color: var(--c-compress); font-weight: 600; }
 .t-hardware { color: var(--c-hardware); font-weight: 600; }
 
-.query-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
-.query-chip {
-  font-family: var(--heading-font); font-size: 0.82rem;
-  padding: 0.35rem 0.75rem; border: 1px solid var(--border); border-radius: 999px;
-  background: var(--fig-bg); color: var(--text-2); cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
-}
-.query-chip:hover { border-color: var(--c-query); color: var(--text); }
-.query-chip.active { border-color: var(--c-query); background: var(--c-query); color: white; }
-
-.result-list { font-family: var(--heading-font); font-size: 0.88rem; }
-.result-row {
-  display: grid; grid-template-columns: 1.2rem 1fr auto;
-  align-items: center; gap: 0.75rem;
-  padding: 0.5rem 0.6rem;
-  border-bottom: 1px solid var(--border);
-}
-.result-row:last-child { border-bottom: none; }
-.result-rank { color: var(--text-2); font-family: var(--mono-font); font-size: 0.75rem; }
-.result-text { color: var(--text); line-height: 1.35; }
-.result-dist { color: var(--text-2); font-family: var(--mono-font); font-size: 0.75rem; }
-.result-row.top { background: rgba(245, 158, 11, 0.08); }
-.result-row.top .result-rank { color: var(--c-neighbor); font-weight: 600; }
-
-.dial-grid {
-  display: grid;
-  grid-template-columns: 8.5rem 1fr 1fr;
-  border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
-  font-family: var(--heading-font); font-size: 0.88rem;
-  background: var(--fig-bg);
-}
-.dial-head, .dial-row-label, .dial-cell { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); }
-.dial-head {
-  font-weight: 700; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--text-2); background: var(--bg);
-}
-.dial-head:not(:last-child) { border-right: 1px solid var(--border); }
-.dial-row-label { font-weight: 700; color: var(--text); border-right: 1px solid var(--border); background: var(--bg); }
-.dial-row-label .dial-kicker { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
-.dial-cell { color: var(--text-2); line-height: 1.4; }
-.dial-cell:not(:last-child) { border-right: 1px solid var(--border); }
-.dial-cell strong { color: var(--text); font-weight: 600; }
-.dial-row-label.partition { border-left: 4px solid var(--c-partition); }
-.dial-row-label.compress { border-left: 4px solid var(--c-compress); }
-.dial-row-label.hardware { border-left: 4px solid var(--c-hardware); }
-.dial-row-label.partition .dial-kicker { color: var(--c-partition); }
-.dial-row-label.compress .dial-kicker { color: var(--c-compress); }
-.dial-row-label.hardware .dial-kicker { color: var(--c-hardware); }
-.dial-grid > *:nth-last-child(-n+3) { border-bottom: none; }
+footer { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+footer a { color: var(--text-2); }
+footer a.next { color: var(--accent); }
 
 @media (max-width: 640px) {
   h1 { font-size: 1.75rem; }
+  .figure { padding: 0.9rem; }
   .figure-wide { margin-left: 0; margin-right: 0; }
-  .dial-grid { grid-template-columns: 1fr; }
-  .dial-grid > * { border-right: none !important; }
-  .dial-row-label { border-bottom: 1px solid var(--border); }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+
+.query-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.9rem; }
+.query-chip {
+  font-family: var(--heading-font); font-size: 0.85rem;
+  padding: 0.35rem 0.75rem; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--fig-bg); color: var(--text-2); cursor: pointer;
+}
+.query-chip:hover { border-color: var(--c-query); color: var(--text); }
+.query-chip[aria-pressed="true"] { border-color: var(--c-query); background: var(--c-query); color: var(--on-color); }
+
+.result-list { font-family: var(--heading-font); font-size: 0.9rem; list-style: none; }
+.result-row { display: grid; grid-template-columns: 1.2rem 1fr auto; align-items: baseline; gap: 0.6rem; padding: 0.45rem 0.3rem; border-bottom: 1px solid var(--border); }
+.result-row:last-child { border-bottom: none; }
+.result-rank, .result-dist { color: var(--text-2); font-family: var(--mono-font); font-size: 0.82rem; }
+.result-text { color: var(--text); line-height: 1.35; }
+
+.dial-table { width: 100%; border-collapse: collapse; font-family: var(--heading-font); font-size: 0.9rem; }
+.dial-table th, .dial-table td { text-align: left; vertical-align: top; padding: 0.75rem 0.8rem; border-bottom: 1px solid var(--border); line-height: 1.4; }
+.dial-table thead th { font-size: 0.85rem; color: var(--text-2); font-weight: 600; }
+.dial-table tbody th { font-weight: 700; width: 6.5rem; }
+.dial-table td { color: var(--text-2); }
+.dial-table td strong { color: var(--text); font-weight: 600; }
+.dial-table tr:last-child th, .dial-table tr:last-child td { border-bottom: none; }
+@media (max-width: 640px) {
+  .dial-table, .dial-table tbody, .dial-table tr, .dial-table th, .dial-table td { display: block; width: auto; }
+  .dial-table thead { display: none; }
+  .dial-table tbody th { border-bottom: none; padding-bottom: 0; }
+  .dial-table td { border-bottom: none; padding-top: 0.4rem; padding-bottom: 0.4rem; }
+  .dial-table td::before { content: attr(data-for) ": "; font-weight: 600; color: var(--text); }
+  .dial-table tr { border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+  .dial-table tr:last-child { border-bottom: none; }
+}
 </style>
 </head>
 <body>
 <div class="article">
   <header>
     <h1>UMAP vs Semantic Search</h1>
-    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
-      Two destinations for the same primitive. UMAP uses nearest neighbors to build a
-      skeleton of local structure for dimensionality reduction. Semantic search uses them
-      to retrieve answers at query time.
+    <p class="subtitle">
+      Two uses of the same nearest-neighbor machinery. UMAP uses it once, over every point,
+      to build a graph it then draws. Semantic search uses it on every query, for as long
+      as the index is in service.
     </p>
-    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">
-      Part 5 of <a href="index.html">Approximate Nearest Neighbors</a>
-    </p>
+    <p class="part-of">Part 5 of <a href="index.html">Approximate Nearest Neighbors</a></p>
   </header>
 
-  <h2>Two Destinations from the Same Foundation</h2>
   <p>
-    The last four articles built up a single primitive. Given a query vector and a large
-    collection of database vectors, find the ones that are closest. The algorithms got
-    clever (partition, compress, design for hardware), but the question never changed.
-  </p>
-  <p>
-    This article is about what people do with that primitive once it works. Two destinations
-    sit downstream of nearest-neighbor search, and they optimize for very different things.
-    One wants <em>structure</em> to look at. The other wants <em>answers</em> to return.
-  </p>
-
-  <div class="figure figure-wide" id="fig-two-paths">
-    <svg id="paths-svg" style="width:100%; display:block; border-radius:4px;"></svg>
-    <div class="figure-caption">
-      <span class="figure-label">Figure 1.</span>
-      Both methods start from the same pile of high-dimensional vectors and rely on the same
-      nearest-neighbor primitive. <strong>UMAP</strong> uses it to build a graph, then flattens
-      the graph into a 2D layout. <strong>Semantic search</strong> uses it to answer a steady
-      stream of user queries with a ranked list of candidates.
-    </div>
-  </div>
-
-  <p>
-    Both methods need "what is near this vector?" to be fast enough and good enough. What they
-    demand beyond that is where the two diverge, and each one turns the three ideas from this
-    series to different settings.
+    The previous four articles were about one operation: given a query vector and a large
+    collection, find the vectors closest to it. This one is about two things people build
+    on that operation, and how differently they use it. A UMAP projection needs the
+    neighbors of every point at once, wants them as a graph, and never asks again. A
+    semantic search service needs the neighbors of one unknown query at a time, quickly,
+    indefinitely. The same three ideas (<span class="t-partition">partition</span>,
+    <span class="t-compress">compress</span>, design for the
+    <span class="t-hardware">hardware</span>) get set differently for each.
   </p>
 
-  <h2>UMAP: Neighbors as Skeleton</h2>
+  <h2>UMAP: neighbors as the skeleton of a map</h2>
   <p>
-    UMAP is an algorithm for projecting high-dimensional data down to two or three dimensions
-    so that a person can look at it. Its first step, before any layout work, is to build a
-    <strong>k-nearest-neighbor graph</strong> over the input vectors. Each point connects to
-    its k closest neighbors in the original space.
+    UMAP projects high-dimensional data to two dimensions so that a person can look at it.
+    Its first step is to build a <strong>k-nearest-neighbor graph</strong>: every point is
+    linked to its k closest points in the original space (k is the
+    <code>n_neighbors</code> parameter, 15 by default). The distances along those links
+    are converted to weights, scaled separately around each point so that dense and sparse
+    regions are treated alike.
   </p>
   <p>
-    That graph is UMAP's model of the data. It encodes the local topology of the manifold: who
-    is near whom. The rest of the algorithm is an optimizer that embeds the graph into 2D
-    while trying to preserve those connections. If two points are graph-neighbors in high
-    dimensions, the optimizer pulls them together in the plane. If they are not, it pushes
-    them apart.
+    That graph is all UMAP knows about the data from then on. The second step is an
+    optimizer that places the points in the plane, pulling linked points together and
+    pushing randomly sampled pairs apart. The original vectors are not consulted again, so
+    whatever the graph gets wrong, the map gets wrong.
   </p>
   <p>
-    The graph does not have to be perfect. UMAP does not need the true nearest neighbors. It needs a graph that roughly captures local
-    structure. A few mistakes are smoothed out by the optimization. This is why UMAP
-    implementations are built on approximate nearest-neighbor libraries, not exact search.
+    The figure below runs a small UMAP in the page to see how wrong the graph can be. The
+    data is 360 points in 10 dimensions lying along four curved strands. On the left, the
+    layout from the exact graph. On the right, the layout from a graph whose neighbors were
+    found using product-quantized codes, as in the
+    <a href="03-compress-the-vectors.html">compression article</a>, with the code size
+    under your control.
   </p>
 
   <div class="figure figure-wide" id="fig-umap">
     <div class="controls">
-      <label>k (neighbors per point) <input type="range" id="umap-k" min="2" max="200" value="15" step="1"><span class="val" id="umap-k-val">15</span></label>
-      <button id="umap-reset">reset to k=15</button>
+      <label>neighbors k <input type="range" id="umap-k" min="2" max="60" value="15" step="1"><span class="val" id="umap-k-val">15</span></label>
+      <label>code size for the right-hand graph
+        <select id="umap-bits">
+          <option value="32">25 bits</option>
+          <option value="16">20 bits</option>
+          <option value="8">15 bits</option>
+          <option value="4" selected>10 bits</option>
+          <option value="2">5 bits</option>
+        </select>
+      </label>
     </div>
-    <svg id="umap-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="panels">
+      <div><p class="hint" style="margin-bottom:0.3rem;">exact k-NN graph</p><div class="plot"><svg id="umap-exact"></svg></div></div>
+      <div><p class="hint" style="margin-bottom:0.3rem;" id="umap-approx-label">k-NN graph from 10-bit codes</p><div class="plot"><svg id="umap-approx"></svg></div></div>
+    </div>
+    <div class="readout" id="umap-readout"></div>
     <div class="figure-caption">
-      <span class="figure-label">Figure 2.</span>
-      A UMAP-style projection of a synthetic dataset with five latent clusters, rendered at
-      different values of k. At <strong>k = 2</strong>, the graph is too local and the
-      projection fragments into strings and pairs. Around <strong>k = 15</strong> the clusters
-      are well-separated and the layout looks how you would want it to. Past
-      <strong>k = 100</strong>, the graph connects almost everything to almost everything, and
-      the optimizer smears distinct clusters together. The slider blends between a handful of
-      pre-computed layouts to show the effect.
+      <span class="figure-label">Figure 1.</span>
+      Two layouts of the same 360 points from the same starting positions, differing only
+      in the graph. Hue marks the strand a point belongs to and lightness its position
+      along the strand, so a faithful layout shows four smooth gradients. With 25-bit codes
+      the graph has about nine tenths of the true neighbors and the two layouts match. With
+      10-bit codes it has about half: the strands are still separated from each other, and
+      each one has broken into clumps. Points that share a code are tied in distance, so
+      they link to each other and lose their order along the strand. Try k = 2 and k = 60
+      on the exact side as well: too few neighbors shatters the strands, more neighbors
+      joins their pieces.
     </div>
   </div>
 
-  <h3>UMAP's Priorities</h3>
-  <p>
-    Think about the cost profile. Building the k-NN graph over a million points is a one-time
-    job. It might take minutes. The layout step that follows is also one-time, also offline.
-    Once the projection is produced, UMAP is done. There is no "query" in the sense that
-    semantic search has one. You do not run UMAP in response to a user action.
-  </p>
-  <p>
-    This reshapes every decision about the index. Build-time cost dominates, so a memory-heavy
-    structure like HNSW that takes a while to build but has great recall for graph construction
-    is perfectly fine. Query-time cost is irrelevant because there are no online queries.
-    Reranking, the step where you refine approximate matches using exact distances, is
-    pointless: the output is a layout, not a candidate list. The graph's statistical shape
-    is the answer.
-  </p>
-  <p>
-    Recall of 90% for the k-NN graph is usually indistinguishable from 100% in the final
-    layout. The optimizer pulls the picture back toward the manifold's true shape either way.
+  <p class="note">
+    The UMAP in Figure 1 is a small reimplementation, simplified in three ways: it starts
+    from the first two principal components where UMAP defaults to a spectral layout, it
+    runs 150 epochs, and it uses fixed curve parameters (a = 1.577, b = 0.895, the values
+    for <code>min_dist</code> = 0.1). The graph weights and the attract-and-repel updates
+    follow the UMAP paper. Both sides use exact distances for the neighbors they found; only
+    the choice of neighbors differs.
   </p>
 
-  <h2>Semantic Search: Neighbors as Retrieval</h2>
+  <h3>What does UMAP need from the index?</h3>
   <p>
-    Semantic search is the opposite side of the same primitive. A user types a sentence. An
-    embedding model turns it into a vector. The index answers "which documents are closest?"
-    and the top few are handed back to an application, usually as context for a language
-    model or as direct results for the person doing the searching.
+    In Figure 1 the layout tolerates a graph that is missing a tenth of its true neighbors
+    and degrades once about half are missing, and the damage shows up within clusters
+    before it shows up between them. That is one toy dataset, and the thresholds will
+    differ on real data, but the direction matches what large-scale practice reports:
+    a graph built from heavily quantized vectors produces clumped maps, and builders of
+    large maps measure graph recall against an exact sample and re-score candidates with
+    exact distances before trusting the graph.
   </p>
   <p>
-    Every keystroke can trigger a query. Every user triggers many queries. The index is built
-    once, often from millions or billions of documents, then hit constantly for the rest of
-    its life.
+    The other requirements follow from the shape of the job. Every point is a query, and
+    all the queries are known in advance, so there is no need for an index that answers
+    one arbitrary query fast. The reference UMAP implementation uses NN-descent, which
+    builds the graph directly: it starts from a rough guess at each point's neighbors and
+    repeatedly improves it by checking neighbors of neighbors. At larger scales the usual
+    approach is the partitioning idea applied to construction: cluster the data, find
+    neighbors within each cluster by brute force on a GPU, and assign points near a border
+    to more than one cluster so that no neighborhood is cut by it.
+  </p>
+  <p>
+    Latency per query does not matter here; total build time does. For UMAP that build is
+    most of the cost. One study of GPU UMAP (Park et al., "Massive-Scale Out-Of-Core UMAP on
+    the GPU") found the k-NN graph taking up to 99% of the end-to-end runtime on GPU and
+    over 75% on CPU.
+  </p>
+
+  <h2>Semantic search: neighbors as answers</h2>
+  <p>
+    Semantic search uses the same operation the other way around. A user types a sentence,
+    an embedding model turns it into a vector, the index returns the closest document
+    vectors, and those documents go back to the user or into a language model's context.
+    The queries are not known in advance and they do not stop.
   </p>
 
   <div class="figure figure-wide" id="fig-search">
-    <div class="query-chips" id="query-chips"></div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: start;">
-      <div>
-        <div style="font-family: var(--heading-font); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 0.5rem;">Top results</div>
-        <div class="result-list" id="result-list"></div>
-      </div>
-      <div>
-        <div style="font-family: var(--heading-font); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 0.5rem;">Corpus in embedding space</div>
-        <svg id="search-svg" style="width:100%; display:block; border-radius:4px;"></svg>
-      </div>
+    <div class="query-chips" id="query-chips" role="group" aria-label="Choose a query"></div>
+    <div class="panels">
+      <ol class="result-list" id="result-list"></ol>
+      <div class="plot"><svg id="search-svg"></svg></div>
     </div>
     <div class="figure-caption">
-      <span class="figure-label">Figure 3.</span>
-      A tiny semantic search with a corpus of twenty sentences and a few preset queries. Pick
-      a <span class="t-query">query</span> above. The scatter shows every document in a
-      compressed 2D embedding; the top-5 <span class="t-neighbor">nearest documents</span>
-      glow amber and appear in the ranked list on the left. The distances are cosine distances
-      in the embedding space; smaller is closer.
+      <span class="figure-label">Figure 2.</span>
+      A search over twenty sentences, with real embeddings: each sentence and each
+      <span class="t-query">query</span> was embedded with all-MiniLM-L6-v2 (384
+      dimensions) ahead of time, and the list ranks sentences by cosine distance to the
+      query. The scatter is a projection of those embeddings onto their first two
+      principal components, which carry 21% of the variance, so the
+      <span class="t-neighbor">five nearest</span> are not always the five closest dots.
+      Notice the fourth result for "bugs in a sorting algorithm": the search returns k
+      results whether or not k relevant ones exist.
     </div>
   </div>
 
-  <h3>Semantic Search's Priorities</h3>
+  <h3>What does semantic search need from the index?</h3>
   <p>
-    Query latency dominates. A semantic search backend needs to answer in something like 50ms
-    at the 99th percentile, and it needs to do that while the disk is busy and the network is
-    noisy and other queries are running. The index is allowed to be expensive to build because
-    you amortize that cost across the billions of queries it will serve.
+    With twenty documents the search is a scan. With twenty million it is everything in
+    the previous three articles, tuned for a latency budget: an answer within, say, tens
+    of milliseconds, including on a bad day when other queries are competing for the same
+    disk. The index can be expensive to build because that cost is paid once and shared
+    by every query afterward.
   </p>
   <p>
-    This flips the set of reasonable choices. IVF-PQ with on-disk partitions, the combination
-    that sits at the heart of systems like lancedb, is a sweet spot: cheap enough to keep hot
-    shards in RAM, compressed enough to fit the long tail on SSD, fast enough to return the
-    top-k in a few milliseconds. Reranking matters here; approximate codes get you the
-    candidates, exact distances decide the final order. Recall@10 of 95% is typically "good
-    enough" because a language model downstream can filter out the miss and the user rarely
-    notices.
+    Compression is central here where it was a risk for UMAP, because a search has a
+    cheap repair that a graph build does not. A query only needs its own top k to be
+    right, so the index can rank with small codes held in RAM, keep a shortlist, and
+    rerank that shortlist with exact distances. Recall is then tuned against latency, by
+    raising <code>nprobe</code>, <code>ef</code> or the shortlist size until the budget is
+    spent.
   </p>
 
-  <h2>Same Primitives, Different Dials</h2>
-  <p>
-    The three ideas from this series, <span class="t-partition">partition</span>,
-    <span class="t-compress">compress</span>, and <span class="t-hardware">hardware</span>,
-    appear in both systems. What differs is how hard each dial is turned, and why.
-  </p>
+  <h2>The same three ideas, set differently</h2>
 
   <div class="figure" id="fig-dials">
-    <div class="dial-grid">
-      <div class="dial-head"></div>
-      <div class="dial-head">UMAP</div>
-      <div class="dial-head">Semantic Search</div>
-
-      <div class="dial-row-label partition">
-        <div class="dial-kicker">Idea 1</div>
-        Partition
-      </div>
-      <div class="dial-cell">
-        Used mainly <strong>at build time</strong> to accelerate graph construction. The
-        partition can be coarse; small mistakes are absorbed by the layout optimizer.
-      </div>
-      <div class="dial-cell">
-        Used <strong>at every query</strong> to avoid scanning the whole index. Has to balance
-        recall against latency on every request. The partition is the main dial for the
-        speed/accuracy tradeoff.
-      </div>
-
-      <div class="dial-row-label compress">
-        <div class="dial-kicker">Idea 2</div>
-        Compress
-      </div>
-      <div class="dial-cell">
-        <strong>Less important.</strong> The vectors are thrown away after the graph is built.
-        Compression is useful only if raw vectors do not fit in RAM during construction.
-      </div>
-      <div class="dial-cell">
-        <strong>Aggressive.</strong> Product quantization takes a 1536-dim float vector and
-        turns it into a few dozen bytes. Without this, billion-scale indices do not fit on
-        any single machine's memory.
-      </div>
-
-      <div class="dial-row-label hardware">
-        <div class="dial-kicker">Idea 3</div>
-        Hardware
-      </div>
-      <div class="dial-cell">
-        <strong>CPU-parallel build.</strong> Many cores, lots of RAM, big batch jobs. Once
-        built, the graph is a small in-memory object. Disk layout is not a concern.
-      </div>
-      <div class="dial-cell">
-        <strong>Disk layout matters hugely.</strong> Hot shards in RAM, long tail on SSD,
-        codes aligned for SIMD. GPUs pay off when many queries arrive at once. Every byte
-        fetched from SSD counts.
-      </div>
-    </div>
+    <table class="dial-table">
+      <thead>
+        <tr><th></th><th>UMAP</th><th>Semantic search</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th class="t-partition">Partition</th>
+          <td data-for="UMAP">Used <strong>during construction</strong>, to avoid comparing every point with every other. Points near a border are assigned to several cells so their neighborhoods stay whole.</td>
+          <td data-for="Semantic search">Used <strong>on every query</strong>. The number of cells or graph nodes visited is the main control for trading recall against latency.</td>
+        </tr>
+        <tr>
+          <th class="t-compress">Compress</th>
+          <td data-for="UMAP"><strong>Optional, and risky.</strong> Codes blur the order of near neighbors, which is what the graph is made of. When codes are needed to fit the data in memory, candidates are re-scored with exact distances.</td>
+          <td data-for="Semantic search"><strong>Central.</strong> Codes in RAM do the ranking, and a shortlist is reranked with full vectors. Without codes a billion-vector index does not fit in one machine's memory.</td>
+        </tr>
+        <tr>
+          <th class="t-hardware">Hardware</th>
+          <td data-for="UMAP"><strong>Batch throughput.</strong> Every vector is a query, which is the workload a GPU rewards. The output is N × k edges: with k = 15, a 4-byte id and a 4-byte weight each, 120 bytes per point.</td>
+          <td data-for="Semantic search"><strong>Latency per query.</strong> Codes in RAM, full vectors on SSD, hot partitions in the page cache. A GPU helps only when queries arrive in batches.</td>
+        </tr>
+      </tbody>
+    </table>
     <div class="figure-caption">
-      <span class="figure-label">Figure 4.</span>
-      The same three ideas under different constraints. UMAP is an offline,
-      throughput-oriented, correctness-tolerant job. Semantic search is an online,
-      latency-bound, high-recall service. The dials land in different places.
+      <span class="figure-label">Figure 3.</span>
+      How each of the three ideas from this series is used by the two applications. The
+      Compress row is where they differ most: for search, codes with a rerank are the
+      normal design; for a graph build they are a source of error that has to be checked.
     </div>
   </div>
 
-  <h2>Build-time and Query-time Budgets</h2>
+  <h2>Where does the work go?</h2>
   <p>
-    The two disciplines spend their compute budget in opposite shapes. UMAP pours almost
-    everything into a single up-front build; nothing happens afterward. Semantic search
-    builds once and then pays a small cost on every user interaction, forever.
+    We can compare the two workloads in the unit the series has used throughout, distance
+    computations, for one concrete index: a million vectors in an IVF index with 1,000
+    cells, searched with nprobe = 10. Adding the vectors costs N × nlist comparisons to
+    assign each one to a cell. A query costs nlist comparisons to rank the cells plus the
+    vectors in ten of them.
   </p>
 
   <div class="figure figure-wide" id="fig-budget">
-    <svg id="budget-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="controls">
+      <label>queries the search service has answered <input type="range" id="budget-q" min="3" max="9" value="7" step="0.25"><span class="val" id="budget-q-val">10M</span></label>
+    </div>
+    <div class="plot"><svg id="budget-svg"></svg></div>
+    <div class="readout" id="budget-readout"></div>
     <div class="figure-caption">
-      <span class="figure-label">Figure 5.</span>
-      The two workloads drawn to the same total-work budget. For UMAP, most of the cost is the
-      one-shot k-NN graph build, plus a smaller layout pass. For semantic search, the index
-      build is comparable in size, but it is followed by millions of tiny per-query slices.
-      Over a realistic month of operation the query work dominates, even though each query
-      is small.
+      <span class="figure-label">Figure 4.</span>
+      Distance computations for the two workloads on the same index, computed from the
+      formulas above. <span class="t-partition">Teal</span> is building the index,
+      <span class="t-hardware">orange</span> is querying it. The UMAP bar never changes:
+      its graph needs exactly N queries, one per point, and then the job is over. The search
+      bar starts smaller, matches the graph build once the service has answered a million
+      queries, and keeps growing. Left out: training the centroids, and UMAP's layout step,
+      which is arithmetic on 2D coordinates and not distance computations in the original
+      space.
     </div>
   </div>
 
-  <h2>The whole stack</h2>
   <p>
-    Both systems come down to the three ideas in this series, stacked and tuned for the job. <span class="t-partition">Partition</span> the space so you are not
-    looking everywhere. <span class="t-compress">Compress</span> the vectors so comparisons
-    are cheap and the data fits. Design for the <span class="t-hardware">hardware</span> you
-    are running on. The same stack builds the kNN graph behind a map of a million embeddings
-    and serves queries over a billion documents.
+    So a k-NN graph over N points costs about as much as serving N queries, and it has to
+    be paid before the first picture appears. A search service pays the same amount
+    gradually and then goes on paying. That difference in timing, more than any difference
+    in algorithm, is why one of them is tuned for total throughput and the other for the
+    latency of a single request.
   </p>
 
-  <div class="figure" id="fig-recap">
-    <svg id="recap-svg" style="width:100%; display:block; border-radius:4px;"></svg>
-    <div class="figure-caption">
-      <span class="figure-label">Figure 6.</span>
-      The full stack in one picture. The three ideas feed both destinations.
-    </div>
-  </div>
-
-  <p style="font-family: var(--heading-font); font-size: 0.95rem; color: var(--text-2); margin-top: 2rem; text-align: center;">
-    Thanks for reading. If you want to go deeper, the
-    <a href="index.html">series index</a> has all five parts in one place.
-  </p>
-
-  <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
-    <p>Part of <a href="index.html" style="color: var(--text-2);">Approximate Nearest Neighbors</a>. Previous: <a href="04-hardware-aware-design.html" style="color: var(--accent);">Hardware-Aware Design</a>.</p>
-    <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+  <footer>
+    <p>Part of <a href="index.html">Approximate Nearest Neighbors</a>. Previous: <a href="04-hardware-aware-design.html">Hardware-Aware Design</a>.</p>
+    <p>Sentence embeddings in Figure 2 from <a href="https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2">all-MiniLM-L6-v2</a>. Built with <a href="https://github.com/enjalot/moonshine">moonshine</a>.</p>
   </footer>
 </div>
 
 <script>
-// Seeded RNG for reproducibility
+// ============================================================
+// Shared helpers (the same block is inlined in every chapter)
+// ============================================================
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// Seeded RNG so every reader sees the same data
 function mulberry32(seed) {
   return function() {
     let t = seed += 0x6D2B79F5;
@@ -398,807 +398,361 @@ function mulberry32(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-
-// Box-Muller Gaussian from uniform RNG
 function gauss(rng) {
-  let u = 0, v = 0;
-  while (u === 0) u = rng();
-  while (v === 0) v = rng();
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  let u = 0; while (u === 0) u = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng());
+}
+// squared Euclidean distance, any dimension
+function d2(a, b) { let s = 0; for (let i = 0; i < a.length; i++) { const t = a[i] - b[i]; s += t * t; } return s; }
+
+// Size an <svg> to its wrapper and redraw when the wrapper's width changes.
+// heightFor(W) picks the height; draw(W, H) renders. Returns a function that redraws.
+function responsive(svgEl, heightFor, draw) {
+  const box = svgEl.parentElement;
+  let lastW = -1;
+  function run() {
+    const W = Math.floor(box.clientWidth);
+    if (W <= 0) return;
+    lastW = W;
+    const H = heightFor(W);
+    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svgEl.setAttribute("width", W);
+    svgEl.setAttribute("height", H);
+    draw(W, H);
+  }
+  new ResizeObserver(() => { if (Math.floor(box.clientWidth) !== lastW) run(); }).observe(box);
+  run();
+  return run;
+}
+
+// Let the reader place a query point in a plot: hover with a mouse, tap on touch
+// (a swipe still scrolls the page), arrow keys when the plot has focus.
+// toUnit(px, py) maps pixels to [0,1]^2; get/set read and write the query.
+function placeQuery(svgEl, toUnit, get, set) {
+  const at = e => { const r = svgEl.getBoundingClientRect(); set(toUnit(e.clientX - r.left, e.clientY - r.top)); };
+  svgEl.addEventListener("pointermove", e => { if (e.pointerType === "mouse") at(e); });
+  svgEl.addEventListener("pointerdown", at);
+  svgEl.setAttribute("tabindex", "0");
+  svgEl.addEventListener("keydown", e => {
+    const step = e.shiftKey ? 0.1 : 0.02;
+    const move = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+    if (!move) return;
+    e.preventDefault();
+    const q = get();
+    set([Math.max(0, Math.min(1, q[0] + move[0])), Math.max(0, Math.min(1, q[1] + move[1]))]);
+  });
+}
+const clamp01 = v => Math.max(0, Math.min(1, v));
+// Text alternative for a figure: role=img plus a description that tracks the current state
+function describe(svgEl, text) { svgEl.setAttribute("role", "img"); svgEl.setAttribute("aria-label", text); }
+
+// ============================================================
+// Numeric building blocks used by this chapter's figures
+// ============================================================
+function kmeans(points, k, iters, rng) {
+  const N = points.length, D = points[0].length;
+  const cents = [Float64Array.from(points[Math.floor(rng() * N)])];
+  const dm = new Float64Array(N).fill(Infinity);
+  while (cents.length < k) {
+    const last = cents[cents.length - 1]; let sum = 0;
+    for (let i = 0; i < N; i++) { const d = d2(points[i], last); if (d < dm[i]) dm[i] = d; sum += dm[i]; }
+    let r = rng() * sum, pick = N - 1;
+    for (let i = 0; i < N; i++) { r -= dm[i]; if (r <= 0) { pick = i; break; } }
+    cents.push(Float64Array.from(points[pick]));
+  }
+  const assign = new Int32Array(N);
+  for (let it = 0; it < iters; it++) {
+    for (let i = 0; i < N; i++) {
+      let bd = Infinity, bi = 0;
+      for (let c = 0; c < k; c++) { const d = d2(points[i], cents[c]); if (d < bd) { bd = d; bi = c; } }
+      assign[i] = bi;
+    }
+    const sums = Array.from({ length: k }, () => new Float64Array(D)), cnt = new Int32Array(k);
+    for (let i = 0; i < N; i++) { cnt[assign[i]]++; for (let j = 0; j < D; j++) sums[assign[i]][j] += points[i][j]; }
+    for (let c = 0; c < k; c++) if (cnt[c] > 0) for (let j = 0; j < D; j++) cents[c][j] = sums[c][j] / cnt[c];
+  }
+  return { centroids: cents, assign };
+}
+
+function topK(pts, q, k, skip) {
+  const arr = [];
+  for (let i = 0; i < pts.length; i++) if (i !== skip) arr.push([d2(pts[i], q), i]);
+  arr.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  return arr.slice(0, k).map(o => o[1]);
+}
+
+function pqTrain(pts, m, K, rng) {
+  const D = pts[0].length, sub = D / m, books = [], codes = pts.map(() => new Uint8Array(m));
+  for (let s = 0; s < m; s++) {
+    const subPts = pts.map(p => p.subarray(s * sub, (s + 1) * sub));
+    const { centroids, assign } = kmeans(subPts, K, 15, rng);
+    books.push(centroids);
+    for (let i = 0; i < pts.length; i++) codes[i][s] = assign[i];
+  }
+  return { m, K, sub, books, codes };
+}
+
+function pqLUT(pq, q) {
+  return pq.books.map((book, s) => book.map(c => d2(q.subarray(s * pq.sub, (s + 1) * pq.sub), c)));
+}
+
+function pqADC(lut, code) { let t = 0; for (let s = 0; s < code.length; s++) t += lut[s][code[s]]; return t; }
+
+// ---- a minimal UMAP: fuzzy k-NN graph + stochastic layout ----
+function fuzzyGraph(pts, knn, k) {
+  const N = pts.length, target = Math.log2(k), W = new Map();
+  for (let i = 0; i < N; i++) {
+    const ds = knn[i].map(j => Math.sqrt(d2(pts[i], pts[j])));
+    let rho = Infinity; for (const d of ds) if (d > 0 && d < rho) rho = d;
+    if (!isFinite(rho)) rho = 0;
+    let lo = 0, hi = Infinity, sigma = 1;
+    for (let it = 0; it < 64; it++) {
+      let s = 0; for (const d of ds) s += Math.exp(-Math.max(0, d - rho) / sigma);
+      if (Math.abs(s - target) < 1e-5) break;
+      if (s > target) { hi = sigma; sigma = (lo + hi) / 2; } else { lo = sigma; sigma = hi === Infinity ? sigma * 2 : (lo + hi) / 2; }
+    }
+    knn[i].forEach((j, t) => { W.set(i * N + j, Math.exp(-Math.max(0, ds[t] - rho) / sigma)); });
+  }
+  const edges = [];
+  for (const [key, w] of W) {
+    const i = Math.floor(key / N), j = key % N, wr = W.get(j * N + i) || 0;
+    if (wr && i > j) continue;               // count each undirected edge once
+    edges.push([i, j, w + wr - w * wr]);     // fuzzy union
+  }
+  return edges;
+}
+function pca2(pts, rng) {
+  const N = pts.length, D = pts[0].length, mean = new Float64Array(D);
+  pts.forEach(p => { for (let j = 0; j < D; j++) mean[j] += p[j] / N; });
+  const X = pts.map(p => Float64Array.from(p, (v, j) => v - mean[j])), comps = [];
+  for (let c = 0; c < 2; c++) {
+    let v = Float64Array.from({ length: D }, () => rng() - 0.5);
+    for (let it = 0; it < 60; it++) {
+      const nv = new Float64Array(D);
+      for (const x of X) { let dot = 0; for (let j = 0; j < D; j++) dot += x[j] * v[j]; for (let j = 0; j < D; j++) nv[j] += dot * x[j]; }
+      for (const u of comps) { let dot = 0; for (let j = 0; j < D; j++) dot += nv[j] * u[j]; for (let j = 0; j < D; j++) nv[j] -= dot * u[j]; }
+      let n = 0; for (let j = 0; j < D; j++) n += nv[j] * nv[j]; n = Math.sqrt(n);
+      for (let j = 0; j < D; j++) v[j] = nv[j] / n;
+    }
+    comps.push(v);
+  }
+  const Y = X.map(x => comps.map(u => { let dot = 0; for (let j = 0; j < D; j++) dot += x[j] * u[j]; return dot; }));
+  let mx = 0; Y.forEach(y => { mx = Math.max(mx, Math.abs(y[0]), Math.abs(y[1])); });
+  return Y.map(y => [10 * y[0] / mx, 10 * y[1] / mx]);
+}
+function umapLayout(edges, init, nEpochs, seed) {
+  const rng = mulberry32(seed), N = init.length, a = 1.577, b = 0.895, negRate = 5;
+  const Y = init.map(p => [p[0], p[1]]);
+  const wmax = Math.max(...edges.map(e => e[2]));
+  const eps = edges.map(e => wmax / e[2]), next = eps.slice();   // epochs per sample
+  const clip = v => Math.max(-4, Math.min(4, v));
+  for (let ep = 1; ep <= nEpochs; ep++) {
+    const lr = 1 - (ep - 1) / nEpochs;
+    for (let e = 0; e < edges.length; e++) {
+      if (next[e] > ep) continue; next[e] += eps[e];
+      const [i, j] = edges[e], yi = Y[i], yj = Y[j];
+      let dx = yi[0] - yj[0], dy = yi[1] - yj[1], d = dx * dx + dy * dy;
+      if (d > 0) {
+        const g = (-2 * a * b * Math.pow(d, b - 1)) / (1 + a * Math.pow(d, b));
+        const gx = clip(g * dx) * lr, gy = clip(g * dy) * lr;
+        yi[0] += gx; yi[1] += gy; yj[0] -= gx; yj[1] -= gy;
+      }
+      for (let s = 0; s < negRate; s++) {
+        const k = Math.floor(rng() * N); if (k === i) continue;
+        const yk = Y[k]; dx = yi[0] - yk[0]; dy = yi[1] - yk[1]; d = dx * dx + dy * dy;
+        if (d > 0) {
+          const g = (2 * b) / ((0.001 + d) * (1 + a * Math.pow(d, b)));
+          yi[0] += clip(g * dx) * lr; yi[1] += clip(g * dy) * lr;
+        } else { yi[0] += 4 * lr * (rng() - 0.5); }
+      }
+    }
+  }
+  return Y;
 }
 
 // ============================================================
-// Figure 1: Two paths from high-dim vectors
+// Figure 1: UMAP layouts from an exact graph and from a graph built on PQ codes
 // ============================================================
 (function() {
-  const svgEl = document.getElementById("paths-svg");
-  const container = svgEl.parentElement;
-  let W = 0, H = 320;
-  const svg = d3.select(svgEl);
-
-  function layout() {
-    W = container.clientWidth - 48;
-    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svgEl.setAttribute("width", W);
-    svgEl.setAttribute("height", H);
-  }
-
-  function draw() {
-    svg.selectAll("*").remove();
-
-    // Layout coordinates
-    const leftX = Math.max(110, W * 0.15);
-    const midX  = W * 0.5;
-    const rightX = Math.min(W - 110, W * 0.85);
-    const topY = 90, bottomY = 230;
-
-    // The shared source: a cloud of vectors
-    const cloudCx = leftX, cloudCy = H / 2;
-    const rng = mulberry32(11);
-    const cloud = [];
-    for (let i = 0; i < 50; i++) {
-      const r = 32 * Math.sqrt(rng());
-      const a = rng() * Math.PI * 2;
-      cloud.push([cloudCx + Math.cos(a) * r, cloudCy + Math.sin(a) * r]);
-    }
-    // Label for the source
-    svg.append("text")
-      .attr("x", cloudCx).attr("y", cloudCy - 56)
-      .attr("text-anchor", "middle")
-      .attr("font-size", 11).attr("font-weight", 600).attr("fill", "var(--text-2)")
-      .attr("text-transform", "uppercase").attr("letter-spacing", "0.08em")
-      .text("high-dim vectors");
-    svg.selectAll(".cp").data(cloud).join("circle")
-      .attr("class", "cp")
-      .attr("cx", d => d[0]).attr("cy", d => d[1])
-      .attr("r", 2.2)
-      .attr("fill", "var(--c-query)").attr("opacity", 0.65);
-    svg.append("text")
-      .attr("x", cloudCx).attr("y", cloudCy + 58)
-      .attr("text-anchor", "middle")
-      .attr("font-size", 11).attr("fill", "var(--text-2)")
-      .text("the same input");
-
-    // Middle node: "ANN primitive"
-    const mid = { x: midX, y: H / 2, w: 150, h: 60 };
-    svg.append("rect")
-      .attr("x", mid.x - mid.w/2).attr("y", mid.y - mid.h/2)
-      .attr("width", mid.w).attr("height", mid.h)
-      .attr("rx", 8).attr("fill", "var(--fig-bg)")
-      .attr("stroke", "var(--text)").attr("stroke-width", 1.5);
-    svg.append("text")
-      .attr("x", mid.x).attr("y", mid.y - 6).attr("text-anchor", "middle")
-      .attr("font-size", 13).attr("font-weight", 700).attr("fill", "var(--text)")
-      .text("nearest neighbor");
-    svg.append("text")
-      .attr("x", mid.x).attr("y", mid.y + 12).attr("text-anchor", "middle")
-      .attr("font-size", 11).attr("fill", "var(--text-2)")
-      .text("the shared primitive");
-
-    // Arrow from cloud to middle
-    arrow(svg, cloudCx + 38, cloudCy, mid.x - mid.w/2 - 6, mid.y, "var(--text-2)");
-
-    // Branch arrows from middle to UMAP / Search
-    arrow(svg, mid.x + mid.w/2 + 6, mid.y - 8, rightX - 80, topY + 20, "var(--c-partition)", true);
-    arrow(svg, mid.x + mid.w/2 + 6, mid.y + 8, rightX - 80, bottomY - 20, "var(--c-compress)", true);
-
-    // UMAP output: a 2D scatter showing clusters
-    const umapCx = rightX, umapCy = topY;
-    svg.append("text")
-      .attr("x", umapCx).attr("y", umapCy - 50)
-      .attr("text-anchor", "middle")
-      .attr("font-size", 11).attr("font-weight", 600).attr("fill", "var(--c-partition)")
-      .attr("text-transform", "uppercase").attr("letter-spacing", "0.08em")
-      .text("UMAP");
-    // Draw a tiny "clusters" scatter
-    const clusterRng = mulberry32(23);
-    const clusters = [
-      { cx: -20, cy: -12, col: "var(--c-query)" },
-      { cx: 14, cy: -18, col: "var(--c-partition)" },
-      { cx: 18, cy: 16, col: "var(--c-compress)" },
-      { cx: -14, cy: 16, col: "var(--c-hardware)" },
-    ];
-    clusters.forEach(cl => {
-      for (let i = 0; i < 16; i++) {
-        svg.append("circle")
-          .attr("cx", umapCx + cl.cx + gauss(clusterRng) * 4)
-          .attr("cy", umapCy + cl.cy + gauss(clusterRng) * 4)
-          .attr("r", 2)
-          .attr("fill", cl.col).attr("opacity", 0.75);
-      }
-    });
-    svg.append("text")
-      .attr("x", umapCx).attr("y", umapCy + 48)
-      .attr("text-anchor", "middle")
-      .attr("font-size", 11).attr("fill", "var(--text-2)")
-      .text("2D scatter (structure)");
-
-    // Semantic search output: a ranked list
-    const sCx = rightX, sCy = bottomY;
-    svg.append("text")
-      .attr("x", sCx).attr("y", sCy - 50)
-      .attr("text-anchor", "middle")
-      .attr("font-size", 11).attr("font-weight", 600).attr("fill", "var(--c-compress)")
-      .attr("text-transform", "uppercase").attr("letter-spacing", "0.08em")
-      .text("Semantic Search");
-    const rowY = sCy - 32;
-    const widths = [60, 52, 44, 38, 32];
-    widths.forEach((w, i) => {
-      svg.append("rect")
-        .attr("x", sCx - 40).attr("y", rowY + i * 12)
-        .attr("width", 80).attr("height", 7).attr("rx", 2)
-        .attr("fill", "var(--bg)").attr("stroke", "var(--border)");
-      svg.append("rect")
-        .attr("x", sCx - 40).attr("y", rowY + i * 12)
-        .attr("width", w).attr("height", 7).attr("rx", 2)
-        .attr("fill", i === 0 ? "var(--c-neighbor)" : "var(--c-db)")
-        .attr("opacity", i === 0 ? 0.95 : 0.55);
-    });
-    svg.append("text")
-      .attr("x", sCx).attr("y", sCy + 48)
-      .attr("text-anchor", "middle")
-      .attr("font-size", 11).attr("fill", "var(--text-2)")
-      .text("ranked list (answers)");
-  }
-
-  function arrow(svg, x1, y1, x2, y2, color, curve) {
-    // For curved arrows, pull the control point horizontally toward x2 so the curve
-    // leaves the source horizontally and arrives at the target from the side.
-    const cx = curve ? x1 + (x2 - x1) * 0.6 : (x1 + x2) / 2;
-    const cy = curve ? y1 : (y1 + y2) / 2;
-    const pathStr = curve
-      ? `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`
-      : `M ${x1} ${y1} L ${x2} ${y2}`;
-    // Arrowhead marker
-    const id = `arr-${Math.random().toString(36).slice(2, 9)}`;
-    const defs = svg.select("defs").empty() ? svg.append("defs") : svg.select("defs");
-    defs.append("marker")
-      .attr("id", id).attr("viewBox", "0 -5 10 10")
-      .attr("refX", 8).attr("refY", 0).attr("markerWidth", 6).attr("markerHeight", 6)
-      .attr("orient", "auto")
-      .append("path").attr("d", "M0,-4L8,0L0,4").attr("fill", color);
-    svg.append("path")
-      .attr("d", pathStr).attr("fill", "none")
-      .attr("stroke", color).attr("stroke-width", 1.5)
-      .attr("marker-end", `url(#${id})`);
-  }
-
-  const ro = new ResizeObserver(() => { layout(); draw(); });
-  ro.observe(container);
-  layout();
-  draw();
-})();
-
-// ============================================================
-// Figure 2: UMAP layout at different k values
-// Pre-compute a handful of hand-designed layouts; slider blends between them.
-// ============================================================
-(function() {
-  const svgEl = document.getElementById("umap-svg");
-  const container = svgEl.parentElement;
-  let W = 0, H = 360;
-  let k = 15;
-  const svg = d3.select(svgEl);
-
-  // 5 true clusters, ~40 points each, total 200 points.
-  // Each cluster has a "true" label color.
-  // We define hand-designed positions for several k breakpoints:
-  //   k=2   fragmented "threads" of each cluster
-  //   k=8   moderately clustered
-  //   k=15  clean separation (ideal)
-  //   k=50  clusters merge partially
-  //   k=200 everything collapses toward a center
-  const N_PER = 40, N_CLUST = 5, N = N_PER * N_CLUST;
-  const palette = [
-    "var(--c-query)",
-    "var(--c-partition)",
-    "var(--c-compress)",
-    "var(--c-hardware)",
-    "var(--c-neighbor)",
-  ];
-  const labels = [];
-  for (let c = 0; c < N_CLUST; c++) for (let i = 0; i < N_PER; i++) labels.push(c);
-
-  // Generate a per-point "identity" so layouts stay consistent across k
-  const rng = mulberry32(29);
-  const baseOffsets = Array.from({length: N}, () => [gauss(rng), gauss(rng)]);
-
-  // Cluster centers in a pentagon, in unit coords roughly (0..1)
-  function centerAt(c, scale, cx, cy) {
-    const angle = (c / N_CLUST) * Math.PI * 2 - Math.PI / 2;
-    return [cx + Math.cos(angle) * scale, cy + Math.sin(angle) * scale];
-  }
-
-  // Layout generators for different k regimes.
-  // Each returns an array of [x, y] in unit coords [0,1].
-  function layoutForK(kVal) {
-    const out = new Array(N);
-    if (kVal <= 3) {
-      // Fragmented: each cluster forms 2-3 threads.
-      for (let i = 0; i < N; i++) {
-        const c = labels[i];
-        const sub = i % 3;
-        const [cx, cy] = centerAt(c, 0.32, 0.5, 0.5);
-        // Short chains, one per sub
-        const t = ((i % N_PER) / N_PER) * 0.9 - 0.45;
-        const dir = (c * 1.7 + sub * 2.1);
-        const px = cx + Math.cos(dir) * t * 0.22 + baseOffsets[i][0] * 0.012;
-        const py = cy + Math.sin(dir) * t * 0.22 + baseOffsets[i][1] * 0.012;
-        // Add a perpendicular mini-offset per sub to look like separate threads
-        const perp = sub * 0.035 - 0.035;
-        out[i] = [px + Math.cos(dir + Math.PI/2) * perp,
-                  py + Math.sin(dir + Math.PI/2) * perp];
-      }
-    } else if (kVal <= 10) {
-      // Medium: clusters are blobs but somewhat overlapping
-      for (let i = 0; i < N; i++) {
-        const c = labels[i];
-        const [cx, cy] = centerAt(c, 0.27, 0.5, 0.5);
-        out[i] = [cx + baseOffsets[i][0] * 0.045,
-                  cy + baseOffsets[i][1] * 0.045];
-      }
-    } else if (kVal <= 25) {
-      // Ideal: tight, well-separated clusters
-      for (let i = 0; i < N; i++) {
-        const c = labels[i];
-        const [cx, cy] = centerAt(c, 0.33, 0.5, 0.5);
-        out[i] = [cx + baseOffsets[i][0] * 0.030,
-                  cy + baseOffsets[i][1] * 0.030];
-      }
-    } else if (kVal <= 80) {
-      // Too-global: clusters still visible but pulled toward center
-      for (let i = 0; i < N; i++) {
-        const c = labels[i];
-        const [cx, cy] = centerAt(c, 0.20, 0.5, 0.5);
-        out[i] = [cx + baseOffsets[i][0] * 0.055,
-                  cy + baseOffsets[i][1] * 0.055];
-      }
-    } else {
-      // Very global: clusters collapse into one blob
-      for (let i = 0; i < N; i++) {
-        const c = labels[i];
-        const [cx, cy] = centerAt(c, 0.08, 0.5, 0.5);
-        out[i] = [cx + baseOffsets[i][0] * 0.075,
-                  cy + baseOffsets[i][1] * 0.075];
-      }
-    }
-    return out;
-  }
-
-  // Interpolate between breakpoints for smooth slider motion
-  const breakpoints = [2, 8, 15, 50, 200];
-  const layouts = breakpoints.map(b => layoutForK(b));
-
-  function interp(kVal) {
-    // Find the two breakpoints that bracket kVal (in log space to feel natural)
-    const lk = Math.log(kVal);
-    let lo = 0, hi = breakpoints.length - 1;
-    for (let i = 0; i < breakpoints.length - 1; i++) {
-      if (lk >= Math.log(breakpoints[i]) && lk <= Math.log(breakpoints[i + 1])) {
-        lo = i; hi = i + 1; break;
-      }
-      if (lk > Math.log(breakpoints[breakpoints.length - 1])) { lo = hi = breakpoints.length - 1; break; }
-    }
-    const logLo = Math.log(breakpoints[lo]), logHi = Math.log(breakpoints[hi]);
-    const t = logHi === logLo ? 0 : (lk - logLo) / (logHi - logLo);
-    const A = layouts[lo], B = layouts[hi];
-    const out = new Array(N);
-    for (let i = 0; i < N; i++) {
-      out[i] = [A[i][0] * (1 - t) + B[i][0] * t, A[i][1] * (1 - t) + B[i][1] * t];
-    }
-    return out;
-  }
-
-  function layoutSvg() {
-    W = container.clientWidth - 48;
-    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svgEl.setAttribute("width", W);
-    svgEl.setAttribute("height", H);
-  }
-
-  function toX(p) {
-    const s = Math.min(W - 40, H - 40);
-    return W / 2 + (p[0] - 0.5) * s;
-  }
-  function toY(p) {
-    const s = Math.min(W - 40, H - 40);
-    return H / 2 + (p[1] - 0.5) * s;
-  }
-
-  function draw() {
-    svg.selectAll("*").remove();
-    // Backdrop
-    svg.append("rect").attr("x", 10).attr("y", 10)
-      .attr("width", W - 20).attr("height", H - 20)
-      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
-
-    const pts = interp(k);
-
-    // Points colored by true cluster label
-    svg.selectAll(".pt").data(pts).join("circle")
-      .attr("class", "pt")
-      .attr("cx", p => toX(p)).attr("cy", p => toY(p))
-      .attr("r", 3)
-      .attr("fill", (p, i) => palette[labels[i]])
-      .attr("opacity", 0.8);
-
-    // Annotation about regime
-    let regime = "", sub = "";
-    if (k <= 3) { regime = "k too small"; sub = "graph is too local; clusters fragment into threads"; }
-    else if (k <= 10) { regime = "k low"; sub = "clusters visible but overlapping"; }
-    else if (k <= 25) { regime = "k well-tuned"; sub = "clusters are crisp and separated"; }
-    else if (k <= 80) { regime = "k high"; sub = "global structure pulls clusters toward the center"; }
-    else { regime = "k too large"; sub = "everything is \"near\" everything; local structure is lost"; }
-
-    svg.append("text")
-      .attr("x", 20).attr("y", 26)
-      .attr("font-size", 12).attr("font-weight", 700).attr("fill", "var(--text)")
-      .text(regime);
-    svg.append("text")
-      .attr("x", 20).attr("y", 42)
-      .attr("font-size", 11).attr("fill", "var(--text-2)")
-      .text(sub);
-
-    // Bottom legend
-    const legend = svg.append("g")
-      .attr("transform", `translate(20, ${H - 20})`)
-      .attr("font-size", 10).attr("fill", "var(--text-2)");
-    for (let c = 0; c < N_CLUST; c++) {
-      legend.append("circle").attr("cx", c * 62).attr("cy", 0).attr("r", 3).attr("fill", palette[c]);
-      legend.append("text").attr("x", c * 62 + 8).attr("y", 3)
-        .text(`cluster ${c + 1}`);
-    }
-  }
-
-  document.getElementById("umap-k").addEventListener("input", e => {
-    k = +e.target.value;
-    document.getElementById("umap-k-val").textContent = k;
-    draw();
+  const exEl = document.getElementById("umap-exact"), apEl = document.getElementById("umap-approx");
+  const N = 360, D = 10, NS = 4, M = 5, EPOCHS = 150, HUES = [330, 175, 265, 28];
+  // four noisy arcs, each in its own random plane of the 10-D space
+  const rng = mulberry32(21), pts = [], strand = [], pos = [];
+  const frames = d3.range(NS).map(() => {
+    const c = Array.from({ length: D }, () => rng() * 1.2), u = Array.from({ length: D }, () => gauss(rng)), v = Array.from({ length: D }, () => gauss(rng));
+    const nu = Math.hypot(...u); let dot = 0;
+    for (let j = 0; j < D; j++) { u[j] /= nu; dot += u[j] * v[j]; }
+    for (let j = 0; j < D; j++) v[j] -= dot * u[j];
+    const nv = Math.hypot(...v); for (let j = 0; j < D; j++) v[j] /= nv;
+    return { c, u, v };
   });
-  document.getElementById("umap-reset").addEventListener("click", () => {
-    k = 15;
-    document.getElementById("umap-k").value = 15;
-    document.getElementById("umap-k-val").textContent = 15;
-    draw();
-  });
-
-  const ro = new ResizeObserver(() => { layoutSvg(); draw(); });
-  ro.observe(container);
-  layoutSvg();
-  draw();
-})();
-
-// ============================================================
-// Figure 3: Mini semantic search demo
-// ============================================================
-(function() {
-  const container = document.getElementById("fig-search");
-  const svgEl = document.getElementById("search-svg");
-  let W = 0, H = 300;
-  const svg = d3.select(svgEl);
-
-  // Corpus: 20 short sentences, each with a hand-placed 2D "embedding"
-  // Topics are arranged as clusters on the unit square.
-  // Topic A (food): top-left   Topic B (weather): top-right
-  // Topic C (code): bottom-left Topic D (travel): bottom-right
-  // Plus a few crossover sentences
-  const corpus = [
-    // Food
-    { id: 0,  text: "A quiet bakery in the neighborhood sells excellent sourdough.",      p: [0.20, 0.18] },
-    { id: 1,  text: "The soup was rich, almost too salty, but warming on a cold day.",   p: [0.15, 0.30] },
-    { id: 2,  text: "She toasted the seeds before adding them to the bread dough.",      p: [0.25, 0.24] },
-    { id: 3,  text: "A tasting menu worth the price of the reservation.",                p: [0.30, 0.10] },
-    { id: 4,  text: "The pasta came with a simple tomato sauce and fresh basil.",        p: [0.22, 0.35] },
-    // Weather
-    { id: 5,  text: "Heavy rain flooded the streets downtown last night.",               p: [0.78, 0.20] },
-    { id: 6,  text: "A snowstorm closed the airport for most of the morning.",           p: [0.85, 0.15] },
-    { id: 7,  text: "Forecasters expect a calm, clear weekend ahead.",                   p: [0.72, 0.30] },
-    { id: 8,  text: "High winds delayed several flights out of the region.",             p: [0.80, 0.35] },
-    // Code
-    { id: 9,  text: "The compiler complained about a missing semicolon on line eighty.", p: [0.18, 0.75] },
-    { id: 10, text: "A subtle off-by-one error hid in the sorting routine.",             p: [0.25, 0.78] },
-    { id: 11, text: "She refactored the module and all the tests still pass.",           p: [0.22, 0.85] },
-    { id: 12, text: "Profiling showed the loop was the main bottleneck.",                p: [0.30, 0.70] },
-    // Travel
-    { id: 13, text: "The train to the coast leaves every hour in the afternoon.",        p: [0.78, 0.72] },
-    { id: 14, text: "A crowded market sold fruit, spices, and woven bags.",              p: [0.72, 0.82] },
-    { id: 15, text: "They rented a small car and drove along the mountain road.",        p: [0.85, 0.78] },
-    { id: 16, text: "Their flight landed late, but the hotel room was ready.",           p: [0.80, 0.65] },
-    // Crossover / ambiguous
-    { id: 17, text: "The cafe served hot chocolate during the snowstorm.",               p: [0.55, 0.22] }, // food+weather
-    { id: 18, text: "He ran a travel blog and reviewed airport lounges.",                p: [0.82, 0.50] }, // travel
-    { id: 19, text: "A developer conference offered catered breakfast each morning.",    p: [0.40, 0.55] }, // code+food crossover
-  ];
-
-  // Preset queries, each with a 2D vector
-  const queries = [
-    { text: "freshly baked bread at a local shop",           p: [0.22, 0.20] },
-    { text: "storms causing flight delays",                  p: [0.80, 0.28] },
-    { text: "bugs in a sorting algorithm",                   p: [0.23, 0.78] },
-    { text: "a trip along a coastal road",                   p: [0.80, 0.74] },
-    { text: "hot drinks on a cold morning",                  p: [0.55, 0.24] },
-    { text: "breakfast at a technical event",                p: [0.42, 0.52] },
-  ];
-
-  let activeQueryIdx = 0;
-
-  // Render chips
-  const chipContainer = document.getElementById("query-chips");
-  queries.forEach((q, i) => {
-    const chip = document.createElement("button");
-    chip.className = "query-chip" + (i === 0 ? " active" : "");
-    chip.textContent = q.text;
-    chip.addEventListener("click", () => {
-      activeQueryIdx = i;
-      Array.from(chipContainer.children).forEach((c, j) => {
-        c.classList.toggle("active", j === i);
-      });
-      render();
-    });
-    chipContainer.appendChild(chip);
-  });
-
-  function layoutSvg() {
-    W = svgEl.parentElement.clientWidth;
-    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svgEl.setAttribute("width", W);
-    svgEl.setAttribute("height", H);
+  for (let i = 0; i < N; i++) {
+    const s = i % NS, t = rng(), f = frames[s], ang = Math.PI * 1.2 * t;
+    pts.push(Float64Array.from({ length: D }, (_, j) => f.c[j] + 0.45 * (Math.cos(ang) * f.u[j] + Math.sin(ang) * f.v[j]) + gauss(rng) * 0.025));
+    strand.push(s); pos.push(t);
   }
+  const color = i => `hsl(${HUES[strand[i]]}, 75%, ${72 - 34 * pos[i]}%)`;
+  const init = pca2(pts, mulberry32(1));
+  const exactOrder = pts.map((p, i) => topK(pts, p, 60, i));           // true neighbors, nearest first
+  const pqCache = new Map();
+  // neighbors ranked by the PQ estimate (ties, which are common with small codes, fall back to index order)
+  function pqOrder(K) {
+    if (!pqCache.has(K)) {
+      const pq = pqTrain(pts, M, K, mulberry32(4));
+      pqCache.set(K, pts.map((p, i) => {
+        const lut = pqLUT(pq, p), arr = [];
+        for (let j = 0; j < N; j++) if (j !== i) arr.push([pqADC(lut, pq.codes[j]), j]);
+        return arr.sort((a, b) => a[0] - b[0] || a[1] - b[1]).slice(0, 60).map(o => o[1]);
+      }));
+    }
+    return pqCache.get(K);
+  }
+  const overlap = (A, B) => d3.mean(A, (a, i) => { const T = new Set(B[i]); return a.filter(j => T.has(j)).length / a.length; });
+  const truth15 = exactOrder.map(a => a.slice(0, 15));
+  // share of each point's 15 true nearest neighbors that are among its 15 nearest in the layout
+  const preserved = Y => overlap(Y.map((y, i) => topK(Y, y, 15, i)), truth15);
+  let k = 15, K = 4, layouts = null;
 
-  function dist(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
-
+  function compute() {
+    const gE = exactOrder.map(a => a.slice(0, k)), gA = pqOrder(K).map(a => a.slice(0, k));
+    const YE = umapLayout(fuzzyGraph(pts, gE, k), init, EPOCHS, 7), YA = umapLayout(fuzzyGraph(pts, gA, k), init, EPOCHS, 7);
+    layouts = { YE, YA, recall: overlap(gA, gE), pE: preserved(YE), pA: preserved(YA) };
+  }
+  function drawPanel(el, Y, W, H, label) {
+    const svg = d3.select(el); svg.selectAll("*").remove();
+    svg.append("rect").attr("x", 0.5).attr("y", 0.5).attr("width", W - 1).attr("height", H - 1).attr("fill", "var(--plot-bg)").attr("stroke", "var(--border)").attr("rx", 4);
+    const ex = d3.extent(Y, y => y[0]), ey = d3.extent(Y, y => y[1]), span = Math.max(ex[1] - ex[0], ey[1] - ey[0]) || 1, s = (Math.min(W, H) - 24) / span;
+    const cx = (ex[0] + ex[1]) / 2, cy = (ey[0] + ey[1]) / 2;
+    svg.append("g").selectAll("circle").data(Y).join("circle")
+      .attr("cx", y => W / 2 + (y[0] - cx) * s).attr("cy", y => H / 2 + (y[1] - cy) * s).attr("r", 3).attr("fill", (y, i) => color(i));
+    describe(el, label);
+  }
+  let sizes = {};
   function render() {
-    const q = queries[activeQueryIdx];
-    // Compute distances
-    const ranked = corpus
-      .map(d => ({ ...d, dist: dist(d.p, q.p) }))
-      .sort((a, b) => a.dist - b.dist);
-    const top5Ids = new Set(ranked.slice(0, 5).map(d => d.id));
-
-    // Ranked list
-    const list = document.getElementById("result-list");
-    list.innerHTML = "";
-    ranked.slice(0, 5).forEach((d, i) => {
-      const row = document.createElement("div");
-      row.className = "result-row" + (i === 0 ? " top" : "");
-      row.innerHTML = `
-        <div class="result-rank">${i + 1}</div>
-        <div class="result-text">${d.text}</div>
-        <div class="result-dist">${d.dist.toFixed(2)}</div>
-      `;
-      list.appendChild(row);
-    });
-
-    // Scatter
-    svg.selectAll("*").remove();
-    svg.append("rect").attr("x", 2).attr("y", 2)
-      .attr("width", W - 4).attr("height", H - 4)
-      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
-
-    const pad = 20;
-    const toX = p => pad + p[0] * (W - 2 * pad);
-    const toY = p => pad + p[1] * (H - 2 * pad);
-
-    // Connection lines from query to top-5
-    ranked.slice(0, 5).forEach(d => {
-      svg.append("line")
-        .attr("x1", toX(q.p)).attr("y1", toY(q.p))
-        .attr("x2", toX(d.p)).attr("y2", toY(d.p))
-        .attr("stroke", "var(--c-neighbor)").attr("stroke-width", 0.8).attr("opacity", 0.55);
-    });
-
-    // Documents
-    svg.selectAll(".doc").data(corpus).join("circle")
-      .attr("class", "doc")
-      .attr("cx", d => toX(d.p)).attr("cy", d => toY(d.p))
-      .attr("r", d => top5Ids.has(d.id) ? 5 : 3)
-      .attr("fill", d => top5Ids.has(d.id) ? "var(--c-neighbor)" : "var(--c-db)")
-      .attr("opacity", d => top5Ids.has(d.id) ? 1 : 0.55);
-
-    // Query point
-    svg.append("circle")
-      .attr("cx", toX(q.p)).attr("cy", toY(q.p))
-      .attr("r", 7)
-      .attr("fill", "var(--c-query)").attr("stroke", "white").attr("stroke-width", 2);
-    svg.append("text")
-      .attr("x", toX(q.p)).attr("y", toY(q.p) - 12)
-      .attr("text-anchor", "middle").attr("font-size", 10)
-      .attr("fill", "var(--c-query)").attr("font-weight", 600)
-      .text("query");
+    if (!layouts) compute();
+    const bits = M * Math.log2(K);
+    document.getElementById("umap-approx-label").textContent = `k-NN graph from ${bits}-bit codes`;
+    if (sizes.ex) drawPanel(exEl, layouts.YE, sizes.ex[0], sizes.ex[1], `UMAP layout of 360 points from the exact ${k}-nearest-neighbor graph. It keeps ${Math.round(100 * layouts.pE)} percent of true neighbors adjacent.`);
+    if (sizes.ap) drawPanel(apEl, layouts.YA, sizes.ap[0], sizes.ap[1], `UMAP layout from a graph built on ${bits}-bit codes, which contains ${Math.round(100 * layouts.recall)} percent of the true neighbors. It keeps ${Math.round(100 * layouts.pA)} percent of true neighbors adjacent.`);
+    document.getElementById("umap-readout").innerHTML =
+      `The graph from ${bits}-bit codes contains <b>${Math.round(100 * layouts.recall)}%</b> of the true ${k} nearest neighbors (its recall@${k}). ` +
+      `Of each point's 15 true nearest neighbors, the left layout keeps <b>${Math.round(100 * layouts.pE)}%</b> among its 15 nearest on screen and the right layout keeps <b>${Math.round(100 * layouts.pA)}%</b>.`;
   }
-
-  const ro = new ResizeObserver(() => { layoutSvg(); render(); });
-  ro.observe(svgEl.parentElement);
-  layoutSvg();
-  render();
+  responsive(exEl, w => Math.min(w, 340), (w, h) => { sizes.ex = [w, h]; render(); });
+  responsive(apEl, w => Math.min(w, 340), (w, h) => { sizes.ap = [w, h]; render(); });
+  let pending = false;
+  const recompute = () => { if (pending) return; pending = true; requestAnimationFrame(() => { pending = false; layouts = null; render(); }); };
+  document.getElementById("umap-k").addEventListener("input", e => { k = +e.target.value; document.getElementById("umap-k-val").textContent = k; recompute(); });
+  document.getElementById("umap-bits").addEventListener("change", e => { K = +e.target.value; recompute(); });
 })();
 
 // ============================================================
-// Figure 5: Build-time vs query-time budget bars
+// Figure 2: semantic search over twenty sentences, with precomputed MiniLM embeddings
+// ============================================================
+(function() {
+  const svgEl = document.getElementById("search-svg");
+  const svg = d3.select(svgEl);
+  const docs = [
+    "A quiet bakery in the neighborhood sells excellent sourdough.",
+    "The soup was rich, almost too salty, but warming on a cold day.",
+    "She toasted the seeds before adding them to the bread dough.",
+    "A tasting menu worth the price of the reservation.",
+    "The pasta came with a simple tomato sauce and fresh basil.",
+    "Heavy rain flooded the streets downtown last night.",
+    "A snowstorm closed the airport for most of the morning.",
+    "Forecasters expect a calm, clear weekend ahead.",
+    "High winds delayed several flights out of the region.",
+    "The compiler complained about a missing semicolon on line eighty.",
+    "A subtle off-by-one error hid in the sorting routine.",
+    "She refactored the module and all the tests still pass.",
+    "Profiling showed the loop was the main bottleneck.",
+    "The train to the coast leaves every hour in the afternoon.",
+    "A crowded market sold fruit, spices, and woven bags.",
+    "They rented a small car and drove along the mountain road.",
+    "Their flight landed late, but the hotel room was ready.",
+    "The cafe served hot chocolate during the snowstorm.",
+    "He ran a travel blog and reviewed airport lounges.",
+    "A developer conference offered catered breakfast each morning.",
+  ];
+  const queries = [
+    "freshly baked bread at a local shop",
+    "storms causing flight delays",
+    "bugs in a sorting algorithm",
+    "a trip along a coastal road",
+    "hot drinks on a cold morning",
+    "breakfast at a technical event",
+  ];
+  // COS[q][d]: cosine distance (1 - cosine similarity) between query q and document d, from all-MiniLM-L6-v2.
+  // XY: the 20 documents then the 6 queries, projected onto the documents' first two principal components.
+  const COS = [[0.361,0.902,0.661,0.68,0.813,0.947,0.958,0.937,0.999,1.046,0.933,0.99,0.985,0.904,0.688,0.861,0.924,0.754,0.961,0.758],[1.038,0.909,0.904,1.04,1.034,0.672,0.605,0.656,0.3,0.964,0.925,1.006,0.856,0.847,0.922,0.874,0.645,0.792,0.838,0.973],[0.973,0.923,0.918,0.974,0.937,1.025,0.94,0.939,0.96,0.759,0.222,0.907,0.846,0.906,0.872,0.968,0.929,0.988,0.996,0.999],[0.99,0.847,1.027,0.821,0.871,0.836,0.945,0.801,0.78,0.946,1.016,1.052,0.915,0.656,0.912,0.577,0.908,0.924,0.824,0.982],[0.946,0.596,0.927,0.771,0.886,0.869,0.671,0.805,0.952,0.936,1.048,1.063,1.048,0.864,0.924,0.887,0.913,0.587,0.916,0.671],[0.817,0.728,0.827,0.669,0.858,1.002,0.808,0.766,0.915,0.953,0.949,1.005,1.019,0.916,0.811,1,0.805,0.735,0.863,0.373]];
+  const XY = [[-0.322,0.384],[-0.097,0.218],[-0.198,-0.161],[-0.434,0.407],[-0.409,0.058],[0.393,0.111],[0.568,0.131],[0.337,0.079],[0.481,-0.112],[-0.164,-0.369],[-0.275,-0.465],[-0.13,-0.539],[-0.179,-0.48],[0.273,-0.001],[-0.287,0.243],[0.078,0.013],[0.27,-0.18],[0.077,0.504],[0.163,-0.067],[-0.143,0.227],[-0.304,0.299],[0.499,-0.07],[-0.191,-0.343],[0.125,0.048],[0.07,0.31],[-0.106,0.266]];
+  let active = 2, W = 0, H = 0;
+  const chips = document.getElementById("query-chips"), list = document.getElementById("result-list");
+  queries.forEach((q, i) => {
+    const b = document.createElement("button");
+    b.className = "query-chip"; b.textContent = q;
+    b.addEventListener("click", () => { active = i; render(); });
+    chips.appendChild(b);
+  });
+  function render() {
+    [...chips.children].forEach((c, i) => c.setAttribute("aria-pressed", i === active));
+    const ranked = d3.range(docs.length).sort((a, b) => COS[active][a] - COS[active][b]).slice(0, 5);
+    list.innerHTML = ranked.map((d, r) => `<li class="result-row"><span class="result-rank">${r + 1}</span><span class="result-text">${docs[d]}</span><span class="result-dist">${COS[active][d].toFixed(2)}</span></li>`).join("");
+    svg.selectAll("*").remove();
+    svg.append("rect").attr("x", 0.5).attr("y", 0.5).attr("width", W - 1).attr("height", H - 1).attr("fill", "var(--plot-bg)").attr("stroke", "var(--border)").attr("rx", 4);
+    const x = d3.scaleLinear().domain(d3.extent(XY, p => p[0])).range([18, W - 18]), y = d3.scaleLinear().domain(d3.extent(XY, p => p[1])).range([H - 18, 26]);
+    const q = XY[docs.length + active], top = new Set(ranked);
+    svg.append("g").selectAll("line").data(ranked).join("line").attr("x1", x(q[0])).attr("y1", y(q[1])).attr("x2", d => x(XY[d][0])).attr("y2", d => y(XY[d][1])).attr("stroke", "var(--c-neighbor)").attr("opacity", 0.7);
+    svg.append("g").selectAll("circle").data(d3.range(docs.length)).join("circle").attr("cx", d => x(XY[d][0])).attr("cy", d => y(XY[d][1]))
+      .attr("r", d => top.has(d) ? 6 : 4).attr("fill", d => top.has(d) ? "var(--c-neighbor)" : "var(--c-db)").attr("opacity", d => top.has(d) ? 1 : 0.6);
+    svg.append("g").selectAll("text").data(ranked).join("text").attr("x", d => x(XY[d][0])).attr("y", d => y(XY[d][1]) - 10).attr("text-anchor", "middle").attr("fill", "var(--text)").text((d, r) => r + 1);
+    svg.append("circle").attr("cx", x(q[0])).attr("cy", y(q[1])).attr("r", 7).attr("fill", "var(--c-query)").attr("stroke", "var(--plot-bg)").attr("stroke-width", 2);
+    describe(svgEl, `Scatter of 20 sentence embeddings projected to two dimensions. For the query "${queries[active]}" the nearest sentence is "${docs[ranked[0]]}" at cosine distance ${COS[active][ranked[0]].toFixed(2)}; the fifth is at ${COS[active][ranked[4]].toFixed(2)}.`);
+  }
+  responsive(svgEl, w => Math.min(w, 320), (w, h) => { W = w; H = h; render(); });
+})();
+
+// ============================================================
+// Figure 4: distance computations for a k-NN graph build and for a search service
 // ============================================================
 (function() {
   const svgEl = document.getElementById("budget-svg");
-  const container = svgEl.parentElement;
-  let W = 0, H = 280;
   const svg = d3.select(svgEl);
-
-  function layout() {
-    W = container.clientWidth - 48;
-    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svgEl.setAttribute("width", W);
-    svgEl.setAttribute("height", H);
-  }
-
-  // Relative time units (illustrative, not measured)
-  const budgets = [
-    {
-      name: "UMAP",
-      phases: [
-        { label: "k-NN graph build", val: 70, color: "var(--c-partition)" },
-        { label: "layout optimization", val: 28, color: "var(--c-compress)" },
-        { label: "queries", val: 0, color: "var(--c-hardware)", note: "no online queries" },
-      ],
-    },
-    {
-      name: "Semantic Search",
-      phases: [
-        { label: "index build", val: 40, color: "var(--c-partition)" },
-        { label: "index tuning", val: 8, color: "var(--c-compress)" },
-        { label: "queries (millions × tiny)", val: 52, color: "var(--c-hardware)" },
-      ],
-    },
-  ];
-
-  function draw() {
+  const N = 1e6, NLIST = 1000, NPROBE = 10, QPS = 10;
+  const build = N * NLIST;                         // assign every vector to its nearest centroid
+  const perQuery = NLIST + NPROBE * N / NLIST;     // rank the centroids, then scan nprobe lists
+  let logQ = 7;
+  const big = v => v >= 1e9 ? +(v / 1e9).toPrecision(3) + " billion" : v >= 1e6 ? +(v / 1e6).toPrecision(3) + " million" : d3.format(",")(Math.round(v));
+  const short = v => v >= 1e9 ? +(v / 1e9).toPrecision(2) + "B" : v >= 1e6 ? +(v / 1e6).toPrecision(2) + "M" : +(v / 1e3).toPrecision(2) + "K";
+  const dur = s => s < 3600 ? `${Math.round(s / 60)} minutes` : s < 86400 * 2 ? `${Math.round(s / 3600)} hours` : s < 86400 * 365 ? `${Math.round(s / 86400)} days` : `${(s / 86400 / 365).toFixed(1)} years`;
+  function draw(W, H) {
     svg.selectAll("*").remove();
-    svg.append("rect").attr("x", 2).attr("y", 2)
-      .attr("width", W - 4).attr("height", H - 4)
-      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
-
-    const labelW = 150;
-    const chartX = labelW + 20;
-    const chartW = W - chartX - 200;
-    const barH = 32;
-    const gap = 60;
-    const yStart = 50;
-
-    // Title
-    svg.append("text")
-      .attr("x", 20).attr("y", 26)
-      .attr("font-size", 12).attr("font-weight", 700).attr("fill", "var(--text)")
-      .text("Where the compute goes");
-    svg.append("text")
-      .attr("x", 20).attr("y", 42)
-      .attr("font-size", 10).attr("fill", "var(--text-2)")
-      .text("illustrative, not measured; scaled to the same total effort");
-
-    budgets.forEach((b, bi) => {
-      const y = yStart + bi * (barH + gap);
-      svg.append("text")
-        .attr("x", 20).attr("y", y + barH / 2 + 4)
-        .attr("font-size", 12).attr("font-weight", 600).attr("fill", "var(--text)")
-        .text(b.name);
-
-      // Track
-      svg.append("rect")
-        .attr("x", chartX).attr("y", y)
-        .attr("width", chartW).attr("height", barH)
-        .attr("fill", "var(--bg)").attr("stroke", "var(--border)").attr("rx", 4);
-
-      let cx = chartX;
-      const total = b.phases.reduce((s, p) => s + p.val, 0) || 1;
-      b.phases.forEach(p => {
-        const w = (p.val / 100) * chartW;
-        if (p.val > 0) {
-          svg.append("rect")
-            .attr("x", cx).attr("y", y)
-            .attr("width", w).attr("height", barH)
-            .attr("fill", p.color).attr("opacity", 0.82);
-          // Label inside if wide enough
-          if (w > 90) {
-            svg.append("text")
-              .attr("x", cx + w / 2).attr("y", y + barH / 2 + 4)
-              .attr("text-anchor", "middle").attr("font-size", 10)
-              .attr("fill", "white").attr("font-weight", 600)
-              .text(p.label);
-          } else if (w > 40) {
-            svg.append("text")
-              .attr("x", cx + w / 2).attr("y", y + barH / 2 + 4)
-              .attr("text-anchor", "middle").attr("font-size", 10)
-              .attr("fill", "white").attr("font-weight", 600)
-              .text(p.label.split(" ")[0]);
-          }
-        }
-        cx += w;
-      });
-
-      // Side annotations
-      if (b.name === "UMAP") {
-        const annX = chartX + chartW + 16;
-        svg.append("text")
-          .attr("x", annX).attr("y", y + 12)
-          .attr("font-size", 10).attr("font-weight", 600).attr("fill", "var(--text)")
-          .text("offline, once");
-        svg.append("text")
-          .attr("x", annX).attr("y", y + 26)
-          .attr("font-size", 10).attr("fill", "var(--text-2)")
-          .text("correctness-tolerant;");
-        svg.append("text")
-          .attr("x", annX).attr("y", y + 38)
-          .attr("font-size", 10).attr("fill", "var(--text-2)")
-          .text("no queries at all");
-      } else {
-        const annX = chartX + chartW + 16;
-        svg.append("text")
-          .attr("x", annX).attr("y", y + 12)
-          .attr("font-size", 10).attr("font-weight", 600).attr("fill", "var(--text)")
-          .text("online, forever");
-        svg.append("text")
-          .attr("x", annX).attr("y", y + 26)
-          .attr("font-size", 10).attr("fill", "var(--text-2)")
-          .text("query latency bound;");
-        svg.append("text")
-          .attr("x", annX).attr("y", y + 38)
-          .attr("font-size", 10).attr("fill", "var(--text-2)")
-          .text("millions of tiny slices");
-      }
-
-      // Below-bar breakdown
-      let bx = chartX;
-      b.phases.forEach(p => {
-        if (p.val > 0) {
-          const w = (p.val / 100) * chartW;
-          svg.append("text")
-            .attr("x", bx + w / 2).attr("y", y + barH + 14)
-            .attr("text-anchor", "middle").attr("font-size", 10)
-            .attr("fill", "var(--text-2)")
-            .text(`${p.val}%`);
-          bx += w;
-        }
-      });
-    });
-
-    // Legend under both bars
-    const legY = H - 20;
-    const legend = svg.append("g").attr("transform", `translate(${chartX}, ${legY})`);
-    const items = [
-      { label: "build / index work", color: "var(--c-partition)" },
-      { label: "tune / compress", color: "var(--c-compress)" },
-      { label: "query-time work", color: "var(--c-hardware)" },
+    const Q = 10 ** logQ;
+    const rows = [
+      { label: "UMAP k-NN graph", build, query: N * perQuery, note: `${short(N)} queries, one per point` },
+      { label: "semantic search", build, query: Q * perQuery, note: `${short(Q)} queries so far` },
     ];
-    const legStep = Math.min(180, Math.max(110, (chartW + 100) / items.length));
-    items.forEach((it, i) => {
-      const row = legend.append("g").attr("transform", `translate(${i * legStep}, 0)`);
-      row.append("rect").attr("x", 0).attr("y", -8).attr("width", 10).attr("height", 10)
-        .attr("fill", it.color).attr("opacity", 0.82);
-      row.append("text").attr("x", 16).attr("y", 1).attr("font-size", 10)
-        .attr("fill", "var(--text-2)").text(it.label);
+    const m = { top: 8, right: 10, bottom: 8, left: 0 }, iw = W - m.left - m.right;
+    const max = d3.max(rows, r => r.build + r.query), x = d3.scaleLinear().domain([0, max]).range([0, iw]);
+    const g = svg.append("g").attr("transform", `translate(${m.left},${m.top})`);
+    rows.forEach((r, i) => {
+      const y0 = i * 86;
+      g.append("text").attr("x", 0).attr("y", y0 + 14).attr("fill", "var(--text)").attr("font-weight", 600).text(r.label);
+      g.append("text").attr("x", iw).attr("y", y0 + 14).attr("text-anchor", "end").text(r.note);
+      g.append("rect").attr("x", 0).attr("y", y0 + 22).attr("width", iw).attr("height", 30).attr("fill", "var(--plot-bg)").attr("stroke", "var(--border)");
+      g.append("rect").attr("x", 0).attr("y", y0 + 22).attr("width", Math.max(1, x(r.build))).attr("height", 30).attr("fill", "var(--c-partition)");
+      g.append("rect").attr("x", x(r.build)).attr("y", y0 + 22).attr("width", Math.max(1, x(r.query))).attr("height", 30).attr("fill", "var(--c-hardware)");
+      g.append("text").attr("x", 0).attr("y", y0 + 70).attr("font-family", "var(--mono-font)").text(`${short(r.build)} build + ${short(r.query)} queries = ${short(r.build + r.query)}`);
     });
+    document.getElementById("budget-q-val").textContent = short(Q);
+    const ratio = (build + Q * perQuery) / (build + N * perQuery);
+    document.getElementById("budget-readout").innerHTML =
+      `One query costs ${d3.format(",")(NLIST)} + ${NPROBE} × ${d3.format(",")(N / NLIST)} = <b>${d3.format(",")(perQuery)}</b> distance computations; adding the million vectors costs <b>${big(build)}</b>. ` +
+      `After <b>${big(Q)}</b> queries (about <b>${dur(Q / QPS)}</b> at ${QPS} queries per second) the search service has done <b>${ratio >= 10 ? Math.round(ratio) : ratio.toFixed(2)}×</b> the work of the UMAP graph build.`;
+    describe(svgEl, `Stacked bars of distance computations. UMAP graph: ${big(build)} to build the index plus ${big(N * perQuery)} for one query per point. Search after ${big(Q)} queries: ${big(build)} to build plus ${big(Q * perQuery)} for queries.`);
   }
-
-  const ro = new ResizeObserver(() => { layout(); draw(); });
-  ro.observe(container);
-  layout();
-  draw();
-})();
-
-// ============================================================
-// Figure 6: Closing recap — three ideas feeding two destinations
-// ============================================================
-(function() {
-  const svgEl = document.getElementById("recap-svg");
-  const container = svgEl.parentElement;
-  let W = 0, H = 260;
-  const svg = d3.select(svgEl);
-
-  function layout() {
-    W = container.clientWidth - 48;
-    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svgEl.setAttribute("width", W);
-    svgEl.setAttribute("height", H);
-  }
-
-  function draw() {
-    svg.selectAll("*").remove();
-
-    const leftX = Math.max(90, W * 0.18);
-    const midX = W * 0.50;
-    const rightX = Math.min(W - 90, W * 0.82);
-
-    // Three idea boxes on the left
-    const ideas = [
-      { label: "Partition", y: 50,  color: "var(--c-partition)" },
-      { label: "Compress",  y: 125, color: "var(--c-compress)" },
-      { label: "Hardware",  y: 200, color: "var(--c-hardware)" },
-    ];
-
-    ideas.forEach(I => {
-      svg.append("rect")
-        .attr("x", leftX - 70).attr("y", I.y - 18)
-        .attr("width", 140).attr("height", 36).attr("rx", 6)
-        .attr("fill", "var(--fig-bg)")
-        .attr("stroke", I.color).attr("stroke-width", 1.5);
-      svg.append("text")
-        .attr("x", leftX).attr("y", I.y + 5)
-        .attr("text-anchor", "middle")
-        .attr("font-size", 13).attr("font-weight", 700).attr("fill", I.color)
-        .text(I.label);
-    });
-
-    // Middle: ANN primitive box
-    svg.append("rect")
-      .attr("x", midX - 80).attr("y", H / 2 - 30)
-      .attr("width", 160).attr("height", 60).attr("rx", 8)
-      .attr("fill", "var(--fig-bg)")
-      .attr("stroke", "var(--text)").attr("stroke-width", 1.5);
-    svg.append("text")
-      .attr("x", midX).attr("y", H / 2 - 6)
-      .attr("text-anchor", "middle")
-      .attr("font-size", 13).attr("font-weight", 700).attr("fill", "var(--text)")
-      .text("ANN primitive");
-    svg.append("text")
-      .attr("x", midX).attr("y", H / 2 + 12)
-      .attr("text-anchor", "middle")
-      .attr("font-size", 11).attr("fill", "var(--text-2)")
-      .text("nearest neighbor search");
-
-    // Arrows from ideas to primitive
-    const defs = svg.append("defs");
-    ["p", "c", "h"].forEach((key, i) => {
-      defs.append("marker")
-        .attr("id", `arr-recap-${key}`).attr("viewBox", "0 -5 10 10")
-        .attr("refX", 8).attr("refY", 0).attr("markerWidth", 6).attr("markerHeight", 6)
-        .attr("orient", "auto")
-        .append("path").attr("d", "M0,-4L8,0L0,4").attr("fill", ideas[i].color);
-    });
-    ideas.forEach((I, i) => {
-      svg.append("line")
-        .attr("x1", leftX + 70).attr("y1", I.y)
-        .attr("x2", midX - 80 - 2).attr("y2", H / 2)
-        .attr("stroke", I.color).attr("stroke-width", 1.5).attr("opacity", 0.7)
-        .attr("marker-end", `url(#arr-recap-${["p","c","h"][i]})`);
-    });
-
-    // Right: two applications
-    const apps = [
-      { label: "UMAP", desc: "layouts", y: 75, color: "var(--c-query)" },
-      { label: "Semantic Search", desc: "retrieval", y: 180, color: "var(--c-neighbor)" },
-    ];
-    defs.append("marker")
-      .attr("id", "arr-recap-out").attr("viewBox", "0 -5 10 10")
-      .attr("refX", 8).attr("refY", 0).attr("markerWidth", 6).attr("markerHeight", 6)
-      .attr("orient", "auto")
-      .append("path").attr("d", "M0,-4L8,0L0,4").attr("fill", "var(--text-2)");
-
-    apps.forEach(A => {
-      svg.append("rect")
-        .attr("x", rightX - 80).attr("y", A.y - 22)
-        .attr("width", 160).attr("height", 44).attr("rx", 6)
-        .attr("fill", "var(--fig-bg)")
-        .attr("stroke", A.color).attr("stroke-width", 1.5);
-      svg.append("text")
-        .attr("x", rightX).attr("y", A.y - 3)
-        .attr("text-anchor", "middle")
-        .attr("font-size", 12).attr("font-weight", 700).attr("fill", A.color)
-        .text(A.label);
-      svg.append("text")
-        .attr("x", rightX).attr("y", A.y + 13)
-        .attr("text-anchor", "middle")
-        .attr("font-size", 10).attr("fill", "var(--text-2)")
-        .text(A.desc);
-      // Arrow from primitive to app
-      svg.append("line")
-        .attr("x1", midX + 80).attr("y1", H / 2)
-        .attr("x2", rightX - 80 - 2).attr("y2", A.y)
-        .attr("stroke", "var(--text-2)").attr("stroke-width", 1.5).attr("opacity", 0.7)
-        .attr("marker-end", "url(#arr-recap-out)");
-    });
-  }
-
-  const ro = new ResizeObserver(() => { layout(); draw(); });
-  ro.observe(container);
-  layout();
-  draw();
+  const redraw = responsive(svgEl, () => 176, draw);
+  document.getElementById("budget-q").addEventListener("input", e => { logQ = +e.target.value; redraw(); });
 })();
 </script>
 </body>

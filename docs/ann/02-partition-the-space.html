@@ -3,12 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Partition the Space — Approximate Nearest Neighbors</title>
+<title>Partition the Space | Approximate Nearest Neighbors</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -26,13 +24,40 @@
   --bg: #fafafa;
   --fig-bg: #ffffff;
   --border: #e2e2e8;
+  --plot-bg: #fafafa;
+  --grid: #ececf1;
+  --muted: #cbd5e1;
+  --on-color: #ffffff;
 
+  /* ANN series palette: one color per role, the same in every chapter */
   --c-query: #db2777;
   --c-db: #64748b;
-  --c-neighbor: #f59e0b;
+  --c-neighbor: #d97706;
   --c-partition: #0d9488;
   --c-compress: #7c3aed;
   --c-hardware: #ea580c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e6dd;
+    --text-2: #a9a9bd;
+    --accent: #7fb2ff;
+    --accent-light: #1e2a44;
+    --bg: #16161f;
+    --fig-bg: #1f1f2c;
+    --border: #3a3a52;
+    --plot-bg: #191924;
+    --grid: #2b2b3d;
+    --muted: #4a4f63;
+    --on-color: #16161f;
+    --c-query: #f472b6;
+    --c-db: #94a3b8;
+    --c-neighbor: #fbbf24;
+    --c-partition: #2dd4bf;
+    --c-compress: #a78bfa;
+    --c-hardware: #fb923c;
+  }
 }
 
 body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
@@ -44,30 +69,51 @@ h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
 h3 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
 p { margin: 0 0 1rem; }
 a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+code { font-family: var(--mono-font); font-size: 0.9em; }
+.subtitle { font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2); }
+.part-of { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem; }
+.note { font-size: 0.95rem; color: var(--text-2); border-left: 2px solid var(--border); padding-left: 0.9rem; margin: 1.25rem 0; }
 
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .figure-wide { margin-left: -2rem; margin-right: -2rem; }
 .figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.45; }
 .figure-label { font-weight: 600; color: var(--text); }
+.plot { width: 100%; min-width: 0; }
+.plot svg { display: block; border-radius: 4px; max-width: 100%; }
+.plot svg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; align-items: start; }
 
-.controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
-.controls input[type="range"] { width: 160px; accent-color: var(--accent); }
-.controls label { display: flex; align-items: center; gap: 0.5rem; }
-.controls .val { font-family: var(--mono-font); color: var(--text); min-width: 2.5em; display: inline-block; text-align: right; }
-.controls button { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.25rem 0.7rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text-2); cursor: pointer; }
-.controls button:hover { background: var(--bg); color: var(--text); }
+.controls { display: flex; align-items: center; gap: 0.6rem 1rem; flex-wrap: wrap; margin-bottom: 0.9rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.controls input[type="range"] { width: 150px; max-width: 42vw; accent-color: var(--accent); }
+.controls label { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.controls .val { font-family: var(--mono-font); color: var(--text); min-width: 2.5em; display: inline-block; }
+.controls button, .controls select { font-family: var(--heading-font); font-size: 0.85rem; padding: 0.3rem 0.7rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text); cursor: pointer; }
+.controls button:hover { background: var(--bg); }
+.controls button[aria-pressed="true"] { background: var(--text); color: var(--fig-bg); border-color: var(--text); }
+.hint { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin: 0 0 0.6rem; }
 
-.readout { display: flex; gap: 1.25rem; flex-wrap: wrap; font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-2); margin-top: 0.5rem; }
+.readout { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.6rem; min-height: 2.6em; line-height: 1.45; }
 .readout b { font-family: var(--mono-font); font-weight: 500; color: var(--text); }
 
-svg text { font-family: var(--heading-font); }
+/* inherited, so a fill or font-size attribute on an individual element still wins */
+.plot svg { font-family: var(--heading-font); font-size: 13px; fill: var(--text-2); color: var(--text-2); }
 
 .t-query { color: var(--c-query); font-weight: 600; }
 .t-db { color: var(--c-db); font-weight: 600; }
 .t-neighbor { color: var(--c-neighbor); font-weight: 600; }
 .t-partition { color: var(--c-partition); font-weight: 600; }
+.t-compress { color: var(--c-compress); font-weight: 600; }
+.t-hardware { color: var(--c-hardware); font-weight: 600; }
 
-@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } }
+footer { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+footer a { color: var(--text-2); }
+footer a.next { color: var(--accent); }
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .figure { padding: 0.9rem; }
+  .figure-wide { margin-left: 0; margin-right: 0; }
+}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
 </style>
 </head>
@@ -75,218 +121,189 @@ svg text { font-family: var(--heading-font); }
 <div class="article">
   <header>
     <h1>Partition the Space</h1>
-    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
-      The first of three ideas behind modern ANN: cut the vector space into regions so every
-      query only searches the regions that could possibly contain its neighbors.
+    <p class="subtitle">
+      The first of three ideas behind approximate nearest-neighbor search: cut the vector
+      space into regions so a query only searches the regions likely to hold its neighbors.
     </p>
-    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">
-      Part 2 of <a href="index.html">Approximate Nearest Neighbors</a>
-    </p>
+    <p class="part-of">Part 2 of <a href="index.html">Approximate Nearest Neighbors</a></p>
   </header>
 
-  <h2>Exploit the Clustering That Real Data Has</h2>
+  <h2>Using the clusters that real data has</h2>
   <p>
-    The previous article left us in an awkward place. In high dimensions, a kd-tree's pruning
-    test almost always fails, and the naive linear scan is the only algorithm that still
-    works. Distances concentrate, corners swallow the volume, and the geometry pushes back
-    against anything clever.
+    The <a href="01-curse-of-dimensionality.html">previous article</a> ended with a kd-tree
+    that, by 16 to 20 dimensions, examined nearly every point to answer one query. That
+    measurement used points sampled uniformly at random from a cube, which is the hard case.
   </p>
   <p>
-    But there is an important asterisk on that story. The experiments in Article 1 used
-    points sampled <em>uniformly at random</em> in the unit cube. That is a worst case.
-    Real embeddings never look like that. A sentence embedding from a language model sits in
-    768 or 1536 dimensions, but the vectors a real corpus actually produces cluster heavily:
-    by topic, by language, by style, by whatever the model learned to care about. The
-    ambient space is high-dimensional, but the data lives on a much lower-dimensional
-    manifold inside it.
+    Real embeddings do not look like that. A sentence embedding has 768 or 1536 dimensions,
+    but the vectors a corpus produces clump by topic, by language, by style, by whatever the
+    model learned to separate. The data behaves as if it had far fewer dimensions than the
+    space it sits in.
   </p>
   <p>
-    This is the opening that partitioning exploits. If the data clumps, we can group those
-    clumps into regions and store the grouping. At query time we find the few regions near
-    the query and scan only those. The <span class="t-partition">partitioning</span> idea
-    shows up in three main forms, each answering the same question differently: IVF draws
-    its regions around learned centroids, LSH draws them with random hyperplanes, and graph
-    methods like HNSW trade explicit regions for a navigable mesh of local neighborhoods.
+    Partitioning uses those clumps. We group nearby vectors into regions ahead of time, and
+    at query time we find the few regions near the query and scan only those. There are
+    three common ways to draw the regions: <span class="t-partition">IVF</span> puts them
+    around learned centroids, LSH cuts them with random hyperplanes, and graph indexes such
+    as HNSW replace explicit regions with links between neighboring points.
   </p>
 
-  <h2>IVF: Cluster the Database, Only Scan One Cell</h2>
+  <h2>IVF: cluster the database, scan one cell</h2>
   <p>
-    The most intuitive partition is the one you would invent on a napkin. Run k-means on the
-    database. You get k <span class="t-partition">centroids</span>. Assign every vector to
-    its closest centroid. That builds an <em>inverted file</em>, one posting list per
-    centroid, hence the name <strong>IVF</strong>. At query time you compare the query to
-    the k centroids (cheap, because k is small) and scan the posting list attached to the
-    nearest one.
+    Run k-means on the database to get a set of <span class="t-partition">centroids</span>,
+    and assign every vector to its closest one. Each centroid now owns a list of vectors,
+    and the set of lists is called an <em>inverted file</em>, which is where the name
+    <strong>IVF</strong> comes from. At query time we compare the query to the centroids,
+    which is cheap because there are few of them, and scan the list of the nearest one.
+    We will call the number of centroids <code>nlist</code>, as FAISS does.
   </p>
 
   <div class="figure figure-wide" id="fig-ivf">
     <div class="controls">
-      <label>clusters k = <input type="range" id="ivf-k" min="2" max="20" value="8" step="1"><span class="val" id="ivf-k-val">8</span></label>
+      <label>cells (nlist) <input type="range" id="ivf-k" min="2" max="20" value="8" step="1"><span class="val" id="ivf-k-val">8</span></label>
       <button id="ivf-regen">new dataset</button>
-      <span style="margin-left: auto; font-size: 0.8rem;">move the cursor to place the query</span>
     </div>
-    <svg id="ivf-svg" style="width:100%; display:block; border-radius:4px;"></svg>
-    <div class="readout">
-      <span>scanning cell <b id="ivf-cell">3</b></span>
-      <span>points in cell: <b id="ivf-scanned">0</b> / <b id="ivf-total">0</b></span>
-      <span>best in cell: <b id="ivf-best">0.00</b></span>
-      <span>true NN: <b id="ivf-true">0.00</b></span>
-    </div>
+    <p class="hint">Move the cursor over the plot, tap it, or focus it and use the arrow keys.</p>
+    <div class="plot"><svg id="ivf-svg"></svg></div>
+    <div class="readout" id="ivf-readout"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 1.</span>
-      A synthetic 2D database laid out in a few soft clusters. K-means carves it into
-      <span class="t-partition">Voronoi cells</span>. The query's cell lights up teal,
-      the closest point inside it lights up amber. Sometimes the true nearest neighbor
-      sits in a different cell, just across the boundary. That is the weak spot of
-      single-cell search.
+      220 points, clustered with k-means; the lines are the borders between cells. The search
+      scans only the <span class="t-partition">teal cell</span>, the one whose centroid
+      (square) is closest to the <span class="t-query">query</span>, and returns the best
+      point it finds there (solid line). The figure opens on a query where that is the wrong
+      answer: the <span class="t-neighbor">true nearest neighbor</span> (dashed line) sits
+      just across a border, in a cell that was never scanned.
     </div>
   </div>
 
   <p>
-    This is fast. The query does a distance computation to k centroids plus a scan of one
-    posting list, not the whole database. If the centroids carve the data into roughly equal
-    cells of size N/k, each query inspects about 1/k of the points. For k = 100 and
-    N = 1 million, that is 10,000 distance checks instead of a million.
+    The saving is easy to count. A query costs <code>nlist</code> centroid comparisons plus
+    a scan of one list. If the cells are roughly equal, a list holds N / nlist vectors, so
+    with nlist = 100 and N = 1 million a query makes 100 + 10,000 distance computations
+    instead of a million.
   </p>
   <p>
-    IVF also inherits a nice property from k-means: the centroids themselves describe where
-    the data concentrates. A centroid with a big posting list sits in a dense region. An
-    empty cell means no vector fell closer to that centroid than to any other. This is why
-    the first thing any production IVF index does is train on a representative sample of
-    the data rather than picking random centroids.
+    The centroids are fit to the data, so cells are small where the data is dense and large
+    where it is sparse. That is also the method's dependency: an IVF index has to be trained
+    on a representative sample before anything is added to it, and if the data drifts away
+    from that sample the cells stop matching it.
   </p>
 
-  <h2>The Boundary Problem, and <code>nprobe</code></h2>
+  <h2>Probing more than one cell</h2>
   <p>
-    Single-cell search has an obvious failure mode. If the query lands near a cell boundary,
-    the true nearest neighbor may be just on the other side. Voronoi cells are convex and
-    sharp; a single point of displacement can land the query in the wrong cell entirely.
-    The fix is to scan not just the closest cell but the
-    <code style="font-family: var(--mono-font);">nprobe</code> closest cells. This trades
-    speed for recall in a knob the user controls.
+    Figure 1 shows the failure of single-cell search. A neighbor is missed whenever it was
+    assigned to a different centroid than the query, which happens when the two sit on
+    opposite sides of a cell border, however close together they are. The fix is to scan
+    the <code>nprobe</code> closest cells instead of one.
   </p>
   <p>
-    As <code>nprobe</code> grows from 1 toward k, recall climbs toward exact and speed
-    degrades toward a linear scan. In between there is a sweet spot where you catch nearly
-    all the true neighbors while still inspecting a small fraction of the database. Every
-    partition-based ANN method has some version of this knob, even when the "cells" are not
-    literal Voronoi regions.
+    As <code>nprobe</code> grows from 1 toward <code>nlist</code>, recall climbs toward
+    exact and the work climbs toward a linear scan. The figure below shows both for one
+    index: the left panel is a single query, the right panel is the average over many.
   </p>
 
   <div class="figure figure-wide" id="fig-nprobe">
     <div class="controls">
-      <label>nprobe = <input type="range" id="np-slider" min="1" max="16" value="1" step="1"><span class="val" id="np-val">1</span></label>
-      <label>query radius (recall@k) k = <input type="range" id="np-k" min="1" max="20" value="10" step="1"><span class="val" id="np-k-val">10</span></label>
+      <label>nprobe <input type="range" id="np-slider" min="1" max="12" value="1" step="1"><span class="val" id="np-val">1</span></label>
+      <label>neighbors wanted, k <input type="range" id="np-k" min="1" max="20" value="10" step="1"><span class="val" id="np-k-val">10</span></label>
     </div>
-    <div style="display:grid; grid-template-columns: 1.4fr 1fr; gap: 1rem; align-items: stretch;">
-      <div>
-        <svg id="np-scatter" style="width:100%; display:block; border-radius:4px;"></svg>
-      </div>
-      <div>
-        <svg id="np-chart" style="width:100%; display:block; border-radius:4px;"></svg>
-      </div>
+    <p class="hint">Drag nprobe. Move the query with the cursor, a tap, or the arrow keys.</p>
+    <div class="panels">
+      <div class="plot"><svg id="np-scatter"></svg></div>
+      <div class="plot"><svg id="np-chart"></svg></div>
     </div>
-    <div class="readout">
-      <span>scanning <b id="np-frac">12%</b> of points</span>
-      <span>recall@<span id="np-k-out">10</span>: <b id="np-recall">0.70</b></span>
-    </div>
+    <div class="readout" id="np-readout"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 2.</span>
-      Drag the <code style="font-family: var(--mono-font);">nprobe</code> slider. On the
-      left, each additional probed cell joins the scanned region in teal. On the right,
-      the curve plots recall against the fraction of points actually scanned. The dot marks
-      the current position. Low <code style="font-family: var(--mono-font);">nprobe</code>
-      is fast but sometimes misses neighbors near a boundary; high
-      <code style="font-family: var(--mono-font);">nprobe</code> approaches exact search.
-      This tradeoff shape is the core of every partition-based ANN method.
+      An IVF index with 40 cells over 600 points. Left: the probed cells are
+      <span class="t-partition">teal</span>; the query's true k nearest neighbors are
+      <span class="t-neighbor">amber</span>, filled if a probed cell contains them and
+      hollow if they were missed. Right: recall against the share of the database scanned,
+      averaged over 200 queries placed near the data. The dashed diagonal is what scanning
+      a random subset of that size would find. One probe finds about two
+      thirds of the neighbors; three or four find nearly all of them. This toy is easy
+      because a cell in two dimensions has only a handful of adjacent cells. In high
+      dimensions a cell borders many more cells, which is why real indexes often probe
+      tens of cells out of thousands.
     </div>
   </div>
 
   <p>
-    There is a simple mental model for when boundary mistakes happen. A neighbor gets missed
-    when it is closer to the query than the query's own chosen centroid is, but closer to a
-    different centroid than to the query's chosen centroid. Geometrically, the bad points
-    live in thin slivers along cell boundaries. More clusters means more boundaries, which
-    means more slivers, which means you need a higher <code>nprobe</code> to sweep them up.
-    Fewer, bigger clusters hide fewer neighbors, but each scan is larger.
+    The choice of <code>nlist</code> moves this curve. More cells mean shorter lists but
+    more borders for a neighbor to fall behind, so a higher <code>nprobe</code> is needed
+    for the same recall. The total work is about nlist + nprobe · N / nlist distance
+    computations, which is smallest when nlist is near √(nprobe · N). That square root is
+    why IVF guidelines scale <code>nlist</code> with √N.
   </p>
 
-  <h2>LSH: Let Randomness Do the Partitioning</h2>
+  <h2>LSH: partitioning with random hyperplanes</h2>
   <p>
-    IVF works because k-means finds centroids where the data concentrates. That requires
-    training, and the resulting cells only make sense for the dataset they were fit to.
-    A different approach gives up trying to know where clusters are and just partitions with
-    random hyperplanes. This is the core idea of <strong>locality-sensitive hashing</strong>,
-    or LSH.
+    IVF has to be trained, and its cells only fit the dataset they were trained on.
+    <strong>Locality-sensitive hashing</strong>, or LSH, partitions without looking at the
+    data at all. In its random-hyperplane form, each hyperplane splits space into two
+    halves and gives every vector one bit, depending on the side it falls on. With h
+    hyperplanes each vector gets an h-bit code, and vectors with the same code share a
+    bucket.
   </p>
   <p>
-    A single random hyperplane through the origin splits space into two halves. Every vector
-    falls on one side or the other, so you can assign it a single bit. Stack h independent
-    random hyperplanes and each vector becomes an h-bit hash code. The hash function has a
-    useful property: two points that are close together are likely to land on the same side
-    of any random hyperplane, so they are likely to share their hash code. Two points that
-    are far apart are likely to be split.
+    Two vectors separated by a small angle are unlikely to be split by a random hyperplane,
+    so near neighbors tend to share a bucket. Each added hyperplane makes buckets smaller,
+    which means less to scan, and gives every pair of neighbors one more chance to be
+    separated.
   </p>
 
   <div class="figure figure-wide" id="fig-lsh">
     <div class="controls">
-      <label>hyperplanes h = <span class="val" id="lsh-h-val">3</span>
-        <button id="lsh-minus">−</button>
-        <button id="lsh-plus">+</button>
+      <label>hyperplanes h
+        <button id="lsh-minus" aria-label="fewer hyperplanes">−</button>
+        <span class="val" id="lsh-h-val" style="min-width:1.2em; text-align:center;">3</span>
+        <button id="lsh-plus" aria-label="more hyperplanes">+</button>
       </label>
       <button id="lsh-regen">new hyperplanes</button>
-      <span style="margin-left: auto; font-size: 0.8rem;">hover a point to highlight its hash bucket</span>
     </div>
-    <svg id="lsh-svg" style="width:100%; display:block; border-radius:4px;"></svg>
-    <div class="readout">
-      <span>buckets in use: <b id="lsh-buckets">0</b> / <b id="lsh-max">8</b></span>
-      <span>avg bucket size: <b id="lsh-avg">0</b></span>
-      <span>collision rate among top-10 true neighbors: <b id="lsh-coll">0%</b></span>
-    </div>
+    <p class="hint">Point at, tap, or arrow-key to a point to select it.</p>
+    <div class="plot"><svg id="lsh-svg"></svg></div>
+    <div class="readout" id="lsh-readout"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 3.</span>
-      Random hyperplanes split the plane into binary-coded regions. Each point is colored
-      by its hash bucket. Hover to see which other points share a bucket. With few
-      hyperplanes the buckets are huge and easy to share; with many, buckets fracture
-      and even close neighbors fall apart. The collision rate is the fraction of a point's
-      top-10 true neighbors that land in its bucket, averaged over the dataset.
+      Random hyperplanes (lines, in two dimensions) through the center of 180 points. The
+      selected point's bucket is <span class="t-compress">purple</span>. Its ten true
+      nearest neighbors are ringed in <span class="t-neighbor">amber</span>: a ring around a
+      purple point is a neighbor the bucket kept, a ring around a gray point is one that a
+      hyperplane cut off. Add hyperplanes and the bucket shrinks, and so does the share of
+      neighbors it keeps.
     </div>
   </div>
 
   <p>
-    LSH needs no training. The hash function is picked once, at random,
-    and works for any dataset. It also has provable guarantees: you can bound the probability
-    that near points collide and far points do not, given the number of hyperplanes and the
-    distance threshold. In practice a single hash table is too noisy, so real LSH uses
-    multiple independent tables and takes the union of the buckets each returns. More tables
-    means more candidates, which means better recall at the cost of more work.
+    LSH needs no training, since the hyperplanes are drawn once at random and work for any
+    dataset, and the probability that two vectors collide can be written down as a function
+    of the angle between them. A single table loses too many neighbors, as the figure shows,
+    so practical LSH builds several independent tables and scans the union of the query's
+    buckets. More tables recover recall and add work.
   </p>
   <p>
-    Ignoring the data is also LSH's weakness. Random hyperplanes waste capacity on empty
-    regions and overfill dense ones. Data-aware methods
-    use the structure of the dataset and reach higher recall for the same work. In the last
-    decade LSH has lost ground to graph methods on the standard benchmarks.
-    It remains useful for theoretical analysis and for settings where the dataset changes
-    too fast to retrain centroids.
+    Ignoring the data is also the weakness. Random hyperplanes spend bits on empty regions
+    and leave dense ones undivided, so for the same amount of scanning, methods that look at
+    the data usually reach higher recall. LSH is still used where the data changes too fast
+    to retrain, and it is the easiest of the three to analyze.
   </p>
 
-  <h2>Graph-Based: HNSW as a Highway System</h2>
+  <h2>Graph indexes: walking toward the query</h2>
   <p>
-    The method that currently dominates production ANN is neither centroids nor hyperplanes
-    but a <em>graph</em>. The idea is to precompute a structure where every vector is a
-    vertex connected to some of its nearest neighbors, and then to answer a query by
-    walking that graph. Start at some entry node. Look at its neighbors. Move to whichever
-    is closest to the query. Repeat. When no neighbor is closer, you have found a local
-    minimum, which is almost always a true nearest neighbor if the graph was built well.
+    The third approach stores a graph. Every vector is a node linked to some of its near
+    neighbors, and a query is answered by walking: start at an entry node, look at its
+    neighbors, move to whichever is closest to the query, and repeat until no neighbor is
+    closer.
   </p>
   <p>
-    A plain k-NN graph gets you most of the way but struggles when the query is far from
-    the entry node: the greedy walk has to cross the whole dataset one short hop at a time.
-    <strong>HNSW</strong> (Hierarchical Navigable Small World) fixes this by building
-    multiple layers. The top layer has very few nodes, connected by long edges. The bottom
-    layer has every node, connected to its near neighbors. The query descends layer by
-    layer: a few long jumps at the top put it in the right neighborhood, then progressively
-    shorter hops zoom in, the way an airline routes a long trip through hubs.
+    A walk over short links alone would cross a large dataset one small hop at a time.
+    <strong>HNSW</strong> (Hierarchical Navigable Small World) adds layers. Every node is in
+    the bottom layer, a random fraction are also in the layer above, and a fraction of those
+    in the one above that. The upper layers have few nodes, so their links are long. A
+    query starts at the top, walks until it stops improving, drops a layer at the node it
+    reached, and continues.
   </p>
 
   <div class="figure figure-wide" id="fig-hnsw">
@@ -295,122 +312,110 @@ svg text { font-family: var(--heading-font); }
       <label><input type="checkbox" id="hnsw-l1" checked> middle layer</label>
       <label><input type="checkbox" id="hnsw-l0" checked> bottom layer</label>
       <button id="hnsw-replay">replay walk</button>
-      <span style="margin-left: auto; font-size: 0.8rem;">move the cursor to place the query</span>
     </div>
-    <svg id="hnsw-svg" style="width:100%; display:block; border-radius:4px;"></svg>
-    <div class="readout">
-      <span>layers visited: <b id="hnsw-layers">3</b></span>
-      <span>hops: <b id="hnsw-hops">0</b></span>
-      <span>distance comparisons: <b id="hnsw-comps">0</b></span>
-    </div>
+    <p class="hint">Move the query with the cursor, a tap, or the arrow keys.</p>
+    <div class="plot"><svg id="hnsw-svg"></svg></div>
+    <div class="readout" id="hnsw-readout"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 4.</span>
-      A three-layer HNSW graph. The top layer is sparse with long edges; the bottom layer
-      is dense with short edges. The query (your cursor) enters at the top and greedily
-      walks toward itself. When no neighbor on this layer is closer, the search drops a
-      layer and continues. The full walk traverses far fewer vertices than the database
-      has. Toggle layers on and off to see the highway system without the local roads, or
-      vice versa.
+      A three-layer graph over 140 points, built by HNSW's insertion procedure. The walk
+      (<span class="t-neighbor">amber</span>) always enters at the same top-layer node
+      (ringed), takes long hops there, then shorter ones in each layer below. The readout
+      counts every distance the walk computed, and says whether it ended on the query's true
+      nearest neighbor. Move the query around: it usually does, and sometimes stops one node
+      short.
     </div>
   </div>
 
+  <p class="note">
+    Two simplifications in Figure 4. The walk is purely greedy, keeping only its single best
+    node; HNSW keeps a list of the best <code>ef</code> candidates in the bottom layer and
+    expands all of them, which is how it avoids stopping one node short and how it trades
+    work for recall. And with 140 points the layers are tiny; the hierarchy pays off when
+    the bottom layer has millions of nodes.
+  </p>
   <p>
-    HNSW's build cost is high. Every vector has to be inserted, which involves running a
-    query-like walk to find the neighbors to connect to. For a million vectors in 768
-    dimensions, this can take hours on a single machine. Its memory footprint is also
-    substantial, because each vector stores its edge list on top of the vector itself.
-    In exchange it gives the best recall-per-query-time among open-source indexes and
-    scales to tens of millions of vectors. Weaviate and Qdrant build HNSW indexes by
-    default, and pgvector offers HNSW alongside IVF.
+    The links are what the method depends on. HNSW does not connect each node to its
+    nearest neighbors only: when it picks links for a node it skips a candidate that is
+    closer to an already chosen neighbor than to the node itself, which spreads the links
+    out in different directions. Figure 5 includes a graph built without that rule, and it
+    shows why the rule is there.
+  </p>
+  <p>
+    Graph indexes cost more to build than IVF, because every insertion is itself a search,
+    and they cost memory: on top of each vector, hnswlib stores about 8 · M bytes of links,
+    where M is the number of links per node. HNSW is the default index in Weaviate and
+    Qdrant, and pgvector offers it alongside IVF.
   </p>
 
-  <h2>Tradeoffs</h2>
+  <h2>Comparing the three on one dataset</h2>
   <p>
-    Every partition method is navigating the same recall-versus-speed plane. What differs is
-    the slope of the curve and the shape of the knobs. Here is a stylized picture of where
-    the three methods sit. The curves are representative, not taken from any specific
-    benchmark, but their ordering matches what ann-benchmarks.com has shown on most
-    datasets for years.
+    All three methods trade recall against work, each with its own knob:
+    <code>nprobe</code> for IVF, the number of tables for LSH, the candidate list size
+    <code>ef</code> for a graph. To compare them we built all three in this page over the
+    same data and swept each knob. Work is counted in distance computations per query, as a
+    share of the database, so a full scan is 100%.
   </p>
 
   <div class="figure figure-wide" id="fig-tradeoff">
-    <svg id="tradeoff-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="plot"><svg id="tradeoff-svg"></svg></div>
+    <div class="readout" id="tradeoff-readout"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 5.</span>
-      Recall at 10 against queries per second (log scale). Up and to the right is
-      better: high recall, high throughput. Exact search is the dashed line on the
-      left: perfect recall at the lowest throughput, set by the dataset size. HNSW
-      sits above the others across most of the plane. IVF is close behind and competitive
-      at lower recall targets. LSH lags, especially at high recall.
+      Measured in this page: recall@10 against distance computations per query, for 2,000
+      points in 16 dimensions (20 Gaussian clusters) and 100 queries. Up and to the left is
+      better. Each dot is one setting of the method's knob. IVF has 45 cells; LSH uses 8
+      hyperplanes per table; the graph is a single-layer HNSW-style graph with M = 8. The
+      dashed line is a plain 8-nearest-neighbor graph searched the same way: with only
+      nearest-neighbor links the clusters are barely connected to each other, and many walks
+      that start in the wrong cluster never reach the right one, however long the candidate list.
     </div>
   </div>
 
   <p>
-    A short summary of the practical character of each method:
+    This is a small experiment and it counts distance computations, not time, so it leaves
+    out memory access patterns, SIMD and everything else the
+    <a href="04-hardware-aware-design.html">hardware article</a> is about. At 2,000 points
+    the three methods are within a small factor of each other. The gap widens with scale,
+    because a graph search grows roughly with log N while an IVF scan grows with √N. On the
+    million-vector datasets tracked by <a href="https://ann-benchmarks.com">ann-benchmarks</a>,
+    graph indexes have held the best recall for a given query rate for years, with IVF
+    variants behind them and LSH further back.
   </p>
-
-  <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0; font-family: var(--heading-font); font-size: 0.88rem;">
-    <div style="padding: 1rem 1.1rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-partition);">
-      <div style="font-weight: 700; color: var(--c-partition); margin-bottom: 0.4rem;">IVF</div>
-      <div style="color: var(--text-2); line-height: 1.45;">Fast build. Strong baseline. Tuning reduces to one knob (<code style="font-family: var(--mono-font);">nprobe</code>). Quality depends on k-means capturing the data's structure.</div>
-    </div>
-    <div style="padding: 1rem 1.1rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-partition);">
-      <div style="font-weight: 700; color: var(--c-partition); margin-bottom: 0.4rem;">LSH</div>
-      <div style="color: var(--text-2); line-height: 1.45;">No training. Theoretical guarantees. Needs many hash tables in practice. Losing ground to data-aware methods on empirical benchmarks.</div>
-    </div>
-    <div style="padding: 1rem 1.1rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-partition);">
-      <div style="font-weight: 700; color: var(--c-partition); margin-bottom: 0.4rem;">HNSW</div>
-      <div style="color: var(--text-2); line-height: 1.45;">Best recall-per-QPS. Heavy on memory. Slow to build. The default in most production vector databases today.</div>
-    </div>
-  </div>
-
   <p>
-    There is one more thing to say before moving on. All three methods reduce the number of
-    full-vector distance computations a query has to perform, but they do not make any
-    single distance computation faster. Each comparison still touches every dimension of
-    two vectors. If the vectors are 1536-dimensional floats, that is 6 KB per vector and a
-    few thousand multiply-adds to compare them. When the database grows into the hundreds
-    of millions of vectors, even a tiny fraction of "let me look at this one" becomes a lot
-    of arithmetic.
+    In practice the choice also depends on what else the index has to do. IVF builds
+    quickly, has one main knob, and its lists are contiguous blocks that compress and page
+    well, which matters in the next two articles. HNSW gives the best recall per query when
+    everything fits in memory. LSH needs no training and tolerates data that changes
+    constantly.
   </p>
 
-  <h2>Next: Compress the Vectors</h2>
+  <h2>What partitioning leaves untouched</h2>
   <p>
-    Partitioning decides <em>which</em> vectors to look at. The next article asks what if we
-    made each vector itself cheaper to look at? Product quantization, binary codes, and
-    their friends trade a little accuracy in the distance computation for an order-of-magnitude
-    drop in memory and CPU per comparison. Stacked on top of IVF or HNSW, compression is
-    what lets a billion-vector index run on a single machine.
+    All three methods reduce how many vectors a query is compared against. None of them
+    makes a single comparison cheaper. Each one still reads every dimension of a stored
+    vector: for 1536-dimensional float32 vectors that is 6 KB of memory and 1,536
+    multiply-adds per comparison. With hundreds of millions of vectors, even a small share
+    of the database is a lot of bytes to read.
+  </p>
+  <p>
+    The <a href="03-compress-the-vectors.html">next article</a> is about making each vector
+    cheaper to store and to compare, at the cost of some accuracy in the distance.
   </p>
 
-  <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0; font-family: var(--heading-font);">
-    <div style="padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-partition); opacity: 0.55;">
-      <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 0.4rem;">Just read</div>
-      <div style="font-size: 1rem; font-weight: 700; color: var(--c-partition);">Partition</div>
-      <div style="font-size: 0.85rem; color: var(--text-2); line-height: 1.45;">Cut the space into regions and only search the ones near the query.</div>
-    </div>
-    <div style="padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-compress);">
-      <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 0.4rem;">Next</div>
-      <div style="font-size: 1rem; font-weight: 700; color: var(--c-compress);"><a href="03-compress-the-vectors.html" style="color: var(--c-compress); text-decoration: none;">Compress</a></div>
-      <div style="font-size: 0.85rem; color: var(--text-2); line-height: 1.45;">Replace full vectors with small codes that are cheap to compare.</div>
-    </div>
-    <div style="padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-hardware);">
-      <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 0.4rem;">Then</div>
-      <div style="font-size: 1rem; font-weight: 700; color: var(--c-hardware);"><a href="04-hardware-aware-design.html" style="color: var(--c-hardware); text-decoration: none;">Hardware</a></div>
-      <div style="font-size: 0.85rem; color: var(--text-2); line-height: 1.45;">Design for where the data lives: RAM, SSD, or GPU.</div>
-    </div>
-  </div>
-
-  <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
-    <p>Part of <a href="index.html" style="color: var(--text-2);">Approximate Nearest Neighbors</a>. Previous: <a href="01-curse-of-dimensionality.html" style="color: var(--accent);">The Curse of Dimensionality</a>. Next: <a href="03-compress-the-vectors.html" style="color: var(--accent);">Compress the Vectors</a>.</p>
-    <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+  <footer>
+    <p>Part of <a href="index.html">Approximate Nearest Neighbors</a>. Previous: <a href="01-curse-of-dimensionality.html">The Curse of Dimensionality</a>. Next: <a class="next" href="03-compress-the-vectors.html">Compress the Vectors</a>.</p>
+    <p>Built with <a href="https://github.com/enjalot/moonshine">moonshine</a>.</p>
   </footer>
 </div>
 
 <script>
 // ============================================================
-// Shared utilities
+// Shared helpers (the same block is inlined in every chapter)
 // ============================================================
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// Seeded RNG so every reader sees the same data
 function mulberry32(seed) {
   return function() {
     let t = seed += 0x6D2B79F5;
@@ -419,1085 +424,634 @@ function mulberry32(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+function gauss(rng) {
+  let u = 0; while (u === 0) u = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng());
+}
+// squared Euclidean distance, any dimension
+function d2(a, b) { let s = 0; for (let i = 0; i < a.length; i++) { const t = a[i] - b[i]; s += t * t; } return s; }
 
-// Generate a clustered 2D dataset (for several figures)
-function makeClusteredData(seed, N, nClusters) {
-  const rng = mulberry32(seed);
-  const centers = [];
-  for (let i = 0; i < nClusters; i++) {
-    centers.push([0.15 + rng() * 0.7, 0.15 + rng() * 0.7]);
+// Size an <svg> to its wrapper and redraw when the wrapper's width changes.
+// heightFor(W) picks the height; draw(W, H) renders. Returns a function that redraws.
+function responsive(svgEl, heightFor, draw) {
+  const box = svgEl.parentElement;
+  let lastW = -1;
+  function run() {
+    const W = Math.floor(box.clientWidth);
+    if (W <= 0) return;
+    lastW = W;
+    const H = heightFor(W);
+    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svgEl.setAttribute("width", W);
+    svgEl.setAttribute("height", H);
+    draw(W, H);
   }
-  const pts = [];
-  for (let i = 0; i < N; i++) {
-    const c = centers[Math.floor(rng() * nClusters)];
-    // Gaussian-ish around center via box-muller
-    const u1 = Math.max(1e-6, rng()), u2 = rng();
-    const r = 0.07 * Math.sqrt(-2 * Math.log(u1));
-    const theta = 2 * Math.PI * u2;
-    const x = c[0] + r * Math.cos(theta);
-    const y = c[1] + r * Math.sin(theta);
-    pts.push([Math.max(0.02, Math.min(0.98, x)), Math.max(0.02, Math.min(0.98, y))]);
-  }
-  return pts;
+  new ResizeObserver(() => { if (Math.floor(box.clientWidth) !== lastW) run(); }).observe(box);
+  run();
+  return run;
 }
 
-// K-means with kmeans++ init
-function kmeans(points, k, iters = 25, seed = 1) {
-  const rng = mulberry32(seed);
-  const N = points.length;
-  // kmeans++ init
-  const centroids = [points[Math.floor(rng() * N)].slice()];
-  while (centroids.length < k) {
-    const dists = points.map(p => {
-      let dm = Infinity;
-      for (const c of centroids) {
-        const dx = p[0] - c[0], dy = p[1] - c[1];
-        const d = dx * dx + dy * dy;
-        if (d < dm) dm = d;
-      }
-      return dm;
-    });
-    const sum = dists.reduce((a, b) => a + b, 0);
-    let r = rng() * sum, pick = 0;
-    for (let i = 0; i < N; i++) { r -= dists[i]; if (r <= 0) { pick = i; break; } }
-    centroids.push(points[pick].slice());
+// Let the reader place a query point in a plot: hover with a mouse, tap on touch
+// (a swipe still scrolls the page), arrow keys when the plot has focus.
+// toUnit(px, py) maps pixels to [0,1]^2; get/set read and write the query.
+function placeQuery(svgEl, toUnit, get, set) {
+  const at = e => { const r = svgEl.getBoundingClientRect(); set(toUnit(e.clientX - r.left, e.clientY - r.top)); };
+  svgEl.addEventListener("pointermove", e => { if (e.pointerType === "mouse") at(e); });
+  svgEl.addEventListener("pointerdown", at);
+  svgEl.setAttribute("tabindex", "0");
+  svgEl.addEventListener("keydown", e => {
+    const step = e.shiftKey ? 0.1 : 0.02;
+    const move = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+    if (!move) return;
+    e.preventDefault();
+    const q = get();
+    set([Math.max(0, Math.min(1, q[0] + move[0])), Math.max(0, Math.min(1, q[1] + move[1]))]);
+  });
+}
+const clamp01 = v => Math.max(0, Math.min(1, v));
+// Text alternative for a figure: role=img plus a description that tracks the current state
+function describe(svgEl, text) { svgEl.setAttribute("role", "img"); svgEl.setAttribute("aria-label", text); }
+
+// ============================================================
+// Numeric building blocks used by this chapter's figures
+// ============================================================
+function mixture(rng, n, D, nC, sLo, sHi) {
+  const centers = [], stds = [];
+  for (let c = 0; c < nC; c++) { centers.push(Array.from({ length: D }, () => rng())); stds.push(sLo + rng() * (sHi - sLo)); }
+  const pts = [], labels = [];
+  for (let i = 0; i < n; i++) {
+    const c = Math.floor(rng() * nC);
+    pts.push(Float64Array.from({ length: D }, (_, j) => centers[c][j] + gauss(rng) * stds[c]));
+    labels.push(c);
   }
-  // Lloyd iterations
+  return { pts, labels, centers, stds };
+}
+
+function kmeans(points, k, iters, rng) {
+  const N = points.length, D = points[0].length;
+  const cents = [Float64Array.from(points[Math.floor(rng() * N)])];
+  const dm = new Float64Array(N).fill(Infinity);
+  while (cents.length < k) {
+    const last = cents[cents.length - 1]; let sum = 0;
+    for (let i = 0; i < N; i++) { const d = d2(points[i], last); if (d < dm[i]) dm[i] = d; sum += dm[i]; }
+    let r = rng() * sum, pick = N - 1;
+    for (let i = 0; i < N; i++) { r -= dm[i]; if (r <= 0) { pick = i; break; } }
+    cents.push(Float64Array.from(points[pick]));
+  }
   const assign = new Int32Array(N);
   for (let it = 0; it < iters; it++) {
     for (let i = 0; i < N; i++) {
       let bd = Infinity, bi = 0;
-      for (let c = 0; c < k; c++) {
-        const dx = points[i][0] - centroids[c][0];
-        const dy = points[i][1] - centroids[c][1];
-        const d = dx * dx + dy * dy;
-        if (d < bd) { bd = d; bi = c; }
-      }
+      for (let c = 0; c < k; c++) { const d = d2(points[i], cents[c]); if (d < bd) { bd = d; bi = c; } }
       assign[i] = bi;
     }
-    const sums = Array.from({length: k}, () => [0, 0, 0]);
-    for (let i = 0; i < N; i++) {
-      sums[assign[i]][0] += points[i][0];
-      sums[assign[i]][1] += points[i][1];
-      sums[assign[i]][2] += 1;
-    }
-    for (let c = 0; c < k; c++) {
-      if (sums[c][2] > 0) {
-        centroids[c][0] = sums[c][0] / sums[c][2];
-        centroids[c][1] = sums[c][1] / sums[c][2];
-      }
-    }
+    const sums = Array.from({ length: k }, () => new Float64Array(D)), cnt = new Int32Array(k);
+    for (let i = 0; i < N; i++) { cnt[assign[i]]++; for (let j = 0; j < D; j++) sums[assign[i]][j] += points[i][j]; }
+    for (let c = 0; c < k; c++) if (cnt[c] > 0) for (let j = 0; j < D; j++) cents[c][j] = sums[c][j] / cnt[c];
   }
-  return { centroids, assign };
+  return { centroids: cents, assign };
 }
 
-function nearestCentroid(q, centroids) {
-  let bd = Infinity, bi = 0;
-  for (let c = 0; c < centroids.length; c++) {
-    const dx = q[0] - centroids[c][0], dy = q[1] - centroids[c][1];
-    const d = dx * dx + dy * dy;
-    if (d < bd) { bd = d; bi = c; }
-  }
-  return bi;
+function topK(pts, q, k, skip) {
+  const arr = [];
+  for (let i = 0; i < pts.length; i++) if (i !== skip) arr.push([d2(pts[i], q), i]);
+  arr.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  return arr.slice(0, k).map(o => o[1]);
+}
+
+function clustered2D(seed, N, nClusters) {
+  const rng = mulberry32(seed);
+  const centers = Array.from({ length: nClusters }, () => [0.15 + rng() * 0.7, 0.15 + rng() * 0.7]);
+  return Array.from({ length: N }, () => {
+    const c = centers[Math.floor(rng() * nClusters)];
+    return [clamp01(c[0] + 0.07 * gauss(rng)) * 0.96 + 0.02, clamp01(c[1] + 0.07 * gauss(rng)) * 0.96 + 0.02];
+  });
 }
 
 function rankCentroids(q, centroids) {
-  const arr = centroids.map((c, i) => {
-    const dx = q[0] - c[0], dy = q[1] - c[1];
-    return { i, d: dx * dx + dy * dy };
-  });
-  arr.sort((a, b) => a.d - b.d);
-  return arr.map(o => o.i);
+  return centroids.map((c, i) => [d2(c, q), i]).sort((a, b) => a[0] - b[0]).map(o => o[1]);
+}
+
+function graphSearch(pts, nb, q, entry, ef) {
+  const visited = new Set([entry]);
+  let comps = 1;
+  const d0 = d2(pts[entry], q);
+  const cand = [[d0, entry]], res = [[d0, entry]];
+  while (cand.length) {
+    let bi = 0;
+    for (let i = 1; i < cand.length; i++) if (cand[i][0] < cand[bi][0]) bi = i;
+    const c = cand[bi]; cand[bi] = cand[cand.length - 1]; cand.pop();
+    if (res.length >= ef && c[0] > res[res.length - 1][0]) break;
+    for (const j of nb[c[1]]) {
+      if (visited.has(j)) continue;
+      visited.add(j); comps++;
+      const d = d2(pts[j], q);
+      if (res.length < ef || d < res[res.length - 1][0]) {
+        cand.push([d, j]);
+        let k = res.length; res.push(null);
+        while (k > 0 && res[k - 1][0] > d) { res[k] = res[k - 1]; k--; }
+        res[k] = [d, j];
+        if (res.length > ef) res.pop();
+      }
+    }
+  }
+  return { res, comps };
+}
+
+function selectDiverse(pts, cands, M) {
+  const keep = [];
+  for (const [d, j] of cands) {
+    if (keep.length >= M) break;
+    if (keep.every(([, k]) => d2(pts[j], pts[k]) >= d)) keep.push([d, j]);
+  }
+  return keep;
+}
+
+function buildLayer(pts, ids, M, efConstruction) {
+  const nb = pts.map(() => []), entry = ids[0];
+  for (let t = 1; t < ids.length; t++) {
+    const i = ids[t];
+    const sel = selectDiverse(pts, graphSearch(pts, nb, pts[i], entry, efConstruction).res, M);
+    nb[i] = sel.map(o => o[1]);
+    for (const [, j] of sel) {
+      nb[j].push(i);
+      if (nb[j].length > 2 * M) {
+        const c = nb[j].map(k => [d2(pts[j], pts[k]), k]).sort((a, b) => a[0] - b[0]);
+        nb[j] = selectDiverse(pts, c, 2 * M).map(o => o[1]);
+      }
+    }
+  }
+  return { nb, entry };
+}
+
+function shuffled(n, rng) {
+  const a = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
 }
 
 // ============================================================
-// Figure 1: IVF — Voronoi regions, one scanned cell
+// Figure 1: IVF, one scanned cell
 // ============================================================
 (function() {
   const svgEl = document.getElementById("ivf-svg");
-  const container = svgEl.parentElement;
-  let W = 0, H = 380;
-
-  let k = 8;
-  let seed = 3;
-  let query = [0.5, 0.5];
-  const N = 220;
-  let points = [];
-  let result = null;
-
-  function regen() {
-    points = makeClusteredData(seed, N, 6);
-    result = kmeans(points, k, 30, seed + 1);
-  }
-
   const svg = d3.select(svgEl);
+  const N = 220, pad = 12;
+  let nlist = 8, seed = 3, points = [], km = null, query = [0.5, 0.5];
+  let W = 0, H = 0;
+  const toX = v => pad + v * (W - 2 * pad), toY = v => pad + v * (H - 2 * pad);
 
-  function layout() {
-    W = Math.max(320, container.clientWidth - 48);
-    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svgEl.setAttribute("width", W);
-    svgEl.setAttribute("height", H);
+  function train() { km = kmeans(points, nlist, 30, mulberry32(seed + 1)); }
+  function regen() { points = clustered2D(seed, N, 6); train(); }
+  function answer(q) {
+    const cell = rankCentroids(q, km.centroids)[0];
+    let trueNN = 0, trueD = Infinity, inNN = -1, inD = Infinity, count = 0;
+    for (let i = 0; i < N; i++) {
+      const d = d2(points[i], q);
+      if (d < trueD) { trueD = d; trueNN = i; }
+      if (km.assign[i] === cell) { count++; if (d < inD) { inD = d; inNN = i; } }
+    }
+    return { cell, trueNN, trueD: Math.sqrt(trueD), inNN, inD: Math.sqrt(inD), count };
   }
-
-  function toX(p) { return 20 + p[0] * (W - 40); }
-  function toY(p) { return 20 + p[1] * (H - 40); }
-
+  // open on a query where single-cell search returns the wrong point by the widest margin
+  function findMiss() {
+    let best = [0.5, 0.5], gap = 0;
+    for (let gx = 1; gx < 40; gx++) for (let gy = 1; gy < 40; gy++) {
+      const q = [gx / 40, gy / 40], a = answer(q);
+      if (a.inNN !== a.trueNN && a.count > 8 && a.inD - a.trueD > gap && a.trueD < 0.05) { gap = a.inD - a.trueD; best = q; }
+    }
+    return best;
+  }
   function draw() {
     svg.selectAll("*").remove();
-    // Frame
-    svg.append("rect").attr("x", 10).attr("y", 10)
-      .attr("width", W - 20).attr("height", H - 20)
-      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
-
-    const { centroids, assign } = result;
-    // Voronoi via d3.Delaunay on centroids in pixel space
-    const cpx = centroids.map(c => [toX(c), toY(c)]);
-    const delaunay = d3.Delaunay.from(cpx);
-    const voronoi = delaunay.voronoi([10, 10, W - 10, H - 10]);
-
-    const queryCell = nearestCentroid(query, centroids);
-
-    // Voronoi cells
-    svg.append("g").selectAll("path").data(centroids).join("path")
-      .attr("d", (c, i) => voronoi.renderCell(i))
-      .attr("fill", (c, i) => i === queryCell ? "rgba(13, 148, 136, 0.12)" : "none")
-      .attr("stroke", "var(--border)").attr("stroke-width", 1);
-
-    // Boundaries with a slightly stronger teal for the query cell
-    svg.append("path")
-      .attr("d", voronoi.renderCell(queryCell))
-      .attr("fill", "none")
-      .attr("stroke", "var(--c-partition)").attr("stroke-width", 1.3);
-
-    // True nearest neighbor (global)
-    let trueNN = 0, trueD = Infinity;
-    for (let i = 0; i < N; i++) {
-      const dx = points[i][0] - query[0], dy = points[i][1] - query[1];
-      const d = dx * dx + dy * dy;
-      if (d < trueD) { trueD = d; trueNN = i; }
-    }
-
-    // Best point inside query cell
-    let bestIn = -1, bestInD = Infinity, cellCount = 0;
-    for (let i = 0; i < N; i++) {
-      if (assign[i] === queryCell) {
-        cellCount++;
-        const dx = points[i][0] - query[0], dy = points[i][1] - query[1];
-        const d = dx * dx + dy * dy;
-        if (d < bestInD) { bestInD = d; bestIn = i; }
-      }
-    }
-
-    // Database points
-    svg.selectAll(".pt").data(points).join("circle")
-      .attr("class", "pt")
-      .attr("cx", p => toX(p)).attr("cy", p => toY(p))
-      .attr("r", (p, i) => i === trueNN ? 5 : (assign[i] === queryCell ? 3.5 : 2.7))
-      .attr("fill", (p, i) => {
-        if (i === trueNN) return "var(--c-neighbor)";
-        if (assign[i] === queryCell) return "var(--c-partition)";
-        return "var(--c-db)";
-      })
-      .attr("opacity", (p, i) => {
-        if (i === trueNN) return 1;
-        if (assign[i] === queryCell) return 0.95;
-        return 0.3;
-      });
-
-    // Centroids
-    svg.selectAll(".cent").data(centroids).join("rect")
-      .attr("class", "cent")
-      .attr("x", c => toX(c) - 3).attr("y", c => toY(c) - 3)
-      .attr("width", 6).attr("height", 6)
-      .attr("fill", (c, i) => i === queryCell ? "var(--c-partition)" : "var(--text-2)")
-      .attr("stroke", "white").attr("stroke-width", 1);
-
-    // Line from query to best-in-cell
-    if (bestIn >= 0) {
-      svg.append("line")
-        .attr("x1", toX(query)).attr("y1", toY(query))
-        .attr("x2", toX(points[bestIn])).attr("y2", toY(points[bestIn]))
-        .attr("stroke", "var(--c-partition)").attr("stroke-width", 1.2).attr("opacity", 0.8);
-    }
-    // Line from query to true NN (faint, for contrast)
-    if (trueNN !== bestIn) {
-      svg.append("line")
-        .attr("x1", toX(query)).attr("y1", toY(query))
-        .attr("x2", toX(points[trueNN])).attr("y2", toY(points[trueNN]))
-        .attr("stroke", "var(--c-neighbor)").attr("stroke-width", 1)
-        .attr("stroke-dasharray", "3 3").attr("opacity", 0.7);
-    }
-
-    // Query
-    svg.append("circle")
-      .attr("cx", toX(query)).attr("cy", toY(query)).attr("r", 6)
-      .attr("fill", "var(--c-query)").attr("stroke", "white").attr("stroke-width", 1.5);
-
-    // Legend
-    const leg = svg.append("g").attr("font-size", 11).attr("fill", "var(--text-2)")
-      .attr("transform", `translate(${W - 180}, 22)`);
-    const L = [
-      { c: "var(--c-query)", t: "query", sh: "c" },
-      { c: "var(--c-partition)", t: "scanned cell", sh: "c" },
-      { c: "var(--c-neighbor)", t: "true NN (may lie outside)", sh: "c" },
-    ];
-    L.forEach((o, i) => {
-      if (o.sh === "c") {
-        leg.append("circle").attr("cx", 4).attr("cy", i * 16).attr("r", 3.5).attr("fill", o.c);
-      }
-      leg.append("text").attr("x", 14).attr("y", i * 16 + 4).text(o.t);
-    });
-
-    // Readout
-    document.getElementById("ivf-cell").textContent = queryCell;
-    document.getElementById("ivf-scanned").textContent = cellCount;
-    document.getElementById("ivf-total").textContent = N;
-    document.getElementById("ivf-best").textContent = bestIn >= 0 ? Math.sqrt(bestInD).toFixed(3) : "—";
-    document.getElementById("ivf-true").textContent = Math.sqrt(trueD).toFixed(3);
+    svg.append("rect").attr("x", pad - 6).attr("y", pad - 6).attr("width", W - 2 * pad + 12).attr("height", H - 2 * pad + 12)
+      .attr("fill", "var(--plot-bg)").attr("stroke", "var(--border)").attr("rx", 4);
+    const a = answer(query);
+    const vor = d3.Delaunay.from(km.centroids.map(c => [toX(c[0]), toY(c[1])])).voronoi([pad - 6, pad - 6, W - pad + 6, H - pad + 6]);
+    svg.append("path").attr("d", vor.render()).attr("fill", "none").attr("stroke", "var(--text-2)").attr("opacity", 0.35);
+    svg.append("path").attr("d", vor.renderCell(a.cell)).attr("fill", "var(--c-partition)").attr("fill-opacity", 0.14)
+      .attr("stroke", "var(--c-partition)").attr("stroke-width", 1.5);
+    svg.selectAll(".pt").data(points).join("circle").attr("class", "pt")
+      .attr("cx", p => toX(p[0])).attr("cy", p => toY(p[1]))
+      .attr("r", (p, i) => i === a.trueNN ? 5.5 : 3)
+      .attr("fill", (p, i) => i === a.trueNN ? "var(--c-neighbor)" : km.assign[i] === a.cell ? "var(--c-partition)" : "var(--c-db)")
+      .attr("opacity", (p, i) => i === a.trueNN || km.assign[i] === a.cell ? 1 : 0.45);
+    svg.selectAll(".cent").data(km.centroids).join("rect").attr("class", "cent")
+      .attr("x", c => toX(c[0]) - 4).attr("y", c => toY(c[1]) - 4).attr("width", 8).attr("height", 8)
+      .attr("fill", (c, i) => i === a.cell ? "var(--c-partition)" : "var(--text-2)").attr("stroke", "var(--plot-bg)");
+    const line = (i, color, dash) => svg.append("line").attr("x1", toX(query[0])).attr("y1", toY(query[1]))
+      .attr("x2", toX(points[i][0])).attr("y2", toY(points[i][1])).attr("stroke", color).attr("stroke-width", 1.5).attr("stroke-dasharray", dash);
+    if (a.inNN >= 0) line(a.inNN, "var(--c-partition)", null);
+    if (a.inNN !== a.trueNN) line(a.trueNN, "var(--c-neighbor)", "4 3");
+    svg.append("circle").attr("cx", toX(query[0])).attr("cy", toY(query[1])).attr("r", 6)
+      .attr("fill", "var(--c-query)").attr("stroke", "var(--plot-bg)").attr("stroke-width", 1.5);
+    const missed = a.inNN !== a.trueNN;
+    const verdict = missed
+      ? `<b>Missed.</b> The best point in the cell is <b>${a.inD.toFixed(3)}</b> away; the true nearest neighbor is <b>${a.trueD.toFixed(3)}</b> away, in another cell.`
+      : `<b>Found.</b> The true nearest neighbor, <b>${a.trueD.toFixed(3)}</b> away, is in the scanned cell.`;
+    document.getElementById("ivf-readout").innerHTML =
+      `Compared the query to <b>${nlist}</b> centroids, then scanned <b>${a.count}</b> of <b>${N}</b> points (<b>${Math.round(100 * a.count / N)}%</b>). ${verdict}`;
+    describe(svgEl, `Scatter of ${N} clustered points divided into ${nlist} k-means cells. The query's cell holds ${a.count} points. ` +
+      (missed ? "The true nearest neighbor lies in a neighboring cell and is missed." : "The true nearest neighbor is inside the scanned cell."));
   }
-
-  function setQueryFromEvent(event) {
-    const r = svgEl.getBoundingClientRect();
-    const mx = (event.clientX - r.left) * (W / r.width);
-    const my = (event.clientY - r.top) * (H / r.height);
-    query = [
-      Math.max(0, Math.min(1, (mx - 20) / (W - 40))),
-      Math.max(0, Math.min(1, (my - 20) / (H - 40))),
-    ];
-    draw();
-  }
-
-  svgEl.addEventListener("pointermove", setQueryFromEvent);
-  svgEl.addEventListener("pointerdown", setQueryFromEvent);
-
-  document.getElementById("ivf-k").addEventListener("input", e => {
-    k = +e.target.value;
-    document.getElementById("ivf-k-val").textContent = k;
-    result = kmeans(points, k, 30, seed + 1);
-    draw();
-  });
-  document.getElementById("ivf-regen").addEventListener("click", () => {
-    seed = Math.floor(Math.random() * 999) + 1;
-    regen();
-    draw();
-  });
-
-  regen();
-  const ro = new ResizeObserver(() => { layout(); draw(); });
-  ro.observe(container);
-  layout();
-  draw();
+  regen(); query = findMiss();
+  responsive(svgEl, w => Math.round(Math.min(400, Math.max(280, w * 0.6))), (w, h) => { W = w; H = h; draw(); });
+  placeQuery(svgEl, (x, y) => [clamp01((x - pad) / (W - 2 * pad)), clamp01((y - pad) / (H - 2 * pad))], () => query, q => { query = q; draw(); });
+  document.getElementById("ivf-k").addEventListener("input", e => { nlist = +e.target.value; document.getElementById("ivf-k-val").textContent = nlist; train(); draw(); });
+  document.getElementById("ivf-regen").addEventListener("click", () => { seed = (seed * 37 + 5) % 997 + 1; regen(); draw(); });
 })();
 
 // ============================================================
-// Figure 2: nprobe tradeoff
+// Figure 2: nprobe, recall against share of the database scanned
 // ============================================================
 (function() {
-  const scatterEl = document.getElementById("np-scatter");
-  const chartEl = document.getElementById("np-chart");
-  const container = scatterEl.parentElement.parentElement;
+  const scEl = document.getElementById("np-scatter"), chEl = document.getElementById("np-chart");
+  const NLIST = 40, N = 600, NQ = 200, pad = 10;
+  const points = clustered2D(11, N, 7);
+  const km = kmeans(points, NLIST, 30, mulberry32(12));
+  const cellSize = new Array(NLIST).fill(0); km.assign.forEach(c => cellSize[c]++);
+  let nprobe = 1, topk = 10, query = [0.5, 0.5];
+  let Ws = 0, Hs = 0;
+  const toX = v => pad + v * (Ws - 2 * pad), toY = v => pad + v * (Hs - 2 * pad);
 
-  const K_CLUSTERS = 16;
-  let nprobe = 1;
-  let topK = 10;
-  const seed = 11;
-  const N = 320;
-
-  const points = makeClusteredData(seed, N, 7);
-  const { centroids, assign } = kmeans(points, K_CLUSTERS, 30, seed + 1);
-  const npSlider = document.getElementById("np-slider");
-  npSlider.max = K_CLUSTERS;
-
-  // Use a fixed query for the curve computation, but also the live query from cursor for the visual
-  let query = [0.5, 0.5];
-
-  let Wsc = 0, Hsc = 360;
-  let Wch = 0, Hch = 360;
-
-  function layout() {
-    Wsc = Math.max(260, scatterEl.clientWidth);
-    scatterEl.setAttribute("viewBox", `0 0 ${Wsc} ${Hsc}`);
-    scatterEl.setAttribute("width", Wsc); scatterEl.setAttribute("height", Hsc);
-    Wch = Math.max(220, chartEl.clientWidth);
-    chartEl.setAttribute("viewBox", `0 0 ${Wch} ${Hch}`);
-    chartEl.setAttribute("width", Wch); chartEl.setAttribute("height", Hch);
-  }
-
-  function toXsc(p) { return 14 + p[0] * (Wsc - 28); }
-  function toYsc(p) { return 14 + p[1] * (Hsc - 28); }
-
-  // Precompute a representative "recall vs fraction-scanned" curve by averaging across many sample queries
-  function computeCurve() {
-    const rng = mulberry32(91);
-    const samples = [];
-    for (let i = 0; i < 80; i++) samples.push([rng(), rng()]);
-    const curve = [];
-    for (let np = 1; np <= K_CLUSTERS; np++) {
-      let sumRecall = 0, sumFrac = 0;
-      for (const q of samples) {
-        // True top-K
-        const dists = points.map((p, i) => {
-          const dx = p[0] - q[0], dy = p[1] - q[1];
-          return { i, d: dx * dx + dy * dy };
-        });
-        dists.sort((a, b) => a.d - b.d);
-        const trueTop = new Set(dists.slice(0, topK).map(o => o.i));
-        // Probed cells
-        const ranked = rankCentroids(q, centroids).slice(0, np);
-        const cells = new Set(ranked);
-        let scanned = 0, hit = 0;
-        for (let i = 0; i < N; i++) {
-          if (cells.has(assign[i])) {
-            scanned++;
-            if (trueTop.has(i)) hit++;
-          }
-        }
-        sumRecall += hit / topK;
-        sumFrac += scanned / N;
+  // sample queries near the data; for each, the cell order and the database sorted by distance
+  const qrng = mulberry32(91);
+  const samples = Array.from({ length: NQ }, () => {
+    const p = points[Math.floor(qrng() * N)], q = [clamp01(p[0] + 0.03 * gauss(qrng)), clamp01(p[1] + 0.03 * gauss(qrng))];
+    return { cells: rankCentroids(q, km.centroids), order: topK(points, q, 20) };
+  });
+  function curve() {
+    return d3.range(1, 13).map(np => {
+      let rec = 0, frac = 0;
+      for (const s of samples) {
+        const probed = new Set(s.cells.slice(0, np));
+        let hit = 0; for (let t = 0; t < topk; t++) if (probed.has(km.assign[s.order[t]])) hit++;
+        rec += hit / topk;
+        frac += s.cells.slice(0, np).reduce((a, c) => a + cellSize[c], 0) / N;
       }
-      curve.push({ np, recall: sumRecall / samples.length, frac: sumFrac / samples.length });
-    }
-    return curve;
+      return { np, recall: rec / NQ, frac: frac / NQ };
+    });
   }
-  let curve = computeCurve();
-
-  const scatter = d3.select(scatterEl);
-  const chart = d3.select(chartEl);
+  let cv = curve();
+  function one(q) {
+    const probed = new Set(rankCentroids(q, km.centroids).slice(0, nprobe));
+    const truth = topK(points, q, topk);
+    const hit = truth.filter(i => probed.has(km.assign[i])).length;
+    let scanned = 0; probed.forEach(c => scanned += cellSize[c]);
+    return { probed, truth: new Set(truth), hit, scanned };
+  }
+  // open on the query with the worst single-probe recall
+  (function() {
+    let worst = 2;
+    for (let gx = 2; gx < 30; gx++) for (let gy = 2; gy < 30; gy++) {
+      const q = [gx / 30, gy / 30], a = one(q);
+      const near = Math.sqrt(d2(points[[...a.truth][topk - 1]], q));
+      if (near < 0.09 && a.scanned >= 12 && a.hit / topk < worst) { worst = a.hit / topk; query = q; }
+    }
+  })();
 
   function drawScatter() {
-    scatter.selectAll("*").remove();
-    scatter.append("rect").attr("x", 6).attr("y", 6)
-      .attr("width", Wsc - 12).attr("height", Hsc - 12)
-      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
-
-    // Voronoi
-    const cpx = centroids.map(c => [toXsc(c), toYsc(c)]);
-    const del = d3.Delaunay.from(cpx);
-    const vor = del.voronoi([6, 6, Wsc - 6, Hsc - 6]);
-
-    const ranked = rankCentroids(query, centroids).slice(0, nprobe);
-    const probeSet = new Set(ranked);
-
-    // True top-K
-    const dists = points.map((p, i) => {
-      const dx = p[0] - query[0], dy = p[1] - query[1];
-      return { i, d: dx * dx + dy * dy };
-    });
-    dists.sort((a, b) => a.d - b.d);
-    const trueTop = new Set(dists.slice(0, topK).map(o => o.i));
-
-    // Count stats
-    let scanned = 0, hit = 0;
-    for (let i = 0; i < N; i++) {
-      if (probeSet.has(assign[i])) {
-        scanned++;
-        if (trueTop.has(i)) hit++;
-      }
-    }
-
-    // Cells
-    scatter.append("g").selectAll("path").data(centroids).join("path")
-      .attr("d", (c, i) => vor.renderCell(i))
-      .attr("fill", (c, i) => probeSet.has(i) ? "rgba(13, 148, 136, 0.14)" : "none")
-      .attr("stroke", "var(--border)").attr("stroke-width", 0.8);
-    // Emphasize boundaries of scanned cells
-    scatter.append("g").selectAll("path").data(ranked).join("path")
-      .attr("d", i => vor.renderCell(i))
-      .attr("fill", "none").attr("stroke", "var(--c-partition)").attr("stroke-width", 1.2)
-      .attr("opacity", 0.7);
-
-    // Points
-    scatter.selectAll(".p").data(points).join("circle")
-      .attr("class", "p")
-      .attr("cx", p => toXsc(p)).attr("cy", p => toYsc(p))
-      .attr("r", (p, i) => trueTop.has(i) ? 3.5 : 2.4)
+    const svg = d3.select(scEl); svg.selectAll("*").remove();
+    svg.append("rect").attr("x", pad - 5).attr("y", pad - 5).attr("width", Ws - 2 * pad + 10).attr("height", Hs - 2 * pad + 10)
+      .attr("fill", "var(--plot-bg)").attr("stroke", "var(--border)").attr("rx", 4);
+    const a = one(query);
+    const vor = d3.Delaunay.from(km.centroids.map(c => [toX(c[0]), toY(c[1])])).voronoi([pad - 5, pad - 5, Ws - pad + 5, Hs - pad + 5]);
+    svg.append("path").attr("d", vor.render()).attr("fill", "none").attr("stroke", "var(--text-2)").attr("opacity", 0.35);
+    a.probed.forEach(c => svg.append("path").attr("d", vor.renderCell(c)).attr("fill", "var(--c-partition)").attr("fill-opacity", 0.14)
+      .attr("stroke", "var(--c-partition)").attr("stroke-width", 1.2));
+    svg.selectAll(".p").data(points).join("circle").attr("class", "p")
+      .attr("cx", p => toX(p[0])).attr("cy", p => toY(p[1]))
+      .attr("r", (p, i) => a.truth.has(i) ? 4.5 : 2.2)
       .attr("fill", (p, i) => {
-        if (trueTop.has(i) && probeSet.has(assign[i])) return "var(--c-neighbor)";
-        if (trueTop.has(i)) return "var(--c-query)";
-        if (probeSet.has(assign[i])) return "var(--c-partition)";
-        return "var(--c-db)";
+        const inProbe = a.probed.has(km.assign[i]);
+        if (a.truth.has(i)) return inProbe ? "var(--c-neighbor)" : "var(--plot-bg)";
+        return inProbe ? "var(--c-partition)" : "var(--c-db)";
       })
-      .attr("opacity", (p, i) => probeSet.has(assign[i]) || trueTop.has(i) ? 0.95 : 0.3);
-
-    // Centroids
-    scatter.selectAll(".cent").data(centroids).join("rect")
-      .attr("class", "cent")
-      .attr("x", c => toXsc(c) - 2.5).attr("y", c => toYsc(c) - 2.5)
-      .attr("width", 5).attr("height", 5)
-      .attr("fill", "var(--text-2)").attr("stroke", "white").attr("stroke-width", 0.8);
-
-    // Query
-    scatter.append("circle")
-      .attr("cx", toXsc(query)).attr("cy", toYsc(query)).attr("r", 6)
-      .attr("fill", "var(--c-query)").attr("stroke", "white").attr("stroke-width", 1.5);
-
-    // Legend (compact)
-    const leg = scatter.append("g").attr("font-size", 10).attr("fill", "var(--text-2)")
-      .attr("transform", `translate(10, ${Hsc - 38})`);
-    [
-      { c: "var(--c-neighbor)", t: "true NN in scanned cell" },
-      { c: "var(--c-query)", t: "true NN missed" },
-      { c: "var(--c-partition)", t: "scanned" },
-    ].forEach((o, i) => {
-      leg.append("circle").attr("cx", 4).attr("cy", i * 11).attr("r", 3).attr("fill", o.c);
-      leg.append("text").attr("x", 12).attr("y", i * 11 + 3).text(o.t);
-    });
-
-    // Update the live readout
-    document.getElementById("np-frac").textContent = `${Math.round(100 * scanned / N)}%`;
-    document.getElementById("np-recall").textContent = (hit / topK).toFixed(2);
-    document.getElementById("np-k-out").textContent = topK;
+      .attr("stroke", (p, i) => a.truth.has(i) ? "var(--c-neighbor)" : "none").attr("stroke-width", 2)
+      .attr("opacity", (p, i) => a.truth.has(i) || a.probed.has(km.assign[i]) ? 1 : 0.4);
+    svg.selectAll(".cent").data(km.centroids).join("rect").attr("class", "cent")
+      .attr("x", c => toX(c[0]) - 3).attr("y", c => toY(c[1]) - 3).attr("width", 6).attr("height", 6)
+      .attr("fill", "var(--text-2)").attr("stroke", "var(--plot-bg)");
+    svg.append("circle").attr("cx", toX(query[0])).attr("cy", toY(query[1])).attr("r", 6)
+      .attr("fill", "var(--c-query)").attr("stroke", "var(--plot-bg)").attr("stroke-width", 1.5);
+    const cur = cv[nprobe - 1];
+    document.getElementById("np-readout").innerHTML =
+      `This query: probing <b>${nprobe}</b> of ${NLIST} cells scans <b>${a.scanned}</b> of ${N} points and finds <b>${a.hit}</b> of its <b>${topk}</b> nearest. ` +
+      `Average over ${NQ} queries: <b>${Math.round(100 * cur.frac)}%</b> scanned, recall@${topk} = <b>${cur.recall.toFixed(2)}</b>.`;
+    describe(scEl, `IVF index with ${NLIST} cells over ${N} points. With nprobe ${nprobe} this query finds ${a.hit} of its ${topk} nearest neighbors after scanning ${Math.round(100 * a.scanned / N)} percent of the points.`);
   }
-
-  function drawChart() {
-    chart.selectAll("*").remove();
-    const margin = { top: 28, right: 18, bottom: 40, left: 48 };
-    const iw = Wch - margin.left - margin.right;
-    const ih = Hch - margin.top - margin.bottom;
-    const g = chart.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
-
-    const xS = d3.scaleLinear().domain([0, 1]).range([0, iw]);
-    const yS = d3.scaleLinear().domain([0, 1]).range([ih, 0]);
-
-    // Grid
-    g.append("g").attr("transform", `translate(0,${ih})`)
-      .call(d3.axisBottom(xS).ticks(5).tickFormat(d3.format(".0%")).tickSize(-ih))
-      .call(g => g.selectAll(".tick line").attr("stroke", "#eee"))
-      .call(g => g.selectAll(".domain").attr("stroke", "var(--border)"))
-      .call(g => g.selectAll(".tick text").attr("fill", "var(--text-2)").attr("font-size", 10));
-    g.append("g")
-      .call(d3.axisLeft(yS).ticks(5).tickFormat(d3.format(".0%")).tickSize(-iw))
-      .call(g => g.selectAll(".tick line").attr("stroke", "#eee"))
-      .call(g => g.selectAll(".domain").attr("stroke", "var(--border)"))
-      .call(g => g.selectAll(".tick text").attr("fill", "var(--text-2)").attr("font-size", 10));
-
-    g.append("text").attr("x", iw / 2).attr("y", ih + 30).attr("text-anchor", "middle")
-      .attr("font-size", 11).attr("fill", "var(--text-2)").text("fraction of points scanned");
-    g.append("text").attr("transform", `translate(-36,${ih/2}) rotate(-90)`)
-      .attr("text-anchor", "middle").attr("font-size", 11).attr("fill", "var(--text-2)")
-      .text(`recall@${topK}`);
-
-    chart.append("text").attr("x", margin.left).attr("y", 18)
-      .attr("font-size", 12).attr("font-weight", 600).attr("fill", "var(--text)")
-      .text("Recall climbs as nprobe grows");
-
-    // Reference: y = x (random guessing)
-    g.append("line").attr("x1", 0).attr("y1", ih).attr("x2", iw).attr("y2", 0)
-      .attr("stroke", "var(--border)").attr("stroke-dasharray", "3 3");
-    g.append("text").attr("x", iw - 4).attr("y", 12).attr("text-anchor", "end")
-      .attr("font-size", 10).attr("fill", "var(--text-2)").text("random");
-
-    // The curve
-    const line = d3.line().x(d => xS(d.frac)).y(d => yS(d.recall)).curve(d3.curveMonotoneX);
-    g.append("path").datum(curve).attr("fill", "none")
-      .attr("stroke", "var(--c-partition)").attr("stroke-width", 2).attr("d", line);
-    g.selectAll(".dot").data(curve).join("circle").attr("class", "dot")
-      .attr("cx", d => xS(d.frac)).attr("cy", d => yS(d.recall))
-      .attr("r", 2.5).attr("fill", "var(--c-partition)").attr("opacity", 0.7);
-
-    // Current position dot
-    const cur = curve[nprobe - 1];
-    g.append("circle").attr("cx", xS(cur.frac)).attr("cy", yS(cur.recall))
-      .attr("r", 6).attr("fill", "var(--c-query)").attr("stroke", "white").attr("stroke-width", 2);
-    g.append("text").attr("x", xS(cur.frac) + 10).attr("y", yS(cur.recall) - 6)
-      .attr("font-size", 11).attr("fill", "var(--c-query)").attr("font-weight", 600)
-      .text(`nprobe = ${nprobe}`);
+  function drawChart(W, H) {
+    const svg = d3.select(chEl); svg.selectAll("*").remove();
+    const m = { top: 26, right: 14, bottom: 44, left: 36 }, iw = W - m.left - m.right, ih = H - m.top - m.bottom;
+    const g = svg.append("g").attr("transform", `translate(${m.left},${m.top})`);
+    const xmax = Math.ceil(cv[cv.length - 1].frac * 20) / 20;
+    const x = d3.scaleLinear().domain([0, xmax]).range([0, iw]), y = d3.scaleLinear().domain([0, 1]).range([ih, 0]);
+    g.append("g").attr("transform", `translate(0,${ih})`).call(d3.axisBottom(x).ticks(4).tickFormat(d3.format(".0%")).tickSize(-ih))
+      .call(a => a.select(".domain").attr("stroke", "var(--border)")).call(a => a.selectAll("line").attr("stroke", "var(--grid)"));
+    g.append("g").call(d3.axisLeft(y).ticks(5).tickSize(-iw))
+      .call(a => a.select(".domain").attr("stroke", "var(--border)")).call(a => a.selectAll("line").attr("stroke", "var(--grid)"));
+    g.selectAll(".tick text").attr("font-size", 13).attr("fill", "var(--text-2)");
+    g.append("text").attr("x", iw / 2).attr("y", ih + 38).attr("text-anchor", "middle").text("share of points scanned");
+    g.append("text").attr("x", -m.left + 2).attr("y", -10).text(`recall@${topk}`);
+    g.append("line").attr("x1", 0).attr("y1", ih).attr("x2", iw).attr("y2", y(xmax)).attr("stroke", "var(--text-2)").attr("stroke-dasharray", "4 3").attr("opacity", 0.6);
+    g.append("path").datum(cv).attr("fill", "none").attr("stroke", "var(--c-partition)").attr("stroke-width", 2)
+      .attr("d", d3.line().x(o => x(o.frac)).y(o => y(o.recall)));
+    g.selectAll(".dot").data(cv).join("circle").attr("cx", o => x(o.frac)).attr("cy", o => y(o.recall)).attr("r", 3).attr("fill", "var(--c-partition)");
+    const cur = cv[nprobe - 1];
+    g.append("circle").attr("cx", x(cur.frac)).attr("cy", y(cur.recall)).attr("r", 7).attr("fill", "var(--c-partition)").attr("stroke", "var(--fig-bg)").attr("stroke-width", 2);
+    g.append("text").attr("x", Math.min(x(cur.frac) + 12, iw - 76)).attr("y", Math.min(y(cur.recall) + 22, ih - 8)).attr("fill", "var(--text)").text(`nprobe = ${nprobe}`);
+    describe(chEl, "Recall against share of points scanned: " + cv.filter(o => [1, 2, 3, 4, 8, 12].includes(o.np)).map(o => `nprobe ${o.np}: ${Math.round(100 * o.frac)}% scanned, recall ${o.recall.toFixed(2)}`).join("; ") + ".");
   }
-
-  function setQueryFromEvent(event) {
-    const r = scatterEl.getBoundingClientRect();
-    const mx = (event.clientX - r.left) * (Wsc / r.width);
-    const my = (event.clientY - r.top) * (Hsc / r.height);
-    query = [
-      Math.max(0, Math.min(1, (mx - 14) / (Wsc - 28))),
-      Math.max(0, Math.min(1, (my - 14) / (Hsc - 28))),
-    ];
-    drawScatter();
-  }
-
-  scatterEl.addEventListener("pointermove", setQueryFromEvent);
-  scatterEl.addEventListener("pointerdown", setQueryFromEvent);
-
-  npSlider.addEventListener("input", e => {
-    nprobe = +e.target.value;
-    document.getElementById("np-val").textContent = nprobe;
-    drawScatter();
-    drawChart();
-  });
-  document.getElementById("np-k").addEventListener("input", e => {
-    topK = +e.target.value;
-    document.getElementById("np-k-val").textContent = topK;
-    curve = computeCurve();
-    drawScatter();
-    drawChart();
-  });
-
-  const ro = new ResizeObserver(() => { layout(); drawScatter(); drawChart(); });
-  ro.observe(container);
-  layout();
-  drawScatter();
-  drawChart();
+  const rs = responsive(scEl, w => Math.min(w, 340), (w, h) => { Ws = w; Hs = h; drawScatter(); });
+  const rc = responsive(chEl, w => Math.min(Math.max(w * 0.9, 240), 340), drawChart);
+  placeQuery(scEl, (x, y) => [clamp01((x - pad) / (Ws - 2 * pad)), clamp01((y - pad) / (Hs - 2 * pad))], () => query, q => { query = q; drawScatter(); });
+  document.getElementById("np-slider").addEventListener("input", e => { nprobe = +e.target.value; document.getElementById("np-val").textContent = nprobe; rs(); rc(); });
+  document.getElementById("np-k").addEventListener("input", e => { topk = +e.target.value; document.getElementById("np-k-val").textContent = topk; cv = curve(); rs(); rc(); });
 })();
 
 // ============================================================
-// Figure 3: LSH random hyperplanes
+// Figure 3: LSH with random hyperplanes
 // ============================================================
 (function() {
   const svgEl = document.getElementById("lsh-svg");
-  const container = svgEl.parentElement;
-  let W = 0, H = 380;
+  const svg = d3.select(svgEl);
+  const N = 180, pad = 12, TOPK = 10;
+  let h = 3, seed = 5, planes = [], cursor = [0.55, 0.45], selected = 0;
+  const points = clustered2D(5, N, 5);
+  const center = [d3.mean(points, p => p[0]), d3.mean(points, p => p[1])];
+  const nn = points.map((p, i) => topK(points, p, TOPK, i));
+  let W = 0, H = 0;
+  const toX = v => pad + v * (W - 2 * pad), toY = v => pad + v * (H - 2 * pad);
 
-  let h = 3;
-  let seed = 5;
-  const N = 180;
-  let points = makeClusteredData(seed, N, 5);
-
-  // Hyperplanes are lines through a center point (we use 0.5, 0.5) with a normal direction.
-  // For each plane, a point's bit is sign((p - center) . normal).
-  let planes = [];
-  function genPlanes() {
-    const rng = mulberry32(seed + 100);
-    planes = [];
-    for (let i = 0; i < 12; i++) {
-      const theta = rng() * Math.PI;
-      planes.push([Math.cos(theta), Math.sin(theta)]);
-    }
-  }
-  genPlanes();
-
-  function hashOf(p, hCount) {
+  function genPlanes() { const rng = mulberry32(seed + 100); planes = Array.from({ length: 7 }, () => { const t = rng() * Math.PI; return [Math.cos(t), Math.sin(t)]; }); }
+  // one bit per hyperplane: which side of the line through the data's center the point is on
+  function hashOf(p) {
     let code = 0;
-    for (let i = 0; i < hCount; i++) {
-      const dx = p[0] - 0.5, dy = p[1] - 0.5;
-      const dot = dx * planes[i][0] + dy * planes[i][1];
-      code = (code << 1) | (dot >= 0 ? 1 : 0);
-    }
+    for (let i = 0; i < h; i++) code = code * 2 + ((p[0] - center[0]) * planes[i][0] + (p[1] - center[1]) * planes[i][1] >= 0 ? 1 : 0);
     return code;
   }
-
-  const svg = d3.select(svgEl);
-  let hovered = -1;
-
-  function layout() {
-    W = Math.max(320, container.clientWidth - 48);
-    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svgEl.setAttribute("width", W);
-    svgEl.setAttribute("height", H);
-  }
-
-  function toX(p) { return 20 + p[0] * (W - 40); }
-  function toY(p) { return 20 + p[1] * (H - 40); }
-
-  // Pick a qualitative palette big enough for 2^h up to 2^7
-  const palette = d3.schemeSet3.concat(d3.schemeTableau10).concat(d3.schemePaired);
+  function nearest(q) { let b = 0, bd = Infinity; points.forEach((p, i) => { const d = d2(p, q); if (d < bd) { bd = d; b = i; } }); return b; }
 
   function draw() {
     svg.selectAll("*").remove();
-    svg.append("rect").attr("x", 10).attr("y", 10)
-      .attr("width", W - 20).attr("height", H - 20)
-      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
-
-    const hashes = points.map(p => hashOf(p, h));
-    const bucketsSet = new Set(hashes);
-    const bucketSizes = {};
-    hashes.forEach(c => { bucketSizes[c] = (bucketSizes[c] || 0) + 1; });
-
-    // Draw hyperplanes as line segments across the field
-    const cx = 0.5, cy = 0.5;
-    const diag = Math.hypot(W, H);
+    svg.append("rect").attr("x", pad - 6).attr("y", pad - 6).attr("width", W - 2 * pad + 12).attr("height", H - 2 * pad + 12)
+      .attr("fill", "var(--plot-bg)").attr("stroke", "var(--border)").attr("rx", 4);
+    svg.append("clipPath").attr("id", "lsh-clip").append("rect").attr("x", pad - 6).attr("y", pad - 6).attr("width", W - 2 * pad + 12).attr("height", H - 2 * pad + 12);
+    const hashes = points.map(hashOf), mine = hashes[selected];
+    const L = Math.hypot(W, H), cx = toX(center[0]), cy = toY(center[1]);
+    const lines = svg.append("g").attr("clip-path", "url(#lsh-clip)");
     for (let i = 0; i < h; i++) {
-      // normal = planes[i] = (a, b). Line: perpendicular to normal, through (cx, cy)
-      const a = planes[i][0], b = planes[i][1];
-      // Tangent direction = (-b, a)
-      const tx = -b, ty = a;
-      const x0 = toX([cx, cy]) + tx * diag;
-      const y0 = toY([cx, cy]) + ty * diag;
-      const x1 = toX([cx, cy]) - tx * diag;
-      const y1 = toY([cx, cy]) - ty * diag;
-      svg.append("line")
-        .attr("x1", x0).attr("y1", y0).attr("x2", x1).attr("y2", y1)
-        .attr("stroke", "var(--c-compress)").attr("stroke-width", 1).attr("opacity", 0.55);
+      // direction of the line in pixels: perpendicular to the normal, with the plot's x/y scales applied
+      const tx = -planes[i][1] * (W - 2 * pad), ty = planes[i][0] * (H - 2 * pad), n = Math.hypot(tx, ty);
+      lines.append("line").attr("x1", cx + tx / n * L).attr("y1", cy + ty / n * L).attr("x2", cx - tx / n * L).attr("y2", cy - ty / n * L)
+        .attr("stroke", "var(--c-compress)").attr("stroke-width", 1.2).attr("opacity", 0.7);
     }
-
-    // Collision highlight: if hovered, darken non-matching, highlight matching
-    let hoverHash = hovered >= 0 ? hashes[hovered] : null;
-
-    // Points colored by hash
-    svg.selectAll(".pt").data(points).join("circle")
-      .attr("class", "pt")
-      .attr("cx", p => toX(p)).attr("cy", p => toY(p))
-      .attr("r", (p, i) => hoverHash !== null && hashes[i] === hoverHash ? 5 : 3.5)
-      .attr("fill", (p, i) => palette[hashes[i] % palette.length])
-      .attr("stroke", (p, i) => hoverHash !== null && hashes[i] === hoverHash ? "var(--c-compress)" : "white")
-      .attr("stroke-width", (p, i) => hoverHash !== null && hashes[i] === hoverHash ? 1.5 : 0.8)
-      .attr("opacity", (p, i) => {
-        if (hoverHash === null) return 0.92;
-        return hashes[i] === hoverHash ? 1 : 0.25;
-      })
-      .on("pointerenter", function(e, d) {
-        const idx = points.indexOf(d);
-        hovered = idx;
-        draw();
-      })
-      .on("pointerleave", function() { hovered = -1; draw(); });
-
-    // Hyperplane label
-    svg.append("text").attr("x", 14).attr("y", 24)
-      .attr("font-size", 11).attr("fill", "var(--c-compress)").attr("font-weight", 600)
-      .text(`h = ${h} hyperplanes, up to ${Math.pow(2, h)} buckets`);
-
-    // Compute collision rate: for each point, among its top-10 true neighbors,
-    // what fraction share its hash?
-    const topK = 10;
-    let collision = 0;
-    for (let i = 0; i < N; i++) {
-      const dists = [];
-      for (let j = 0; j < N; j++) {
-        if (j === i) continue;
-        const dx = points[i][0] - points[j][0], dy = points[i][1] - points[j][1];
-        dists.push({ j, d: dx * dx + dy * dy });
-      }
-      dists.sort((a, b) => a.d - b.d);
-      const myHash = hashes[i];
-      let hit = 0;
-      for (let t = 0; t < topK; t++) if (hashes[dists[t].j] === myHash) hit++;
-      collision += hit / topK;
-    }
-    collision /= N;
-
-    document.getElementById("lsh-buckets").textContent = bucketsSet.size;
-    document.getElementById("lsh-max").textContent = Math.pow(2, h);
-    const avg = (N / bucketsSet.size).toFixed(1);
-    document.getElementById("lsh-avg").textContent = avg;
-    document.getElementById("lsh-coll").textContent = `${Math.round(collision * 100)}%`;
+    const isNN = new Set(nn[selected]);
+    svg.selectAll(".pt").data(points).join("circle").attr("class", "pt")
+      .attr("cx", p => toX(p[0])).attr("cy", p => toY(p[1])).attr("r", 3.5)
+      .attr("fill", (p, i) => hashes[i] === mine ? "var(--c-compress)" : "var(--c-db)")
+      .attr("opacity", (p, i) => hashes[i] === mine ? 1 : 0.45);
+    svg.selectAll(".ring").data(nn[selected]).join("circle").attr("class", "ring")
+      .attr("cx", i => toX(points[i][0])).attr("cy", i => toY(points[i][1])).attr("r", 7)
+      .attr("fill", "none").attr("stroke", "var(--c-neighbor)").attr("stroke-width", 2);
+    svg.append("circle").attr("cx", toX(points[selected][0])).attr("cy", toY(points[selected][1])).attr("r", 6)
+      .attr("fill", "var(--c-query)").attr("stroke", "var(--plot-bg)").attr("stroke-width", 1.5);
+    // statistics over the whole dataset
+    const sizes = new Map(); hashes.forEach(c => sizes.set(c, (sizes.get(c) || 0) + 1));
+    let kept = 0; points.forEach((p, i) => { kept += nn[i].filter(j => hashes[j] === hashes[i]).length / TOPK; });
+    const keptHere = nn[selected].filter(j => hashes[j] === mine).length;
+    document.getElementById("lsh-readout").innerHTML =
+      `Selected point: its bucket holds <b>${sizes.get(mine)}</b> of ${N} points and <b>${keptHere}</b> of its ${TOPK} nearest neighbors. ` +
+      `Whole dataset: <b>${sizes.size}</b> of ${2 ** h} possible buckets in use, and a bucket keeps <b>${Math.round(100 * kept / N)}%</b> of a point's ${TOPK} nearest neighbors on average.`;
+    describe(svgEl, `${h} random hyperplanes split ${N} points into ${sizes.size} buckets. On average a point shares its bucket with ${Math.round(100 * kept / N)} percent of its ${TOPK} nearest neighbors.`);
   }
-
-  document.getElementById("lsh-plus").addEventListener("click", () => {
-    if (h < 7) { h++; document.getElementById("lsh-h-val").textContent = h; draw(); }
-  });
-  document.getElementById("lsh-minus").addEventListener("click", () => {
-    if (h > 1) { h--; document.getElementById("lsh-h-val").textContent = h; draw(); }
-  });
-  document.getElementById("lsh-regen").addEventListener("click", () => {
-    seed = Math.floor(Math.random() * 999) + 1;
-    points = makeClusteredData(seed, N, 5);
-    genPlanes();
-    draw();
-  });
-
-  const ro = new ResizeObserver(() => { layout(); draw(); });
-  ro.observe(container);
-  layout();
-  draw();
+  genPlanes();
+  // open on a point that sits next to a hyperplane, so some of its neighbors are cut off
+  (function() {
+    const hashes = points.map(hashOf); let best = -1;
+    points.forEach((p, i) => { const lost = nn[i].filter(j => hashes[j] !== hashes[i]).length; if (lost >= 4 && lost <= 6 && best < 0) best = i; });
+    if (best >= 0) { selected = best; cursor = points[best].slice(); }
+  })();
+  responsive(svgEl, w => Math.round(Math.min(400, Math.max(280, w * 0.6))), (w, h_) => { W = w; H = h_; draw(); });
+  placeQuery(svgEl, (x, y) => [clamp01((x - pad) / (W - 2 * pad)), clamp01((y - pad) / (H - 2 * pad))], () => cursor,
+    q => { cursor = q; const s = nearest(q); if (s !== selected) { selected = s; draw(); } });
+  const setH = v => { h = Math.max(1, Math.min(7, v)); document.getElementById("lsh-h-val").textContent = h; draw(); };
+  document.getElementById("lsh-plus").addEventListener("click", () => setH(h + 1));
+  document.getElementById("lsh-minus").addEventListener("click", () => setH(h - 1));
+  document.getElementById("lsh-regen").addEventListener("click", () => { seed = (seed * 37 + 5) % 997 + 1; genPlanes(); draw(); });
 })();
 
 // ============================================================
-// Figure 4: HNSW greedy walk
+// Figure 4: a three-layer HNSW graph and a greedy walk through it
 // ============================================================
 (function() {
   const svgEl = document.getElementById("hnsw-svg");
-  const container = svgEl.parentElement;
-  let W = 0, H = 420;
-
-  const seed = 7;
-  const N = 140;
-  const points = makeClusteredData(seed, N, 4);
-
-  // Build a k-NN graph on all points (bottom layer)
-  const kNN = 6;
-  function buildKNN(pts) {
-    const graph = pts.map(() => []);
-    for (let i = 0; i < pts.length; i++) {
-      const d = [];
-      for (let j = 0; j < pts.length; j++) {
-        if (j === i) continue;
-        const dx = pts[i][0] - pts[j][0], dy = pts[i][1] - pts[j][1];
-        d.push({ j, d: dx * dx + dy * dy });
-      }
-      d.sort((a, b) => a.d - b.d);
-      for (let t = 0; t < kNN; t++) graph[i].push(d[t].j);
-    }
-    // Symmetric
-    for (let i = 0; i < graph.length; i++) {
-      for (const j of graph[i]) if (!graph[j].includes(i)) graph[j].push(i);
-    }
-    return graph;
-  }
-
-  // Sample subsets for upper layers (HNSW uses exponential decay)
-  const rng = mulberry32(seed + 3);
-  const layer1 = []; // middle
-  const layer2 = []; // top
-  for (let i = 0; i < N; i++) {
-    if (rng() < 0.22) {
-      layer1.push(i);
-      if (rng() < 0.25) layer2.push(i);
-    }
-  }
-  if (layer2.length < 3) {
-    // ensure at least a few
-    layer2.push(layer1[0], layer1[1] || layer1[0], layer1[2] || layer1[0]);
-  }
-
-  // k-NN for each subset (larger k on sparser layers)
-  function buildSubgraph(ids, k) {
-    const graph = {};
-    for (const i of ids) {
-      const d = [];
-      for (const j of ids) {
-        if (j === i) continue;
-        const dx = points[i][0] - points[j][0], dy = points[i][1] - points[j][1];
-        d.push({ j, d: dx * dx + dy * dy });
-      }
-      d.sort((a, b) => a.d - b.d);
-      graph[i] = d.slice(0, Math.min(k, d.length)).map(o => o.j);
-    }
-    return graph;
-  }
-
-  const graph0 = buildKNN(points);
-  const graph1 = buildSubgraph(layer1, 5);
-  const graph2 = buildSubgraph(layer2, 4);
-
-  // Layer descriptors
-  const layers = [
-    { ids: layer2, graph: graph2, name: "L2 (top)", col: "#0891b2" },
-    { ids: layer1, graph: graph1, name: "L1 (middle)", col: "#14b8a6" },
-    { ids: d3.range(N), graph: graph0, name: "L0 (bottom)", col: "#0d9488" },
-  ];
-
-  let showL2 = true, showL1 = true, showL0 = true;
-  let query = [0.6, 0.4];
-  let replayKey = 0;
-
   const svg = d3.select(svgEl);
+  const N = 140, M = 4, pad = 12;
+  const points = clustered2D(7, N, 4);
+  // HNSW level rule: level = floor(-ln(u) / ln(M)), capped at 2 for a three-layer picture
+  const rng = mulberry32(10);
+  const order = shuffled(N, rng);
+  const level = new Array(N);
+  order.forEach(i => { level[i] = Math.min(2, Math.floor(-Math.log(Math.max(rng(), 1e-9)) / Math.log(M))); });
+  const top = order.find(i => level[i] === 2);
+  // put the top node first so every layer is entered through it
+  const ord = [top, ...order.filter(i => i !== top)];
+  const layers = [2, 1, 0].map(l => {
+    const ids = ord.filter(i => level[i] >= l);
+    return { l, ids, nb: buildLayer(points, ids, M, 20).nb };
+  });
+  const names = ["top", "middle", "bottom"];
+  const show = [true, true, true];
+  let query = [0.8, 0.25], revealed = Infinity, timer = null;
+  let W = 0, H = 0;
+  const toX = v => pad + v * (W - 2 * pad), toY = v => pad + v * (H - 2 * pad);
 
-  function layout() {
-    W = Math.max(320, container.clientWidth - 48);
-    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svgEl.setAttribute("width", W);
-    svgEl.setAttribute("height", H);
-  }
-
-  function toX(p) { return 20 + p[0] * (W - 40); }
-  function toY(p) { return 20 + p[1] * (H - 40); }
-
-  function d2(i, q) {
-    const dx = points[i][0] - q[0], dy = points[i][1] - q[1];
-    return dx * dx + dy * dy;
-  }
-
-  // Greedy search: start at entry on top, find local min, drop to next layer at that node, repeat
-  function greedy(q) {
-    const path = []; // array of { layer, nodes: [id, id, ...], final: id }
-    let entry = layer2[0];
-    // pick entry = first vertex in layer2 furthest from centroid, or first for determinism
-    for (const i of layer2) {
-      if (d2(i, q) < d2(entry, q)) entry = i;
-    }
-    let comps = 0;
-    let hops = 0;
-    for (const L of layers) {
-      if (!L.ids.includes(entry)) {
-        // Need to map: entry should exist in this layer's ids
-        // If we are on bottom, everything exists; on others, we start from the previous layer's final node
+  // greedy descent: in each layer move to the closest neighbor until none is closer, then drop a layer
+  function walk(q) {
+    let cur = top, comps = 1; const hops = [];
+    layers.forEach((L, li) => {
+      for (;;) {
+        let best = cur, bd = d2(points[cur], q);
+        for (const j of L.nb[cur]) { comps++; const d = d2(points[j], q); if (d < bd) { bd = d; best = j; } }
+        if (best === cur) break;
+        hops.push({ from: cur, to: best, li }); cur = best;
       }
-      const trail = [entry];
-      let cur = entry;
-      while (true) {
-        const neighbors = L.graph[cur] || [];
-        let bestJ = cur, bestD = d2(cur, q);
-        for (const j of neighbors) {
-          comps++;
-          const d = d2(j, q);
-          if (d < bestD) { bestD = d; bestJ = j; }
-        }
-        if (bestJ === cur) break;
-        cur = bestJ;
-        trail.push(cur);
-        hops++;
-      }
-      path.push({ layer: L.name, col: L.col, ids: L.ids, graph: L.graph, trail, final: cur });
-      entry = cur;
-    }
-    return { path, comps, hops };
+    });
+    return { hops, comps, end: cur, trueNN: topK(points, q, 1)[0] };
   }
-
-  let walk = null;
-
-  function draw(animated) {
+  function draw() {
     svg.selectAll("*").remove();
-    svg.append("rect").attr("x", 10).attr("y", 10)
-      .attr("width", W - 20).attr("height", H - 20)
-      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
-
-    walk = greedy(query);
-
-    // Draw edges by layer
-    const visible = [showL2, showL1, showL0];
-    layers.forEach((L, idx) => {
-      if (!visible[idx]) return;
-      const edges = [];
-      for (const i of L.ids) {
-        for (const j of L.graph[i] || []) {
-          if (i < j) edges.push([i, j]);
-        }
-      }
+    svg.append("rect").attr("x", pad - 6).attr("y", pad - 6).attr("width", W - 2 * pad + 12).attr("height", H - 2 * pad + 12)
+      .attr("fill", "var(--plot-bg)").attr("stroke", "var(--border)").attr("rx", 4);
+    const w = walk(query);
+    // links, bottom layer first so the long links draw on top
+    [2, 1, 0].forEach(li => {
+      if (!show[li]) return;
+      const L = layers[li], edges = [];
+      L.ids.forEach(i => L.nb[i].forEach(j => { if (i < j || !L.nb[j].includes(i)) edges.push([i, j]); }));
       svg.append("g").selectAll("line").data(edges).join("line")
-        .attr("x1", e => toX(points[e[0]])).attr("y1", e => toY(points[e[0]]))
-        .attr("x2", e => toX(points[e[1]])).attr("y2", e => toY(points[e[1]]))
-        .attr("stroke", L.col)
-        .attr("stroke-width", idx === 0 ? 1.3 : idx === 1 ? 1 : 0.6)
-        .attr("opacity", idx === 0 ? 0.55 : idx === 1 ? 0.35 : 0.16);
+        .attr("x1", e => toX(points[e[0]][0])).attr("y1", e => toY(points[e[0]][1]))
+        .attr("x2", e => toX(points[e[1]][0])).attr("y2", e => toY(points[e[1]][1]))
+        .attr("stroke", li === 2 ? "var(--c-db)" : "var(--c-partition)")
+        .attr("stroke-width", [2, 1.3, 0.8][li]).attr("opacity", [0.9, 0.6, 0.35][li]);
     });
-
-    // Draw nodes by layer (stacked)
-    layers.forEach((L, idx) => {
-      if (!visible[idx]) return;
-      const size = idx === 0 ? 5 : idx === 1 ? 4 : 2.6;
-      svg.append("g").selectAll("circle").data(L.ids).join("circle")
-        .attr("cx", i => toX(points[i])).attr("cy", i => toY(points[i]))
-        .attr("r", size)
-        .attr("fill", idx === 2 ? "var(--c-db)" : L.col)
-        .attr("stroke", idx < 2 ? "white" : "none")
-        .attr("stroke-width", 0.8)
-        .attr("opacity", idx === 2 ? 0.55 : 0.9);
+    [2, 1, 0].forEach(li => {
+      if (!show[li]) return;
+      svg.append("g").selectAll("circle").data(layers[li].ids).join("circle")
+        .attr("cx", i => toX(points[i][0])).attr("cy", i => toY(points[i][1]))
+        .attr("r", [6, 4.5, 2.8][li])
+        .attr("fill", li === 2 ? "var(--c-db)" : "var(--c-partition)")
+        .attr("stroke", "var(--plot-bg)").attr("stroke-width", li === 2 ? 0 : 1);
     });
-
-    // Draw walk path (one overlay per visible layer)
-    const pathG = svg.append("g");
-    walk.path.forEach((seg, idx) => {
-      if (!visible[idx]) return;
-      for (let i = 0; i < seg.trail.length - 1; i++) {
-        const a = seg.trail[i], b = seg.trail[i + 1];
-        pathG.append("line")
-          .attr("x1", toX(points[a])).attr("y1", toY(points[a]))
-          .attr("x2", toX(points[b])).attr("y2", toY(points[b]))
-          .attr("stroke", "var(--c-neighbor)").attr("stroke-width", 2.2)
-          .attr("opacity", 0.9)
-          .attr("marker-end", "url(#arrowhead)");
-      }
-      // Mark nodes on the trail
-      pathG.selectAll(null).data(seg.trail).enter().append("circle")
-        .attr("cx", i => toX(points[i])).attr("cy", i => toY(points[i]))
-        .attr("r", 4.5).attr("fill", "var(--c-neighbor)")
-        .attr("stroke", "white").attr("stroke-width", 1.3);
-    });
-
-    // Arrowhead marker
-    const defs = svg.append("defs");
-    defs.append("marker").attr("id", "arrowhead")
-      .attr("viewBox", "0 -4 8 8").attr("refX", 6).attr("refY", 0)
-      .attr("markerWidth", 6).attr("markerHeight", 6).attr("orient", "auto")
-      .append("path").attr("d", "M0,-4 L8,0 L0,4 Z").attr("fill", "var(--c-neighbor)");
-
-    // Final result marker on bottom layer
-    if (showL0) {
-      const finalId = walk.path[walk.path.length - 1].final;
-      svg.append("circle")
-        .attr("cx", toX(points[finalId])).attr("cy", toY(points[finalId])).attr("r", 7)
-        .attr("fill", "none").attr("stroke", "var(--c-neighbor)")
-        .attr("stroke-width", 2.5);
+    // entry node
+    svg.append("circle").attr("cx", toX(points[top][0])).attr("cy", toY(points[top][1])).attr("r", 11)
+      .attr("fill", "none").attr("stroke", "var(--text)").attr("stroke-width", 1.5);
+    svg.append("text").attr("x", toX(points[top][0]) + 14).attr("y", toY(points[top][1]) + 4).attr("fill", "var(--text)").text("entry");
+    // the walk
+    const hops = w.hops.slice(0, revealed);
+    svg.append("g").selectAll("line").data(hops).join("line")
+      .attr("x1", e => toX(points[e.from][0])).attr("y1", e => toY(points[e.from][1]))
+      .attr("x2", e => toX(points[e.to][0])).attr("y2", e => toY(points[e.to][1]))
+      .attr("stroke", "var(--c-neighbor)").attr("stroke-width", e => [4, 3, 2.2][e.li]).attr("stroke-linecap", "round");
+    svg.append("g").selectAll("circle").data(hops).join("circle")
+      .attr("cx", e => toX(points[e.to][0])).attr("cy", e => toY(points[e.to][1])).attr("r", 4.5)
+      .attr("fill", "var(--c-neighbor)").attr("stroke", "var(--plot-bg)");
+    if (hops.length === w.hops.length) {
+      svg.append("circle").attr("cx", toX(points[w.end][0])).attr("cy", toY(points[w.end][1])).attr("r", 8)
+        .attr("fill", "none").attr("stroke", "var(--c-neighbor)").attr("stroke-width", 2.5);
     }
-
-    // Query
-    svg.append("circle")
-      .attr("cx", toX(query)).attr("cy", toY(query)).attr("r", 6)
-      .attr("fill", "var(--c-query)").attr("stroke", "white").attr("stroke-width", 1.5);
-
-    // Layer legend
-    const leg = svg.append("g").attr("font-size", 11).attr("fill", "var(--text-2)")
-      .attr("transform", `translate(${W - 150}, 22)`);
-    layers.forEach((L, idx) => {
-      leg.append("circle").attr("cx", 4).attr("cy", idx * 16).attr("r", 4)
-        .attr("fill", idx === 2 ? "var(--c-db)" : L.col).attr("opacity", visible[idx] ? 1 : 0.2);
-      leg.append("text").attr("x", 14).attr("y", idx * 16 + 4).text(`${L.name} (${L.ids.length})`)
-        .attr("opacity", visible[idx] ? 1 : 0.3);
-    });
-
-    // Walk label
-    svg.append("text").attr("x", 14).attr("y", 24)
-      .attr("font-size", 11).attr("fill", "var(--c-neighbor)").attr("font-weight", 600)
-      .text("greedy walk: top → bottom");
-
-    // Readout
-    document.getElementById("hnsw-layers").textContent = walk.path.filter((_, i) => visible[i]).length;
-    document.getElementById("hnsw-hops").textContent = walk.hops;
-    document.getElementById("hnsw-comps").textContent = walk.comps;
+    svg.append("circle").attr("cx", toX(query[0])).attr("cy", toY(query[1])).attr("r", 6)
+      .attr("fill", "var(--c-query)").attr("stroke", "var(--plot-bg)").attr("stroke-width", 1.5);
+    const per = [0, 1, 2].map(li => w.hops.filter(e => e.li === li).length);
+    const found = w.end === w.trueNN;
+    document.getElementById("hnsw-readout").innerHTML =
+      `Hops: <b>${per[0]}</b> in the top layer (${layers[0].ids.length} nodes), <b>${per[1]}</b> in the middle (${layers[1].ids.length}), <b>${per[2]}</b> in the bottom (${N}). ` +
+      `Distances computed: <b>${w.comps}</b>, against ${N} for a full scan. ` +
+      (found ? `The walk ended on the <b>true nearest neighbor</b>.` : `The walk <b>stopped short</b>: a closer point exists that none of the last node's links reach.`);
+    describe(svgEl, `Three-layer graph over ${N} points with ${layers[0].ids.length}, ${layers[1].ids.length} and ${N} nodes per layer. The greedy walk takes ${w.hops.length} hops and computes ${w.comps} distances; ` + (found ? "it reaches the true nearest neighbor." : "it stops at a node that is not the true nearest neighbor."));
   }
-
-  function setQueryFromEvent(event) {
-    const r = svgEl.getBoundingClientRect();
-    const mx = (event.clientX - r.left) * (W / r.width);
-    const my = (event.clientY - r.top) * (H / r.height);
-    query = [
-      Math.max(0, Math.min(1, (mx - 20) / (W - 40))),
-      Math.max(0, Math.min(1, (my - 20) / (H - 40))),
-    ];
-    draw();
-  }
-
-  svgEl.addEventListener("pointermove", setQueryFromEvent);
-  svgEl.addEventListener("pointerdown", setQueryFromEvent);
-
-  document.getElementById("hnsw-l2").addEventListener("change", e => { showL2 = e.target.checked; draw(); });
-  document.getElementById("hnsw-l1").addEventListener("change", e => { showL1 = e.target.checked; draw(); });
-  document.getElementById("hnsw-l0").addEventListener("change", e => { showL0 = e.target.checked; draw(); });
-  document.getElementById("hnsw-replay").addEventListener("click", () => { replayKey++; draw(true); });
-
-  const ro = new ResizeObserver(() => { layout(); draw(); });
-  ro.observe(container);
-  layout();
-  draw();
+  // open on a query whose walk uses every layer and ends on the true nearest neighbor
+  (function() {
+    let bestHops = -1;
+    for (let gx = 1; gx < 30; gx++) for (let gy = 1; gy < 30; gy++) {
+      const q = [gx / 30, gy / 30], w = walk(q), per = [0, 1, 2].map(li => w.hops.filter(e => e.li === li).length);
+      if (w.end === w.trueNN && per.every(n => n > 0) && w.hops.length > bestHops && Math.sqrt(d2(points[w.end], q)) < 0.06) { bestHops = w.hops.length; query = q; }
+    }
+  })();
+  function stop() { if (timer) { clearInterval(timer); timer = null; } revealed = Infinity; }
+  responsive(svgEl, w => Math.round(Math.min(420, Math.max(290, w * 0.62))), (w, h) => { W = w; H = h; draw(); });
+  placeQuery(svgEl, (x, y) => [clamp01((x - pad) / (W - 2 * pad)), clamp01((y - pad) / (H - 2 * pad))], () => query, q => { stop(); query = q; draw(); });
+  ["hnsw-l2", "hnsw-l1", "hnsw-l0"].forEach((id, li) => document.getElementById(id).addEventListener("change", e => { show[li] = e.target.checked; draw(); }));
+  document.getElementById("hnsw-replay").addEventListener("click", () => {
+    stop();
+    if (reducedMotion) { draw(); return; }
+    const total = walk(query).hops.length;
+    revealed = 0; draw();
+    timer = setInterval(() => { revealed++; draw(); if (revealed >= total) stop(); }, 550);
+  });
 })();
 
 // ============================================================
-// Figure 5: Recall vs QPS tradeoff
+// Figure 5: IVF, LSH and graph search measured on one dataset
 // ============================================================
 (function() {
   const svgEl = document.getElementById("tradeoff-svg");
-  const container = svgEl.parentElement;
-  let W = 0, H = 340;
-
   const svg = d3.select(svgEl);
+  const N = 2000, D = 16, NQ = 100, K = 10;
+  let series = null;
 
-  function layout() {
-    W = Math.max(320, container.clientWidth - 48);
-    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svgEl.setAttribute("width", W);
-    svgEl.setAttribute("height", H);
+  function measure() {
+    const { pts } = mixture(mulberry32(11), N, D, 20, 0.08, 0.2);
+    const qrng = mulberry32(5);
+    const queries = Array.from({ length: NQ }, () => { const p = pts[Math.floor(qrng() * N)]; return Float64Array.from(p, v => v + gauss(qrng) * 0.08); });
+    const truth = queries.map(q => new Set(topK(pts, q, K)));
+    const recallOf = (ids, T) => ids.filter(i => T.has(i)).length / K;
+    const best = (cands, q) => cands.map(i => [d2(pts[i], q), i]).sort((a, b) => a[0] - b[0]).slice(0, K).map(o => o[1]);
+    const sweep = (settings, run) => settings.map(s => {
+      let rec = 0, work = 0;
+      queries.forEach((q, qi) => { const r = run(s, q); work += r.work; rec += recallOf(r.ids, truth[qi]); });
+      return { s, work: work / NQ / N, recall: rec / NQ };
+    });
+
+    // IVF: 45 centroids, probe the nprobe nearest lists. Work = centroid comparisons + vectors scanned.
+    const NLIST = 45, km = kmeans(pts, NLIST, 15, mulberry32(2));
+    const lists = Array.from({ length: NLIST }, () => []); km.assign.forEach((c, i) => lists[c].push(i));
+    const ivf = sweep([1, 2, 3, 4, 6, 9], (np, q) => {
+      const cands = []; rankCentroids(q, km.centroids).slice(0, np).forEach(c => cands.push(...lists[c]));
+      return { work: NLIST + cands.length, ids: best(cands, q) };
+    });
+
+    // LSH: T tables of 8 random hyperplanes through the data mean; scan the union of the query's buckets.
+    // Work = hyperplane dot products + vectors scanned.
+    const HB = 8, MAXT = 64, mean = new Float64Array(D); pts.forEach(p => p.forEach((v, j) => mean[j] += v / N));
+    const prng = mulberry32(8);
+    const planes = Array.from({ length: MAXT }, () => Array.from({ length: HB }, () => Float64Array.from({ length: D }, () => gauss(prng))));
+    const hash = (p, t) => { let code = 0; for (let b = 0; b < HB; b++) { let dot = 0; for (let j = 0; j < D; j++) dot += (p[j] - mean[j]) * planes[t][b][j]; code = code * 2 + (dot >= 0 ? 1 : 0); } return code; };
+    const tables = planes.map((_, t) => { const m = new Map(); pts.forEach((p, i) => { const c = hash(p, t); if (!m.has(c)) m.set(c, []); m.get(c).push(i); }); return m; });
+    const lsh = sweep([1, 2, 4, 8, 16, 32, 64], (T, q) => {
+      const set = new Set();
+      for (let t = 0; t < T; t++) (tables[t].get(hash(q, t)) || []).forEach(i => set.add(i));
+      return { work: T * HB + set.size, ids: best([...set], q) };
+    });
+
+    // Graph: single-layer HNSW-style graph (M = 8), searched with a candidate list of size ef from a fixed entry node.
+    const g = buildLayer(pts, shuffled(N, mulberry32(3)), 8, 40);
+    const efs = [10, 14, 20, 30, 45, 70, 100, 150];
+    const runGraph = (nb, entry) => (ef, q) => { const r = graphSearch(pts, nb, q, entry, ef); return { work: r.comps, ids: r.res.slice(0, K).map(o => o[1]) }; };
+    const graph = sweep(efs, runGraph(g.nb, g.entry));
+
+    // Plain 8-nearest-neighbor graph (made symmetric), same search, same entry node.
+    const knn = pts.map((p, i) => topK(pts, p, 8, i)), sym = knn.map(a => new Set(a));
+    knn.forEach((a, i) => a.forEach(j => sym[j].add(i)));
+    const plain = sweep(efs.concat([220]), runGraph(sym.map(s => [...s]), g.entry));
+    return [
+      { key: "graph", label: "graph (HNSW-style)", knob: "ef", color: "var(--c-partition)", data: graph },
+      { key: "ivf", label: "IVF", knob: "nprobe", color: "var(--c-compress)", data: ivf },
+      { key: "lsh", label: "LSH", knob: "tables", color: "var(--c-hardware)", data: lsh },
+      { key: "plain", label: "plain kNN graph", knob: "ef", color: "var(--c-db)", dash: "5 4", data: plain },
+    ];
   }
-
-  // Stylized curves. x = QPS (log), y = recall@10.
-  // Each method: as you push for higher recall, QPS drops.
-  // HNSW is best, IVF next, LSH worst at high recall.
-  function curveFor(method) {
-    const pts = [];
-    const recalls = d3.range(0.5, 1.005, 0.025);
-    for (const r of recalls) {
-      let qps;
-      if (method === "hnsw") {
-        // HNSW: dominant curve. At recall 0.5: ~20000; 0.99: ~1200
-        qps = Math.pow(10, 4.5 - 2.1 * Math.pow((r - 0.5) / 0.5, 1.8));
-      } else if (method === "ivf") {
-        // IVF: slightly lower than HNSW, steeper late decline
-        qps = Math.pow(10, 4.2 - 2.3 * Math.pow((r - 0.5) / 0.5, 1.6));
-      } else if (method === "lsh") {
-        // LSH: below both, steep drop near top
-        qps = Math.pow(10, 3.9 - 2.8 * Math.pow((r - 0.5) / 0.5, 1.4));
-      } else if (method === "exact") {
-        // Exact: always recall = 1.0, QPS limited by N.
-        qps = 150; // just a vertical wall
-      }
-      pts.push({ r, qps });
-    }
-    return pts;
-  }
-
-  function draw() {
+  function draw(W, H) {
     svg.selectAll("*").remove();
-    svg.append("rect").attr("x", 10).attr("y", 10)
-      .attr("width", W - 20).attr("height", H - 20)
-      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
-
-    const margin = { top: 48, right: 150, bottom: 44, left: 60 };
-    const iw = W - margin.left - margin.right;
-    const ih = H - margin.top - margin.bottom;
-    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
-
-    const xS = d3.scaleLog().domain([100, 40000]).range([0, iw]);
-    const yS = d3.scaleLinear().domain([0.5, 1.0]).range([ih, 0]);
-
-    // Axes
-    g.append("g").attr("transform", `translate(0,${ih})`)
-      .call(d3.axisBottom(xS).ticks(5, "~s").tickSize(-ih))
-      .call(g => g.selectAll(".tick line").attr("stroke", "#eee"))
-      .call(g => g.selectAll(".domain").attr("stroke", "var(--border)"))
-      .call(g => g.selectAll(".tick text").attr("fill", "var(--text-2)").attr("font-size", 10));
-    g.append("g")
-      .call(d3.axisLeft(yS).ticks(5).tickFormat(d3.format(".0%")).tickSize(-iw))
-      .call(g => g.selectAll(".tick line").attr("stroke", "#eee"))
-      .call(g => g.selectAll(".domain").attr("stroke", "var(--border)"))
-      .call(g => g.selectAll(".tick text").attr("fill", "var(--text-2)").attr("font-size", 10));
-
-    g.append("text").attr("x", iw / 2).attr("y", ih + 32)
-      .attr("text-anchor", "middle").attr("font-size", 11).attr("fill", "var(--text-2)")
-      .text("queries per second (log scale)");
-    g.append("text").attr("transform", `translate(-42,${ih/2}) rotate(-90)`)
-      .attr("text-anchor", "middle").attr("font-size", 11).attr("fill", "var(--text-2)")
-      .text("recall@10");
-
-    // Better zone label
-    g.append("text").attr("x", iw - 8).attr("y", 16)
-      .attr("text-anchor", "end").attr("font-size", 10).attr("fill", "var(--text-2)")
-      .attr("font-style", "italic").text("↑ better: higher recall, higher QPS");
-
-    // Draw the three curves
-    const methods = [
-      { key: "hnsw", label: "HNSW", color: "var(--c-partition)" },
-      { key: "ivf", label: "IVF", color: "#0ea5e9" },
-      { key: "lsh", label: "LSH", color: "var(--c-compress)" },
-    ];
-    const line = d3.line()
-      .x(d => xS(Math.max(100, Math.min(40000, d.qps))))
-      .y(d => yS(d.r)).curve(d3.curveMonotoneX);
-
-    methods.forEach(m => {
-      const data = curveFor(m.key).filter(d => d.qps >= 100 && d.qps <= 40000);
-      g.append("path").datum(data).attr("fill", "none")
-        .attr("stroke", m.color).attr("stroke-width", 2.5).attr("d", line);
-      // End-of-line dot and label at rightmost visible point
-      const last = data[0];
-      g.append("circle").attr("cx", xS(last.qps)).attr("cy", yS(last.r))
-        .attr("r", 4).attr("fill", m.color);
+    const m = { top: 26, right: 14, bottom: 46, left: 36 }, iw = W - m.left - m.right, ih = H - m.top - m.bottom;
+    const g = svg.append("g").attr("transform", `translate(${m.left},${m.top})`);
+    const x = d3.scaleLog().domain([0.015, 1]).range([0, iw]), y = d3.scaleLinear().domain([0, 1]).range([ih, 0]);
+    const ticks = W < 480 ? [0.02, 0.1, 0.5, 1] : [0.02, 0.05, 0.1, 0.2, 0.5, 1];
+    g.append("g").attr("transform", `translate(0,${ih})`).call(d3.axisBottom(x).tickValues(ticks).tickFormat(d3.format(".0%")).tickSize(-ih))
+      .call(a => a.select(".domain").attr("stroke", "var(--border)")).call(a => a.selectAll("line").attr("stroke", "var(--grid)"));
+    g.append("g").call(d3.axisLeft(y).ticks(5).tickSize(-iw))
+      .call(a => a.select(".domain").attr("stroke", "var(--border)")).call(a => a.selectAll("line").attr("stroke", "var(--grid)"));
+    g.selectAll(".tick text").attr("font-size", 13).attr("fill", "var(--text-2)");
+    g.append("text").attr("x", iw / 2).attr("y", ih + 40).attr("text-anchor", "middle").text(W < 480 ? "distance computations (share of N, log)" : "distance computations per query, as a share of the database (log scale)");
+    g.append("text").attr("x", -m.left + 2).attr("y", -10).text("recall@10");
+    g.append("circle").attr("cx", x(1)).attr("cy", y(1)).attr("r", 5).attr("fill", "var(--text)");
+    g.append("text").attr("x", x(1) - 9).attr("y", y(1) + 18).attr("text-anchor", "end").attr("fill", "var(--text)").text("full scan");
+    if (!series) { g.append("text").attr("x", iw / 2).attr("y", ih / 2).attr("text-anchor", "middle").text("building three indexes…"); return; }
+    const line = d3.line().x(o => x(o.work)).y(o => y(o.recall));
+    series.forEach(s => {
+      const data = s.data.filter(o => o.work <= 1);
+      g.append("path").datum(data).attr("fill", "none").attr("stroke", s.color).attr("stroke-width", 2).attr("stroke-dasharray", s.dash || null).attr("d", line);
+      g.selectAll(null).data(data).join("circle").attr("cx", o => x(o.work)).attr("cy", o => y(o.recall)).attr("r", 3.2).attr("fill", s.color);
     });
-
-    // Exact: vertical wall at QPS = ~150
-    const exactX = xS(150);
-    g.append("line").attr("x1", exactX).attr("x2", exactX)
-      .attr("y1", yS(1)).attr("y2", yS(0.5))
-      .attr("stroke", "var(--c-db)").attr("stroke-width", 2.5).attr("stroke-dasharray", "5 4");
-    g.append("circle").attr("cx", exactX).attr("cy", yS(1))
-      .attr("r", 5).attr("fill", "var(--c-db)");
-
-    // Side legend with descriptions
-    const side = svg.append("g")
-      .attr("transform", `translate(${margin.left + iw + 16},${margin.top + 6})`)
-      .attr("font-size", 11).attr("fill", "var(--text-2)");
-    const legItems = [
-      { color: "var(--c-partition)", label: "HNSW", desc: "graph, best overall" },
-      { color: "#0ea5e9", label: "IVF", desc: "centroid cells" },
-      { color: "var(--c-compress)", label: "LSH", desc: "random hashes" },
-      { color: "var(--c-db)", label: "Exact", desc: "perfect recall, slow" },
-    ];
-    legItems.forEach((o, i) => {
-      const y = i * 32;
-      side.append("line").attr("x1", 0).attr("x2", 18)
-        .attr("y1", y).attr("y2", y)
-        .attr("stroke", o.color).attr("stroke-width", 2.5)
-        .attr("stroke-dasharray", o.label === "Exact" ? "4 3" : "none");
-      side.append("text").attr("x", 22).attr("y", y + 4)
-        .attr("font-size", 12).attr("font-weight", 700).attr("fill", "var(--text)")
-        .text(o.label);
-      side.append("text").attr("x", 22).attr("y", y + 18)
-        .attr("font-size", 10).attr("fill", "var(--text-2)")
-        .text(o.desc);
-    });
-
-    // Note
-    svg.append("text").attr("x", margin.left).attr("y", 20)
-      .attr("font-size", 12).attr("font-weight", 600).attr("fill", "var(--text)")
-      .text("Recall vs speed across methods");
-    svg.append("text").attr("x", margin.left).attr("y", 36)
-      .attr("font-size", 10).attr("fill", "var(--text-2)")
-      .attr("font-style", "italic")
-      .text("representative curves, not from a specific benchmark");
+    // direct labels, placed by hand next to each curve's low end
+    const lab = (key, dx, dy, anchor) => {
+      const s = series.find(v => v.key === key), o = s.data[key === "plain" ? 3 : 0];
+      g.append("text").attr("x", x(o.work) + dx).attr("y", y(o.recall) + dy).attr("text-anchor", anchor).attr("fill", s.color).attr("font-weight", 600).text(key === "graph" && W < 480 ? "graph" : s.label);
+    };
+    lab("graph", -10, 4, "end"); lab("ivf", 10, 6, "start"); lab("lsh", 10, 10, "start"); lab("plain", 0, 20, "start");
   }
-
-  const ro = new ResizeObserver(() => { layout(); draw(); });
-  ro.observe(container);
-  layout();
-  draw();
+  const redraw = responsive(svgEl, w => w < 480 ? 300 : 360, draw);
+  setTimeout(() => {
+    series = measure();
+    redraw();
+    const at = (key, target) => { const s = series.find(v => v.key === key), o = s.data.find(v => v.recall >= target); return o ? `${(100 * o.work).toFixed(1)}% (${s.knob} = ${o.s})` : "not reached"; };
+    const plain = series.find(v => v.key === "plain").data;
+    document.getElementById("tradeoff-readout").innerHTML =
+      `Work needed to reach recall 0.95: graph <b>${at("graph", 0.95)}</b>, IVF <b>${at("ivf", 0.95)}</b>, LSH <b>${at("lsh", 0.95)}</b>. ` +
+      `The plain kNN graph reaches recall <b>${plain[plain.length - 1].recall.toFixed(2)}</b> at its largest setting, after <b>${(100 * plain[plain.length - 1].work).toFixed(0)}%</b>.`;
+    describe(svgEl, "Recall at 10 against distance computations per query. " + series.map(s => `${s.label}: ` + s.data.map(o => `${(100 * o.work).toFixed(0)}% work, recall ${o.recall.toFixed(2)}`).join("; ")).join(". ") + ".");
+  }, 60);
 })();
 </script>
 </body>
