@@ -1,24 +1,31 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useId, useState } from 'react'
+import { inOrder, param, translate, type Draggable } from 'dragology'
 import type { FigureProps } from '../registry'
+import DragFigure from '../drag/DragFigure'
 import { num } from '../lib/params'
-import { isSimActivate, SIM_GESTURE_LABEL } from './gesture'
+import { useFigureHighlight } from '../../store'
+import { useWidth } from './useWidth'
+import TouchPad from './TouchPad'
+import './sims.css'
 
-// Self-contained SIMULATION of moonshine's figure "knob panel".
+// A wave with three parameters, and a SIMULATION of the knob panel the
+// harness generates for it.
 //
-// A real figure exports a DEFAULTS object; directive attributes override
-// them, and Cmd/Ctrl+clicking the figure opens a generated panel of
-// controls. Dragging a slider updates the figure live, and "Save to
-// markdown" writes only the values that DIFFER from the defaults back
-// into the directive's attribute string. The panel INSIDE this figure is
-// local state, but the figure itself also plays the real game: its
-// DEFAULTS/PARAM_HINTS are registered in registry.ts, and any attribute
-// on its `:::figure{id=knobs …}` directive arrives here as a prop and
-// seeds the sim. Cmd/Ctrl+click it during dev to open the real panel on
-// top of the simulated one.
+// The figure itself is real. Its DEFAULTS and PARAM_HINTS are registered in
+// registry.ts, so attributes on `:::figure{id=knobs …}` arrive as props, and
+// during `npm run dev` Cmd/Ctrl+click opens the real panel under it. The
+// crest is a declarative drag (drag/README.md, "drag an output"): the dot
+// sits where the wave peaks, which is computed from amplitude and phase, and
+// d.vary finds the amplitude and phase that put it under the pointer. As in
+// the template's StepSize, a reader's drag stays inside the figure; only
+// the panel writes to markdown.
+//
+// The panel drawn here imitates FigureKnobs.tsx with local state, because
+// the real one does not exist in a static build: same controls, the same
+// rule for what Save writes (only values that differ from DEFAULTS), and
+// the same close behavior (× throws unsaved changes away, Save closes).
 
-// The figure's tweakable surface. In the real system this lives at the
-// top of the figure file and the registry points at it.
-const DEFAULTS = {
+export const DEFAULTS = {
   amplitude: 1,
   frequency: 3,
   phase: 0,
@@ -27,256 +34,212 @@ const DEFAULTS = {
 type Params = typeof DEFAULTS
 type ParamKey = keyof Params
 
-// Per-parameter slider bounds (a real figure's PARAM_HINTS; registered
-// in registry.ts so the real knob panel uses the same bounds).
-const PARAM_HINTS: Record<ParamKey, { min: number; max: number; step: number }> = {
+// The magnitude heuristic would offer amplitude [0, 5] in steps of 0.01 and
+// phase [0, 5] too; these are the ranges the drawing has room for.
+export const PARAM_HINTS: Record<ParamKey, { min: number; max: number; step: number }> = {
   amplitude: { min: 0, max: 2, step: 0.1 },
   frequency: { min: 1, max: 8, step: 1 },
   phase: { min: 0, max: 6.28, step: 0.1 },
 }
 
-const FIG_ID = 'wave'
+const KEYS = Object.keys(DEFAULTS) as ParamKey[]
+const H = 190
+const MID = H / 2
+// Pixels per unit of amplitude: the largest amplitude (2) still fits.
+const UNIT = 42
+const TAU = Math.PI * 2
 
-// Trim trailing zeros so 1.40 → "1.4" and 3.0 → "3", matching how the
-// real serializer writes compact attribute values.
-function fmt(n: number): string {
-  return Number(n.toFixed(2)).toString()
+// Compact attribute values: 1.40 → "1.4", 3.0 → "3".
+const fmt = (n: number) => String(Number(n.toFixed(2)))
+
+// What Save writes: the id, then only the parameters that differ from
+// DEFAULTS (FigureKnobs.buildAttrString).
+function directive(id: string, p: Params): string {
+  const changed = KEYS.filter((k) => p[k] !== DEFAULTS[k]).map((k) => `${k}=${fmt(p[k])}`)
+  return `:::figure{${[`id=${id}`, ...changed].join(' ')}}`
 }
 
-// Build the markdown directive, including ONLY params that differ from
-// the defaults — the exact behavior of the real "Save to markdown".
-function directiveString(params: Params): string {
-  const overrides = (Object.keys(DEFAULTS) as ParamKey[])
-    .filter((k) => params[k] !== DEFAULTS[k])
-    .map((k) => `${k}=${fmt(params[k])}`)
-  const attrs = [`id=${FIG_ID}`, ...overrides].join(' ')
-  return `:::figure{${attrs}}`
-}
-
-// The deterministic figure: an SVG sine curve driven by the params.
-function WaveCurve({ params }: { params: Params }) {
-  const W = 640
-  const H = 180
-  const mid = H / 2
-  const path = useMemo(() => {
-    const { amplitude, frequency, phase } = params
-    const steps = 160
-    const pts: string[] = []
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps
-      const x = t * W
-      // amplitude scaled to ~70px peak; deterministic, no randomness.
-      const y =
-        mid - Math.sin(t * frequency * Math.PI * 2 + phase) * amplitude * 70
-      pts.push(`${i === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`)
-    }
-    return pts.join(' ')
-  }, [params, mid])
-
-  return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      width="100%"
-      height={H}
-      preserveAspectRatio="xMidYMid meet"
-      style={{ display: 'block' }}
-    >
-      <line
-        x1={0}
-        y1={mid}
-        x2={W}
-        y2={mid}
-        stroke="var(--border)"
-        strokeWidth={1}
-      />
-      <path
-        d={path}
-        fill="none"
-        stroke="var(--accent)"
-        strokeWidth={2.5}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
+type Wave = { amplitude: number; phase: number }
 
 export default function KnobsSim(props: FigureProps) {
-  // Directive attributes become props: `:::figure{id=knobs frequency=4}`
-  // arrives as props.frequency === "4" and seeds the sim's initial state.
-  const [params, setParams] = useState<Params>(() => ({
+  const id = props.figureId
+  const uid = useId().replace(/:/g, '')
+  const [ref, width] = useWidth<HTMLDivElement>()
+  const { activePart } = useFigureHighlight(id)
+
+  // `saved` plays the markdown: it starts as the directive's real
+  // attributes. `live` is what the open panel shows and the figure draws.
+  const [saved, setSaved] = useState<Params>(() => ({
     amplitude: num(props.amplitude, DEFAULTS.amplitude),
     frequency: num(props.frequency, DEFAULTS.frequency),
     phase: num(props.phase, DEFAULTS.phase),
   }))
-  const [open, setOpen] = useState(false)
-  const [committed, setCommitted] = useState<string | null>(null)
-  const [flash, setFlash] = useState(false)
-  const flashTimer = useRef<number | null>(null)
-  const rootRef = useRef<HTMLDivElement>(null)
+  const [live, setLive] = useState<Params>(saved)
+  const [open, setOpen] = useState(true)
+  const dirty = KEYS.some((k) => live[k] !== saved[k])
 
-  const live = directiveString(params)
+  const W = Math.max(240, width)
+  const frequency = Math.max(0.5, live.frequency)
+  const lit = activePart === 'crest'
 
-  // A plain click on the figure toggles the simulated knob panel;
-  // Cmd/Ctrl+click passes through to the real one.
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
-    if (!isSimActivate(e)) return
-    e.preventDefault()
-    setOpen((v) => !v)
-  }, [])
+  const draw = useCallback<Draggable<Wave>>(
+    ({ state, d }) => {
+      const y = (t: number) => MID - Math.sin(TAU * frequency * t + state.phase) * state.amplitude * UNIT
+      const curve = Array.from({ length: 161 }, (_, i) => {
+        const t = i / 160
+        return `${i ? 'L' : 'M'}${(t * W).toFixed(1)},${y(t).toFixed(1)}`
+      }).join('')
+      // The crest that slides one period to the left as the phase runs
+      // from 0 to 2π. At a very low frequency it would start off the
+      // right edge, so take the crest before it.
+      let t = (1.25 - state.phase / TAU) / frequency
+      if (t > 0.96) t -= 1 / frequency
+      const cx = t * W
+      const cy = MID - state.amplitude * UNIT
+      // Keep the readout on the drawing when the crest is near an edge.
+      const dx = Math.max(64, Math.min(W - 64, cx)) - cx
+      return (
+        <g>
+          <line className="mn-wave-axis" x1={0} x2={W} y1={MID} y2={MID} />
+          <path className="mn-wave-curve" d={curve} />
+          <line className="mn-wave-rise" transform={translate(cx, MID)} y2={cy - MID} />
+          <g
+            id={`${uid}-crest`}
+            className="mn-wave-crest"
+            data-on={lit ? 'active' : undefined}
+            transform={translate(cx, cy)}
+            dragologyOnDrag={() =>
+              d
+                .vary(state, [param('amplitude'), param('phase')], {
+                  constraint: (s) => [...inOrder([0.1, s.amplitude, 2]), ...inOrder([0, s.phase, 6.28])],
+                })
+                // Land on the values the panel's sliders can show.
+                .onDrop((s) => ({ amplitude: Math.round(s.amplitude * 10) / 10, phase: Math.round(s.phase * 10) / 10 }))
+            }
+          >
+            <circle className="mn-wave-ring" r={15} />
+            <circle className="mn-wave-dot" r={8} />
+            {/* A finger-sized HTML pad over the dot: see .mn-sim-touchpad. */}
+            <foreignObject transform={translate(-22, -22)} width={44} height={44}>
+              <TouchPad />
+            </foreignObject>
+            <text x={dx} y={-18} textAnchor="middle">
+              {`A = ${state.amplitude.toFixed(1)} · φ = ${state.phase.toFixed(1)}`}
+            </text>
+          </g>
+        </g>
+      )
+    },
+    [W, frequency, uid, lit],
+  )
 
-  const setParam = useCallback((k: ParamKey, v: number) => {
-    setParams((p) => ({ ...p, [k]: v }))
-  }, [])
-
-  const save = useCallback(() => {
-    setCommitted(directiveString(params))
-    setFlash(true)
-    if (flashTimer.current) window.clearTimeout(flashTimer.current)
-    flashTimer.current = window.setTimeout(() => setFlash(false), 1200)
-  }, [params])
-
-  const reset = useCallback(() => {
-    setParams({ ...DEFAULTS })
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      if (flashTimer.current) window.clearTimeout(flashTimer.current)
-    }
-  }, [])
+  const set = (k: ParamKey, v: number) => {
+    if (Number.isFinite(v)) setLive((p) => ({ ...p, [k]: v }))
+  }
 
   return (
-    <div
-      ref={rootRef}
-      className="mn-editable-figure"
-      role="button"
-      tabIndex={0}
-      aria-expanded={open}
-      aria-label="Toggle the simulated parameter panel"
-      onPointerDown={onPointerDown}
-      onKeyDown={(e) => {
-        // Keyboard path: Enter/Space on the figure itself toggles the
-        // panel. Keys inside the panel's inputs must not bubble-toggle.
-        if (e.target !== e.currentTarget) return
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          setOpen((v) => !v)
-        }
-      }}
-      style={{
-        background: 'var(--fig-bg)',
-        border: '1px solid var(--border)',
-        borderRadius: 8,
-        padding: '0.75rem 0.9rem',
-        cursor: 'pointer',
-        userSelect: 'none',
-      }}
-    >
-      <WaveCurve params={params} />
+    <div className="mn-sim mn-knobs-sim" ref={ref}>
+      {width > 0 && (
+        <DragFigure
+          // Start again from the panel's values whenever they change; the
+          // reader's own drag holds until then.
+          key={`${W}|${live.amplitude}|${live.frequency}|${live.phase}`}
+          draggable={draw}
+          width={W}
+          height={H}
+          initialState={{ amplitude: live.amplitude, phase: live.phase }}
+          label={`A sine wave with amplitude ${fmt(live.amplitude)}, frequency ${fmt(live.frequency)} and phase ${fmt(live.phase)}. A dot marks one crest.`}
+        />
+      )}
+      <p className="figure-hint">drag the crest: its height is the amplitude, its place along the wave is the phase</p>
 
-      <p
-        style={{
-          margin: '0.4rem 0 0',
-          fontFamily: 'var(--heading-font)',
-          fontSize: '0.75rem',
-          color: 'var(--text-2)',
-          textAlign: 'center',
-        }}
-      >
-        {SIM_GESTURE_LABEL} the figure to open its parameters
-      </p>
-
-      {open && (
-        <div className="mn-knobs" onPointerDown={(e) => e.stopPropagation()}>
+      {open ? (
+        <div className="mn-knobs" role="group" aria-label="Simulated parameter panel">
           <div className="mn-knobs-title">
-            <code>{FIG_ID}</code>
-            <div className="mn-knobs-controls">
+            <span>
+              <code>{id}</code> parameters
+            </span>
+            <span className="mn-knobs-controls">
+              {/* The real panel's other controls. They act on the article,
+                  so here they are shown and switched off. */}
+              <span className="mn-edit-move mn-edit-move-figure">
+                <button type="button" disabled aria-label="Move figure up" title="Move figure up (dev only)">
+                  ↑
+                </button>
+                <button type="button" disabled aria-label="Move figure down" title="Move figure down (dev only)">
+                  ↓
+                </button>
+              </span>
+              <span className="mn-figure-controls">
+                <button type="button" disabled title="Break out of the text column (dev only)">
+                  Wide
+                </button>
+                <button type="button" disabled title="Delete this figure (dev only)">
+                  Delete
+                </button>
+              </span>
+              <button type="button" className="mn-edit-comment" disabled aria-label="Comment to the agent" title="Comment to the agent (dev only)">
+                💬
+              </button>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
-                aria-label="Close parameters"
+                aria-label="Close parameter panel and discard unsaved values"
+                onClick={() => {
+                  setLive(saved)
+                  setOpen(false)
+                }}
               >
                 ×
               </button>
-            </div>
+            </span>
           </div>
 
-          {(Object.keys(DEFAULTS) as ParamKey[]).map((k) => {
+          {KEYS.map((k) => {
             const h = PARAM_HINTS[k]
             return (
-              <div className="mn-knob" key={k}>
+              <label className="mn-knob" key={k}>
                 <span className="mn-knob-name">{k}</span>
                 <input
                   type="range"
                   min={h.min}
                   max={h.max}
                   step={h.step}
-                  value={params[k]}
-                  onChange={(e) => setParam(k, Number(e.target.value))}
+                  value={Math.max(h.min, Math.min(h.max, live[k]))}
+                  onChange={(e) => set(k, Number(e.target.value))}
                 />
-                <input
-                  type="number"
-                  min={h.min}
-                  max={h.max}
-                  step={h.step}
-                  value={params[k]}
-                  onChange={(e) => setParam(k, Number(e.target.value))}
-                />
-              </div>
+                {/* Unbounded, as in the real panel: for values past the slider. */}
+                <input type="number" className="mn-knob-number" step={h.step} value={live[k]} onChange={(e) => set(k, Number(e.target.value))} />
+              </label>
             )
           })}
 
-          <div
-            style={{
-              marginTop: '0.5rem',
-              fontFamily: 'var(--mono-font)',
-              fontSize: '0.72rem',
-              color: 'var(--text)',
-              background: 'var(--fig-bg)',
-              border: '1px solid var(--border)',
-              borderRadius: 4,
-              padding: '0.35rem 0.5rem',
-              overflowX: 'auto',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {live}
-          </div>
-
           <div className="mn-knobs-actions">
-            <button type="button" onClick={save}>
-              {flash ? 'saved ✓' : 'Save to markdown'}
+            <button
+              type="button"
+              onClick={() => {
+                setSaved(live)
+                setOpen(false)
+              }}
+            >
+              Save to markdown
             </button>
-            <button type="button" onClick={reset}>
+            <button type="button" onClick={() => setLive({ ...DEFAULTS })}>
               Reset to defaults
             </button>
           </div>
-
-          {committed && (
-            <p
-              style={{
-                margin: '0.5rem 0 0',
-                fontFamily: 'var(--heading-font)',
-                fontSize: '0.72rem',
-                color: 'var(--text-2)',
-              }}
-            >
-              committed to markdown:{' '}
-              <code
-                style={{
-                  fontFamily: 'var(--mono-font)',
-                  color: 'var(--text)',
-                }}
-              >
-                {committed}
-              </code>
-            </p>
-          )}
+        </div>
+      ) : (
+        <div className="mn-knobs-actions mn-sim-reopen">
+          <button type="button" onClick={() => setOpen(true)}>
+            Open the parameters
+          </button>
         </div>
       )}
+
+      <div className="mn-sim-file" aria-live="polite">
+        <span className="mn-sim-pane-name">guide.md{dirty ? ' · Save would write' : ''}</span>
+        <code data-on={dirty ? 'changed' : undefined}>{directive(id, dirty ? live : saved)}</code>
+      </div>
     </div>
   )
 }
-
-export { KnobsSim, DEFAULTS, PARAM_HINTS }

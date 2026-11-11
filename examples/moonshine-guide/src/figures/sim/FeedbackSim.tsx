@@ -1,387 +1,210 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FigureProps } from '../registry'
+import './sims.css'
 
-// A pure, local-state simulation of moonshine's authorship-feedback loop
-// (the protocol in plugins/moonshine/FEEDBACK.md). The real thing: in edit
-// mode the author hits the 💬 button on a block's source editor or a
-// figure's knob panel, types a comment, and the dev server writes it as a
-// JSON file under .feedback/. Comments accumulate until the author presses
-// Address (or opts into auto-address). That request is routed to the article's
-// authoring session; its adapter claims the comment, and the session's
-// one-line reply lands back in the same file for the HUD to show.
+// A local-state simulation of the authorship-feedback loop (the protocol
+// in plugins/moonshine/FEEDBACK.md). The real thing: in dev the author
+// presses 💬 on an open prose editor or a figure's knob panel, types a
+// comment, and the dev server writes it as one JSON file under
+// .feedback/. Comments accumulate. When the author presses Address in the
+// HUD, the dev server writes address.json; the Claude Code Stop hook finds
+// it the next time the authoring session ends a turn, claims the pending
+// comments (pending → delivered), deletes the request and hands them to
+// the session, which edits the article and writes a one-line reply into
+// the comment's own file.
 //
-// This sim walks that lifecycle: compose → <id>.json (pending) → Address
-// requested → claimed (delivered) → addressed, with the reply surfacing in a
-// simulated HUD.
-// Deterministic (fixed ids and timestamps), reduced-motion aware (the
-// claim/address delays collapse to instant), cleanup-correct (all timers
-// tracked and cleared on unmount). No network, no real files.
+// The sim walks one comment through that: compose → pending → Address
+// queued → delivered → addressed. The record has the real fields, and the
+// HUD uses the real labels (AuthorshipHUD.tsx). Deterministic: fixed id,
+// times and text. With reduced motion the timed steps happen at once.
+// No network, no files.
 
 type Stage = 'idle' | 'composing' | 'pending' | 'queued' | 'delivered' | 'addressed'
 
-const FB_ID = 'fb_20260701_k3f2'
-const COMMENT = 'too hand-wavy: what interval does the listener tick on?'
-const REPLY = 'added the 90s tick interval and named the adapter pass'
-const EXCERPT = 'The agent receives the comment while it works.'
+const FB_ID = 'fb_mc3k9q2a_k3f2x1'
+const COMMENT = 'too hand-wavy: how often does the listener check for comments?'
+const REPLY = 'said the listener ticks every 90 seconds'
+const EXCERPT = 'The agent picks comments up while it works.'
 
-// Fixed wall-clock strings so the sim is deterministic.
-const T_PENDING = '18:30:02Z'
-const T_REQUESTED = '18:30:30Z'
-const T_DELIVERED = '18:30:41Z'
-const T_ADDRESSED = '18:31:07Z'
+const T_PENDING = '2026-07-01T18:30:02Z'
+const T_REQUESTED = '2026-07-01T18:34:30Z'
+const T_DELIVERED = '2026-07-01T18:34:41Z'
+const T_ADDRESSED = '2026-07-01T18:35:07Z'
 
-const STATUS_COLOR: Record<string, string> = {
-  pending: 'var(--text-2)',
-  delivered: 'var(--accent)',
-  addressed: 'var(--accent)',
-}
+const statusOf = (stage: Stage) => (stage === 'delivered' ? 'delivered' : stage === 'addressed' ? 'addressed' : 'pending')
 
-function recordJson(stage: Stage): string {
-  if (stage === 'idle' || stage === 'composing') return ''
-  const status =
-    stage === 'pending' || stage === 'queued'
-      ? 'pending'
-      : stage === 'delivered'
-        ? 'delivered'
-        : 'addressed'
-  const lines = [
-    '{',
-    `  "id": "${FB_ID}",`,
-    `  "ts": "${T_PENDING}",`,
-    `  "status": "${status}",`,
-    '  "target": {',
-    '    "kind": "block",',
-    '    "path": "guide.md",',
-    `    "excerpt": "${EXCERPT}"`,
-    '  },',
-    `  "comment": "${COMMENT}",`,
-    `  "reply": ${stage === 'addressed' ? `"${REPLY}"` : 'null'},`,
-    `  "deliveredAt": ${stage === 'pending' || stage === 'queued' ? 'null' : `"${T_DELIVERED}"`},`,
-    `  "addressedAt": ${stage === 'addressed' ? `"${T_ADDRESSED}"` : 'null'}`,
-    '}',
+// The comment file, with the lines that changed at this stage marked.
+function record(stage: Stage): { text: string; changed: boolean }[] {
+  const waiting = stage === 'pending' || stage === 'queued'
+  const done = stage === 'addressed'
+  return [
+    { text: '{', changed: false },
+    { text: `  "id": "${FB_ID}",`, changed: false },
+    { text: `  "ts": "${T_PENDING}",`, changed: false },
+    { text: '  "project": "moonshine-guide",', changed: false },
+    { text: `  "status": "${statusOf(stage)}",`, changed: !waiting },
+    { text: '  "target": {', changed: false },
+    { text: '    "kind": "block",', changed: false },
+    { text: '    "path": "guide.md",', changed: false },
+    { text: '    "range": [5120, 5163],', changed: false },
+    { text: `    "excerpt": "${EXCERPT}",`, changed: false },
+    { text: '    "anchorHash": "a3f9c0"', changed: false },
+    { text: '  },', changed: false },
+    { text: `  "comment": "${COMMENT}",`, changed: false },
+    { text: `  "reply": ${done ? `"${REPLY}"` : 'null'},`, changed: done },
+    { text: `  "deliveredAt": ${waiting ? 'null' : `"${T_DELIVERED}"`},`, changed: stage === 'delivered' },
+    { text: `  "addressedAt": ${done ? `"${T_ADDRESSED}"` : 'null'}`, changed: done },
+    { text: '}', changed: false },
   ]
-  return lines.join('\n')
-}
-
-const panelStyle: React.CSSProperties = {
-  background: 'var(--fig-bg)',
-  border: '1px solid var(--border)',
-  borderRadius: 6,
-  padding: '0.6rem 0.75rem',
-  minWidth: 0,
-}
-
-const panelTitleStyle: React.CSSProperties = {
-  fontFamily: 'var(--heading-font)',
-  fontWeight: 600,
-  fontSize: '0.78rem',
-  color: 'var(--text-2)',
-  margin: '0 0 0.45rem',
-}
-
-const monoStyle: React.CSSProperties = {
-  fontFamily: 'var(--mono-font)',
-  fontSize: '0.7rem',
-  lineHeight: 1.5,
 }
 
 export default function FeedbackSim(_props: FigureProps) {
   const [stage, setStage] = useState<Stage>('idle')
-  const timeoutsRef = useRef<number[]>([])
-  const reducedRef = useRef(false)
+  const timers = useRef<number[]>([])
 
-  // Respect prefers-reduced-motion: claim/address happen instantly
-  // instead of on a timed sequence.
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    reducedRef.current = mq.matches
-    const onChange = () => {
-      reducedRef.current = mq.matches
-    }
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [])
-
-  // Clear any in-flight timers on unmount.
-  useEffect(() => {
-    return () => {
-      timeoutsRef.current.forEach((id) => clearTimeout(id))
-    }
-  }, [])
+  useEffect(() => () => timers.current.forEach((id) => clearTimeout(id)), [])
 
   function later(fn: () => void, ms: number) {
-    if (reducedRef.current) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       fn()
       return
     }
-    const id = window.setTimeout(fn, ms)
-    timeoutsRef.current.push(id)
+    timers.current.push(window.setTimeout(fn, ms))
   }
 
-  // Sending only appends a pending comment. The default is accumulation: no
-  // adapter claims it until the author explicitly asks.
-  function send() {
-    setStage('pending')
-  }
-
-  // Address writes the one-shot request. A matching adapter consumes it on
-  // its next pass, claims the comment, and hands it to the authoring session.
+  // Address only writes the request. The adapter does the rest when the
+  // authoring session next reaches a turn boundary.
   function address() {
     setStage('queued')
-    later(() => setStage('delivered'), 1000)
-    later(() => setStage('addressed'), 2600)
+    later(() => setStage('delivered'), 1800)
+    later(() => setStage('addressed'), 4200)
   }
 
   function reset() {
-    timeoutsRef.current.forEach((id) => clearTimeout(id))
-    timeoutsRef.current = []
+    timers.current.forEach((id) => clearTimeout(id))
+    timers.current = []
     setStage('idle')
   }
 
-  const hudStatus =
-    stage === 'queued'
-      ? '🟡 agent · address queued · 1 open'
-      : `◯ agent · ready · ${stage === 'pending' || stage === 'delivered' ? '1 open' : '0 open'}`
+  const sent = stage !== 'idle' && stage !== 'composing'
+  const open = stage === 'pending' || stage === 'queued' || stage === 'delivered'
 
   return (
-    <div style={{ fontFamily: 'var(--body-font)', color: 'var(--text)' }}>
-      <p className="figure-hint" style={{ margin: '0 0 0.6rem' }}>
-        A comment's life: the 💬 button writes a file under{' '}
-        <code style={{ fontFamily: 'var(--mono-font)' }}>.feedback/</code>, the
-        author asks for delivery, and the agent replies into the same file.
+    <div className="mn-sim mn-fb-sim">
+      <p className="figure-hint">
+        {stage === 'idle'
+          ? 'press 💬 on the open editor'
+          : stage === 'composing'
+            ? 'send the comment'
+            : stage === 'pending'
+              ? 'the comment waits in its file. Press Address in the HUD'
+              : stage === 'addressed'
+                ? 'the reply is in the file and in the HUD'
+                : 'watch the status change in the file'}
       </p>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr)',
-          gap: '0.7rem',
-          alignItems: 'stretch',
-        }}
-      >
-        {/* ── Author: the block editor with the 💬 affordance ── */}
-        <div style={panelStyle}>
-          <p style={panelTitleStyle}>Author (browser, edit mode)</p>
-          <div
-            style={{
-              ...monoStyle,
-              background: 'var(--bg)',
-              border: '1px solid var(--border)',
-              borderRadius: 4,
-              padding: '0.4rem 0.5rem',
-              color: 'var(--text-2)',
-            }}
-          >
-            {EXCERPT}
-          </div>
-          {stage === 'idle' ? (
+      <div className="mn-fb-grid">
+        {/* The author's side: an open editor, then the comment box. */}
+        <div className="mn-fb-pane mn-fb-author">
+          <div className="mn-sim-pane-name">Author · browser</div>
+          <div className="mn-fb-editor">
+            <div className="mn-fb-source">{EXCERPT}</div>
             <button
               type="button"
+              className="mn-fb-bubble"
+              aria-label="Comment to the agent"
+              title="Comment to the agent"
+              disabled={stage !== 'idle'}
               onClick={() => setStage('composing')}
-              style={{
-                marginTop: '0.5rem',
-                font: 'inherit',
-                fontSize: '0.78rem',
-                border: '1px solid var(--border)',
-                borderRadius: 4,
-                background: 'var(--bg)',
-                cursor: 'pointer',
-                padding: '0.2rem 0.55rem',
-              }}
             >
-              💬 comment to the agent
+              💬
             </button>
-          ) : (
-            <div
-              style={{
-                marginTop: '0.5rem',
-                border: '1px solid var(--accent)',
-                borderRadius: 4,
-                padding: '0.4rem 0.5rem',
-              }}
-            >
-              <div style={{ ...monoStyle, color: 'var(--text)' }}>{COMMENT}</div>
-              {stage === 'composing' ? (
-                <button
-                  type="button"
-                  onClick={send}
-                  style={{
-                    marginTop: '0.4rem',
-                    font: 'inherit',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    border: '1px solid var(--accent)',
-                    borderRadius: 4,
-                    background: 'var(--accent)',
-                    color: 'var(--bg)',
-                    cursor: 'pointer',
-                    padding: '0.15rem 0.7rem',
-                  }}
-                >
-                  Send
-                </button>
-              ) : (
-                <div
-                  style={{ ...monoStyle, marginTop: '0.3rem', color: 'var(--text-2)' }}
-                >
-                  sent → {FB_ID}.json
-                </div>
-              )}
+          </div>
+          {stage === 'composing' && (
+            <div className="mn-fb-box" role="group" aria-label="Comment to the agent">
+              <div>
+                Comment on <strong>this passage</strong>
+              </div>
+              <p className="mn-fb-typed">{COMMENT}</p>
+              <button type="button" onClick={() => setStage('pending')}>
+                Send
+              </button>
             </div>
           )}
+
+          {/* The HUD, as it sits in the corner of the page in dev. */}
+          <div className="mn-fb-hud" role="group" aria-label="Simulated authorship HUD">
+            <div className="mn-fb-hud-bar">
+              <span className="mn-fb-dot" data-on={stage === 'queued' ? 'queued' : undefined} aria-hidden />
+              <span>{stage === 'queued' ? 'agent · address queued' : 'agent · ready'}</span>
+              {open && <span className="mn-fb-badge">1</span>}
+            </div>
+            {stage === 'pending' && (
+              <button type="button" className="mn-fb-address" onClick={address}>
+                Address 1 comment
+              </button>
+            )}
+            {stage === 'queued' && <p className="mn-fb-note">Address queued: delivered when the authoring session next takes a turn.</p>}
+            {sent ? (
+              <div className="mn-fb-item" aria-live="polite">
+                <div className="mn-fb-item-head">{stage === 'addressed' ? 'Addressed (1)' : 'Open (1)'} · block</div>
+                <p>{COMMENT}</p>
+                {stage === 'delivered' && <span className="mn-fb-tag">picked up…</span>}
+                {stage === 'addressed' && <p className="mn-fb-reply">↳ {REPLY}</p>}
+              </div>
+            ) : (
+              <p className="mn-fb-note">No comments yet.</p>
+            )}
+            {stage === 'addressed' && (
+              <button type="button" onClick={reset}>
+                Start over
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* ── The inbox: one JSON file, status mutating in place ── */}
-        <div style={panelStyle}>
-          <p style={{ ...panelTitleStyle, fontFamily: 'var(--mono-font)' }}>
-            .feedback/{stage === 'idle' || stage === 'composing' ? '' : `${FB_ID}.json`}
-          </p>
-          {stage === 'idle' || stage === 'composing' ? (
-            <div style={{ ...monoStyle, color: 'var(--text-2)' }}>
-              (empty, nothing pending)
-            </div>
+        {/* The inbox: one file per comment, rewritten in place. */}
+        <div className="mn-fb-pane mn-fb-file">
+          <div className="mn-sim-pane-name">.feedback/{sent ? `${FB_ID}.json` : ''}</div>
+          {sent ? (
+            <pre className="mn-sim-code" aria-live="polite">
+              {record(stage).map((l, i) => (
+                <span key={i} data-on={l.changed ? 'changed' : undefined}>
+                  {l.text + '\n'}
+                </span>
+              ))}
+            </pre>
           ) : (
-            <pre
-              style={{
-                ...monoStyle,
-                margin: 0,
-                whiteSpace: 'pre',
-                overflowX: 'auto',
-                color: 'var(--text)',
-              }}
-            >
-              {recordJson(stage)}
+            <pre className="mn-sim-code">
+              <span className="mn-sim-dim">(empty)</span>
             </pre>
           )}
           {stage === 'queued' && (
-            <pre
-              style={{
-                ...monoStyle,
-                margin: '0.55rem 0 0',
-                paddingTop: '0.45rem',
-                borderTop: '1px solid var(--border)',
-                whiteSpace: 'pre-wrap',
-                color: 'var(--accent)',
-              }}
-            >
-              {`address.json\n{ "requestedAt": "${T_REQUESTED}",\n  "sessionId": "authoring-session" }`}
-            </pre>
+            <>
+              <div className="mn-sim-pane-name">.feedback/address.json</div>
+              <pre className="mn-sim-code">
+                <span data-on="changed">{`{ "requestedAt": "${T_REQUESTED}",\n  "sessionId": "8b1f6a2e-…" }`}</span>
+              </pre>
+            </>
           )}
         </div>
 
-        {/* ── Agent: how the record gets claimed and addressed ── */}
-        <div style={panelStyle}>
-          <p style={panelTitleStyle}>Agent (authoring session)</p>
-          <div style={{ ...monoStyle, color: 'var(--text-2)' }}>
-            {(stage === 'idle' || stage === 'composing') && <div>… working on its current turn</div>}
-            {stage === 'pending' && <div>comment stays pending until the author asks</div>}
-            {stage === 'queued' && (
-              <>
-                <div style={{ color: 'var(--text)' }}>Address routes this request here</div>
-                <div>waiting for the next adapter pass…</div>
-              </>
-            )}
+        {/* The agent's side. */}
+        <div className="mn-fb-pane mn-fb-agent">
+          <div className="mn-sim-pane-name">Agent · authoring session</div>
+          <ol className="mn-fb-steps" aria-live="polite">
+            {!sent && <li>working on its own turn</li>}
+            {stage === 'pending' && <li>not told: comments wait until the author asks</li>}
+            {stage === 'queued' && <li>still mid-turn. The Stop hook runs when the turn ends</li>}
             {(stage === 'delivered' || stage === 'addressed') && (
-              <>
-                <div style={{ color: 'var(--text)' }}>
-                  adapter: claim {FB_ID}
-                </div>
-                <div>pending → delivered (atomic rename)</div>
-              </>
+              <li data-on={stage === 'delivered' ? 'now' : undefined}>
+                Stop hook finds address.json, claims the comment, deletes the request and keeps the turn going
+              </li>
             )}
-            {stage === 'addressed' && (
-              <>
-                <div style={{ color: 'var(--text)', marginTop: '0.3rem' }}>
-                  edit content/guide.md
-                </div>
-                <div>reply → "{REPLY}"</div>
-              </>
-            )}
-          </div>
+            {stage === 'addressed' && <li data-on="now">edits content/guide.md, then writes reply and addressedAt into the comment file</li>}
+          </ol>
         </div>
       </div>
-
-      {/* ── The HUD strip: where the reply surfaces for the author ── */}
-      <div
-        style={{
-          marginTop: '0.7rem',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          gap: '0.6rem',
-          fontSize: '0.78rem',
-          color: 'var(--text-2)',
-        }}
-      >
-        <span
-          style={{
-            flex: 'none',
-            whiteSpace: 'nowrap',
-            border: '1px solid var(--border)',
-            borderRadius: 999,
-            padding: '0.35rem 0.9rem',
-            background: 'var(--fig-bg)',
-          }}
-        >
-          {hudStatus}
-        </span>
-        {stage !== 'idle' && stage !== 'composing' && (
-          <span
-            style={{
-              ...monoStyle,
-              color: STATUS_COLOR[stage] ?? 'var(--text-2)',
-            }}
-          >
-            {stage === 'addressed'
-              ? `“${COMMENT}” · ✓ ${REPLY}`
-              : `“${COMMENT}” · ${stage === 'queued' ? 'pending' : stage}`}
-          </span>
-        )}
-        {stage === 'pending' && (
-          <button
-            type="button"
-            onClick={address}
-            style={{
-              marginLeft: 'auto',
-              font: 'inherit',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              border: '1px solid var(--accent)',
-              borderRadius: 4,
-              background: 'var(--accent)',
-              color: 'var(--bg)',
-              cursor: 'pointer',
-              padding: '0.15rem 0.6rem',
-            }}
-          >
-            Address 1 comment
-          </button>
-        )}
-        {stage === 'addressed' && (
-          <button
-            type="button"
-            onClick={reset}
-            style={{
-              marginLeft: 'auto',
-              font: 'inherit',
-              fontSize: '0.75rem',
-              border: '1px solid var(--border)',
-              borderRadius: 4,
-              background: 'var(--bg)',
-              cursor: 'pointer',
-              padding: '0.1rem 0.5rem',
-            }}
-          >
-            Replay
-          </button>
-        )}
-      </div>
-
-      <p className="figure-hint" style={{ marginTop: '0.6rem' }}>
-        Comments are plain files and accumulate by default. They stay{' '}
-        <code style={{ fontFamily: 'var(--mono-font)' }}>pending</code> until the
-        author presses Address or enables auto-address.
-      </p>
     </div>
   )
 }
