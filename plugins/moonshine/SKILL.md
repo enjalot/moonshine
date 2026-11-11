@@ -105,11 +105,16 @@ Iterate on this section until it works before building the rest.
 
 Build the remaining sections, following the structure from Phase 2. After each major section, open in the browser to verify. Prose should be written alongside the figures, not after, because the prose frames what the reader should notice in each figure.
 
-**Checkpoint:** Before delivering, verify the article:
+**Checkpoint:** Before delivering, verify the article. None of these steps is optional, and "it built" is not one of them. The shipped examples in this repo were delivered without them and were later found with blank figures, frozen simulations and captions describing behaviour the figure did not have.
 
 1. Run the Editing Pass (see Editorial Tone) over the prose, section by section.
 2. Walk the Anti-Slop list below item by item against the actual output, as a literal checklist pass, not from memory. Fix what you find.
-3. If a browser or screenshot tool is available, screenshot each figure and check it against the Pedagogy principles: something interesting is visible before any interaction, defaults make the phenomenon dramatically visible, nothing is blank or waiting for a click.
+3. Load every page in a browser (headless is fine) and fail on any console error or uncaught exception. One syntax error blanks every figure on a shine page.
+4. Look at each figure at two widths, about 360px and about 1100px, in light and dark (`prefers-color-scheme`). At 360px: no text under 13px, no horizontal page scroll, and a one-finger swipe that starts on a figure still scrolls the page. See "Phones and touch" in `VISUALS.md`.
+5. Check each figure against the Pedagogy principles: something interesting is visible before any interaction, defaults make the phenomenon dramatically visible, nothing is blank or waiting for a click. For anything that runs (a simulation, a training loop, an animation), one screenshot is not enough: look again after about 2, 10 and 30 seconds. Sand that never falls looks fine in the first frame.
+6. Run the Honest Figures pass (see Pedagogy): for every number, named example, "watch it do X" sentence and caption claim, find the line of code, the row of data or the screenshot that makes it true.
+
+If no browser is available, say so in the delivery message and list which of steps 3 to 6 were not done. Do not report them as checked.
 
 ### Output
 
@@ -133,6 +138,8 @@ The one-line rule: **remove the performance, keep the explanation.** Authorial p
 - "Every review has the same shape" → "Making review structure explicit"
 - "What the author writes" → "Annotating the actions"
 - "Marking fields: quick view versus detail" → "What should we show in quick view?"
+
+A metaphor may name a chapter in a kicker line, never in the `h1` or `<title>`, and it must name the same thing in every chapter. A series whose parts are titled "The Lens", "The Projector" and "The Filter" tells a reader scanning the index nothing, and "projector" drifted between two different tools by part five.
 
 **Ground in the real artifact.** Link or point to the concrete thing — the page, the file, the running demo — and start there. Cut abstract scene-setting that delays arrival; start at the point, not one sentence before it. "The reviews page shows all the reviews with minimal context and a quick approve button, how do we determine what to show in that list?" beats two sentences of conceptual framing about what the system can and cannot infer.
 
@@ -250,6 +257,7 @@ The test is simple: does this look like an article, or does it look like a dashb
 - Numbered lists where prose would flow better. Not everything is a "3-step process."
 - Ending with a grand summary that restates everything just said.
 - Teaser headings that withhold the topic to manufacture curiosity (covered in Editorial Tone: describe or ask).
+- Repeated "idea cards" or navigation tiles that restate each section in a box. One list of links is navigation; a card per idea is a dashboard.
 - Maxim sentences that package the point as a quotable principle (covered in Editorial Tone: cut the maxim).
 
 **The check:** Before delivering, scan the output. If you swapped the content for a different topic and nothing else needed to change, the design is too generic. The visual choices should relate to what's being explained.
@@ -264,7 +272,7 @@ These principles come from [Distill.pub](https://distill.pub) and the broader tr
 
 **Visual encoding.** Position and length are the most accurate channels; use them for the most important data. Color encodes categories or highlights, not quantitative information alone. Redundant encoding (color + position) improves accessibility. Consistent visual language across all figures.
 
-**Typography.** Large readable body (18-20px), generous line height (1.5-1.6), constrained line length (60-75 chars), clear heading hierarchy. Monospace for code, KaTeX for math. Margin notes over footnotes.
+**Typography.** Large readable body (18-20px), generous line height (1.5-1.6), constrained line length (60-75 chars), clear heading hierarchy. Monospace for code, KaTeX for math. Margin notes over footnotes. Nothing a reader is meant to read, in a figure or around it, renders under 13px at any width: axis ticks, legends, hints, readouts, inline code in captions.
 
 **Interaction patterns.**
 
@@ -289,3 +297,25 @@ These principles come from building real moonshine articles and noticing what ge
 **Consistent conventions across figures.** If you show a radius as a dotted circle in one figure, show it the same way in every figure. If you color-code a variable blue in an equation, use that same blue everywhere it appears. Inconsistency forces the reader to re-learn the visual language in each figure.
 
 **Looping animations reset cleanly.** If a demonstration loops, it should reset to its initial state, not carry over physics or accumulated values from the previous iteration.
+
+**Each figure opens in its own state.** Two consecutive figures that look identical on load teach the reader that the second one is a repeat. Give each figure a default that differs from the figure before it, and never open on an instruction ("Click a joke on the map"): pre-select the example the prose discusses.
+
+**A comparison must be able to show a difference.** Before building a side-by-side, check that the two things can differ on the chosen data. Embedding 2-D data into 2-D makes every method look perfect. Views being compared share one scale: a difference strip normalised to its own maximum looks the same for every pair.
+
+### Honest Figures
+
+A reader trusts an interactive figure more than a sentence, because it appears to be the thing itself running. These rules keep that trust earned. Every one of them was broken in an example this repo shipped.
+
+**A figure may generate its inputs, never its results.** Synthetic points, a made-up corpus, a toy graph: fine, and say so. But what the figure shows happening to that input has to be computed by the method the figure names. A recall curve drawn from a formula, a "product quantizer" that adds noise to true distances, or a "trained" autoencoder that plots the generating function are illustrations of what the author expects, and they are wrong in the cases where the expectation is wrong.
+
+**A figure named after a method runs that method.** If the real algorithm is too heavy for the page, run a reduced version and state the reduction in the caption ("exact t-SNE on 300 points, no Barnes-Hut"). Never label a panel "UMAP-like" or "PHATE-like". If it is a cartoon of the idea, call it a cartoon in the caption.
+
+**A model is labelled as a model.** A cost model, a hand-rated comparison matrix and a schematic are all legitimate, as long as the caption says which one the reader is looking at. Do not print model output in the style of a measurement.
+
+**Prose is checked against the page.** For each number, named example, offered control and "watch it do X" sentence, find what makes it true: a line of code, a row of the shipped data, a screenshot. Typical failures: the prose says four methods and the code has three; a dropdown offers nine combinations and five exist; the prose invites the reader to "type your own query" and there is no input; an example cluster ("bicycles, transportation") that is not in the data.
+
+**Numbers about the article's own data are recomputed at delivery.** File sizes, counts, hosts, timings and percentages drift as the project changes. Recompute them from the files, and leave a comment next to each constant in the figure source naming where it came from. Report a range when the mean hides the case the reader will hit ("0.2 to 18 MB per chunk", not "about 7 MB").
+
+**Facts recalled from memory are marked for the author.** Published benchmark figures, library defaults and paper results that you did not look up go in the delivery message as a list for the author to check, not silently into the prose.
+
+**A simulation of a feature says it is one.** When an article about a tool reproduces a piece of that tool's interface (a dev-only editor, a panel), the caption says it is a reproduction, and it behaves like the real thing in the respects the prose mentions.

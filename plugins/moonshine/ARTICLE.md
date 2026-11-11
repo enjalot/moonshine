@@ -16,8 +16,10 @@ Self-contained HTML, vanilla JS, D3 v7 from CDN. No build tools, no frameworks. 
 ```
 ~/.agent/moonshine/project-name/
   index.html          # Self-contained explanation (HTML + CSS + JS)
-  data/               # Optional external datasets
+  data/               # Only for data too large to inline (see below)
 ```
+
+Inline data under about 100 KB so the page works when opened from disk. Larger or shared data goes in `data/` and is loaded with the scaffold's `loadJSON`, which reports a failed or `file://` fetch inside the figure that needed it. `VISUALS.md` "External Data" has the rules.
 
 For article series:
 
@@ -60,6 +62,14 @@ Every moonshine explanation starts from this template:
   --bg: #fafafa;
   --fig-bg: #ffffff;
   --border: #e2e2e8;
+  --fig-text: 13px;        /* floor for anything readable inside a figure */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e6dd; --text-2: #a0a0b4; --accent: #60a5fa; --accent-light: #1e3a5f;
+    --bg: #1a1a2e; --fig-bg: #22223a; --border: #3a3a52;
+  }
 }
 
 body {
@@ -81,6 +91,7 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
 
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .figure-wide { margin-left: -2rem; margin-right: -2rem; }
+.figure svg, .figure canvas { display: block; max-width: 100%; }
 .figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
 .figure-label { font-weight: 600; color: var(--text); }
 
@@ -89,8 +100,13 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
 .controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
 .controls input[type="range"] { width: 160px; accent-color: var(--accent); }
 
-svg text { font-family: var(--heading-font); }
-svg .axis text { font-size: 11px; fill: var(--text-2); }
+.readout { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); min-height: 1.6em; margin-top: 0.5rem; }
+.figure-msg { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); padding: 1rem 0; }
+pre, .eq-block { overflow-x: auto; }
+
+/* No font-size here: a stylesheet rule would override .attr("font-size"). */
+svg text { font-family: var(--heading-font); fill: var(--text); }
+svg .axis text { font-size: var(--fig-text); fill: var(--text-2); }
 svg .axis line, svg .axis path { stroke: var(--border); }
 
 @media (max-width: 640px) {
@@ -124,6 +140,69 @@ svg .axis line, svg .axis path { stroke: var(--border); }
 const state = {};
 const dispatch = d3.dispatch('update', 'select', 'hover');
 
+// --- Scaffold helpers. Keep these identical in every file of a series. ---
+
+// Theme: canvas, WebGL and library colour arguments cannot use var(--x).
+const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+// Seeded random numbers, so a figure shows the same thing its caption describes.
+function mulberry32(seed) {
+  return () => {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// figure(id, draw): calls draw(el, width) at the container's real pixel width,
+// and again on resize or colour-scheme change. Lay out in pixels inside draw;
+// do not set a fixed viewBox, or text shrinks with the column.
+function figure(id, draw) {
+  const el = document.getElementById(id);
+  let last = 0;
+  const run = () => { const w = Math.round(el.clientWidth); if (w > 0) { last = w; draw(el, w); } };
+  new ResizeObserver(() => { if (Math.round(el.clientWidth) !== last) run(); }).observe(el);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', run);
+  run();
+}
+
+// visibleLoop(el, frame): runs frame(dt) only while el is on screen and the
+// tab is visible. Under reduced motion it does not start; draw a still and
+// offer a Play button that calls the returned start().
+function visibleLoop(el, frame) {
+  let raf = 0, onScreen = false, wanted = !reducedMotion.matches, prev = 0;
+  const tick = t => { frame(Math.min(50, t - prev)); prev = t; raf = requestAnimationFrame(tick); };
+  const sync = () => {
+    const go = wanted && onScreen && !document.hidden;
+    if (go && !raf) { prev = performance.now(); raf = requestAnimationFrame(tick); }
+    if (!go && raf) { cancelAnimationFrame(raf); raf = 0; }
+  };
+  new IntersectionObserver(([e]) => { onScreen = e.isIntersecting; sync(); }).observe(el);
+  document.addEventListener('visibilitychange', sync);
+  return { start() { wanted = true; sync(); }, stop() { wanted = false; sync(); } };
+}
+
+// loadJSON(url, el, label): a failed, blocked or file:// request becomes a
+// sentence in the figure that needed the data, never a blank box.
+async function loadJSON(url, el, label) {
+  const msg = d3.select(el).append('p').attr('class', 'figure-msg').text(`Loading ${label}…`);
+  try {
+    if (location.protocol === 'file:') throw new Error('file');
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    msg.remove();
+    return data;
+  } catch (err) {
+    msg.text(location.protocol === 'file:'
+      ? `This figure loads ${label}, which a browser blocks for a page opened from disk. Serve this folder over HTTP to see it.`
+      : `Couldn't load ${label}.`);
+    return null;
+  }
+}
+
 // All visualization code in IIFEs to avoid globals
 </script>
 </body>
@@ -144,13 +223,9 @@ The template uses CSS custom properties throughout. Reference them in D3 code vi
 - `--accent` / `--accent-light`: interactive elements and highlights
 - `--bg` / `--fig-bg` / `--border`: backgrounds and structure
 
-**Dark mode** (add when appropriate):
-```css
-@media (prefers-color-scheme: dark) {
-  :root { --text: #e8e6dd; --text-2: #a0a0b4; --bg: #1a1a2e;
-    --fig-bg: #22223a; --border: #3a3a52; --accent: #60a5fa; }
-}
-```
+**Dark mode** is part of the scaffold, not an option. Every colour in a figure comes from a custom property: in SVG as `var(--x)`, in canvas via `cssVar("--x")` with a redraw on scheme change (`figure()` does the redraw). Semantic colours an article adds (one per variable in an equation, say) get a dark value in the same media block, and KaTeX colours are pointed at those properties after render instead of using `\color{#hex}`. Check the page in both schemes before delivering.
+
+**Figure text** is `var(--fig-text)` (13px) or larger. The scaffold sets no `font-size` on `svg text` because a stylesheet rule overrides `.attr("font-size", …)`; set sizes with `.style()` or a class.
 
 ## Layout Patterns
 
@@ -180,7 +255,7 @@ The template uses CSS custom properties throughout. Reference them in D3 code vi
 
 **Dynamic value displays:** When showing live values that update on hover or interaction (like equation variables resolving to numbers), always reserve fixed height for the display area. Values appearing and disappearing causes layout jitter. Use `min-height` or a placeholder value.
 
-**Viewport-aware simulations:** Simulations and animations should only run when scrolled into view. Use IntersectionObserver to start/stop. This saves battery on mobile and prevents background simulations from competing for CPU/GPU with the figure the reader is actually looking at.
+**Viewport-aware simulations:** Simulations and animations should only run when scrolled into view and the tab is visible. Use the scaffold's `visibleLoop`. This saves battery on mobile and prevents background simulations from competing for CPU/GPU with the figure the reader is actually looking at. Under `prefers-reduced-motion` the loop does not start: run the simulation forward a few hundred steps without drawing, draw that still, and add a Play button.
 
 ## Article Series
 
@@ -192,7 +267,9 @@ Each card needs:
 - A title
 - A one-sentence description of what the reader will learn
 - Optionally, tags noting visualization techniques used
-- A thumbnail: either a small inline SVG abstracting the article's main chart (a simplified silhouette of a streamgraph, a heatmap grid, a small force layout) or a miniature of the actual figure. Thumbnails go to the left or top of the card, kept small (80-120px).
+- A thumbnail: a small static miniature of the chapter's main figure, drawn from that chapter's real data, not a decorative stand-in (a sine wave for "embeddings"). Static means no animation loop per card. Thumbnails go to the left or top of the card, kept small (80-120px), and where the layout hides them (a phone) their data is not downloaded.
+
+Card titles say what the chapter covers. A metaphor ("The Lens") can sit in a kicker line above a plain title.
 
 The index should have a small visual element in the header (sparkline, small chart) that gives a sense of the dataset.
 
@@ -200,10 +277,10 @@ The index should have a small visual element in the header (sparkline, small cha
 ```html
 <div class="card-list" style="display: flex; flex-direction: column; gap: 1rem; margin: 2rem 0;">
   <a class="card" href="01-first-concept.html" style="display: block; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1.25rem 1.5rem; text-decoration: none; transition: border-color 0.15s;">
-    <div style="font-family: var(--mono-font); font-size: 0.8rem; color: var(--text-2);">01</div>
+    <div style="font-family: var(--mono-font); font-size: 0.8125rem; color: var(--text-2);">01</div>
     <div style="font-family: var(--heading-font); font-weight: 700; font-size: 1.2rem; color: var(--text); margin-bottom: 0.4rem;">Article Title</div>
     <p style="font-size: 0.95rem; color: var(--text-2); margin: 0;">One sentence about what the reader will learn.</p>
-    <div style="font-family: var(--heading-font); font-size: 0.75rem; color: var(--accent); margin-top: 0.6rem;">scatter plot &middot; brushing &middot; linked views</div>
+    <div style="font-family: var(--heading-font); font-size: 0.8125rem; color: var(--accent); margin-top: 0.6rem;">scatter plot &middot; brushing &middot; linked views</div>
   </a>
 </div>
 ```
@@ -216,6 +293,10 @@ The index should have a small visual element in the header (sparkline, small cha
   <p>Data from ... Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
 </footer>
 ```
+
+**One stylesheet and one set of helpers for the whole series.** Each file is self-contained, so the shared `<style>` block and the scaffold helpers are copied into every chapter, and copies drift: shipped series ended up with opposite colour conventions between chapters and seven variants of the same CSS. Keep the shared blocks byte-identical (generate the files from one template with a small script kept beside the project, or diff the shared blocks across files before delivering), and keep conventions the same across chapters: one colour per variable, one meaning for each ramp, the same footer wording.
+
+**A series keeps its promises.** If chapter 1 says "we will return to these measures", a named later chapter computes them. The capstone computes something (the methods side by side on one dataset, scored), not only a hand-rated summary table; a table of judgments is labelled as judgment.
 
 ## State Coordination
 
@@ -268,8 +349,8 @@ const ro = new ResizeObserver(([entry]) => {
 ro.observe(container);
 ```
 
-Redraw on resize rather than using `viewBox` for any chart with readable text. `viewBox` shrinks 14px text to 7px at half width.
+Redraw on resize rather than using `viewBox` for any chart with readable text. `viewBox` shrinks 14px text to 7px at half width, and to 4px on a phone. The scaffold's `figure(id, draw)` is this pattern packaged: write `draw(el, width)` to clear `el` and lay everything out in pixels for that width (`const svg = d3.select(el).html("").append("svg").attr("width", width).attr("height", h)`), and branch on width for the narrow layout (`const cols = width < 480 ? 1 : 3`). Bind control listeners outside `draw`, or they double up on every redraw.
 
 **Pitfall:** ResizeObserver infinite loop. If chart content changes container height, observer fires again. Fix: observe a wrapper with CSS-determined size. Set `overflow: hidden` on the wrapper.
 
-Touch: always use `pointerenter`/`pointerleave` over `mouseenter`/`mouseleave`. Pointer events unify mouse, touch, and pen.
+Touch: always use `pointerenter`/`pointerleave` over `mouseenter`/`mouseleave`. Pointer events unify mouse, touch, and pen. That is the start of touch support, not the whole of it: see "Phones and touch" in `VISUALS.md` for scrolling past figures, drag handles, pan/zoom and hover-only values.

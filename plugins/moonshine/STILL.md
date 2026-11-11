@@ -662,7 +662,8 @@ zoomed out." Each comment is written as a file under `<project>/.feedback/`.
 
 Comments **accumulate by default** — nothing is delivered until the author
 asks. When they press **Address** in the HUD (or turn on auto-address), the
-Claude Code **Stop hook** injects the pending comments at a turn boundary and
+Claude Code **Stop hook** (registered by the plugin's own
+`hooks/hooks.json`; a project needs no hook configuration) injects the pending comments at a turn boundary and
 blocks the stop until you handle them. Delivery requests carry the article's
 authoring `sessionId`, so another active session leaves them untouched. The
 author may also just ask you
@@ -765,6 +766,7 @@ Once the outline is agreed:
 
 2. **Open in browser.** The reader sees the example content. Don't
    delete it yet — it's the demonstration that everything works.
+   It is scaffolding, though: see step 7.
 
 3. **Write the first section.** Edit `content/example.md` (or create
    `content/your-topic.md` and delete the example). Use directives to
@@ -787,6 +789,27 @@ Once the outline is agreed:
    `content/example.md`. The root URL renders a series index when more
    than one article exists, and a single article when only one does.
 
+7. **Remove the scaffolding once the first real figure exists.** The
+   template's demonstration figures are there to show the mechanisms,
+   and they have stayed registered in every project that was not told
+   to remove them. Delete `content/example.md` (if you made your own
+   file), the demo figure files (`GradientField`, `LossLandscape`,
+   `StepSize`, `Sparkline`, `FlowDiagram` and `lib/lossSurface.ts`),
+   their entries in `src/figures/registry.ts`, the demo's
+   `content/figures/flow-diagram.json`, and the README sections that
+   describe them. Keep the infrastructure they demonstrate: `drag/`,
+   `diagram/`, `DiagramFigure.tsx`, `lib/params.ts`. `npm run build`
+   afterwards confirms nothing still imports them.
+
+8. **Verify before delivering.** The checkpoint in `SKILL.md` Phase 4
+   applies in full: console clean, 360px and 1100px, light and dark,
+   the Honest Figures pass. Check the built output
+   (`npm run build && npx vite preview`), not only the dev server,
+   since the reader never sees the dev chrome. A figure's own CSS goes
+   in a stylesheet beside the figure (`src/figures/<name>.css`,
+   imported by the component), not appended to `src/styles/article.css`,
+   which the template upgrade replaces.
+
 ## Publishing
 
 `npm run build` produces a static site in `dist/` — typecheck, Velite
@@ -807,6 +830,9 @@ is dev-only and absent from the bundle.
 - **Publishing an example to the moonshine repo's own Pages site**: use
   `scripts/publish-example.sh` in the plugin repo (see `DEVELOPING.md`),
   which does the base, title, and 404 steps and syncs into `docs/<slug>/`.
+  If the build needs environment variables or must leave large assets
+  out, record them in the project's `moonshine.publish.json` (see the
+  script's header) so the next publish repeats them.
 
 The static `<title>` in `index.html` is the template's generic one
 (article titles are set at runtime); patch it in `dist/` after building
@@ -834,6 +860,11 @@ falls back to frontmatter and loses the session linkage.
   `DiagramFigure` instead.
 - **Don't hardcode colors in figure files.** Reference the CSS custom
   properties (`var(--accent)`, `var(--text-2)`) from `tokens.css`.
+  Canvas and WebGL can't use `var()`: add the colour to `tokens.css`
+  with a dark value and read it with `getComputedStyle`.
+- **Don't put text under 13px in a figure**, and don't trap the page
+  scroll: see "Phones and touch" in `VISUALS.md`.
+- **Don't leave the demo figures registered** in a real article.
 - **Don't mount heavy figures eagerly.** Wrap them in `<LazyIsland>`
   (the default `<Figure>` already does this).
 - **Don't write KPI cards, status badges, or metric grids.** Same
