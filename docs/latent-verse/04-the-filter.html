@@ -3,46 +3,124 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Filter — Latent Verse</title>
+<title>Decomposing embeddings with a sparse autoencoder | Latent Verse</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
+  color-scheme: light dark;
   --article-width: 740px;
   --body-font: 'Source Serif 4', Georgia, serif;
   --heading-font: 'Source Sans 3', system-ui, sans-serif;
   --mono-font: 'Source Code Pro', monospace;
-  --body-size: 1.125rem; --line-height: 1.6;
-  --text: #1a1a2e; --text-2: #4a4a6a;
-  --accent: #2563eb; --accent-light: #dbeafe;
-  --bg: #fafafa; --fig-bg: #ffffff; --border: #e2e2e8;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --accent: #2563eb;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+  --rule: #ececf2;
+  --track: #ececf2;
+  --code-bg: #f0f0f5;
+  /* figure colours, the same in every chapter */
+  --pos: #d9722a;        /* positive embedding values */
+  --neg: #3f7fbf;        /* negative embedding values */
+  --diff: #8a5fb5;       /* difference between two embeddings */
+  --axis: #b9b9c8;
+  --dot: #4a6fa5;        /* a joke on a map */
+  --dot-muted: #c4c4d2;  /* noise, unselected, background */
+  --context: #d8d8e2;    /* basemap training texts */
+  --hl: #e8791d;         /* neighbours and featured jokes */
+  --mark: #d62839;       /* the selected joke */
+  --specific: #d1495b;   /* SAE feature that fires on few jokes */
+  --broad: #a9a9bd;      /* SAE feature that fires on many */
 }
-body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e6e6ef; --text-2: #a9a9c0; --accent: #7aa5f8;
+    --bg: #14141c; --fig-bg: #1c1c27; --border: #34344a;
+    --rule: #2a2a3a; --track: #2a2a3a; --code-bg: #2a2a3a;
+    --pos: #f0934f; --neg: #6aa5e0; --diff: #b592dd; --axis: #5a5a72;
+    --dot: #7ea6dc; --dot-muted: #4a4a60; --context: #33334a;
+    --hl: #ffa04d; --mark: #ff5d6c; --specific: #f0707f; --broad: #6c6c86;
+  }
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
 .article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
 h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
 h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
 h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+h3 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
 p { margin: 0 0 1rem; }
 a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-code { font-family: var(--mono-font); font-size: 0.9em; background: #f0f0f5; padding: 0.15em 0.35em; border-radius: 3px; }
+code { font-family: var(--mono-font); font-size: 0.9em; background: var(--code-bg); padding: 0.15em 0.35em; border-radius: 3px; }
+.kicker { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.25rem; }
+.kicker a { color: var(--text-2); text-decoration: none; }
+.subtitle { font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2); }
+.byline { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem; }
+
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .figure-wide { margin-left: -2rem; margin-right: -2rem; }
 .figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
 .figure-label { font-weight: 600; color: var(--text); }
-.insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
-.insight p { margin: 0; }
-.margin-note { font-size: 0.8125rem; color: var(--text-2); line-height: 1.4; border-left: 2px solid var(--border); padding-left: 0.75rem; margin: 1rem 0; }
-svg text { font-family: var(--heading-font); }
+.fig-status { font-family: var(--heading-font); font-size: 0.9rem; color: var(--text-2); padding: 1.25rem 0; margin: 0; }
+.fig-status.error { color: var(--text); border-left: 3px solid var(--pos); padding: 0.5rem 0 0.5rem 0.75rem; }
+.fig-status[hidden], .fig-body[hidden] { display: none; }
+.field-label { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.3rem; display: block; }
+.joke-picker {
+  font-family: var(--body-font); font-size: 1rem; padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg);
+  color: var(--text); cursor: pointer; width: 100%; min-width: 0;
+}
+.controls { display: flex; align-items: center; gap: 0.4rem 1.25rem; flex-wrap: wrap; margin-bottom: 0.75rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.btn-group { display: inline-flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
+.btn {
+  font-family: var(--heading-font); font-size: 0.85rem; padding: 0.3rem 0.65rem; min-height: 2rem;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text); cursor: pointer;
+}
+.btn:hover { border-color: var(--accent); }
+.btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--fig-bg); }
+.map-box { width: 100%; height: 460px; position: relative; }
+.map-box canvas { display: block; touch-action: pan-y; }
+.map-box canvas:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.readout { font-family: var(--heading-font); font-size: 0.9rem; color: var(--text-2); margin-top: 0.6rem; min-height: 4.4em; }
+.readout .picked { font-family: var(--body-font); font-style: italic; color: var(--text); font-size: 0.95rem; display: block; overflow-wrap: anywhere; }
+.swatch { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; margin-right: 0.25rem; vertical-align: -1px; }
 
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .figure { padding: 1rem; }
+  .figure-wide { margin-left: 0; margin-right: 0; }
+  .map-box { height: 320px; }
+  .btn-group { display: flex; width: 100%; }
+  .btn-group .lbl { flex-basis: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
 .feature-bar-row {
   display: flex; align-items: center; gap: 0.5rem;
-  padding: 0.35rem 0; border-bottom: 1px solid #f5f5fa;
+  padding: 0.35rem 0; border-bottom: 1px solid var(--rule);
   font-family: var(--heading-font); font-size: 0.85rem;
   min-width: 0;
 }
 .feature-bar-row:last-child { border-bottom: none; }
+.feature-bar-row.shared .feature-bar-label { font-weight: 600; }
+.feature-bar-row.shared .feature-bar-track { outline: 1.5px solid var(--text); outline-offset: 1px; }
 .feature-bar-label {
   /* Fixed column so every bar starts at the same baseline. */
   flex: 0 0 13.5rem; max-width: 45%; color: var(--text);
@@ -50,57 +128,49 @@ svg text { font-family: var(--heading-font); }
 }
 .feature-bar-track {
   flex: 1 1 auto; min-width: 40px; height: 18px;
-  background: #f0f0f5; border-radius: 3px; overflow: hidden; position: relative;
+  background: var(--track); border-radius: 3px; overflow: hidden; position: relative;
   display: block;
 }
 .feature-bar-fill {
   display: block; height: 100%; border-radius: 3px;
   transition: width 0.3s ease; min-width: 2px;
 }
-.feature-bar-value { flex: 0 0 auto; min-width: 2.5rem; text-align: right; font-family: var(--mono-font); font-size: 0.8rem; color: var(--text-2); }
-.feature-bar-share { flex: 0 0 auto; min-width: 2.5rem; text-align: right; font-family: var(--mono-font); font-size: 0.8rem; color: var(--text-2); }
-.feature-bar-fill.specific, .swatch.specific { background: #d1495b; }
-.feature-bar-fill.broad, .swatch.broad { background: #b8b8c8; }
+.feature-bar-value { flex: 0 0 auto; min-width: 2.6rem; text-align: right; font-family: var(--mono-font); font-size: 0.8125rem; color: var(--text-2); }
+.feature-bar-share { flex: 0 0 auto; min-width: 2.6rem; text-align: right; font-family: var(--mono-font); font-size: 0.8125rem; color: var(--text-2); }
+.feature-bar-head { display: flex; gap: 0.5rem; font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-2); padding-bottom: 0.2rem; border-bottom: 1px solid var(--rule); }
+.feature-bar-head span:first-child { flex: 1 1 auto; }
+.feature-bar-head span + span { flex: 0 0 auto; min-width: 2.6rem; text-align: right; }
+.feature-bar-fill.specific, .swatch.specific { background: var(--specific); }
+.feature-bar-fill.broad, .swatch.broad { background: var(--broad); }
 @media (max-width: 520px) {
   .feature-bar-label { white-space: normal; overflow: visible; line-height: 1.2; }
 }
-.feature-legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-2); }
-.feature-legend .swatch { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 2px; margin-right: 0.35rem; vertical-align: -1px; }
-
-.joke-selector {
-  font-family: var(--body-font); font-size: 0.95rem; padding: 0.4rem 0.6rem;
-  border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg);
-  color: var(--text); cursor: pointer; width: 100%; min-width: 0;
-  box-sizing: border-box;
-}
+.feature-legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-2); }
+.feature-legend .swatch { border-radius: 2px; width: 0.75rem; height: 0.75rem; margin-right: 0.35rem; }
 
 .compare-grid {
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem;
 }
-.compare-cell { min-width: 0; overflow: hidden; }
+.compare-cell { min-width: 0; }
+.compare-cell .feature-bar-label { white-space: normal; overflow: visible; line-height: 1.2; flex-basis: 11rem; }
 
 @media (max-width: 640px) {
-  h1 { font-size: 1.75rem; }
-  .figure-wide { margin-left: 0; margin-right: 0; }
-  .compare-grid { grid-template-columns: 1fr; }
+  .compare-grid { grid-template-columns: 1fr; gap: 1.5rem; }
 }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
 </style>
 </head>
 <body>
 <div class="article">
   <header>
-    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.25rem;">
-      <a href="index.html" style="color: var(--text-2); text-decoration: none;">Latent Verse</a> / Part 4
+    <p class="kicker"><a href="index.html">Latent Verse</a> / Part 4: the filter</p>
+    <h1>Decomposing embeddings with a sparse autoencoder</h1>
+    <p class="subtitle">
+      A sparse autoencoder breaks an embedding into a few labeled features. It works on any text the model can embed, including text from other datasets.
     </p>
-    <h1>The Filter</h1>
-    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
-      A Sparse Autoencoder decomposes embeddings into interpretable features. It works on any text, not just this dataset.
-    </p>
-    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">By Ian Johnson</p>
+    <p class="byline">By Ian Johnson</p>
   </header>
 
-  <h2>From local to global</h2>
+  <h2>Why clusters don't transfer to other datasets</h2>
 
   <p>
     In the previous articles, we used tools that are <strong>local</strong> to a dataset. Each time
@@ -115,11 +185,12 @@ svg text { font-family: var(--heading-font); }
   </p>
 
   <p>
-    That tool is a <strong>Sparse Autoencoder</strong> (SAE). It learns to break an embedding
+    That tool is a <strong>sparse autoencoder</strong> (SAE). It learns to break an embedding
     into a small number of active features chosen from a much larger set of possible features.
+    We can think of it as a filter that separates an embedding into its ingredients.
   </p>
 
-  <h2>Decomposing a joke</h2>
+  <h2>What is an SAE feature?</h2>
 
   <p>
     An embedding is a dense vector: all 384 dimensions have nonzero values, and none of them
@@ -138,21 +209,30 @@ svg text { font-family: var(--heading-font); }
   </p>
 
   <p>
-    Pick a joke to see its eight strongest features:
+    A feature is a direction in the embedding space that the SAE learned, together with a
+    number saying how strongly a given text activates it. Here are the eight strongest features
+    of one joke, and you can pick another:
   </p>
 
   <div class="figure figure-wide" id="fig-decompose">
-    <select id="joke-select" class="joke-selector"></select>
+    <p class="fig-status" role="status">Loading the SAE features…</p>
+    <div class="fig-body" hidden>
+    <label class="field-label" for="joke-select">Joke</label>
+    <select id="joke-select" class="joke-picker"></select>
     <div id="joke-text" style="font-style: italic; margin: 0.75rem 0; min-height: 1.5em;"></div>
     <div class="feature-legend">
       <span><i class="swatch specific"></i>specific: fires on under 5% of the 52,573 jokes</span>
       <span><i class="swatch broad"></i>broad: fires on more than that</span>
     </div>
-    <div id="feature-bars" style="margin-top: 0.5rem;"></div>
+    <div class="feature-bar-head" style="margin-top: 0.75rem;"><span>feature label</span><span>activation</span><span>share</span></div>
+    <div id="feature-bars" aria-live="polite"></div>
+    </div>
     <div class="figure-caption">
       <span class="figure-label">Figure 1.</span>
       The eight strongest of a joke's 64 active SAE features. Bar length is activation; the
-      right-hand column is the share of all 52,573 jokes that activate the feature.
+      right-hand column is the share of all 52,573 jokes that activate the feature. For the
+      atoms joke, red features name its subject (atoms, nuclear technology) and one of them,
+      "certificate trust validation", comes from the single word <em>trust</em>.
     </div>
   </div>
 
@@ -171,7 +251,7 @@ svg text { font-family: var(--heading-font); }
     the words and topics a joke is built from, not the wordplay.
   </p>
 
-  <h2>Shared features across jokes</h2>
+  <h2>Comparing the features of two jokes</h2>
 
   <p>
     Every joke activates exactly 64 features, but they are not drawn from 64 separate topics.
@@ -181,23 +261,28 @@ svg text { font-family: var(--heading-font); }
   </p>
 
   <div class="figure figure-wide" id="fig-compare">
+    <p class="fig-status" role="status">Loading the SAE features…</p>
+    <div class="fig-body" hidden>
     <div class="compare-grid">
       <div class="compare-cell">
-        <select id="compare-a-select" class="joke-selector"></select>
+        <label class="field-label" for="compare-a-select">First joke</label>
+        <select id="compare-a-select" class="joke-picker"></select>
         <div id="compare-a-text" style="font-style: italic; margin: 0.5rem 0; font-size: 0.95rem;"></div>
         <div id="compare-a-bars"></div>
       </div>
       <div class="compare-cell">
-        <select id="compare-b-select" class="joke-selector"></select>
+        <label class="field-label" for="compare-b-select">Second joke</label>
+        <select id="compare-b-select" class="joke-picker"></select>
         <div id="compare-b-text" style="font-style: italic; margin: 0.5rem 0; font-size: 0.95rem;"></div>
         <div id="compare-b-bars"></div>
       </div>
     </div>
-    <div id="shared-features" style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border);"></div>
+    <div id="shared-features" style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border);" aria-live="polite"></div>
+    </div>
     <div class="figure-caption">
       <span class="figure-label">Figure 2.</span>
-      Two jokes decomposed side by side, eight strongest features each. Shared features are
-      listed below the columns.
+      Two jokes decomposed side by side, eight strongest features each. Features that both
+      jokes activate are outlined and listed below the columns.
     </div>
   </div>
 
@@ -209,7 +294,7 @@ svg text { font-family: var(--heading-font); }
     article shows that this difference is visible on a map.
   </p>
 
-  <h2>A global vocabulary</h2>
+  <h2>Using the same features on any dataset</h2>
 
   <p>
     Clusters are computed <em>from</em> a dataset and apply only <em>to</em> that dataset. SAE
@@ -231,18 +316,92 @@ svg text { font-family: var(--heading-font); }
   </p>
 
   <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
-    <p>Part of <a href="index.html" style="color: var(--text-2);">Latent Verse</a>. Previous: <a href="03-finding-structure.html" style="color: var(--accent);">Finding Structure</a>. Next: <a href="05-the-atlas.html" style="color: var(--accent);">The Atlas</a>.</p>
+    <p>Part of <a href="index.html" style="color: var(--text-2);">Latent Verse</a>. Previous: <a href="03-finding-structure.html">Clustering and labeling a map</a>. Next: <a href="05-the-atlas.html">A basemap for every dataset</a>.</p>
     <p style="margin-top: 0.5rem;">Features come from <a href="https://huggingface.co/enjalot/sae-all-MiniLM-L6-v2-stagej-49K" style="color: var(--text-2);">sae-all-MiniLM-L6-v2-stagej-49K</a>, a Matryoshka TopK SAE (49,152 features, k=64) trained with <a href="https://github.com/enjalot/latent-sae" style="color: var(--text-2);">latent-sae</a>. Labels were written by qwen2.5-32b from each feature's top web-text exemplars. Jokes are from the dadabase collection, plus seven classics it lacks, embedded with the same model. The approach follows <a href="https://transformer-circuits.pub/2023/monosemantic-features" style="color: var(--text-2);">Towards Monosemanticity</a>.</p>
   </footer>
 </div>
 
 <script>
+// ---- shared helpers (the same block is inlined in every chapter) -------
+const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+const short = (t, n) => { t = t.replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n).trimEnd() + '…' : t; };
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Data lives in data/ next to this page. A failed or blocked request becomes
+// a readable message inside the figure that needed it.
+async function loadJSON(path) {
+  let res;
+  try { res = await fetch(path); }
+  catch (e) {
+    throw new Error(location.protocol === 'file:'
+      ? `This figure reads ${path}, and browsers block that when the page is opened straight from disk. Serve the folder (for example python3 -m http.server) and open it over http.`
+      : `Could not load ${path}. Check the connection and reload the page.`);
+  }
+  if (!res.ok) throw new Error(`Could not load ${path} (HTTP ${res.status}).`);
+  try { return await res.json(); }
+  catch (e) { throw new Error(`${path} arrived but could not be read as JSON.`); }
+}
+function figReady(figId) {
+  const fig = document.getElementById(figId);
+  fig.querySelector('.fig-status').hidden = true;
+  fig.querySelector('.fig-body').hidden = false;
+}
+function figError(figId, err) {
+  const fig = document.getElementById(figId);
+  const s = fig.querySelector('.fig-status');
+  s.hidden = false; s.classList.add('error'); s.textContent = err.message;
+  if (!/^(This figure reads|Could not load)/.test(err.message)) console.error(err);
+  fig.querySelector('.fig-body').hidden = true;
+}
+
+// Redraw canvases when the window is resized or the colour scheme flips.
+const redraws = [];
+function redrawAll() { redraws.forEach(f => f()); }
+{
+  let timer;
+  window.addEventListener('resize', () => { clearTimeout(timer); timer = setTimeout(redrawAll, 150); });
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redrawAll);
+}
+
+// A canvas sized to its container, in CSS pixels.
+function fitCanvas(el, canvas) {
+  const rect = el.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  const dpr = window.devicePixelRatio || 1;
+  if (el !== canvas) { canvas.style.width = W + 'px'; canvas.style.height = H + 'px'; }
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, W, H };
+}
+
+// Scales that fit [x0,x1] x [y0,y1] into a W x H box, keeping the aspect ratio.
+function fitScales(xExt, yExt, W, H, margin = 12) {
+  const xR = (xExt[1] - xExt[0]) || 1, yR = (yExt[1] - yExt[0]) || 1;
+  const pad = 0.04;
+  const pX = xR * (1 + pad * 2), pY = yR * (1 + pad * 2);
+  const aW = W - margin * 2, aH = H - margin * 2;
+  const s = Math.min(aW / pX, aH / pY);
+  const ox = margin + (aW - pX * s) / 2, oy = margin + (aH - pY * s) / 2;
+  return {
+    x: v => ox + (v - xExt[0] + xR * pad) * s,
+    y: v => oy + pY * s - (v - yExt[0] + yR * pad) * s,
+  };
+}
+// Extent that ignores the most extreme 0.5% at each end, so a few far-flung
+// points don't shrink the map.
+function robustExtent(vals, q = 0.005) {
+  const v = Float64Array.from(vals).sort();
+  return [d3.quantileSorted(v, q), d3.quantileSorted(v, 1 - q)];
+}
+function dot(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+function ring(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke(); }
 
 // Share of all jokes that activate a feature. Under 5% reads as specific.
 const SPECIFIC = 0.05;
 
-function renderFeatureBars(containerId, features, data) {
+function renderFeatureBars(containerId, features, data, shared = new Set()) {
   const el = document.getElementById(containerId);
   const total = data.provenance.n_jokes;
   const maxAct = Math.max(...features.map(f => f[1]));
@@ -251,7 +410,7 @@ function renderFeatureBars(containerId, features, data) {
     const share = (data.fires[String(idx)] || 0) / total;
     const cls = share < SPECIFIC ? 'specific' : 'broad';
     const pct = share < 0.01 ? '<1%' : `${Math.round(share * 100)}%`;
-    return `<div class="feature-bar-row">
+    return `<div class="feature-bar-row${shared.has(idx) ? ' shared' : ''}">
       <span class="feature-bar-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
       <span class="feature-bar-track">
         <span class="feature-bar-fill ${cls}" style="width: ${(act / maxAct * 100).toFixed(0)}%;"></span>
@@ -263,9 +422,11 @@ function renderFeatureBars(containerId, features, data) {
 }
 
 async function init() {
-  const data = await fetch('data/sae-real.json').then(r => r.json());
+  let data;
+  try { data = await loadJSON('data/sae-real.json'); }
+  catch (err) { figError('fig-decompose', err); figError('fig-compare', err); return; }
   const jokes = data.jokes;
-  const short = (t, n) => t.length > n ? t.slice(0, n) + '…' : t;
+  figReady('fig-decompose'); figReady('fig-compare');
 
   // Figure 1: single joke decomposition
   const select = document.getElementById('joke-select');
@@ -292,16 +453,15 @@ async function init() {
     const A = jokes[+selA.value], B = jokes[+selB.value];
     document.getElementById('compare-a-text').textContent = `"${A.text}"`;
     document.getElementById('compare-b-text').textContent = `"${B.text}"`;
-    renderFeatureBars('compare-a-bars', A.features, data);
-    renderFeatureBars('compare-b-bars', B.features, data);
-
     const aSet = new Set(A.features.map(f => f[0]));
     const bSet = new Set(B.features.map(f => f[0]));
     const name = idx => escapeHtml(data.labels[String(idx)] || `feature ${idx}`);
     const shared = [...aSet].filter(idx => bSet.has(idx));
+    renderFeatureBars('compare-a-bars', A.features, data, new Set(shared));
+    renderFeatureBars('compare-b-bars', B.features, data, new Set(shared));
     document.getElementById('shared-features').innerHTML = shared.length
-      ? `<div style="font-family: var(--heading-font); font-size: 0.85rem;"><strong>Shared (${shared.length}):</strong> ${shared.map(name).join(', ')}</div>`
-      : `<div style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">No shared features among the eight strongest.</div>`;
+      ? `<div style="font-family: var(--heading-font); font-size: 0.9rem;"><strong>Shared (${shared.length}):</strong> ${shared.map(name).join(', ')}</div>`
+      : `<div style="font-family: var(--heading-font); font-size: 0.9rem; color: var(--text-2);">No shared features among the eight strongest.</div>`;
   }
   selA.addEventListener('change', updateCompare);
   selB.addEventListener('change', updateCompare);

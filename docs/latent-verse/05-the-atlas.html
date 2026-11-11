@@ -3,25 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Atlas — Latent Verse</title>
+<title>A basemap: one fixed map for every dataset | Latent Verse</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
+  color-scheme: light dark;
   --article-width: 740px;
   --body-font: 'Source Serif 4', Georgia, serif;
   --heading-font: 'Source Sans 3', system-ui, sans-serif;
   --mono-font: 'Source Code Pro', monospace;
-  --body-size: 1.125rem; --line-height: 1.6;
-  --text: #1a1a2e; --text-2: #4a4a6a;
-  --accent: #2563eb; --accent-light: #dbeafe;
-  --bg: #fafafa; --fig-bg: #ffffff; --border: #e2e2e8;
-  --atlas-purple: #6b5b95;
-  --atlas-teal: #2a9d8f;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --accent: #2563eb;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+  --rule: #ececf2;
+  --track: #ececf2;
+  --code-bg: #f0f0f5;
+  /* figure colours, the same in every chapter */
+  --pos: #d9722a;        /* positive embedding values */
+  --neg: #3f7fbf;        /* negative embedding values */
+  --diff: #8a5fb5;       /* difference between two embeddings */
+  --axis: #b9b9c8;
+  --dot: #4a6fa5;        /* a joke on a map */
+  --dot-muted: #c4c4d2;  /* noise, unselected, background */
+  --context: #d8d8e2;    /* basemap training texts */
+  --hl: #e8791d;         /* neighbours and featured jokes */
+  --mark: #d62839;       /* the selected joke */
+  --specific: #d1495b;   /* SAE feature that fires on few jokes */
+  --broad: #a9a9bd;      /* SAE feature that fires on many */
 }
-body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e6e6ef; --text-2: #a9a9c0; --accent: #7aa5f8;
+    --bg: #14141c; --fig-bg: #1c1c27; --border: #34344a;
+    --rule: #2a2a3a; --track: #2a2a3a; --code-bg: #2a2a3a;
+    --pos: #f0934f; --neg: #6aa5e0; --diff: #b592dd; --axis: #5a5a72;
+    --dot: #7ea6dc; --dot-muted: #4a4a60; --context: #33334a;
+    --hl: #ffa04d; --mark: #ff5d6c; --specific: #f0707f; --broad: #6c6c86;
+  }
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
 .article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
 h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
 h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
@@ -29,124 +67,111 @@ h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
 h3 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
 p { margin: 0 0 1rem; }
 a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-code { font-family: var(--mono-font); font-size: 0.9em; background: #f0f0f5; padding: 0.15em 0.35em; border-radius: 3px; }
+code { font-family: var(--mono-font); font-size: 0.9em; background: var(--code-bg); padding: 0.15em 0.35em; border-radius: 3px; }
+.kicker { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.25rem; }
+.kicker a { color: var(--text-2); text-decoration: none; }
+.subtitle { font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2); }
+.byline { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem; }
+
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .figure-wide { margin-left: -2rem; margin-right: -2rem; }
 .figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
 .figure-label { font-weight: 600; color: var(--text); }
-.insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
-.insight p { margin: 0; }
-svg text { font-family: var(--heading-font); }
-.tip { position: fixed; pointer-events: none; background: rgba(26,26,46,0.92); color: #fff; font-family: var(--heading-font); font-size: 0.8rem; padding: 0.5rem 0.75rem; border-radius: 4px; max-width: 320px; line-height: 1.4; z-index: 100; }
-
-.comparison-grid {
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem;
+.fig-status { font-family: var(--heading-font); font-size: 0.9rem; color: var(--text-2); padding: 1.25rem 0; margin: 0; }
+.fig-status.error { color: var(--text); border-left: 3px solid var(--pos); padding: 0.5rem 0 0.5rem 0.75rem; }
+.fig-status[hidden], .fig-body[hidden] { display: none; }
+.field-label { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.3rem; display: block; }
+.joke-picker {
+  font-family: var(--body-font); font-size: 1rem; padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg);
+  color: var(--text); cursor: pointer; width: 100%; min-width: 0;
 }
-.comparison-grid > div { min-width: 0; }
-.comparison-label {
-  font-family: var(--heading-font); font-size: 0.85rem; font-weight: 600;
-  color: var(--text-2); margin-bottom: 0.4rem;
-  display: flex; justify-content: space-between; align-items: center;
+.controls { display: flex; align-items: center; gap: 0.4rem 1.25rem; flex-wrap: wrap; margin-bottom: 0.75rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.btn-group { display: inline-flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
+.btn {
+  font-family: var(--heading-font); font-size: 0.85rem; padding: 0.3rem 0.65rem; min-height: 2rem;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text); cursor: pointer;
 }
-.comparison-badge {
-  font-size: 0.7rem; font-weight: 500; padding: 0.1rem 0.4rem;
-  border-radius: 3px; text-transform: uppercase; letter-spacing: 0.04em;
-}
-.badge-local { background: #fef3c7; color: #92400e; }
-.badge-global { background: #e0e7ff; color: #4338ca; }
-
-.feature-tag {
-  display: inline-block; font-family: var(--heading-font); font-size: 0.75rem;
-  background: var(--accent-light); color: var(--accent); padding: 0.15rem 0.5rem;
-  border-radius: 3px; margin: 0.15rem 0.1rem;
-}
-.feature-tag.strong { background: #fee2e2; color: #991b1b; }
-.map-box { width: 100%; height: 420px; position: relative; }
-.map-box--pair { height: 360px; }
-/* The maps are wider than tall: on a phone a tall box is mostly blank. */
-@media (max-width: 600px) { .map-box, .map-box--pair { height: 280px; } }
-.feature-tag.broad { background: #ececf2; color: #55556a; }
-.feature-stat { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.5rem; min-height: 1.3em; }
-.feature-tag.medium { background: #ffedd5; color: #9a3412; }
-
-.microscope-panel {
-  border: 1px solid var(--border); border-radius: 6px; padding: 1rem;
-  margin-top: 1rem; background: #fafaff;
-}
-.microscope-panel.hidden { display: none; }
-.microscope-section {
-  margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #f0f0f5;
-}
-.microscope-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-.microscope-heading {
-  font-family: var(--heading-font); font-size: 0.75rem; font-weight: 600;
-  color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em;
-  margin-bottom: 0.4rem;
-}
-.microscope-grid {
-  display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 1rem;
-  align-items: start;
-}
-.neighbor-row {
-  font-size: 0.85rem; padding: 0.3rem 0; color: var(--text);
-  border-bottom: 1px solid #f5f5fa;
-}
-.neighbor-row:last-child { border-bottom: none; }
-.neighbor-dist {
-  font-family: var(--mono-font); font-size: 0.72rem; color: var(--text-2);
-  margin-right: 0.5rem;
-}
-
-.pipeline-container { display: flex; flex-direction: column; gap: 1rem; }
-.pipeline-step {
-  display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 1rem;
-  align-items: center; padding: 0.75rem; background: #fafaff;
-  border: 1px solid var(--border); border-radius: 5px;
-}
-.pipeline-step-label {
-  font-family: var(--heading-font); font-size: 0.85rem; font-weight: 600;
-  color: var(--text);
-}
-.pipeline-step-sub {
-  font-family: var(--heading-font); font-size: 0.72rem; color: var(--text-2);
-  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;
-}
-.embedding-canvas { width: 100%; height: 40px; display: block; border-radius: 3px; }
-
-.joke-input {
-  font-family: var(--body-font); font-size: 0.95rem; width: 100%;
-  padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: 4px;
-  background: var(--fig-bg); color: var(--text); outline: none;
-  box-sizing: border-box;
-}
-.joke-input:focus { border-color: var(--accent); }
+.btn:hover { border-color: var(--accent); }
+.btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--fig-bg); }
+.map-box { width: 100%; height: 460px; position: relative; }
+.map-box canvas { display: block; touch-action: pan-y; }
+.map-box canvas:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.readout { font-family: var(--heading-font); font-size: 0.9rem; color: var(--text-2); margin-top: 0.6rem; min-height: 4.4em; }
+.readout .picked { font-family: var(--body-font); font-style: italic; color: var(--text); font-size: 0.95rem; display: block; overflow-wrap: anywhere; }
+.swatch { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; margin-right: 0.25rem; vertical-align: -1px; }
 
 @media (max-width: 640px) {
   h1 { font-size: 1.75rem; }
+  .figure { padding: 1rem; }
   .figure-wide { margin-left: 0; margin-right: 0; }
-  .comparison-grid, .microscope-grid { grid-template-columns: 1fr; }
-  .pipeline-step { grid-template-columns: 1fr; }
+  .map-box { height: 320px; }
+  .btn-group { display: flex; width: 100%; }
+  .btn-group .lbl { flex-basis: 100%; }
 }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+:root { --heat-lo: #f2b48c; --heat-hi: #a30f2d; }
+@media (prefers-color-scheme: dark) { :root { --heat-lo: #7d4636; --heat-hi: #ffc19e; } }
+
+.comparison-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+.comparison-grid > div { min-width: 0; }
+.comparison-label { font-family: var(--heading-font); font-size: 0.9rem; font-weight: 600; color: var(--text-2); margin-bottom: 0.4rem; }
+.map-box { height: 420px; }
+.map-box--pair { height: 360px; }
+
+.feature-tag {
+  display: inline-block; font-family: var(--heading-font); font-size: 0.8125rem;
+  border: 1px solid var(--broad); color: var(--text-2); padding: 0.1rem 0.45rem;
+  border-radius: 3px; margin: 0.15rem 0.1rem;
+}
+.feature-tag.specific { border-color: var(--specific); color: var(--text); box-shadow: inset 3px 0 0 var(--specific); }
+.feature-stat { font-family: var(--heading-font); font-size: 0.9rem; color: var(--text-2); margin: 0.5rem 0; min-height: 1.4em; }
+
+.lookup-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 1.25rem; align-items: start; }
+.lookup-section { margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--rule); }
+.lookup-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.lookup-heading { font-family: var(--heading-font); font-size: 0.8125rem; font-weight: 600; color: var(--text-2); margin-bottom: 0.3rem; }
+.neighbor-row { font-size: 0.9rem; padding: 0.3rem 0; color: var(--text); border-bottom: 1px solid var(--rule); overflow-wrap: anywhere; }
+.neighbor-row:last-child { border-bottom: none; }
+.neighbor-sim { font-family: var(--mono-font); font-size: 0.8125rem; color: var(--text-2); margin-right: 0.5rem; }
+
+.steps { display: flex; flex-direction: column; }
+.step { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 1rem; align-items: center; padding: 0.9rem 0; border-top: 1px solid var(--rule); }
+.step-label { font-family: var(--heading-font); font-size: 0.9rem; font-weight: 600; color: var(--text); }
+.step-sub { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-2); }
+.embedding-canvas { width: 100%; height: 44px; display: block; }
+.fbar { display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0; font-family: var(--heading-font); font-size: 0.85rem; min-width: 0; }
+.fbar-label { flex: 0 0 12rem; max-width: 48%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fbar-track { flex: 1 1 auto; display: block; height: 14px; background: var(--track); border-radius: 2px; overflow: hidden; min-width: 30px; }
+.fbar-fill { display: block; height: 100%; border-radius: 2px; }
+.fbar-val { flex: 0 0 auto; font-family: var(--mono-font); font-size: 0.8125rem; color: var(--text-2); min-width: 2.2rem; text-align: right; }
+
+@media (max-width: 640px) {
+  .comparison-grid, .lookup-grid { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 1fr; gap: 0.4rem; }
+  /* The maps are wider than tall: on a phone a tall box is mostly blank. */
+  .map-box, .map-box--pair { height: 280px; }
+  .fbar-label { white-space: normal; line-height: 1.2; }
+}
 </style>
 </head>
 <body>
 <div class="article">
   <header>
-    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.25rem;">
-      <a href="index.html" style="color: var(--text-2); text-decoration: none;">Latent Verse</a> / Part 5
-    </p>
-    <h1>The Atlas</h1>
-    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
+    <p class="kicker"><a href="index.html">Latent Verse</a> / Part 5: the atlas</p>
+    <h1>A basemap: one fixed map for every dataset</h1>
+    <p class="subtitle">
       A parametric UMAP gives every text a permanent address. Paired with an SAE, it lets you name the regions of the map.
     </p>
-    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">By Ian Johnson</p>
+    <p class="byline">By Ian Johnson</p>
   </header>
 
-  <h2>The problem with local maps</h2>
+  <h2>What can't we do with a per-dataset map?</h2>
 
   <p>
-    In <a href="02-the-projector.html">Article 2</a>, we saw that UMAP gives you a map of your
+    In <a href="02-the-projector.html">Part 2</a>, we saw that UMAP gives you a map of your
     data. But that map is disposable. Add new data, re-run UMAP, and the whole layout reshuffles.
     The neighborhoods stay roughly intact, but every point moves. Two UMAP plots of overlapping
     datasets can't be compared directly, because they don't share a coordinate system.
@@ -165,11 +190,11 @@ svg text { font-family: var(--heading-font); }
   </ul>
 
   <p>
-    What we want is a permanent coordinate system. A map that doesn't change when the data changes.
-    A map where every text already has an address.
+    What we want is a permanent coordinate system: a map that doesn't change when the data
+    changes, where every text already has an address.
   </p>
 
-  <h2>Training a permanent projector</h2>
+  <h2>Training a network to do the projection</h2>
 
   <p>
     Instead of running UMAP from scratch on each dataset, train a neural network on the UMAP
@@ -181,48 +206,49 @@ svg text { font-family: var(--heading-font); }
 
   <p>
     Once trained, this network can project any new embedding instantly. It doesn't need to see the
-    whole dataset or recompute anything. Every text gets a consistent position on a permanent map,
-    shaped by the corpus the network trained on.
+    whole dataset or recompute anything. A joke's position depends only on its own embedding and
+    the trained weights, so it lands in the same place whether we project it alone, with 400
+    other jokes or with 50,000. Plain UMAP has no such function: a point's position comes out of
+    an optimization over all the points at once, which is why it moves when the data changes.
   </p>
 
   <p>
     This is called <strong>parametric UMAP</strong>. "Parametric" means the projection is defined
     by the learned parameters of the network, rather than by the specific dataset you're looking
     at. Once you have a trained network, you have a basemap: a global map of meaning that any new
-    text can be placed onto.
+    text can be placed onto, shaped by the corpus the network trained on.
   </p>
 
-  <h3>Same jokes, two different maps</h3>
+  <h3>Comparing a local UMAP with the basemap</h3>
 
   <p>
     Here are the same 400 dad jokes plotted two ways: on a fresh local UMAP computed from just
     these jokes, and on the basemap. Each joke keeps its colour from a clustering of the local
-    map, so you can see which local neighborhoods hold together on the basemap. Hover a joke to
-    find it on both maps.
+    map, so you can see which local neighborhoods hold together on the basemap. One joke is
+    ringed on both maps.
   </p>
 
   <div class="figure figure-wide" id="fig-comparison">
-    <div class="comparison-grid">
-      <div>
-        <div class="comparison-label">
-          <span>Per-dataset UMAP</span>
-          <span class="comparison-badge badge-local">local</span>
+    <p class="fig-status" role="status">Loading the basemap data (2.4 MB)…</p>
+    <div class="fig-body" hidden>
+      <div class="comparison-grid">
+        <div>
+          <div class="comparison-label">Local UMAP of these 400 jokes</div>
+          <div id="local-scatter" class="map-box map-box--pair"></div>
         </div>
-        <div id="local-scatter" class="map-box map-box--pair"></div>
-      </div>
-      <div>
-        <div class="comparison-label">
-          <span>Basemap</span>
-          <span class="comparison-badge badge-global">global</span>
+        <div>
+          <div class="comparison-label">Basemap, trained on 50M web texts</div>
+          <div id="global-scatter" class="map-box map-box--pair"></div>
         </div>
-        <div id="global-scatter" class="map-box map-box--pair"></div>
       </div>
+      <div class="readout" id="comparison-readout" aria-live="polite" style="min-height: 3em;"></div>
     </div>
     <div class="figure-caption">
       <span class="figure-label">Figure 1.</span>
       400 random jokes on a local UMAP and on the basemap, coloured by six k-means clusters of
       the local layout. The faint grey points on the basemap are 12,000 of the texts it was
-      trained on.
+      trained on. Each colour forms one patch on the left and is scattered on the right. Hover
+      or tap a joke on either map to find it on the other.
     </div>
   </div>
 
@@ -240,25 +266,27 @@ svg text { font-family: var(--heading-font); }
     what it is about, and dad jokes are about everything.
   </p>
 
-  <h2>What lives where</h2>
+  <h2>Coloring the basemap by one SAE feature</h2>
 
   <p>
     Colour the basemap by one SAE feature and you can see where the jokes that activate it sit.
     Part 4 split features into specific ones, which fire on a small share of the jokes, and
-    broad ones, which fire on a large share. Pick one of each:
+    broad ones, which fire on a large share. Figure 2 starts on a specific one, cheese. Compare
+    it with a broad one such as "definitions and meanings":
   </p>
 
   <div class="figure figure-wide" id="fig-feature-map">
-    <div style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap;">
-      <label for="feature-select" style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">Feature:</label>
-      <select id="feature-select" class="joke-input" style="flex: 1; min-width: 200px;"></select>
+    <p class="fig-status" role="status">Loading the basemap data (2.4 MB)…</p>
+    <div class="fig-body" hidden>
+      <label class="field-label" for="feature-select">SAE feature</label>
+      <select id="feature-select" class="joke-picker"></select>
+      <div id="feature-stat" class="feature-stat" aria-live="polite"></div>
+      <div id="feature-map-container" class="map-box"></div>
     </div>
-    <div id="feature-stat" class="feature-stat"></div>
-    <div id="feature-map-container" class="map-box"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 2.</span>
       The basemap coloured by one SAE feature. Coloured points are jokes that activate it, out
-      of all 52,573, darker for stronger activation (up to the 1,500 strongest). Grey points are
+      of all 52,573, stronger in colour for stronger activation (up to the 1,500 strongest). Grey points are
       4,000 random jokes and, fainter, 12,000 of the basemap's training texts. <em>Spread</em>
       is the median distance between the coloured jokes divided by the median distance between
       random jokes.
@@ -287,460 +315,468 @@ svg text { font-family: var(--heading-font); }
     map's layout leaves out.
   </p>
 
-  <h2>The full microscope</h2>
+  <h2>Looking up one joke on the map</h2>
 
   <p>
-    Now we have all the pieces of the instrument:
+    Now we have all the pieces:
   </p>
 
   <ul style="margin: 0 0 1rem 1.5rem;">
-    <li>The <strong>lens</strong> (embedding model) turns text into a high-dimensional point.</li>
-    <li>The <strong>projector</strong> (basemap) gives that point a position on a permanent map.</li>
-    <li>The <strong>filter</strong> (SAE) decomposes the point into interpretable features.</li>
+    <li>The <strong>embedding model</strong> (the lens) turns text into a high-dimensional point.</li>
+    <li>The <strong>basemap</strong> (a projector that stays fixed) gives that point a position on a permanent map.</li>
+    <li>The <strong>SAE</strong> (the filter) decomposes the point into interpretable features.</li>
   </ul>
 
   <p>
-    Click any joke on the map below to see its position, its strongest features, and its
-    nearest neighbors among all 52,573 jokes.
+    Figure 3 puts them side by side for one joke: its position, its strongest features, and its
+    nearest neighbors among all 52,573 jokes. Select any other joke on the map.
   </p>
 
-  <div class="figure figure-wide" id="fig-microscope">
-    <div class="microscope-grid">
-      <div>
-        <div id="microscope-scatter" class="map-box"></div>
-      </div>
-      <div>
-        <div id="microscope-panel" class="microscope-panel">
-          <div class="microscope-section">
-            <div class="microscope-heading">Selected</div>
-            <div id="microscope-text" style="font-style: italic; font-size: 0.9rem; color: var(--text-2);">Click a joke on the map.</div>
+  <div class="figure figure-wide" id="fig-lookup">
+    <p class="fig-status" role="status">Loading the basemap data (2.4 MB)…</p>
+    <div class="fig-body" hidden>
+      <div class="lookup-grid">
+        <div>
+          <div id="lookup-scatter" class="map-box"></div>
+          <div class="controls" style="margin: 0.5rem 0 0;">
+            <span class="btn-group">
+              <button class="btn" id="lookup-prev" type="button">Previous</button>
+              <button class="btn" id="lookup-next" type="button">Next</button>
+            </span>
+            <span>step through the twelve jokes from Part 4</span>
           </div>
-          <div class="microscope-section" id="section-position" style="display:none;">
-            <div class="microscope-heading">Position on the basemap</div>
-            <div id="microscope-position" style="font-family: var(--mono-font); font-size: 0.8rem; color: var(--text);"></div>
+        </div>
+        <div aria-live="polite">
+          <div class="lookup-section">
+            <div class="lookup-heading">Selected joke</div>
+            <div id="lookup-text" style="font-style: italic; font-size: 0.95rem;"></div>
           </div>
-          <div class="microscope-section" id="section-features" style="display:none;">
-            <div class="microscope-heading">Strongest SAE features</div>
-            <div id="microscope-features"></div>
+          <div class="lookup-section">
+            <div class="lookup-heading">Position on the basemap</div>
+            <div id="lookup-position" style="font-family: var(--mono-font); font-size: 0.85rem;"></div>
           </div>
-          <div class="microscope-section" id="section-neighbors" style="display:none;">
-            <div class="microscope-heading">Nearest neighbors (cosine similarity)</div>
-            <div id="microscope-neighbors"></div>
+          <div class="lookup-section">
+            <div class="lookup-heading">Strongest SAE features</div>
+            <div id="lookup-features"></div>
+          </div>
+          <div class="lookup-section">
+            <div class="lookup-heading">Nearest neighbors (cosine similarity)</div>
+            <div id="lookup-neighbors"></div>
           </div>
         </div>
       </div>
     </div>
     <div class="figure-caption">
       <span class="figure-label">Figure 3.</span>
-      4,000 random jokes on the basemap; the twelve from Part 4 are orange. Click any joke.
-      Feature tags are red for specific features and grey for broad ones.
+      4,000 random jokes on the basemap; the twelve from Part 4 are orange. Click or tap any
+      joke, or use the buttons. Feature tags with a red edge are specific features and plain
+      ones are broad. The twelve are well-worn jokes, so most of their nearest neighbors are
+      reposts of the same joke with a similarity near 1.
     </div>
   </div>
 
-  <h2>A single joke's journey</h2>
+  <h2>One joke through every step</h2>
 
   <p>
-    To make the pipeline concrete, here is what happens to a single joke as it passes through the
-    complete instrument. Each stage transforms the joke in a different way. Pick a joke and watch
-    it travel:
+    Figure 4 lays the same steps out in order for one of the twelve jokes from Part 4: its
+    embedding, its strongest features, its position on the basemap and its nearest neighbors.
   </p>
 
   <div class="figure figure-wide" id="fig-pipeline">
-    <div style="margin-bottom: 1rem;">
-      <label style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); display: block; margin-bottom: 0.4rem;">Joke to trace:</label>
-      <select id="pipeline-select" class="joke-input"></select>
-    </div>
-    <div class="pipeline-container">
-      <div class="pipeline-step">
-        <div>
-          <div class="pipeline-step-sub">1. The lens</div>
-          <div class="pipeline-step-label">Embedding</div>
+    <p class="fig-status" role="status">Loading the basemap data (2.4 MB)…</p>
+    <div class="fig-body" hidden>
+      <label class="field-label" for="pipeline-select">Joke to trace</label>
+      <select id="pipeline-select" class="joke-picker" style="margin-bottom: 0.9rem;"></select>
+      <div class="steps">
+        <div class="step">
+          <div>
+            <div class="step-sub">Step 1: embedding model</div>
+            <div class="step-label">Embedding</div>
+          </div>
+          <canvas id="pipeline-embedding" class="embedding-canvas" role="img" aria-label="The joke's embedding as 384 bars"></canvas>
         </div>
-        <canvas id="pipeline-embedding" class="embedding-canvas"></canvas>
-      </div>
-      <div class="pipeline-step">
-        <div>
-          <div class="pipeline-step-sub">2. The filter</div>
-          <div class="pipeline-step-label">SAE features</div>
+        <div class="step">
+          <div>
+            <div class="step-sub">Step 2: SAE</div>
+            <div class="step-label">Features</div>
+          </div>
+          <div id="pipeline-features"></div>
         </div>
-        <div id="pipeline-features"></div>
-      </div>
-      <div class="pipeline-step">
-        <div>
-          <div class="pipeline-step-sub">3. The projector</div>
-          <div class="pipeline-step-label">Basemap position</div>
+        <div class="step">
+          <div>
+            <div class="step-sub">Step 3: basemap</div>
+            <div class="step-label">Position</div>
+          </div>
+          <div id="pipeline-position-viz" style="height: 110px; position: relative;"></div>
         </div>
-        <div id="pipeline-position-viz" style="height: 100px; position: relative;"></div>
-      </div>
-      <div class="pipeline-step">
-        <div>
-          <div class="pipeline-step-sub">4. Neighborhood</div>
-          <div class="pipeline-step-label">Nearest in meaning</div>
+        <div class="step">
+          <div>
+            <div class="step-sub">Step 4: similarity</div>
+            <div class="step-label">Nearest jokes</div>
+          </div>
+          <div id="pipeline-neighbors"></div>
         </div>
-        <div id="pipeline-neighbors" style="font-size: 0.85rem;"></div>
       </div>
     </div>
     <div class="figure-caption">
       <span class="figure-label">Figure 4.</span>
-      One joke, four views. The same text becomes a vector (lens), a set of features (filter), a point on the map (projector), and a set of neighbors (similarity).
+      One joke, four views: a vector from the embedding model, a set of features from the SAE,
+      a point on the basemap, and its nearest neighbors by cosine similarity. Steps 2 to 4 all
+      start from the vector in step 1.
     </div>
   </div>
 
-  <h2>An atlas of meaning</h2>
+  <h2>Why call it an atlas?</h2>
 
   <p>
     An atlas pairs maps with a vocabulary: the names of places, the features of terrain, the
-    categories that help you navigate. The basemap provides the geography. The SAE
-    taxonomy provides the vocabulary. Together they form a system for understanding what an
-    embedding model has learned.
+    categories that help you navigate. Here the basemap is the map and the SAE's labeled
+    features are the vocabulary, and both describe what one embedding model has learned.
   </p>
 
   <p>
-    Different embedding models produce different atlases, just as different lenses show different
-    things. Within any one atlas, though, a dad joke, a news article, and a line of code all get
-    a position and a set of features described in the same terms.
+    Different embedding models produce different atlases. Within any one atlas, though, a dad
+    joke, a news article, and a line of code all get a position and a set of features described
+    in the same terms.
   </p>
-
 
   <h2>Where to go from here</h2>
 
   <p>
-    This series has walked through the components of a latent space workbench: embedding,
-    projection, clustering, feature decomposition, and global mapping. Each piece is
-    interchangeable. You can swap in a different embedding model, try a different clustering
-    algorithm, train a basemap on a different corpus, or use a different SAE architecture.
+    Each piece in this series is interchangeable. You can swap in a different embedding model,
+    try a different clustering algorithm, train a basemap on a different corpus, or use a
+    different SAE architecture.
   </p>
 
   <p>
     We used dad jokes because they're fun and small. The same tools work on scientific
-    literature, legal documents, customer feedback, or code, and
-    <a href="https://github.com/enjalot/latent-scope">Latent Scope</a> runs this pipeline on
-    your own data.
+    literature, legal documents, customer feedback, or code.
+    <a href="https://github.com/enjalot/latent-scope">Latent Scope</a> runs the embedding,
+    projection, clustering and labeling steps from Parts 1 to 3 on your own data.
   </p>
 
   <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
-    <p>End of series. Back to <a href="index.html" style="color: var(--accent);">Latent Verse</a>. Previous: <a href="04-the-filter.html" style="color: var(--accent);">The Filter</a>.</p>
-    <p style="margin-top: 0.5rem;">All three instruments use all-MiniLM-L6-v2. Basemap: a parametric UMAP from <a href="https://github.com/enjalot/latent-basemap" style="color: var(--text-2);">latent-basemap</a>, trained on 50M MiniLM embeddings of FineWeb-edu, RedPajama and the Pile. Features: <a href="https://huggingface.co/enjalot/sae-all-MiniLM-L6-v2-stagej-49K" style="color: var(--text-2);">sae-all-MiniLM-L6-v2-stagej-49K</a> from <a href="https://github.com/enjalot/latent-sae" style="color: var(--text-2);">latent-sae</a>, labels by qwen2.5-32b from web-text exemplars. Jokes: dadabase, from r/dadjokes. Figures 1 and 3 show random samples of the jokes, leaving out long, crude and bigoted ones; feature counts include every joke.</p>
+    <p>End of series. Back to <a href="index.html">Latent Verse</a>. Previous: <a href="04-the-filter.html">Decomposing embeddings with a sparse autoencoder</a>.</p>
+    <p style="margin-top: 0.5rem;">The embedding model, the basemap and the SAE all use all-MiniLM-L6-v2. Basemap: a parametric UMAP from <a href="https://github.com/enjalot/latent-basemap" style="color: var(--text-2);">latent-basemap</a>, trained on 50M MiniLM embeddings of FineWeb-edu, RedPajama and the Pile. Features: <a href="https://huggingface.co/enjalot/sae-all-MiniLM-L6-v2-stagej-49K" style="color: var(--text-2);">sae-all-MiniLM-L6-v2-stagej-49K</a> from <a href="https://github.com/enjalot/latent-sae" style="color: var(--text-2);">latent-sae</a>, labels by qwen2.5-32b from web-text exemplars. Jokes: dadabase, from r/dadjokes. Figures 1 and 3 show random samples of the jokes, leaving out long, crude and bigoted ones; feature counts include every joke.</p>
   </footer>
 </div>
 
 <script>
-const tip = d3.select("body").append("div").attr("class", "tip").style("opacity", 0);
+// ---- shared helpers (the same block is inlined in every chapter) -------
+const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+const short = (t, n) => { t = t.replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n).trimEnd() + '…' : t; };
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Aspect-ratio-preserving scatter
-function makeScales(x, y, W, H, margin=15) {
-  const xExt = d3.extent(x), yExt = d3.extent(y);
-  const xR = (xExt[1]-xExt[0]) || 1, yR = (yExt[1]-yExt[0]) || 1;
-  const pad = 0.05;
-  const paddedX = xR * (1 + pad*2), paddedY = yR * (1 + pad*2);
-  const availW = W - margin*2, availH = H - margin*2;
-  const s = Math.min(availW / paddedX, availH / paddedY);
-  const dw = paddedX * s, dh = paddedY * s;
-  const ox = margin + (availW - dw) / 2;
-  const oy = margin + (availH - dh) / 2;
-  return {
-    xScale: d3.scaleLinear().domain([xExt[0]-xR*pad, xExt[1]+xR*pad]).range([ox, ox+dw]),
-    yScale: d3.scaleLinear().domain([yExt[0]-yR*pad, yExt[1]+yR*pad]).range([oy+dh, oy])
-  };
+// Data lives in data/ next to this page. A failed or blocked request becomes
+// a readable message inside the figure that needed it.
+async function loadJSON(path) {
+  let res;
+  try { res = await fetch(path); }
+  catch (e) {
+    throw new Error(location.protocol === 'file:'
+      ? `This figure reads ${path}, and browsers block that when the page is opened straight from disk. Serve the folder (for example python3 -m http.server) and open it over http.`
+      : `Could not load ${path}. Check the connection and reload the page.`);
+  }
+  if (!res.ok) throw new Error(`Could not load ${path} (HTTP ${res.status}).`);
+  try { return await res.json(); }
+  catch (e) { throw new Error(`${path} arrived but could not be read as JSON.`); }
+}
+function figReady(figId) {
+  const fig = document.getElementById(figId);
+  fig.querySelector('.fig-status').hidden = true;
+  fig.querySelector('.fig-body').hidden = false;
+}
+function figError(figId, err) {
+  const fig = document.getElementById(figId);
+  const s = fig.querySelector('.fig-status');
+  s.hidden = false; s.classList.add('error'); s.textContent = err.message;
+  if (!/^(This figure reads|Could not load)/.test(err.message)) console.error(err);
+  fig.querySelector('.fig-body').hidden = true;
 }
 
-// opts: texts, colors, highlights, pointR, color, onClick, onHover(i|-1),
-// background: {x, y} drawn first, faint and not hoverable,
-// extent: {x, y} arrays the scales are fitted to (defaults to x, y),
-// order: draw order (indices), so strong points land on top.
+// Redraw canvases when the window is resized or the colour scheme flips.
+const redraws = [];
+function redrawAll() { redraws.forEach(f => f()); }
+{
+  let timer;
+  window.addEventListener('resize', () => { clearTimeout(timer); timer = setTimeout(redrawAll, 150); });
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redrawAll);
+}
+
+// A canvas sized to its container, in CSS pixels.
+function fitCanvas(el, canvas) {
+  const rect = el.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  const dpr = window.devicePixelRatio || 1;
+  if (el !== canvas) { canvas.style.width = W + 'px'; canvas.style.height = H + 'px'; }
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, W, H };
+}
+
+// Scales that fit [x0,x1] x [y0,y1] into a W x H box, keeping the aspect ratio.
+function fitScales(xExt, yExt, W, H, margin = 12) {
+  const xR = (xExt[1] - xExt[0]) || 1, yR = (yExt[1] - yExt[0]) || 1;
+  const pad = 0.04;
+  const pX = xR * (1 + pad * 2), pY = yR * (1 + pad * 2);
+  const aW = W - margin * 2, aH = H - margin * 2;
+  const s = Math.min(aW / pX, aH / pY);
+  const ox = margin + (aW - pX * s) / 2, oy = margin + (aH - pY * s) / 2;
+  return {
+    x: v => ox + (v - xExt[0] + xR * pad) * s,
+    y: v => oy + pY * s - (v - yExt[0] + yR * pad) * s,
+  };
+}
+// Extent that ignores the most extreme 0.5% at each end, so a few far-flung
+// points don't shrink the map.
+function robustExtent(vals, q = 0.005) {
+  const v = Float64Array.from(vals).sort();
+  return [d3.quantileSorted(v, q), d3.quantileSorted(v, 1 - q)];
+}
+function dot(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+function ring(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke(); }
+// A scatter on the basemap or a local map.
+// opts: colors (per point, null hides), highlights (Set drawn larger in --hl),
+// background {x, y} drawn first and faint, extent {x, y} to fit the view to,
+// order (draw order), pointR, onSelect(i) for hover (mouse) and click/tap.
 function drawScatter(containerId, x, y, opts = {}) {
   const el = document.getElementById(containerId);
   el.innerHTML = '';
-  const rect = el.getBoundingClientRect();
-  const W = rect.width, H = rect.height;
-
   const canvas = document.createElement('canvas');
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
+  canvas.setAttribute('role', 'img');
+  if (opts.label) canvas.setAttribute('aria-label', opts.label);
   el.appendChild(canvas);
-
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  const ext = opts.extent || { x, y };
-  const { xScale, yScale } = makeScales(ext.x, ext.y, W, H);
+  const { ctx, W, H } = fitCanvas(el, canvas);
+  const ext = opts.extent || { x: d3.extent(x), y: d3.extent(y) };
+  const s = fitScales(ext.x, ext.y, W, H);
   const n = x.length;
-  const r = opts.pointR || 3;
-  const colors = opts.colors; // optional per-point color
+  const px = Float32Array.from(x, s.x), py = Float32Array.from(y, s.y);
+  const r = (opts.pointR || 3) * (W < 400 ? 0.8 : 1);
+  const colors = opts.colors;
   const highlights = opts.highlights || new Set();
   const order = opts.order || d3.range(n);
-  let selectedIdx = null;
+  let selectedIdx = opts.selected == null ? null : opts.selected;
 
   function render() {
     ctx.clearRect(0, 0, W, H);
     if (opts.background) {
-      ctx.globalAlpha = 0.5;
-      ctx.fillStyle = '#d8d8e2';
+      ctx.globalAlpha = 0.7;
+      ctx.fillStyle = cssVar('--context');
       const bx = opts.background.x, by = opts.background.y;
-      for (let i = 0; i < bx.length; i++) ctx.fillRect(xScale(bx[i]) - 0.6, yScale(by[i]) - 0.6, 1.2, 1.2);
+      for (let i = 0; i < bx.length; i++) ctx.fillRect(s.x(bx[i]) - 0.6, s.y(by[i]) - 0.6, 1.2, 1.2);
     }
+    const base = cssVar('--dot'), hl = cssVar('--hl'), mark = cssVar('--mark');
     for (const i of order) {
       if (i === selectedIdx) continue;
-      const isStrong = highlights.has(i);
-      let alpha, color, pointR;
-      if (colors) { alpha = colors[i] === null ? 0 : 0.8; color = colors[i]; pointR = isStrong ? r + 1 : r; }
-      else if (isStrong) { alpha = 0.95; color = '#f4a261'; pointR = r + 1.5; }
-      else { alpha = 0.35; color = opts.color || '#6b5b95'; pointR = r; }
-      if (!alpha) continue;
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(xScale(x[i]), yScale(y[i]), pointR, 0, Math.PI*2);
-      ctx.fill();
+      const strong = highlights.has(i);
+      if (colors) {
+        if (colors[i] === null) continue;
+        ctx.globalAlpha = 0.8; ctx.fillStyle = colors[i];
+        dot(ctx, px[i], py[i], strong ? r + 1 : r);
+      } else if (strong) {
+        ctx.globalAlpha = 0.95; ctx.fillStyle = hl; dot(ctx, px[i], py[i], r + 1.5);
+      } else {
+        ctx.globalAlpha = 0.4; ctx.fillStyle = base; dot(ctx, px[i], py[i], r);
+      }
     }
     if (selectedIdx !== null) {
-      const cx = xScale(x[selectedIdx]), cy = yScale(y[selectedIdx]);
       ctx.globalAlpha = 1;
-      ctx.fillStyle = '#e63946';
-      ctx.beginPath(); ctx.arc(cx, cy, r + 2.5, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = '#e63946'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(cx, cy, r + 7, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = ctx.strokeStyle = mark;
+      dot(ctx, px[selectedIdx], py[selectedIdx], r + 2);
+      ctx.lineWidth = 1.5; ring(ctx, px[selectedIdx], py[selectedIdx], r + 8);
     }
     ctx.globalAlpha = 1;
   }
   render();
 
-  function findNearest(event) {
-    const crect = canvas.getBoundingClientRect();
-    const mx = event.clientX - crect.left, my = event.clientY - crect.top;
-    let bestI = -1, bestD = Infinity;
-    for (let i = 0; i < n; i++) {
-      if (colors && colors[i] === null) continue;
-      const d = (xScale(x[i]) - mx)**2 + (yScale(y[i]) - my)**2;
-      if (d < bestD) { bestD = d; bestI = i; }
-    }
-    return bestD < 400 ? bestI : -1;
-  }
-
-  if (opts.texts) {
-    canvas.addEventListener('pointermove', (event) => {
-      const i = findNearest(event);
-      if (opts.onHover) opts.onHover(i);
-      if (i >= 0) {
-        tip.html(escapeHtml(opts.texts[i])).style('opacity', 1);
-        const tw = tip.node().offsetWidth;
-        tip.style('left', Math.min(event.clientX+12, window.innerWidth-tw-8)+'px')
-           .style('top', Math.max(event.clientY-40, 8)+'px');
-      } else tip.style('opacity', 0);
-    });
-    canvas.addEventListener('pointerleave', () => {
-      tip.style('opacity', 0);
-      if (opts.onHover) opts.onHover(-1);
-    });
-  }
-
-  if (opts.onClick) {
+  if (opts.onSelect) {
+    const nearest = event => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = event.clientX - rect.left, my = event.clientY - rect.top;
+      let best = -1, bestD = 400;
+      for (let i = 0; i < n; i++) {
+        if (colors && colors[i] === null) continue;
+        const d = (px[i] - mx) ** 2 + (py[i] - my) ** 2;
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      return best;
+    };
+    const pick = e => { const i = nearest(e); if (i >= 0 && i !== selectedIdx) opts.onSelect(i); };
+    if (opts.hoverSelects) canvas.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') pick(e); });
+    canvas.addEventListener('click', pick);
     canvas.style.cursor = 'pointer';
-    canvas.addEventListener('click', (event) => {
-      const i = findNearest(event);
-      if (i >= 0) opts.onClick(i);
-    });
   }
-
-  return {
-    select(idx) { selectedIdx = idx < 0 ? null : idx; render(); },
-    redraw() { render(); },
-    xScale, yScale
-  };
+  return { canvas, select(idx) { selectedIdx = idx; render(); } };
 }
 
 // Share of all jokes that activate a feature. Under 5% reads as specific
 // (the same threshold as Part 4).
 const SPECIFIC = 0.05;
 
-function renderFeatureBars(containerId, features, labels, specific, maxCount = 6) {
-  const el = document.getElementById(containerId);
-  const maxAct = Math.max(...features.map(f => f[1]));
-  el.innerHTML = features.slice(0, maxCount).map(([idx, act]) => {
-    const label = labels[String(idx)] || `feature ${idx}`;
-    const pct = Math.max(4, (act / maxAct * 100));
-    const c = specific(idx) ? '#d1495b' : '#b8b8c8';
-    return `<div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0; font-family: var(--heading-font); font-size: 0.8rem; min-width: 0;">
-      <span style="flex: 0 0 11.5rem; max-width: 45%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
-      <span style="flex: 1 1 auto; display: block; height: 14px; background: #f0f0f5; border-radius: 2px; overflow: hidden; min-width: 30px;">
-        <span style="display: block; height: 100%; width: ${pct}%; background: ${c}; border-radius: 2px;"></span>
-      </span>
-      <span style="flex: 0 0 auto; font-family: var(--mono-font); font-size: 0.72rem; color: var(--text-2); min-width: 2rem; text-align: right;">${act.toFixed(2)}</span>
-    </div>`;
-  }).join('');
-}
-
-// Draw embedding bars on a canvas
-function drawEmbedding(canvas, embedding) {
-  if (!embedding || !embedding.length) return;
-  const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  const w = rect.width, h = rect.height;
-  canvas.width = w * dpr; canvas.height = h * dpr;
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, w, h);
-  const n = embedding.length;
-  const barW = w / n;
-  const maxAbs = Math.max(...Array.from(embedding).map(Math.abs)) || 1;
-  const pos = d3.interpolateOranges, neg = d3.interpolateBlues;
-  for (let i = 0; i < n; i++) {
-    const v = embedding[i];
-    const norm = Math.abs(v) / maxAbs;
-    const barH = norm * h * 0.45;
-    const x = i * barW;
-    if (v >= 0) {
-      ctx.fillStyle = pos(0.2 + norm * 0.7);
-      ctx.fillRect(x, h/2 - barH, Math.max(barW, 0.5), barH);
-    } else {
-      ctx.fillStyle = neg(0.2 + norm * 0.7);
-      ctx.fillRect(x, h/2, Math.max(barW, 0.5), barH);
-    }
-  }
-  ctx.strokeStyle = '#ccc'; ctx.lineWidth = 0.5;
-  ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
-}
-
-async function init() {
-  const [atlas, sae] = await Promise.all([
-    fetch('data/atlas-real.json').then(r => r.json()),
-    fetch('data/sae-real.json').then(r => r.json()),
-  ]);
+function initFigures(atlas, sae) {
   const total = atlas.provenance.n_jokes;
-  // Specific vs broad, from how many of all the jokes activate a feature.
   const fires = { ...atlas.fires, ...sae.fires };
   const isSpecific = idx => (fires[String(idx)] || 0) / total < SPECIFIC;
 
-  const ctx = { x: atlas.context.map(p => p[0]), y: atlas.context.map(p => p[1]) };
+  const context = { x: atlas.context.map(p => p[0]), y: atlas.context.map(p => p[1]) };
   const jokeTexts = atlas.jokes.map(j => j[0]);
   const jx = atlas.jokes.map(j => j[1]);
   const jy = atlas.jokes.map(j => j[2]);
   // Fit maps to where the points are, not to a few far-flung outliers.
-  const robust = (vals) => {
-    const v = [...vals].sort((a, b) => a - b);
-    return [d3.quantileSorted(v, 0.005), d3.quantileSorted(v, 0.995)];
-  };
-  const fullExtent = { x: robust([...ctx.x, ...jx]), y: robust([...ctx.y, ...jy]) };
+  const fullExtent = { x: robustExtent([...context.x, ...jx]), y: robustExtent([...context.y, ...jy]) };
+  ['fig-comparison', 'fig-feature-map', 'fig-lookup', 'fig-pipeline'].forEach(figReady);
 
-  // Figure 1: local UMAP vs basemap, linked by hover
-  const L = atlas.local;
+  // ---- Figure 1: local UMAP vs basemap, one selection shown on both ----
+  const L = atlas.local; // [text, local x, local y, basemap x, basemap y, cluster]
   const groupColor = d3.scaleOrdinal(['#4e79a7', '#f28e2b', '#59a14f', '#e15759', '#b07aa1', '#76b7b2']);
   const lColors = L.map(d => groupColor(d[5]));
-  let localChart, globalChart;
-  localChart = drawScatter('local-scatter', L.map(d => d[1]), L.map(d => d[2]), {
-    texts: L.map(d => d[0]), colors: lColors, pointR: 3.5,
-    onHover: i => globalChart && globalChart.select(i),
-  });
-  globalChart = drawScatter('global-scatter', L.map(d => d[3]), L.map(d => d[4]), {
-    texts: L.map(d => d[0]), colors: lColors, pointR: 3,
-    background: ctx, extent: fullExtent,
-    onHover: i => localChart && localChart.select(i),
-  });
+  let pairSel = 0, localChart, globalChart;
+  function showPair(i) {
+    pairSel = i;
+    localChart.select(i); globalChart.select(i);
+    document.getElementById('comparison-readout').innerHTML =
+      `<span class="picked">"${escapeHtml(short(L[i][0], 200))}"</span>`;
+  }
+  function buildFig1() {
+    localChart = drawScatter('local-scatter', L.map(d => d[1]), L.map(d => d[2]), {
+      colors: lColors, pointR: 3.5, onSelect: showPair, hoverSelects: true,
+      label: 'Local UMAP of 400 jokes. Each of six colours forms one contiguous patch.',
+    });
+    globalChart = drawScatter('global-scatter', L.map(d => d[3]), L.map(d => d[4]), {
+      colors: lColors, pointR: 3, background: context, extent: fullExtent, onSelect: showPair, hoverSelects: true,
+      label: 'The same 400 jokes on the basemap, spread across most of it. The six colours are mixed together, with some small same-colour groups.',
+    });
+    showPair(pairSel);
+  }
+  buildFig1(); redraws.push(buildFig1);
 
-  // Figure 2: one feature on the basemap
+  // ---- Figure 2: one feature on the basemap ----
   const featureSelect = document.getElementById('feature-select');
-  const groups = [
-    ['Specific', atlas.map_features.filter(f => f.n / total < SPECIFIC)],
-    ['Broad', atlas.map_features.filter(f => f.n / total >= SPECIFIC)],
-  ];
-  for (const [name, feats] of groups) {
+  for (const [name, feats] of [
+    ['Specific: fires on under 5% of the jokes', atlas.map_features.filter(f => f.n / total < SPECIFIC)],
+    ['Broad: fires on more than that', atlas.map_features.filter(f => f.n / total >= SPECIFIC)],
+  ]) {
     const og = document.createElement('optgroup');
     og.label = name;
     feats.forEach(f => og.appendChild(new Option(f.label, f.idx)));
     featureSelect.appendChild(og);
   }
-  const heat = d3.scaleSequential(t => d3.interpolateYlOrRd(0.3 + 0.7 * t));
-
   function updateFeatureMap() {
     const f = atlas.map_features.find(m => m.idx === +featureSelect.value);
     const pts = [...f.points].sort((a, b) => a[2] - b[2]);
-    const maxA = d3.max(pts, p => p[2]);
-    heat.domain([0, maxA]);
+    const heat = d3.scaleLinear().domain([0, d3.max(pts, p => p[2])])
+      .range([cssVar('--heat-lo'), cssVar('--heat-hi')]).interpolate(d3.interpolateRgb);
     const share = f.n / total;
-    document.getElementById('feature-stat').innerHTML =
-      `<strong>${escapeHtml(f.label)}</strong> · fires on ${f.n.toLocaleString()} jokes (${share < 0.01 ? '<1' : Math.round(share * 100)}%) · spread ${f.spread.toFixed(2)}`;
+    const stat = `fires on ${f.n.toLocaleString()} jokes (${share < 0.01 ? 'under 1' : Math.round(share * 100)}%), spread ${f.spread.toFixed(2)}`;
+    document.getElementById('feature-stat').innerHTML = `<strong>${escapeHtml(f.label)}</strong>: ${stat}`;
     // Base layer: the 4,000 random jokes in grey; then the firing jokes.
+    const muted = cssVar('--dot-muted');
     const x = [...jx, ...pts.map(p => p[0])];
     const y = [...jy, ...pts.map(p => p[1])];
-    const colors = [...jx.map(() => '#c9c9d6'), ...pts.map(p => heat(p[2]))];
-    const firing = new Set(pts.map((_, k) => jx.length + k));
+    const colors = [...jx.map(() => muted), ...pts.map(p => heat(p[2]))];
     drawScatter('feature-map-container', x, y, {
-      colors, highlights: firing, pointR: 2.2, background: ctx, extent: fullExtent,
+      colors, highlights: new Set(pts.map((_, k) => jx.length + k)), pointR: 2.2, background: context, extent: fullExtent,
+      label: `Basemap with the jokes that activate "${f.label}" coloured: ${stat}. A spread near 0 means they sit in a few tight spots, near 1 that they cover the whole map.`,
     });
   }
   featureSelect.addEventListener('change', updateFeatureMap);
   featureSelect.value = 45468; // cheese
-  updateFeatureMap();
+  updateFeatureMap(); redraws.push(updateFeatureMap);
 
-  // Figure 3: the full microscope
+  // ---- Figure 3: look up one joke ----
   const featured = new Set(atlas.featured);
   const order = [...d3.range(jokeTexts.length).filter(i => !featured.has(i)), ...atlas.featured];
-  const microChart = drawScatter('microscope-scatter', jx, jy, {
-    texts: jokeTexts, color: '#6b5b95', highlights: featured, pointR: 2.5,
-    background: ctx, extent: fullExtent, order,
-    onClick(i) {
-      microChart.select(i);
-      const t = document.getElementById('microscope-text');
-      t.textContent = jokeTexts[i];
-      t.style.color = 'var(--text)';
-      document.getElementById('section-position').style.display = 'block';
-      document.getElementById('microscope-position').textContent = `x: ${jx[i].toFixed(2)}, y: ${jy[i].toFixed(2)}`;
-      document.getElementById('section-features').style.display = 'block';
-      document.getElementById('microscope-features').innerHTML = atlas.features[i].map(([idx]) => {
-        const label = atlas.labels[String(idx)] || `feature ${idx}`;
-        return `<span class="feature-tag ${isSpecific(idx) ? 'strong' : 'broad'}">${escapeHtml(label)}</span>`;
-      }).join(' ');
-      document.getElementById('section-neighbors').style.display = 'block';
-      document.getElementById('microscope-neighbors').innerHTML = atlas.neighbors[i].map(([text, sim]) =>
-        `<div class="neighbor-row"><span class="neighbor-dist">${sim.toFixed(2)}</span>${escapeHtml(text)}</div>`
-      ).join('');
-    }
-  });
+  let lookupSel = atlas.featured[11]; // the chemistry joke
+  let lookupChart;
+  function showLookup(i) {
+    lookupSel = i;
+    lookupChart.select(i);
+    document.getElementById('lookup-text').textContent = `"${jokeTexts[i]}"`;
+    document.getElementById('lookup-position').textContent = `x ${jx[i].toFixed(2)}, y ${jy[i].toFixed(2)}`;
+    document.getElementById('lookup-features').innerHTML = atlas.features[i].map(([idx]) => {
+      const label = atlas.labels[String(idx)] || `feature ${idx}`;
+      return `<span class="feature-tag ${isSpecific(idx) ? 'specific' : 'broad'}">${escapeHtml(label)}</span>`;
+    }).join(' ');
+    document.getElementById('lookup-neighbors').innerHTML = atlas.neighbors[i].map(([text, sim]) =>
+      `<div class="neighbor-row"><span class="neighbor-sim">${sim.toFixed(2)}</span>${escapeHtml(text)}</div>`).join('');
+    lookupChart.canvas.setAttribute('aria-label',
+      `4,000 jokes on the basemap with the twelve jokes from Part 4 in orange. Selected: ${short(jokeTexts[i], 120)}`);
+  }
+  function buildFig3() {
+    lookupChart = drawScatter('lookup-scatter', jx, jy, {
+      highlights: featured, pointR: 2.5, background: context, extent: fullExtent, order, onSelect: showLookup,
+    });
+    showLookup(lookupSel);
+  }
+  buildFig3(); redraws.push(buildFig3);
+  const stepFeatured = dir => {
+    const k = atlas.featured.indexOf(lookupSel);
+    const m = atlas.featured.length;
+    showLookup(atlas.featured[k < 0 ? 0 : (k + dir + m) % m]);
+  };
+  document.getElementById('lookup-prev').addEventListener('click', () => stepFeatured(-1));
+  document.getElementById('lookup-next').addEventListener('click', () => stepFeatured(1));
 
-  // Figure 4: one joke through the instrument (the twelve from Part 4)
+  // ---- Figure 4: one joke through every step (the twelve from Part 4) ----
   const pipelineSelect = document.getElementById('pipeline-select');
-  atlas.featured.forEach((i, k) => {
-    const t = jokeTexts[i];
-    pipelineSelect.add(new Option(t.length > 65 ? t.slice(0, 65) + '…' : t, k));
-  });
+  atlas.featured.forEach((i, k) => pipelineSelect.add(new Option(short(jokeTexts[i], 65), k)));
 
   function updatePipeline() {
     const k = +pipelineSelect.value;
     const i = atlas.featured[k];
-    drawEmbedding(document.getElementById('pipeline-embedding'), atlas.featured_embeddings[k]);
-    renderFeatureBars('pipeline-features', sae.jokes[k].features, sae.labels, isSpecific, 5);
 
-    const posEl = document.getElementById('pipeline-position-viz');
-    posEl.innerHTML = '';
-    const prect = posEl.getBoundingClientRect();
-    const pW = prect.width, pH = prect.height;
-    const pCanvas = document.createElement('canvas');
-    pCanvas.style.width = pW + 'px'; pCanvas.style.height = pH + 'px';
-    posEl.appendChild(pCanvas);
-    const pdpr = window.devicePixelRatio || 1;
-    pCanvas.width = pW * pdpr; pCanvas.height = pH * pdpr;
-    const pctx = pCanvas.getContext('2d'); pctx.scale(pdpr, pdpr);
-    const { xScale: pxs, yScale: pys } = makeScales(fullExtent.x, fullExtent.y, pW, pH, 8);
-    pctx.globalAlpha = 0.5;
-    pctx.fillStyle = '#c4c4d4';
-    for (let j = 0; j < ctx.x.length; j += 3) pctx.fillRect(pxs(ctx.x[j]), pys(ctx.y[j]), 1, 1);
-    pctx.globalAlpha = 1;
-    pctx.fillStyle = '#e63946';
-    pctx.beginPath(); pctx.arc(pxs(jx[i]), pys(jy[i]), 5, 0, Math.PI*2); pctx.fill();
-    pctx.strokeStyle = '#e63946'; pctx.lineWidth = 1.5;
-    pctx.beginPath(); pctx.arc(pxs(jx[i]), pys(jy[i]), 9, 0, Math.PI*2); pctx.stroke();
+    // step 1: embedding bars, same encoding as Part 1
+    const emb = atlas.featured_embeddings[k];
+    const ec = document.getElementById('pipeline-embedding');
+    const er = ec.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    ec.width = er.width * dpr; ec.height = er.height * dpr;
+    const ectx = ec.getContext('2d');
+    ectx.scale(dpr, dpr);
+    const scale = d3.max(emb, Math.abs) || 1, barW = er.width / emb.length;
+    emb.forEach((v, d) => {
+      const h = Math.abs(v) / scale * er.height * 0.48;
+      ectx.fillStyle = cssVar(v >= 0 ? '--pos' : '--neg');
+      ectx.fillRect(d * barW, v >= 0 ? er.height / 2 - h : er.height / 2, Math.max(barW, 0.5), h);
+    });
+    ectx.strokeStyle = cssVar('--axis'); ectx.lineWidth = 1;
+    ectx.beginPath(); ectx.moveTo(0, er.height / 2); ectx.lineTo(er.width, er.height / 2); ectx.stroke();
 
+    // step 2: five strongest SAE features
+    const feats = sae.jokes[k].features.slice(0, 5);
+    const maxAct = d3.max(feats, f => f[1]);
+    document.getElementById('pipeline-features').innerHTML = feats.map(([idx, act]) => {
+      const label = sae.labels[String(idx)] || `feature ${idx}`;
+      return `<div class="fbar">
+        <span class="fbar-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
+        <span class="fbar-track"><span class="fbar-fill" style="width: ${Math.max(4, act / maxAct * 100)}%; background: var(${isSpecific(idx) ? '--specific' : '--broad'});"></span></span>
+        <span class="fbar-val">${act.toFixed(2)}</span>
+      </div>`;
+    }).join('');
+
+    // step 3: position on the basemap
+    drawScatter('pipeline-position-viz', [jx[i]], [jy[i]], {
+      selected: 0, pointR: 3, background: context, extent: fullExtent,
+      label: `The joke's position on the basemap: x ${jx[i].toFixed(2)}, y ${jy[i].toFixed(2)}.`,
+    });
+
+    // step 4: nearest neighbours
     document.getElementById('pipeline-neighbors').innerHTML = atlas.neighbors[i].map(([text, sim]) =>
-      `<div style="padding: 0.15rem 0;"><span style="font-family: var(--mono-font); font-size: 0.72rem; color: var(--text-2); margin-right: 0.5rem;">${sim.toFixed(2)}</span>${escapeHtml(text)}</div>`
-    ).join('');
+      `<div class="neighbor-row"><span class="neighbor-sim">${sim.toFixed(2)}</span>${escapeHtml(text)}</div>`).join('');
   }
   pipelineSelect.addEventListener('change', updatePipeline);
   pipelineSelect.value = 0;
-  updatePipeline();
+  updatePipeline(); redraws.push(updatePipeline);
+}
+
+async function init() {
+  const figs = ['fig-comparison', 'fig-feature-map', 'fig-lookup', 'fig-pipeline'];
+  try {
+    const [atlas, sae] = await Promise.all([loadJSON('data/atlas-real.json'), loadJSON('data/sae-real.json')]);
+    initFigures(atlas, sae);
+  } catch (err) { figs.forEach(id => figError(id, err)); }
 }
 
 init();
