@@ -1,5 +1,5 @@
 {
   "title": "A Map of What Children Learn",
-  "summary": "Marble's open taxonomy of 1,590 primary-school micro-topics, embedded and projected with latent-scope so meaning (not the timetable) lays out the map. A scrollytelling tour reveals subject 'continents', an age player shows the map filling in, and an explorer traces prerequisites. Ported from the single-file shine article to the editable still substrate.",
+  "summary": "Marble's open taxonomy of 1,590 primary-school micro-topics, embedded and projected with latent-scope, to ask how much of the curriculum's structure the topic descriptions alone recover. A scrollytelling tour finds the subjects as continents, an age map shows the outline set by age 5 and filled in afterwards, and the prerequisite graph drawn on the map agrees with it except for a few soft edges that cross it.",
   "created": "2026-07-11"
 }

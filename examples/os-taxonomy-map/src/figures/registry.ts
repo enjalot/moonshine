@@ -1,17 +1,6 @@
 import type { ComponentType } from 'react'
-import GradientField, { DEFAULTS as gradientFieldDefaults } from './GradientField'
-import LossLandscape, {
-  DEFAULTS as lossLandscapeDefaults,
-  PARAM_HINTS as lossLandscapeHints,
-} from './LossLandscape'
-import FlowDiagram from './FlowDiagram'
-import Sparkline, {
-  DEFAULTS as sparklineDefaults,
-  PARAM_HINTS as sparklineHints,
-} from './Sparkline'
-import MiniSpark from './inline/MiniSpark'
-import AgeMap from './AgeMap'
-import Explorer from './Explorer'
+import AgeMap, { DEFAULTS as ageMapDefaults, PARAM_HINTS as ageMapHints } from './AgeMap'
+import Explorer, { DEFAULTS as explorerDefaults } from './Explorer'
 
 // The registry is the seam between writers and developers. Authors
 // reference figures by id in markdown — never by import. To add a figure:
@@ -21,7 +10,7 @@ import Explorer from './Explorer'
 //
 // Block figures appear as their own section. Inline figures render
 // mid-paragraph. Both kinds receive every directive attribute as a prop:
-//   :::figure{id=loss-landscape lr=0.15}  →  props { figureId, lr: "0.15" }
+//   :::figure{id=age-map age=7}  →  props { figureId, age: "7" }
 // Attributes arrive as strings; parse them with the helpers in
 // lib/params.ts against a DEFAULTS const exported at the top of the
 // figure file. That const is the figure's tweakable surface — authors
@@ -64,29 +53,16 @@ export type FigureEntry = {
 }
 
 export const figures: Record<string, FigureEntry> = {
-  'gradient-field': {
-    component: GradientField,
-    height: 320,
+  'age-map': {
+    component: AgeMap,
+    height: 620,
     wide: true,
-    defaults: gradientFieldDefaults,
+    defaults: ageMapDefaults,
+    paramHints: ageMapHints,
   },
-  'loss-landscape': {
-    component: LossLandscape,
-    height: 350,
-    defaults: lossLandscapeDefaults,
-    paramHints: lossLandscapeHints,
-  },
-  'flow-diagram': { component: FlowDiagram, height: 280 },
-  sparkline: {
-    component: Sparkline,
-    height: 120,
-    defaults: sparklineDefaults,
-    paramHints: sparklineHints,
-  },
-  'age-map': { component: AgeMap, height: 560, wide: true },
-  explorer: { component: Explorer, height: 760, wide: true },
+  explorer: { component: Explorer, height: 700, wide: true, defaults: explorerDefaults },
 }
 
-export const inlineFigures: Record<string, ComponentType<Record<string, unknown>>> = {
-  'mini-spark': MiniSpark as ComponentType<Record<string, unknown>>,
-}
+// This article has no inline figures. Register one here to use
+// `:inline-viz{kind=your-kind}` in the markdown.
+export const inlineFigures: Record<string, ComponentType<Record<string, unknown>>> = {}

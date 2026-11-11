@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import '../taxonomy.css'
 
-// Shared data + canvas helpers for the three taxonomy figures.
+// Shared data, canvas helpers and styles for the three taxonomy figures
+// (the scrollytelling tour, the age map and the explorer).
 //
 // The 1,590-topic dataset ships as a static JSON in public/. It's ~800KB,
 // so we load it once (module-level promise cache) and every figure that
@@ -153,8 +155,17 @@ export function drawHaloText(
     halo?: string
   } = {},
 ): void {
-  const { size = 12, weight = 600, color = '#1a1a2e', align = 'center', halo } = opts
+  const { weight = 600, color = '#1a1a2e', align = 'center', halo } = opts
+  // Canvas text can't reflow, so two guards live here for every caller:
+  // labels never drop below 13px, and a label that would run off the
+  // canvas is pulled back inside it.
+  const size = Math.max(MIN_LABEL_PX, opts.size ?? 13)
   ctx.font = `${weight} ${size}px 'Source Sans 3', sans-serif`
+  const dpr = ctx.getTransform().a || 1
+  const cw = ctx.canvas.width / dpr
+  const tw = ctx.measureText(text).width
+  const left = align === 'left' ? x : align === 'right' ? x - tw : x - tw / 2
+  if (tw + 8 <= cw) x += Math.max(4 - left, 0) + Math.min(cw - 4 - (left + tw), 0)
   ctx.textAlign = align
   ctx.textBaseline = 'middle'
   ctx.lineWidth = 3.5
@@ -183,8 +194,18 @@ function withAlpha(color: string, a: number): string {
 
 // A resolution-aware square canvas bound to a wrapper element. Returns the
 // 2D context and a resize() that syncs the backing store to devicePixelRatio.
-export function makeCanvas(wrapEl: HTMLElement, aspect = 0.92) {
+export function makeCanvas(
+  wrapEl: HTMLElement,
+  // Height / width. A function lets a figure be squarer on a phone than
+  // on a desktop, where a tall canvas pushes its controls off screen.
+  aspect: number | ((width: number) => number) = 0.92,
+  label = 'Map of 1,590 curriculum topics as dots, placed so that topics with similar descriptions sit near each other.',
+) {
   const canvas = document.createElement('canvas')
+  // A canvas is opaque to assistive technology: give it an image role and
+  // a description. Figures update the label as their state changes.
+  canvas.setAttribute('role', 'img')
+  canvas.setAttribute('aria-label', label)
   canvas.style.width = '100%'
   canvas.style.display = 'block'
   wrapEl.appendChild(canvas)
@@ -194,7 +215,7 @@ export function makeCanvas(wrapEl: HTMLElement, aspect = 0.92) {
   function resize(): boolean {
     const w = wrapEl.clientWidth
     if (!w) return false
-    const h = Math.round(w * aspect)
+    const h = Math.round(w * (typeof aspect === 'function' ? aspect(w) : aspect))
     const dpr = window.devicePixelRatio || 1
     W = w
     H = h
@@ -216,6 +237,14 @@ export function makeCanvas(wrapEl: HTMLElement, aspect = 0.92) {
       return H
     },
   }
+}
+
+export const MIN_LABEL_PX = 13
+
+// Topic names and reasons come from third-party data and are inserted
+// into tooltips and the side panel as HTML ("Pompeii & Vesuvius").
+export function esc(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 }
 
 export const reducedMotion =
