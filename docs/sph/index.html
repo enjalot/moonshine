@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smooth Particle Hydrodynamics</title>
+<title>Smoothed Particle Hydrodynamics</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
@@ -26,6 +26,21 @@
   --border: #e2e2e8;
   --water: #3b82f6;
   --water-light: #93c5fd;
+  --canvas-bg: #f0f4f8;
+  --wall: #94a3b8;
+  --c-kernel: #059669;
+  --c-position: #0891b2;
+  --c-spring: #f59e0b;
+  --c-pressure: #dc2626;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e6dd; --text-2: #a8a8bc; --accent: #7aa7ff; --accent-light: #26335c;
+    --bg: #16162a; --fig-bg: #1f1f36; --border: #3a3a52;
+    --water: #60a5fa; --water-light: #93c5fd; --canvas-bg: #14142a; --wall: #64748b;
+    --c-kernel: #34d399; --c-position: #22d3ee; --c-spring: #fbbf24; --c-pressure: #f87171;
+  }
 }
 
 body {
@@ -52,52 +67,53 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
   padding: 1.25rem 1.5rem; text-decoration: none; transition: border-color 0.15s;
 }
 .card:hover { border-color: var(--water); }
-.card-number { font-family: var(--mono-font); font-size: 0.8rem; color: var(--text-2); }
+.card-number { font-family: var(--mono-font); font-size: 0.8125rem; color: var(--text-2); }
 .card-title { font-family: var(--heading-font); font-weight: 700; font-size: 1.2rem; color: var(--text); margin-bottom: 0.4rem; }
 .card-desc { font-size: 0.95rem; color: var(--text-2); margin: 0; }
-.card-tags { font-family: var(--heading-font); font-size: 0.75rem; color: var(--water); margin-top: 0.6rem; }
+.card-tags { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--accent); margin-top: 0.6rem; }
 
 .card-thumb {
   width: 100px; height: 100px; flex-shrink: 0; border-radius: 4px;
-  background: var(--bg); display: flex; align-items: center; justify-content: center;
+  background: var(--canvas-bg); display: flex; align-items: center; justify-content: center;
   overflow: hidden;
 }
 
 @media (max-width: 640px) {
   h1 { font-size: 1.75rem; }
   .card { flex-direction: column; gap: 0.75rem; }
-  .card-thumb { width: 100%; height: 60px; }
+  .card-thumb { width: 100%; height: 100px; }
 }
 </style>
 </head>
 <body>
 <div class="article">
   <header>
-    <h1>Smooth Particle Hydrodynamics</h1>
+    <h1>Smoothed Particle Hydrodynamics</h1>
     <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
       A practical guide to simulating fluids, sand, and ice on the GPU.
     </p>
   </header>
 
-  <div class="header-viz" id="header-particles"></div>
+  <div class="header-viz" id="header-particles" aria-hidden="true"></div>
 
   <p>
-    Smooth Particle Hydrodynamics (SPH) is a way to simulate fluids by modeling them as
+    Smoothed Particle Hydrodynamics (SPH) is a way to simulate fluids by modeling them as
     a collection of particles that push and pull on their neighbors. If you've seen a
     flocking simulation, the idea is similar: each particle follows simple local rules, and
     complex behavior emerges from their collective interactions.
   </p>
 
   <p>
-    This series builds intuition for SPH step by step. We start with the basic idea of
-    particles influencing their neighbors, layer on forces like pressure and viscosity,
-    move the computation to the GPU with WebGPU, and then extend the system to simulate
-    materials beyond water.
+    The series has four parts. We start with the basic idea of particles influencing
+    their neighbors and layer on forces like pressure and viscosity, then move the
+    computation to the GPU with WebGPU, extend the system to materials beyond water,
+    and end with a sandbox that runs them together. Every figure is a live simulation,
+    and the GPU ones fall back to the CPU where WebGPU is missing.
   </p>
 
   <div class="card-list">
     <a class="card" href="01-particles-and-forces.html">
-      <div class="card-thumb" id="thumb-01"></div>
+      <div class="card-thumb" id="thumb-01" aria-hidden="true"></div>
       <div>
         <div class="card-number">01</div>
         <div class="card-title">Particles, Neighborhoods, and Forces</div>
@@ -107,32 +123,32 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
     </a>
 
     <a class="card" href="02-gpu.html">
-      <div class="card-thumb" id="thumb-02"></div>
+      <div class="card-thumb" id="thumb-02" aria-hidden="true"></div>
       <div>
         <div class="card-number">02</div>
         <div class="card-title">Moving to the GPU</div>
-        <p class="card-desc">Spatial hashing, WebGPU compute shaders, and scaling to thousands of particles.</p>
-        <div class="card-tags">spatial hash &middot; compute shaders &middot; WebGPU &middot; performance</div>
+        <p class="card-desc">Why finding neighbors is the expensive part, and how a spatial hash and WebGPU compute passes scale the fluid to thousands of particles.</p>
+        <div class="card-tags">spatial hash &middot; compute passes &middot; WebGPU</div>
       </div>
     </a>
 
     <a class="card" href="03-beyond-water.html">
-      <div class="card-thumb" id="thumb-03"></div>
+      <div class="card-thumb" id="thumb-03" aria-hidden="true"></div>
       <div>
         <div class="card-number">03</div>
         <div class="card-title">Beyond Water</div>
-        <p class="card-desc">Springs, friction, and temperature to simulate sand, ice, and elastic materials.</p>
+        <p class="card-desc">Springs, friction, and temperature to simulate elastic solids, sand, and ice, plus obstacles, emitters, and sinks.</p>
         <div class="card-tags">spring forces &middot; granular &middot; phase transitions &middot; collisions &middot; emitters</div>
       </div>
     </a>
 
     <a class="card" href="04-playground.html">
-      <div class="card-thumb" id="thumb-04"></div>
+      <div class="card-thumb" id="thumb-04" aria-hidden="true"></div>
       <div>
         <div class="card-number">04</div>
         <div class="card-title">Playground</div>
-        <p class="card-desc">A full interactive sandbox combining all the pieces. Choose materials, place emitters, and paint forces.</p>
-        <div class="card-tags">interactive sandbox &middot; device-adaptive</div>
+        <p class="card-desc">Water, sand, and jelly in one simulation. Drop obstacles, paint blowers, and stamp jelly into the streams.</p>
+        <div class="card-tags">interactive sandbox &middot; WebGPU with CPU fallback</div>
       </div>
     </a>
   </div>
@@ -143,7 +159,31 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
 </div>
 
 <script>
-// Header: animated particle wave
+// Canvas can't resolve var(), so the thumbnails read the palette's computed
+// values from here and pick up a color-scheme change without a reload.
+const C = {};
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['text-2', 'border', 'water', 'canvas-bg', 'wall', 'c-kernel', 'c-position', 'c-spring', 'c-pressure']) C[k] = cs.getPropertyValue('--' + k).trim();
+  C.dark = matchMedia('(prefers-color-scheme: dark)').matches;
+}
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+
+// Animate a card thumbnail only while it is on screen. With
+// prefers-reduced-motion it is advanced a little and left as a still.
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function thumbLoop(el, draw) {
+  let on = false, warmed = false;
+  function tick() { if (!on) return; draw(); requestAnimationFrame(tick); }
+  new IntersectionObserver(([e]) => {
+    if (REDUCED) { if (e.isIntersecting && !warmed) { warmed = true; for (let i = 0; i < 150; i++) draw(); } return; }
+    if (e.isIntersecting && !on) { on = true; tick(); }
+    else if (!e.isIntersecting) on = false;
+  }).observe(el);
+}
+
+// Header: a still row of particles
 (function() {
   const container = d3.select("#header-particles");
   const width = 740, height = 80;
@@ -196,7 +236,7 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
 
     // Kernel radius
     ctx.beginPath(); ctx.arc(cx,cy,H,0,Math.PI*2);
-    ctx.strokeStyle='#059669'; ctx.lineWidth=1; ctx.setLineDash([4,3]); ctx.globalAlpha=0.4; ctx.stroke();
+    ctx.strokeStyle=C['c-kernel']; ctx.lineWidth=1; ctx.setLineDash([4,3]); ctx.globalAlpha=0.6; ctx.stroke();
     ctx.setLineDash([]); ctx.globalAlpha=1;
 
     // Connection lines (use actual positions)
@@ -206,14 +246,14 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
       const dist = Math.sqrt(dx*dx+dy*dy);
       if (dist < H) {
         ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(p.x,p.y);
-        ctx.strokeStyle='#059669'; ctx.lineWidth=0.8; ctx.globalAlpha=0.3; ctx.stroke();
+        ctx.strokeStyle=C['c-kernel']; ctx.lineWidth=0.8; ctx.globalAlpha=0.5; ctx.stroke();
         ctx.globalAlpha=1;
       }
     });
 
     // Center particle
     ctx.beginPath(); ctx.arc(cx,cy,5,0,Math.PI*2);
-    ctx.fillStyle='#059669'; ctx.fill();
+    ctx.fillStyle=C['c-kernel']; ctx.fill();
 
     // Neighbors (one orbits slightly)
     pts.forEach((p,i) => {
@@ -221,14 +261,13 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
       const py = i===0 ? p.y + Math.sin(t)*8 : p.y;
       const dist = Math.sqrt((px-cx)*(px-cx)+(py-cy)*(py-cy));
       ctx.beginPath(); ctx.arc(px,py,3.5,0,Math.PI*2);
-      ctx.fillStyle = dist < H ? '#0891b2' : '#ccc';
+      ctx.fillStyle = dist < H ? C['c-position'] : C['text-2'];
       ctx.globalAlpha = dist < H ? 0.8 : 0.3;
       ctx.fill(); ctx.globalAlpha=1;
     });
 
-    requestAnimationFrame(draw);
   }
-  draw();
+  thumbLoop(el, draw);
 })();
 
 // Thumb 02: Spatial hash grid with highlighted cells
@@ -251,11 +290,12 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
     ctx.clearRect(0,0,s,s);
 
     // Grid lines
-    ctx.strokeStyle='#e2e2e8'; ctx.lineWidth=0.5;
+    ctx.strokeStyle=C['text-2']; ctx.globalAlpha=0.35; ctx.lineWidth=0.5;
     for (let i=0; i<=5; i++) {
       ctx.beginPath(); ctx.moveTo(i*cellSize,0); ctx.lineTo(i*cellSize,s); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(0,i*cellSize); ctx.lineTo(s,i*cellSize); ctx.stroke();
     }
+    ctx.globalAlpha=1;
 
     // Highlight 3x3 region around a moving selected particle
     const selX = 45 + Math.cos(t*0.7)*15;
@@ -264,26 +304,25 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
     for (let di=-1;di<=1;di++) for (let dj=-1;dj<=1;dj++) {
       const gi=ci+di, gj=cj+dj;
       if (gi>=0&&gi<5&&gj>=0&&gj<5) {
-        ctx.fillStyle = di===0&&dj===0 ? 'rgba(8,145,178,0.15)' : 'rgba(8,145,178,0.06)';
-        ctx.fillRect(gi*cellSize,gj*cellSize,cellSize,cellSize);
+        ctx.fillStyle = C['c-position']; ctx.globalAlpha = di===0&&dj===0 ? 0.3 : 0.12;
+        ctx.fillRect(gi*cellSize,gj*cellSize,cellSize,cellSize); ctx.globalAlpha=1;
       }
     }
 
     // Particles
     pts.forEach(p => {
       ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2);
-      ctx.fillStyle='#3b82f6'; ctx.globalAlpha=0.6; ctx.fill(); ctx.globalAlpha=1;
+      ctx.fillStyle=C['water']; ctx.globalAlpha=0.7; ctx.fill(); ctx.globalAlpha=1;
     });
 
     // Selected particle
     ctx.beginPath(); ctx.arc(selX,selY,4,0,Math.PI*2);
-    ctx.fillStyle='#0891b2'; ctx.fill();
+    ctx.fillStyle=C['c-position']; ctx.fill();
     ctx.beginPath(); ctx.arc(selX,selY,6,0,Math.PI*2);
-    ctx.strokeStyle='#0891b2'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.strokeStyle=C['c-position']; ctx.lineWidth=1.5; ctx.stroke();
 
-    requestAnimationFrame(draw);
   }
-  draw();
+  thumbLoop(el, draw);
 })();
 
 // Thumb 03: Particles with springs (some stretch, some compress)
@@ -328,7 +367,7 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
       const rest=25;
       const strain = (dist-rest)/rest;
       ctx.beginPath(); ctx.moveTo(pts[a].x,pts[a].y); ctx.lineTo(pts[b].x,pts[b].y);
-      ctx.strokeStyle = strain > 0.05 ? '#f59e0b' : strain < -0.05 ? '#dc2626' : '#d4d4d8';
+      ctx.strokeStyle = strain > 0.05 ? C['c-spring'] : strain < -0.05 ? C['c-pressure'] : C['text-2'];
       ctx.lineWidth = 1 + Math.abs(strain)*3;
       ctx.globalAlpha=0.7; ctx.stroke(); ctx.globalAlpha=1;
     });
@@ -336,13 +375,12 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
     // Particles
     pts.forEach(p => {
       ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2);
-      ctx.fillStyle='#3b82f6'; ctx.fill();
-      ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.stroke();
+      ctx.fillStyle=C['water']; ctx.fill();
+      ctx.strokeStyle=C['canvas-bg']; ctx.lineWidth=1; ctx.stroke();
     });
 
-    requestAnimationFrame(draw);
   }
-  draw();
+  thumbLoop(el, draw);
 })();
 
 // Thumb 04: Mini fluid sandbox with particles falling
@@ -361,10 +399,10 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
   let emitT = 0;
 
   function draw() {
-    ctx.fillStyle='#f0f4f8'; ctx.fillRect(0,0,s,s);
+    ctx.fillStyle=C['canvas-bg']; ctx.fillRect(0,0,s,s);
 
     // Container walls
-    ctx.fillStyle='#94a3b8';
+    ctx.fillStyle=C['wall'];
     ctx.fillRect(20,50,3,48); // left wall
     ctx.fillRect(77,50,3,48); // right wall
     ctx.fillRect(20,95,60,3); // bottom
@@ -398,20 +436,19 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
     });
 
     // Draw particles
-    const cs = d3.scaleSequential(t=>d3.interpolateBlues(0.35+t*0.55)).domain([0,4]);
+    // slow = deep blue, fast = pale, as in the articles
     pts.forEach(p => {
       const sp = Math.sqrt(p.vx*p.vx+p.vy*p.vy);
       ctx.beginPath(); ctx.arc(p.x,p.y,2.5,0,Math.PI*2);
-      ctx.fillStyle=cs(Math.min(sp,4)); ctx.fill();
+      ctx.fillStyle=d3.interpolateBlues((C.dark?0.75:0.85)-Math.min(sp/4,1)*0.45); ctx.fill();
     });
 
     // Hose nozzle
-    ctx.fillStyle='#64748b';
+    ctx.fillStyle=C['wall'];
     ctx.fillRect(22,38,8,5);
 
-    requestAnimationFrame(draw);
   }
-  draw();
+  thumbLoop(el, draw);
 })();
 </script>
 </body>

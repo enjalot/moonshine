@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beyond Water — SPH</title>
+<title>Beyond Water · SPH</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
@@ -26,6 +26,12 @@
   --bg: #fafafa;
   --fig-bg: #ffffff;
   --border: #e2e2e8;
+  --canvas-bg: #f0f4f8;
+  --wall: #94a3b8;
+  --wall-2: #64748b;
+  --eq-bg: #f8f7ff;
+  --code-bg: #f6f8fa;
+  --comment: #6b7280;
   --c-kernel: #059669;
   --c-density: #7c3aed;
   --c-pressure: #dc2626;
@@ -36,6 +42,18 @@
   --c-spring: #f59e0b;
   --c-friction: #9333ea;
   --c-temperature: #e11d48;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e6dd; --text-2: #a8a8bc; --accent: #7aa7ff; --accent-light: #26335c;
+    --bg: #16162a; --fig-bg: #1f1f36; --border: #3a3a52;
+    --canvas-bg: #14142a; --wall: #64748b; --wall-2: #94a3b8;
+    --eq-bg: #24243f; --code-bg: #1a1a30; --comment: #8b93a7;
+    --c-kernel: #34d399; --c-density: #a78bfa; --c-pressure: #f87171; --c-viscosity: #60a5fa;
+    --c-mass: #fbbf24; --c-position: #22d3ee; --c-velocity: #f472b6;
+    --c-spring: #fbbf24; --c-friction: #c084fc; --c-temperature: #fb7185;
+  }
 }
 
 body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
@@ -50,30 +68,28 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
 
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .figure-wide { margin-left: -2rem; margin-right: -2rem; }
-.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.75rem; }
 .figure-label { font-weight: 600; color: var(--text); }
 
-.insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
-.insight p { margin: 0; }
-
 .controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
-.controls input[type="range"] { width: 140px; accent-color: var(--accent); }
+.controls input[type="range"] { width: 140px; max-width: 100%; accent-color: var(--accent); }
 .controls label { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
-.controls button { font-family: var(--heading-font); font-size: 0.85rem; padding: 0.25rem 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); cursor: pointer; }
+.controls button, .motion-btn { font-family: var(--heading-font); font-size: 0.85rem; padding: 0.35rem 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text); cursor: pointer; }
+.motion-btn { margin-bottom: 1rem; }
 .controls button:hover { background: var(--bg); }
 
 svg text { font-family: var(--heading-font); }
 
-.eq-code-stack { margin: 1.5rem 0; border-radius: 6px; overflow: hidden; border: 1px solid #e8e6f0; }
-.eq-block { padding: 1rem 1.25rem; background: #f8f7ff; text-align: center; border-bottom: 1px solid #e8e6f0; }
-.eq-block .eq-label { font-family: var(--heading-font); font-size: 0.75rem; color: var(--text-2); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.eq-code-stack { margin: 1.5rem 0; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+.eq-block { padding: 1rem 1.25rem; background: var(--eq-bg); text-align: center; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.eq-block .eq-label { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-2); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
 .eq-rows { position: relative; }
-.eq-values-row { height: 2.2em; display: flex; align-items: center; justify-content: center; margin-top: 0.4rem; transition: opacity 0.15s; }
+.eq-values-row { min-height: 2.2em; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 0.4rem; }
 .eq-values-row.visible { opacity: 1; }
-.eq-hint { font-family: var(--heading-font); font-size: 0.7rem; color: var(--text-2); opacity: 0.5; font-style: italic; }
+.eq-hint { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-2); font-style: italic; }
 
-.code-block { padding: 1rem 1.25rem; background: #f6f8fa; color: #1a1a2e; font-family: var(--mono-font); font-size: 0.8rem; line-height: 1.6; overflow-x: auto; }
-.code-block .comment { color: #6b7280; }
+.code-block { padding: 1rem 1.25rem; background: var(--code-bg); color: var(--text); font-family: var(--mono-font); font-size: 0.8125rem; line-height: 1.6; overflow-x: auto; white-space: nowrap; }
+.code-block .comment { color: var(--comment); }
 .code-block .c-kernel { color: var(--c-kernel); }
 .code-block .c-density { color: var(--c-density); }
 .code-block .c-pressure { color: var(--c-pressure); }
@@ -96,12 +112,14 @@ svg text { font-family: var(--heading-font); }
 .t-friction { color: var(--c-friction); font-weight: 600; }
 .t-temperature { color: var(--c-temperature); font-weight: 600; }
 
+.sim-canvas { display: block; width: 100%; border-radius: 4px; touch-action: pan-y; }
+svg [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .side-by-side { display: flex; gap: 1rem; }
 .side-by-side > div { flex: 1; min-width: 0; }
-.side-by-side canvas { width: 100%; border-radius: 4px; }
-.side-label { font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-2); text-align: center; margin-bottom: 0.5rem; font-weight: 600; }
+.side-by-side canvas { display: block; width: 100%; border-radius: 4px; }
+.side-label { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-2); text-align: center; margin-bottom: 0.5rem; font-weight: 600; }
 
-@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } .side-by-side { flex-direction: column; } }
+@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } .figure { padding: 1rem; } .eq-block { padding: 0.75rem 0.5rem; } .eq-block .katex { font-size: 1em; } .code-block { padding: 0.75rem; } .side-by-side { flex-direction: column; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
 </style>
 </head>
@@ -113,7 +131,7 @@ svg text { font-family: var(--heading-font); }
       Stretching the particle framework to simulate springs, sand, ice, and more.
     </p>
     <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">
-      Part 3 of <a href="index.html">Smooth Particle Hydrodynamics</a>
+      Part 3 of <a href="index.html">Smoothed Particle Hydrodynamics</a>
     </p>
   </header>
 
@@ -123,16 +141,16 @@ svg text { font-family: var(--heading-font); }
     differences. That gives us something that looks like water.
   </p>
   <p>
-    The particle framework is not limited to water. By changing the force rules, the same loop of "find neighbors, compute forces, update"
-    can produce elastic solids, granular piles, phase transitions, and more. Each section
-    below adds a new force or parameter on top of Part 1's foundation.
+    The same loop of "find neighbors, compute forces, update" can produce more than water.
+    By changing the force rules we get elastic solids, granular piles, and phase transitions.
+    Each section below adds a new force or parameter on top of Part 1's foundation.
   </p>
 
   <h2>Springs Between Particles</h2>
   <p>
     What if nearby particles remembered each other? When two particles drift apart, a
     <span class="t-spring">spring</span> pulls them back. When they're pushed too close,
-    the spring pushes them apart. This is the simplest path from fluid to solid.
+    the spring pushes them apart. This is one of the simpler ways to get from a fluid to a solid.
   </p>
   <p>
     The force on particle <em>i</em> from a spring connecting it to particle <em>j</em>
@@ -147,13 +165,13 @@ svg text { font-family: var(--heading-font); }
         <div class="eq-label">Spring force</div>
         <div class="eq-rows">
           <div id="eq-spring"></div>
-          <div class="eq-values-row" id="eq-spring-values"><span class="eq-hint">drag a particle</span></div>
+          <div class="eq-values-row" id="eq-spring-values"></div>
         </div>
       </div>
       <div class="code-block">
         <span class="c-spring">d</span> = distance(i, j) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// current distance</span><br>
         <span class="c-spring">strain</span> = (<span class="c-spring">d</span> - <span class="c-spring">restLen</span>) / <span class="c-spring">restLen</span> <span class="comment">// how stretched</span><br>
-        <span class="c-spring">F</span> = -<span class="c-spring">k</span> * <span class="c-spring">strain</span> * <span class="c-position">dir</span>(i, j) &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// Hooke's law</span>
+        <span class="c-spring">F</span> = -<span class="c-spring">k</span> * <span class="c-spring">strain</span> * <span class="c-position">dir</span>(j, i) &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// Hooke's law; dir points from j to i</span>
       </div>
     </div>
     <div class="controls">
@@ -164,23 +182,28 @@ svg text { font-family: var(--heading-font); }
     <div id="spring-viz"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 1.</span>
-      Drag any particle to deform the network. <span class="t-spring">Springs</span> change
-      color and thickness based on strain: amber when stretched, red when compressed.
+      The lattice drops, swings and settles under its own weight.
+      <span class="t-spring">Springs</span> turn amber where they are stretched and red where
+      they are compressed, and get thicker with more strain; the numbers above follow one
+      spring of the ringed particle. Drag any particle to deform the network.
       Try low stiffness for jelly, high for near-rigid.
     </div>
   </div>
 
   <h2>Sand and Granular Materials</h2>
   <p>
-    Sand is not a fluid, but it is not a solid either. Grains slide over each other,
-    pile up into cones, and resist shearing. The key difference from water is
-    <span class="t-friction">friction</span>: a force that opposes the relative tangential
+    Sand sits somewhere between a fluid and a solid: grains slide over each other,
+    pile up into cones, and resist shearing. What separates it from water is
+    <span class="t-friction">friction</span>, a force that opposes the relative tangential
     motion between neighboring particles.
   </p>
   <p>
     When two particles are sliding past each other, the friction force acts perpendicular
-    to the line connecting them, opposing the sliding direction. Combined with slightly
-    higher viscosity and a bit of cohesion, this produces piles instead of puddles.
+    to the line connecting them, opposing the sliding direction. That kind of friction
+    only slows sliding down, so by itself it would give a slow puddle. The sand in the figure
+    also gets four times the viscosity of the water, a little cohesion, and a rule for
+    static friction: a slow grain with a resting grain under it on both sides stops dead,
+    while one perched on a single grain keeps rolling.
   </p>
 
   <div class="figure figure-wide" id="fig-sand">
@@ -189,33 +212,34 @@ svg text { font-family: var(--heading-font); }
         <div class="eq-label">Friction force</div>
         <div class="eq-rows">
           <div id="eq-friction"></div>
-          <div class="eq-values-row visible" id="eq-friction-values"><span class="eq-hint">watch the particles settle</span></div>
+          <div class="eq-values-row visible" id="eq-friction-values" style="font-family:var(--heading-font);font-size:0.875rem;color:var(--text-2);"></div>
         </div>
       </div>
       <div class="code-block">
-        <span class="c-velocity">v_rel</span> = <span class="c-velocity">v</span>[j] - <span class="c-velocity">v</span>[i] &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// relative velocity</span><br>
+        <span class="c-velocity">v_rel</span> = <span class="c-velocity">v</span>[i] - <span class="c-velocity">v</span>[j] &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// i's velocity relative to its neighbor</span><br>
         <span class="c-position">n</span> = normalize(<span class="c-position">r</span>[j] - <span class="c-position">r</span>[i]) &nbsp;&nbsp;&nbsp;<span class="comment">// direction between particles</span><br>
         <span class="c-velocity">v_tan</span> = <span class="c-velocity">v_rel</span> - dot(<span class="c-velocity">v_rel</span>, <span class="c-position">n</span>) * <span class="c-position">n</span> <span class="comment">// tangential component</span><br>
-        <span class="c-friction">F_fric</span> = -<span class="c-friction">&mu;_f</span> * <span class="c-velocity">v_tan</span> * <span class="c-kernel">W</span>(<span class="c-position">r</span>, <span class="c-kernel">h</span>) &nbsp;<span class="comment">// oppose sliding</span>
+        <span class="c-friction">F_fric</span> = -<span class="c-friction">&mu;_f</span> * <span class="c-velocity">v_tan</span> * <span class="c-kernel">W</span>(<span class="c-position">r</span>, <span class="c-kernel">h</span>) / <span class="c-density">&rho;</span>[j] &nbsp;<span class="comment">// oppose sliding</span>
       </div>
     </div>
     <div class="controls">
-      <button id="sand-drop">Drop Again</button>
+      <button id="sand-drop" type="button">Pour again</button>
     </div>
     <div class="side-by-side">
       <div>
         <div class="side-label">Water (low viscosity, no friction)</div>
-        <canvas id="sand-water-canvas"></canvas>
+        <canvas id="sand-water-canvas" role="img" aria-label="A thin stream of blue particles lands and spreads into a flat layer across the whole floor."></canvas>
       </div>
       <div>
-        <div class="side-label">Sand (high friction, slight cohesion)</div>
-        <canvas id="sand-sand-canvas"></canvas>
+        <div class="side-label">Sand (friction, resting grains stop)</div>
+        <canvas id="sand-sand-canvas" role="img" aria-label="The same stream of orange grains lands and heaps into a cone that keeps its slope."></canvas>
       </div>
     </div>
     <div class="figure-caption">
       <span class="figure-label">Figure 2.</span>
-      Same initial drop, different parameters. Water spreads flat.
-      Sand piles into a cone because <span class="t-friction">friction</span> resists sliding.
+      The same stream poured into both panels. Water runs out into a flat layer.
+      Sand stops wherever it is supported and heaps into a cone, because
+      <span class="t-friction">friction</span> resists sliding.
     </div>
   </div>
 
@@ -232,9 +256,10 @@ svg text { font-family: var(--heading-font); }
     and particles repel each other, expanding like a gas.
   </p>
   <p>
-    This is a simplified model. Real phase transitions involve latent heat, crystal
-    structures, and more complex thermodynamics. But the intuition is right: temperature
-    controls how strongly particles are bound to their neighbors.
+    This is a simplified model: real phase transitions involve latent heat, crystal
+    structures, and more complex thermodynamics. What it keeps is the idea that temperature
+    controls how strongly particles are bound to their neighbors. The gas in the figure
+    also gets weaker gravity and a random jitter, which stand in for thermal motion.
   </p>
 
   <div class="figure figure-wide" id="fig-temperature">
@@ -243,34 +268,37 @@ svg text { font-family: var(--heading-font); }
         <div class="eq-label">Temperature-dependent spring stiffness</div>
         <div class="eq-rows">
           <div id="eq-temperature"></div>
-          <div class="eq-values-row visible" id="eq-temperature-values"><span class="eq-hint">slide the temperature</span></div>
+          <div class="eq-values-row visible" id="eq-temperature-values"></div>
         </div>
       </div>
       <div class="code-block">
-        <span class="c-temperature">T</span> = temperature &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// 0 = cold, 1 = hot</span><br>
+        <span class="c-temperature">T</span> = temperature &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// 0 = cold, 100 = hot</span><br>
         <span class="c-spring">k_eff</span> = <span class="c-spring">k_max</span> * max(0, 1 - <span class="c-temperature">T</span> / <span class="c-temperature">T_melt</span>) <span class="comment">// springs weaken with heat</span><br>
-        <span class="c-density">&rho;_rest</span> = <span class="c-density">&rho;_0</span> * (1 - 0.5 * max(0, <span class="c-temperature">T</span> - <span class="c-temperature">T_boil</span>))  <span class="comment">// gas expands</span>
+        <span class="c-density">&rho;_rest</span> = <span class="c-density">&rho;_0</span> * (1 - 0.5 * max(0, <span class="c-temperature">T</span> - <span class="c-temperature">T_boil</span>) / (100 - <span class="c-temperature">T_boil</span>))  <span class="comment">// gas expands</span>
       </div>
     </div>
     <div class="controls">
-      <label>Temperature: <input type="range" id="temp-slider" min="0" max="100" value="0" step="1"> <span id="temp-val">0</span></label>
-      <span id="temp-phase" style="font-weight:600;color:var(--c-viscosity);">Ice</span>
-      <button id="temp-reset">Reset</button>
+      <label>Temperature: <input type="range" id="temp-slider" min="0" max="100" value="0" step="1"> <span id="temp-val" style="min-width:2ch;">0</span></label>
+      <span id="temp-phase" style="font-weight:600;color:var(--c-viscosity);min-width:3.5em;">Ice</span>
+      <label><input type="checkbox" id="temp-sweep" checked> Sweep</label>
+      <button id="temp-reset" type="button">Reset</button>
     </div>
-    <canvas id="temp-canvas" style="width:100%;border-radius:4px;"></canvas>
+    <canvas id="temp-canvas" class="sim-canvas" role="img" aria-label="A block of particles in a box. Cold, it is a rigid lattice joined by springs. Warmer, the springs vanish and it slumps into a puddle. Hot, the particles spread out and fill the box."></canvas>
     <div class="figure-caption">
       <span class="figure-label">Figure 3.</span>
-      Slide from cold to hot:
-      <span style="color:var(--c-viscosity)">ice</span> (rigid lattice) to
-      <span style="color:var(--c-kernel)">water</span> (fluid) to
-      <span style="color:var(--c-pressure)">gas</span> (expanding).
-      Particles are colored by temperature: blue is cold, red is hot.
+      The temperature sweeps from cold to hot and starts over. The
+      <span style="color:var(--c-viscosity)">ice</span> lattice holds its shape until its
+      springs fade out at 40, the <span style="color:var(--c-kernel)">water</span> slumps
+      into a puddle, and above 75 the <span style="color:var(--c-pressure)">gas</span>
+      spreads through the box. Particles are colored by temperature: blue is cold, red is hot.
+      Move the slider to set the temperature yourself. Cooling does not rebuild the lattice
+      neatly, so use Reset for fresh ice.
     </div>
   </div>
 
   <h2>Collisions with Solid Objects</h2>
   <p>
-    So far our fluid lives in a box with invisible walls. But interesting simulations
+    So far our fluid lives in a box with invisible walls. More interesting simulations
     need obstacles: rocks in a stream, walls with openings, spinning paddles. There
     are two common approaches.
   </p>
@@ -282,8 +310,8 @@ svg text { font-family: var(--heading-font); }
   <p>
     <strong>Signed distance fields (SDF).</strong> For simple shapes like circles and
     rectangles, we can compute the shortest distance from a fluid particle to the surface.
-    If a particle is inside the shape, push it out along the surface normal. This is faster
-    than boundary particles for smooth shapes.
+    If a particle is inside the shape, push it out along the surface normal. This is usually
+    cheaper than boundary particles for smooth shapes.
   </p>
   <p>
     The simulation below uses SDFs for a circle and a rectangle. Drag them around
@@ -296,7 +324,7 @@ svg text { font-family: var(--heading-font); }
         <div class="eq-label">Signed distance collision</div>
         <div class="eq-rows">
           <div id="eq-collision"></div>
-          <div class="eq-values-row visible" id="eq-collision-values"><span class="eq-hint">drag the shapes</span></div>
+          <div class="eq-values-row visible" id="eq-collision-values" style="font-family:var(--heading-font);font-size:0.875rem;color:var(--text-2);"></div>
         </div>
       </div>
       <div class="code-block">
@@ -308,14 +336,17 @@ svg text { font-family: var(--heading-font); }
     </div>
     <div class="controls">
       <label>Gravity: <input type="range" id="coll-gravity-slider" min="0" max="500" value="200" step="10"> <span id="coll-gravity-val">200</span></label>
-      <label>Max particles: <input type="range" id="coll-count-slider" min="50" max="300" value="150" step="10"> <span id="coll-count-val">150</span></label>
+      <label>Max particles: <input type="range" id="coll-count-slider" min="50" max="300" value="200" step="10"> <span id="coll-count-val">200</span></label>
       <button id="coll-reset">Reset</button>
     </div>
-    <canvas id="coll-canvas" style="width:100%;border-radius:4px;cursor:grab;"></canvas>
+    <canvas id="coll-canvas" class="sim-canvas" style="cursor:grab;" role="img"
+      aria-label="A stream of blue particles falls onto a circle, splits around it, and part of it lands on a rectangular ledge below before running off to the floor."></canvas>
     <div class="figure-caption">
       <span class="figure-label">Figure 4.</span>
-      Fluid particles fall onto a circle and rectangle. Drag either shape to reposition it.
-      The SDF handles collision without any boundary particles.
+      The stream lands on the circle and splits around it, and the part that goes right
+      runs off the rectangle below. Drag either shape to redirect the flow. Both
+      collisions come from the signed distance alone, with no boundary particles.
+      Particles are removed when they reach the floor, so the stream keeps coming.
     </div>
   </div>
 
@@ -334,30 +365,33 @@ svg text { font-family: var(--heading-font); }
 
   <div class="figure figure-wide" id="fig-emitters">
     <div class="controls">
-      <span>Click to add emitter. Shift+click to add sink. </span>
+      <span>Click adds:</span>
+      <label><input type="radio" name="emitter-mode" value="emitter" checked> emitter</label>
+      <label><input type="radio" name="emitter-mode" value="sink"> sink</label>
       <label><input type="checkbox" id="emitter-vortex" checked> Vortex field</label>
-      <button id="emitter-clear-sources">Clear all</button>
-      <button id="emitter-reset">Reset particles</button>
+      <button id="emitter-clear-sources" type="button">Clear all</button>
+      <button id="emitter-reset" type="button">Reset</button>
     </div>
-    <canvas id="emitter-canvas" style="width:100%;border-radius:4px;cursor:crosshair;"></canvas>
+    <canvas id="emitter-canvas" class="sim-canvas" style="cursor:crosshair;" role="img"
+      aria-label="Particles pour out of a green emitter, are carried around the canvas by a clockwise vortex field, and disappear when they cross a red dashed sink."></canvas>
     <div class="figure-caption">
       <span class="figure-label">Figure 5.</span>
-      Click to place <span style="color:var(--c-kernel)">emitters</span> (green),
-      shift+click for <span style="color:var(--c-pressure)">sinks</span> (red).
-      Toggle the vortex field to swirl particles around the center.
-      Particles flow from sources to sinks through the field.
+      The <span style="color:var(--c-kernel)">emitter</span> (green) pours particles out, the
+      vortex field (grey ticks) carries them clockwise along the top and down the right side,
+      and the <span style="color:var(--c-pressure)">sink</span> (red) removes them, so the
+      flow keeps running for as long as you watch. Click the canvas to add
+      emitters or sinks, or switch the field off and gravity takes the stream straight down.
     </div>
   </div>
 
   <p>
-    Pressure and viscosity give you fluids. Add springs for solids, friction for sand,
-    temperature for phase changes, SDFs for obstacles, and emitters for continuous flows,
-    all inside the same simulation loop.
-    In <a href="04-playground.html">Part 4</a> we combine all of these into an interactive sandbox.
+    Each of these is a few lines added to the same simulation loop, and they can run
+    together. In <a href="04-playground.html">Part 4</a> we combine water, sand and springs
+    in one interactive sandbox.
   </p>
 
   <footer style="margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border);font-family:var(--heading-font);font-size:0.85rem;color:var(--text-2);">
-    <p>Part of <a href="index.html" style="color:var(--text-2);">Smooth Particle Hydrodynamics</a>. Prev: <a href="02-gpu.html" style="color:var(--accent);">Moving to the GPU</a>. Next: <a href="04-playground.html" style="color:var(--accent);">Playground</a>.</p>
+    <p>Part of <a href="index.html" style="color:var(--text-2);">Smoothed Particle Hydrodynamics</a>. Prev: <a href="02-gpu.html" style="color:var(--accent);">Moving to the GPU</a>. Next: <a href="04-playground.html" style="color:var(--accent);">Playground</a>.</p>
     <p>Built with <a href="https://github.com/enjalot/moonshine" style="color:var(--text-2);">moonshine</a>.</p>
   </footer>
 </div>
@@ -373,33 +407,98 @@ const SPH = {
   distance(a, b) { const dx=a.x-b.x, dy=a.y-b.y; return Math.sqrt(dx*dx+dy*dy); }
 };
 function fmt(v, d=2) { return typeof v==='number' ? v.toFixed(d) : v; }
-function renderEq(el, tex) { katex.render(tex, el, { displayMode: false, throwOnError: false }); }
+// KaTeX bakes \color{#hex} into inline styles. Point those at the palette's
+// custom properties so equation colors follow the theme like the prose does.
+const EQ_COLORS = { '#059669': 'c-kernel', '#7c3aed': 'c-density', '#dc2626': 'c-pressure', '#2563eb': 'c-viscosity',
+  '#d97706': 'c-mass', '#0891b2': 'c-position', '#be185d': 'c-velocity', '#f59e0b': 'c-spring',
+  '#9333ea': 'c-friction', '#e11d48': 'c-temperature' };
+const EQ_RGB = {}; // the browser reports inline colors as "rgb(r, g, b)"
+for (const [hex, name] of Object.entries(EQ_COLORS)) {
+  EQ_RGB[`rgb(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)})`] = name;
+}
+function themeEq(el) {
+  el.querySelectorAll('[style*="color"]').forEach(s => {
+    const name = EQ_RGB[s.style.color] || EQ_COLORS[s.style.color];
+    if (name) s.style.color = `var(--${name})`;
+  });
+}
+function renderEq(el, tex) { katex.render(tex, el, { displayMode: false, throwOnError: false }); themeEq(el); }
 
 // Symbolic equations
 (function() {
   const eqs = {
     'eq-spring': String.raw`{\color{#f59e0b}\mathbf{F}_{spring}} = -{\color{#f59e0b}k}\;\frac{{\color{#f59e0b}d} - {\color{#f59e0b}L_0}}{{\color{#f59e0b}L_0}}\;{\color{#0891b2}\hat{\mathbf{n}}}`,
-    'eq-friction': String.raw`{\color{#9333ea}\mathbf{F}_{fric}} = -{\color{#9333ea}\mu_f}\;{\color{#be185d}\mathbf{v}_{tan}}\;{\color{#059669}W}({\color{#0891b2}r},\,{\color{#059669}h})`,
+    'eq-friction': String.raw`{\color{#9333ea}\mathbf{F}_{fric}} = -{\color{#9333ea}\mu_f}\;{\color{#be185d}\mathbf{v}_{tan}}\;\frac{{\color{#059669}W}({\color{#0891b2}r},\,{\color{#059669}h})}{{\color{#7c3aed}\rho_j}}`,
     'eq-temperature': String.raw`{\color{#f59e0b}k_{eff}} = {\color{#f59e0b}k_{max}}\;\max\!\left(0,\;1 - \frac{{\color{#e11d48}T}}{{\color{#e11d48}T_{melt}}}\right)`,
     'eq-collision': String.raw`\text{if } {\color{#0891b2}d} < 0: \quad {\color{#0891b2}\mathbf{r}} \mathrel{+}= {\color{#0891b2}\hat{n}}\,|{\color{#0891b2}d}|, \quad {\color{#be185d}\mathbf{v}} \mathrel{-}= ({\color{#be185d}\mathbf{v}} \cdot {\color{#0891b2}\hat{n}})\,{\color{#0891b2}\hat{n}}`
   };
   for (const [id, tex] of Object.entries(eqs)) {
     const el = document.getElementById(id);
-    if (el) katex.render(tex, el, { displayMode: true, throwOnError: false });
+    if (el) { katex.render(tex, el, { displayMode: true, throwOnError: false }); themeEq(el); }
   }
 })();
 
-// Visibility-based animation: only run rAF loops when figure is in view
-function visibleLoop(elementId, loopFn) {
-  let running = false, animId;
-  function tick() { if (!running) return; loopFn(); animId = requestAnimationFrame(tick); }
+// Canvas can't resolve var(), so figures read the palette's computed values
+// from here and pick up a color-scheme change without a reload.
+const THEME = {};
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['text', 'text-2', 'bg', 'fig-bg', 'border', 'accent', 'canvas-bg', 'wall', 'wall-2',
+    'c-kernel', 'c-density', 'c-pressure', 'c-viscosity', 'c-mass', 'c-position', 'c-velocity',
+    'c-spring', 'c-friction', 'c-temperature', 'c-water', 'c-sand', 'c-jelly']) {
+    THEME[k] = cs.getPropertyValue('--' + k).trim();
+  }
+  THEME.dark = matchMedia('(prefers-color-scheme: dark)').matches;
+}
+readTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTheme);
+
+// One convention for speed in every simulation of the series:
+// settled particles are deep blue, fast ones pale.
+function speedColor(speed, max = 200) {
+  const t = Math.min(speed / max, 1);
+  return d3.interpolateBlues((THEME.dark ? 0.75 : 0.85) - t * 0.45);
+}
+
+// Canvas width in CSS pixels (the canvas is styled width:100%).
+function canvasWidth(canvas) { return Math.max(120, Math.floor(canvas.clientWidth)); }
+
+// Run a figure's animation loop only while the figure is on screen and the tab
+// is visible. With prefers-reduced-motion the loop does not start by itself:
+// the figure is advanced to a representative still and gets a Play button.
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function visibleLoop(elementId, loopFn, opts = {}) {
   const el = document.getElementById(elementId);
-  const obs = new IntersectionObserver(([e]) => {
-    if (e.isIntersecting && !running) { running = true; tick(); }
-    else if (!e.isIntersecting && running) { running = false; cancelAnimationFrame(animId); }
-  }, { threshold: 0.1 });
-  obs.observe(el);
-  return { start() { if (!running) { running = true; tick(); } }, stop() { running = false; cancelAnimationFrame(animId); } };
+  let running = false, visible = false, paused = REDUCED, warmed = false, animId;
+  function tick() { if (!running) return; loopFn(); animId = requestAnimationFrame(tick); }
+  function sync() {
+    const should = visible && !paused && !document.hidden;
+    if (should && !running) { running = true; tick(); }
+    else if (!should && running) { running = false; cancelAnimationFrame(animId); }
+  }
+  new IntersectionObserver(([e]) => {
+    visible = e.isIntersecting;
+    if (visible && REDUCED && !warmed) {
+      warmed = true;
+      for (let i = 0; i < (opts.warm ?? 90); i++) loopFn();
+      setTimeout(() => { if (!running) loopFn(); }, 400); // lets an async GPU readback land
+    }
+    sync();
+  }, { threshold: 0.05 }).observe(el);
+  document.addEventListener('visibilitychange', sync);
+  if (REDUCED) {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'motion-btn'; btn.textContent = 'Play animation';
+    btn.addEventListener('click', () => { paused = !paused; btn.textContent = paused ? 'Play animation' : 'Pause animation'; sync(); });
+    el.insertBefore(btn, el.querySelector('.eq-code-stack') ? el.querySelector('.eq-code-stack').nextSibling : el.firstChild);
+  }
+}
+
+// Run up to `n` simulation substeps but stop once `budgetMs` is spent, so a slow
+// device gets slow motion instead of a frozen page.
+function budgetSteps(n, stepFn, budgetMs = 10) {
+  const t0 = performance.now();
+  for (let s = 0; s < n; s++) { stepFn(); if (s >= 1 && performance.now() - t0 > budgetMs) break; }
 }
 
 // Spatial hash for neighbor queries
@@ -437,7 +536,8 @@ class SpatialHash {
     .attr("viewBox", `0 0 ${W} ${H}`)
     .style("width", "100%")
     .style("border-radius", "4px")
-    .style("background", "#f0f4f8");
+    .style("background", "var(--canvas-bg)")
+    .attr("role", "group").attr("aria-label", "A 6 by 4 lattice of particles joined by springs along the sides and diagonals of every square. It drops to the floor and wobbles; stretched springs are amber, compressed springs red.");
 
   let springK = 200, damping = 3;
   let dragged = null;
@@ -455,9 +555,11 @@ class SpatialHash {
     nodes = [];
     springs = [];
     for (let r=0; r<rows; r++) for (let c=0; c<cols; c++) {
+      // Start lifted and sheared sideways, so the lattice swings and settles
+      // by itself and the strain colors show before anyone drags anything.
       nodes.push({
-        x: offsetX + c * spacingX,
-        y: offsetY + r * spacingY,
+        x: offsetX + c * spacingX + (rows - 1 - r) * 26,
+        y: offsetY + r * spacingY - 50,
         vx: 0, vy: 0,
         restX: offsetX + c * spacingX,
         restY: offsetY + r * spacingY,
@@ -477,6 +579,8 @@ class SpatialHash {
 
   const springGroup = svg.append("g");
   const nodeGroup = svg.append("g");
+  const selRing = svg.append("circle").attr("r", 13).attr("fill", "none").attr("stroke", "var(--c-spring)").attr("stroke-width", 2).attr("pointer-events", "none");
+  let tracked = 0; // the particle whose spring is written out in the equation row
 
   function step() {
     // Reset forces
@@ -524,9 +628,9 @@ class SpatialHash {
         const a=nodes[d.a], b=nodes[d.b];
         const dist = Math.sqrt((b.x-a.x)**2+(b.y-a.y)**2);
         const strain = (dist - d.restLen) / d.restLen;
-        if (strain > 0.02) return '#f59e0b';
-        if (strain < -0.02) return '#dc2626';
-        return '#94a3b8';
+        if (strain > 0.02) return 'var(--c-spring)';
+        if (strain < -0.02) return 'var(--c-pressure)';
+        return 'var(--text-2)';
       })
       .attr("stroke-width", d => {
         const a=nodes[d.a], b=nodes[d.b];
@@ -540,31 +644,44 @@ class SpatialHash {
     const nodeSel = nodeGroup.selectAll("circle").data(nodes, d => d.id);
     nodeSel.enter().append("circle")
       .attr("r", 8)
-      .attr("fill", "#334155")
-      .attr("stroke", "#fff")
+      .attr("fill", "var(--text)")
+      .attr("stroke", "var(--canvas-bg)")
       .attr("stroke-width", 2)
       .attr("cursor", "grab")
+      .attr("tabindex", 0).attr("role", "button").attr("aria-label", "Lattice particle. Arrow keys push it.")
+      .on("focus", (e, d) => { tracked = d.id; })
+      .on("keydown", (e, d) => {
+        const kx = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+        const ky = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
+        if (!kx && !ky) return;
+        e.preventDefault(); tracked = d.id;
+        nodes[d.id].vx += kx * 120; nodes[d.id].vy += ky * 120;
+      })
       .call(d3.drag()
-        .on("start", (e, d) => { dragged = d; })
-        .on("drag", (e, d) => { d.x = e.x; d.y = e.y; d.vx = 0; d.vy = 0; updateEqValues(d); })
+        .on("start", (e, d) => { dragged = nodes[d.id]; tracked = d.id; })
+        .on("drag", (e, d) => { const n = nodes[d.id]; n.x = Math.max(15, Math.min(W-15, e.x)); n.y = Math.max(15, Math.min(H-15, e.y)); n.vx = 0; n.vy = 0; })
         .on("end", () => { dragged = null; })
       )
+      .on("touchstart.noscroll", e => e.preventDefault(), { passive: false })
       .merge(nodeSel)
       .attr("cx", d => d.x).attr("cy", d => d.y);
+    selRing.attr("cx", nodes[tracked].x).attr("cy", nodes[tracked].y);
+    updateEqValues(nodes[tracked]);
   }
 
   function updateEqValues(node) {
-    // Find a connected spring and show its values
-    const s = springs.find(s => s.a === node.id || s.b === node.id);
+    // Show the most strained of this particle's springs
+    const strainOf = sp => { const a = nodes[sp.a], b = nodes[sp.b]; return Math.abs(Math.hypot(b.x-a.x, b.y-a.y) - sp.restLen) / sp.restLen; };
+    const s = springs.filter(sp => sp.a === node.id || sp.b === node.id).sort((p, q) => strainOf(q) - strainOf(p))[0];
     if (!s) return;
     const a = nodes[s.a], b = nodes[s.b];
     const dist = Math.sqrt((b.x-a.x)**2 + (b.y-a.y)**2);
     const strain = (dist - s.restLen) / s.restLen;
     const force = springK * strain;
-    const tex = `{\\color{#f59e0b}d}=${fmt(dist,0)}\\;\\text{px},\\;{\\color{#f59e0b}L_0}=${fmt(s.restLen,0)},\\;{\\color{#f59e0b}\\text{strain}}=${fmt(strain,2)},\\;{\\color{#f59e0b}F}=${fmt(force,1)}`;
-    const el = document.getElementById("eq-spring-values");
-    renderEq(el, tex); el.classList.add('visible');
+    const tex = `{\\color{#f59e0b}d}=${fmt(dist,0)},\\;{\\color{#f59e0b}L_0}=${fmt(s.restLen,0)},\\;{\\color{#f59e0b}\\text{strain}}=${fmt(strain,2)},\\;{\\color{#f59e0b}F}=${fmt(force,0)}`;
+    if (tex !== lastTex) { lastTex = tex; renderEq(document.getElementById("eq-spring-values"), tex); }
   }
+  let lastTex = '';
 
   function loopStep() { step(); render(); }
 
@@ -605,27 +722,30 @@ class SpatialHash {
 
   const H = 10, pR = 4, stiffness = 10000, dt = 0.001, substeps = 16;
   const gravity = 200;
+  // What makes the right-hand panel sand. Water has none of these (and viscosity 50).
+  const SAND = { friction: 300, viscosity: 200, cohesion: 2, staticSpeed: 6, restingDamping: 0.97 };
+  const POUR_COUNT = 180;
+  const RESTING_MAX_SPEED = 30;
 
   function createSim(isSand) {
-    const friction = isSand ? 200 : 0;   // tangential damping
-    const viscosity = isSand ? 400 : 50; // much higher for sand
-    const cohesion = isSand ? 2 : 0;
-    const restD = isSand ? 2.5 : 1.5;
-    const simStiffness = isSand ? 3000 : stiffness; // lower stiffness = less bouncy grains
-    const staticThreshold = isSand ? 3 : 0; // velocity below this gets killed (static friction)
-    const velocityDamping = isSand ? 0.92 : 0.998; // strong per-step damping for sand
+    const friction = isSand ? SAND.friction : 0;   // tangential damping between grains
+    const viscosity = isSand ? SAND.viscosity : 50;
+    const cohesion = isSand ? SAND.cohesion : 0;
+    const restD = 1.5;
+    const simStiffness = stiffness;
+    const staticThreshold = isSand ? SAND.staticSpeed : 0; // a resting grain slower than this stops (static friction)
+    const restingDamping = isSand ? SAND.restingDamping : 0.998; // per-substep damping for grains resting on the pile
     // Use a container object so the reference stays stable across drops
     const sim = { particles: [] };
 
-    function drop() {
-      sim.particles = [];
-      const cx = simW / 2, startY = 40;
-      const cols = 6, rows = 6, spacing = 7;
-      for (let r=0; r<rows; r++) for (let c=0; c<cols; c++) {
+    // Pour a thin stream from the top center: POUR_COUNT particles, two at a time.
+    function drop() { sim.particles = []; sim.left = POUR_COUNT; sim.tick = 0; }
+    function pour(rand) {
+      if (sim.left <= 0 || (sim.tick++ % 3)) return;
+      for (let k = 0; k < 2 && sim.left > 0; k++, sim.left--) {
         sim.particles.push({
-          x: cx - (cols-1)*spacing/2 + c*spacing + (Math.random()-0.5)*2,
-          y: startY + r*spacing + (Math.random()-0.5)*2,
-          vx: 0, vy: 0, density: 0, pressure: 0, fx: 0, fy: 0
+          x: simW / 2 + (rand() - 0.5) * 12, y: 12 + k * 6,
+          vx: (rand() - 0.5) * 10, vy: 80, density: 0, pressure: 0, fx: 0, fy: 0
         });
       }
     }
@@ -675,11 +795,11 @@ class SpatialHash {
               pi.fx += friction * vtx * w;
               pi.fy += friction * vty * w;
             }
-            // Cohesion
+            // Cohesion: a weak pull toward each neighbor (n points from j to i)
             if (cohesion > 0) {
               const w = SPH.kernel(dist, H);
-              pi.fx += cohesion * nx * w;
-              pi.fy += cohesion * ny * w;
+              pi.fx -= cohesion * nx * w;
+              pi.fy -= cohesion * ny * w;
             }
           }
         }
@@ -688,10 +808,12 @@ class SpatialHash {
       for (const p of particles) {
         const rho = Math.max(p.density, 0.01);
         p.vx += (p.fx/rho)*dt; p.vy += (p.fy/rho)*dt;
-        // Per-step velocity damping (strong for sand)
-        p.vx *= velocityDamping; p.vy *= velocityDamping;
-        // Static friction: kill tiny motions so sand piles hold still
-        if (staticThreshold > 0) {
+        // Damping and static friction act only on grains that rest on the floor,
+        // directly or through other grains. Applied to every grain they would hold
+        // the whole drop up in mid-air.
+        const d = p.resting ? restingDamping : 0.998;
+        p.vx *= d; p.vy *= d;
+        if (staticThreshold > 0 && p.resting) {
           const sp2 = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
           if (sp2 < staticThreshold) { p.vx = 0; p.vy = 0; }
         }
@@ -704,40 +826,72 @@ class SpatialHash {
       }
     }
 
-    return { sim, drop, step, get particles() { return sim.particles; } };
+    // Mark the grains that rest on the floor or on a grain that does, working up from the floor.
+    function markResting() {
+      const particles = sim.particles;
+      hash.clear();
+      for (let i=0; i<particles.length; i++) { hash.insert(particles[i], i); particles[i].resting = false; }
+      const order = particles.map((_, i) => i).sort((a, b) => particles[b].y - particles[a].y);
+      for (const i of order) {
+        const pi = particles[i];
+        if (pi.vx*pi.vx + pi.vy*pi.vy > RESTING_MAX_SPEED*RESTING_MAX_SPEED) continue; // still falling or sliding fast
+        if (pi.y >= simH - pR - 2) { pi.resting = true; continue; }
+        // A grain needs a resting grain under it on both sides. One perched on a
+        // single grain, or on the edge of a slope, is free to roll off.
+        let left = false, right = false;
+        for (const j of hash.query(pi.x, pi.y, H)) {
+          const pj = particles[j];
+          if (!pj.resting || pj.y <= pi.y + 1) continue;
+          const dx = pj.x-pi.x, dy = pj.y-pi.y;
+          if (dx*dx + dy*dy > (2*pR+1)*(2*pR+1)) continue;
+          if (dx < -0.5) left = true; else if (dx > 0.5) right = true;
+        }
+        pi.resting = left && right;
+      }
+    }
+
+    return { sim, drop, pour, step, markResting, get particles() { return sim.particles; } };
   }
 
   let waterSim = createSim(false);
   let sandSim = createSim(true);
-  waterSim.drop(); sandSim.drop();
+  let waterRand, sandRand;
+  function restart() { waterRand = d3.randomLcg(5); sandRand = d3.randomLcg(5); waterSim.drop(); sandSim.drop(); }
+  restart();
 
   function renderSim(ctx, sim, color) {
     ctx.ctx.clearRect(0, 0, simW, simH);
-    ctx.ctx.fillStyle = '#f0f4f8'; ctx.ctx.fillRect(0, 0, simW, simH);
+    ctx.ctx.fillStyle = THEME['canvas-bg']; ctx.ctx.fillRect(0, 0, simW, simH);
     // Floor line
-    ctx.ctx.strokeStyle = '#94a3b8'; ctx.ctx.lineWidth = 1;
+    ctx.ctx.strokeStyle = THEME['wall']; ctx.ctx.lineWidth = 1;
     ctx.ctx.beginPath(); ctx.ctx.moveTo(0, simH-3); ctx.ctx.lineTo(simW, simH-3); ctx.ctx.stroke();
     // Particles
-    const cs = d3.scaleSequential(color).domain([0, 150]);
     for (const p of sim.particles) {
       const sp = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
       ctx.ctx.beginPath(); ctx.ctx.arc(p.x, p.y, pR, 0, Math.PI*2);
-      ctx.ctx.fillStyle = cs(Math.min(sp, 130));
+      ctx.ctx.fillStyle = color(sp);
       ctx.ctx.fill();
       ctx.ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.ctx.lineWidth = 0.5; ctx.ctx.stroke();
     }
   }
 
   function loopStep() {
-    for (let s=0; s<substeps; s++) { waterSim.step(); sandSim.step(); }
-    renderSim(waterCtx, waterSim, t => d3.interpolateBlues(0.3 + t*0.6));
-    renderSim(sandCtx, sandSim, t => d3.interpolateOranges(0.3 + t*0.55));
+    // Both panels get the same stream: one seeded random sequence each
+    waterSim.pour(waterRand); sandSim.pour(sandRand);
+    sandSim.markResting();
+    budgetSteps(substeps, () => { waterSim.step(); sandSim.step(); }, 12);
+    // Same convention as the water: resting grains are deep orange, moving ones pale
+    renderSim(waterCtx, waterSim, sp => speedColor(sp, 150));
+    renderSim(sandCtx, sandSim, sp => d3.interpolateOranges(0.75 - Math.min(sp / 150, 1) * 0.45));
+    if (frame++ % 10 === 0) {
+      const n = sandSim.particles.length, resting = sandSim.particles.filter(p => p.resting).length;
+      document.getElementById("eq-friction-values").textContent =
+        n === 0 ? '' : `${resting} of ${n} sand grains are at rest`;
+    }
   }
+  let frame = 0;
 
-  d3.select("#sand-drop").on("click", () => {
-    waterSim = createSim(false); sandSim = createSim(true);
-    waterSim.drop(); sandSim.drop();
-  });
+  d3.select("#sand-drop").on("click", restart);
 
   visibleLoop('fig-sand', loopStep);
 })();
@@ -754,7 +908,7 @@ class SpatialHash {
 
   function resize() {
     const rect = canvas.parentElement.getBoundingClientRect();
-    simW = Math.floor(rect.width - 48); simH = 300;
+    simW = canvasWidth(canvas); simH = 300;
     canvas.width = simW*dpr; canvas.height = simH*dpr;
     canvas.style.height = simH+'px';
     ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -781,15 +935,15 @@ class SpatialHash {
     return baseRestD * Math.max(0.3, 1 - 0.5 * (temperature - Tboil) / (100 - Tboil));
   }
   function getGravity() {
-    if (temperature > Tboil) return 200 * Math.max(0, 1 - (temperature - Tboil) / (100 - Tboil) * 0.8);
+    if (temperature > Tboil) return 200 * Math.max(0, 1 - (temperature - Tboil) / (100 - Tboil));
     return 200;
   }
 
   function init() {
     particles = [];
     springPairs = [];
-    const cols = 10, rows = 8, spacing = 10;
-    const ox = simW/2 - (cols-1)*spacing/2, oy = simH/2 - (rows-1)*spacing/2 + 40;
+    const cols = 12, rows = 8, spacing = 10;
+    const ox = simW/2 - (cols-1)*spacing/2, oy = simH - 20 - (rows-1)*spacing;
     for (let r=0; r<rows; r++) for (let c=0; c<cols; c++) {
       particles.push({
         x: ox + c*spacing, y: oy + r*spacing,
@@ -802,6 +956,9 @@ class SpatialHash {
       const i = r*cols+c;
       if (c<cols-1) springPairs.push({ a:i, b:i+1, restLen:spacing });
       if (r<rows-1) springPairs.push({ a:i, b:i+cols, restLen:spacing });
+      // diagonals keep the squares from shearing, as in Figure 1
+      if (c<cols-1 && r<rows-1) springPairs.push({ a:i, b:i+cols+1, restLen:spacing*Math.SQRT2 });
+      if (c>0 && r<rows-1) springPairs.push({ a:i, b:i+cols-1, restLen:spacing*Math.SQRT2 });
     }
   }
   init();
@@ -865,7 +1022,9 @@ class SpatialHash {
     }
     // Gas expansion (random jitter at high temp)
     if (temperature > Tboil) {
-      const jitter = (temperature - Tboil) / (100 - Tboil) * 80;
+      // Exaggerated on purpose: kicks large enough that hot particles fly around
+      // the whole box instead of lying on the floor as a thin layer.
+      const jitter = (temperature - Tboil) / (100 - Tboil) * 25000;
       for (const p of particles) {
         p.fx += (Math.random()-0.5) * jitter;
         p.fy += (Math.random()-0.5) * jitter;
@@ -890,15 +1049,15 @@ class SpatialHash {
 
   function render() {
     ctx.clearRect(0,0,simW,simH);
-    ctx.fillStyle='#f0f4f8';ctx.fillRect(0,0,simW,simH);
+    ctx.fillStyle=THEME['canvas-bg'];ctx.fillRect(0,0,simW,simH);
     // Container outline
-    ctx.strokeStyle='#94a3b8';ctx.lineWidth=2;ctx.strokeRect(2,2,simW-4,simH-4);
+    ctx.strokeStyle=THEME['wall'];ctx.lineWidth=2;ctx.strokeRect(2,2,simW-4,simH-4);
 
     // Springs (when visible)
     const kSpring = getSpringK();
     if (kSpring > 1) {
       ctx.globalAlpha = Math.min(1, kSpring / 100);
-      ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 0.8;
+      ctx.strokeStyle = THEME['wall']; ctx.lineWidth = 0.8;
       for (const s of springPairs) {
         const a=particles[s.a], b=particles[s.b];
         ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
@@ -912,12 +1071,27 @@ class SpatialHash {
       ctx.beginPath(); ctx.arc(p.x, p.y, pR, 0, Math.PI*2);
       ctx.fillStyle = d3.interpolateRdYlBu(1 - t01);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 0.5; ctx.stroke();
+      ctx.strokeStyle = THEME['text-2']; ctx.lineWidth = 0.5; ctx.stroke();
     }
   }
 
+  // Sweep: cold to hot in about 20 seconds, hold, then start over from fresh ice.
+  let sweeping = true, sweepT = 0, hold = 0;
+  function setTemperature(t) {
+    const v = Math.round(t);
+    if (v === temperature) return;
+    temperature = v;
+    document.getElementById("temp-slider").value = v;
+    d3.select("#temp-val").text(v);
+    updatePhaseLabel();
+  }
   function loopStep() {
-    for (let s=0; s<substeps; s++) step();
+    if (sweeping) {
+      if (sweepT >= 100) { if (++hold > 200) { hold = 0; sweepT = 0; init(); setTemperature(0); } }
+      else if (sweepT === 0 && hold < 90) hold++; // let the ice sit for a moment first
+      else { hold = 0; sweepT = Math.min(100, sweepT + 100 / (60 * 20)); setTemperature(sweepT); }
+    }
+    budgetSteps(substeps, step, 12);
     render();
   }
 
@@ -928,16 +1102,17 @@ class SpatialHash {
     else { el.textContent = "Gas"; el.style.color = 'var(--c-pressure)'; }
 
     const tex = `{\\color{#e11d48}T}=${temperature},\\;{\\color{#f59e0b}k_{eff}}=${fmt(getSpringK(),0)},\\;{\\color{#7c3aed}\\rho_{rest}}=${fmt(getRestDensity(),1)}`;
-    const el2 = document.getElementById("eq-temperature-values");
-    renderEq(el2, tex); el2.classList.add('visible');
+    renderEq(document.getElementById("eq-temperature-values"), tex);
   }
 
   d3.select("#temp-slider").on("input", function() {
+    sweeping = false; document.getElementById("temp-sweep").checked = false; // the reader takes over
     temperature = +this.value;
     d3.select("#temp-val").text(temperature);
     updatePhaseLabel();
   });
-  d3.select("#temp-reset").on("click", () => { init(); updatePhaseLabel(); });
+  d3.select("#temp-sweep").on("change", function() { sweeping = this.checked; sweepT = temperature; hold = 0; });
+  d3.select("#temp-reset").on("click", () => { init(); sweepT = 0; hold = 0; setTemperature(0); updatePhaseLabel(); });
 
   new ResizeObserver(resize).observe(canvas.parentElement);
   updatePhaseLabel();
@@ -956,7 +1131,7 @@ class SpatialHash {
 
   function resize() {
     const rect = canvas.parentElement.getBoundingClientRect();
-    simW = Math.floor(rect.width - 48); simH = 360;
+    simW = canvasWidth(canvas); simH = 360;
     canvas.width = simW*dpr; canvas.height = simH*dpr;
     canvas.style.height = simH+'px';
     ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -965,6 +1140,7 @@ class SpatialHash {
 
   const H = 11, pR = 5, dt = 0.001, substeps = 12, stiffness = 4000, restD = 3.0;
   let gravity = 200, maxP = 200;
+  let drained = 0;
   let particles = [], emitTimer = 0;
 
   // Obstacles: a circle and a rectangle, draggable
@@ -973,8 +1149,9 @@ class SpatialHash {
   let dragTarget = null, dragOffX = 0, dragOffY = 0;
 
   function resetObstacles() {
-    circleObs.x = simW * 0.35; circleObs.y = simH * 0.5;
-    rectObs.x = simW * 0.6; rectObs.y = simH * 0.6;
+    // Circle just left of the stream so it splits unevenly; ledge below to the right
+    circleObs.x = simW * 0.5 - 14; circleObs.y = simH * 0.42;
+    rectObs.x = Math.min(simW - rectObs.w - 40, simW * 0.5 + 34); rectObs.y = simH * 0.72;
   }
   resetObstacles();
 
@@ -1090,49 +1267,60 @@ class SpatialHash {
 
   function render() {
     ctx.clearRect(0,0,simW,simH);
-    ctx.fillStyle='#f0f4f8';ctx.fillRect(0,0,simW,simH);
+    ctx.fillStyle=THEME['canvas-bg'];ctx.fillRect(0,0,simW,simH);
 
     // Obstacles
-    ctx.strokeStyle='#475569';ctx.lineWidth=2.5;ctx.fillStyle='rgba(71,85,105,0.1)';
+    ctx.strokeStyle=THEME['wall-2'];ctx.lineWidth=2.5;ctx.fillStyle='rgba(71,85,105,0.1)';
     ctx.beginPath();ctx.arc(circleObs.x,circleObs.y,circleObs.r,0,Math.PI*2);ctx.fill();ctx.stroke();
     ctx.fillStyle='rgba(71,85,105,0.1)';
     ctx.fillRect(rectObs.x,rectObs.y,rectObs.w,rectObs.h);
     ctx.strokeRect(rectObs.x,rectObs.y,rectObs.w,rectObs.h);
 
     // Particles
-    const cs=d3.scaleSequential(t=>d3.interpolateBlues(0.35+t*0.55)).domain([0,200]);
     for(const p of particles){
       const sp=Math.sqrt(p.vx*p.vx+p.vy*p.vy);
       ctx.beginPath();ctx.arc(p.x,p.y,pR,0,Math.PI*2);
-      ctx.fillStyle=cs(Math.min(sp,180));ctx.fill();
+      ctx.fillStyle=speedColor(sp);ctx.fill();
       ctx.strokeStyle='rgba(30,64,175,0.1)';ctx.lineWidth=0.5;ctx.stroke();
     }
 
-    ctx.fillStyle='#94a3b8';ctx.font='11px Source Sans 3,system-ui,sans-serif';
-    ctx.fillText(`${particles.length}/${maxP}`,simW-60,14);
+    if (frame++ % 10 === 0) {
+      const margin = pR + 2;
+      const touching = particles.filter(p => sdfCircle(p.x,p.y).d < margin + 1 || sdfRect(p.x,p.y).d < margin + 1).length;
+      document.getElementById("eq-collision-values").textContent = `${particles.length} particles in the air, ${touching} of them touching a shape`;
+    }
   }
+  let frame = 0;
 
   function loopStep() {
     emitTimer++;
     if(emitTimer>=3){emitTimer=0;emit();}
-    for(let s=0;s<substeps;s++)step();
+    budgetSteps(substeps, step, 12);
+    // Drain: particles that reach the floor are removed, so the stream never runs out.
+    const before = particles.length;
+    particles = particles.filter(p => p.y < simH - pR - 2);
+    drained += before - particles.length;
     render();
   }
 
   // Dragging obstacles
-  canvas.addEventListener("pointerdown", e => {
+  function hit(clientX, clientY) {
     const rect=canvas.getBoundingClientRect();
-    const mx=(e.clientX-rect.left)*(simW/rect.width);
-    const my=(e.clientY-rect.top)*(simH/rect.height);
-    // Check circle
+    const mx=(clientX-rect.left)*(simW/rect.width);
+    const my=(clientY-rect.top)*(simH/rect.height);
     const cdx=mx-circleObs.x,cdy=my-circleObs.y;
-    if(Math.sqrt(cdx*cdx+cdy*cdy)<circleObs.r+10){
-      dragTarget='circle';dragOffX=cdx;dragOffY=cdy;canvas.style.cursor='grabbing';return;
-    }
-    // Check rect
-    if(mx>rectObs.x-10&&mx<rectObs.x+rectObs.w+10&&my>rectObs.y-10&&my<rectObs.y+rectObs.h+10){
-      dragTarget='rect';dragOffX=mx-rectObs.x;dragOffY=my-rectObs.y;canvas.style.cursor='grabbing';return;
-    }
+    if(Math.sqrt(cdx*cdx+cdy*cdy)<circleObs.r+10) return {target:'circle',offX:cdx,offY:cdy};
+    if(mx>rectObs.x-12&&mx<rectObs.x+rectObs.w+12&&my>rectObs.y-12&&my<rectObs.y+rectObs.h+12) return {target:'rect',offX:mx-rectObs.x,offY:my-rectObs.y};
+    return null;
+  }
+  // A touch that starts on a shape drags it; a touch anywhere else scrolls the page.
+  canvas.style.touchAction = 'auto';
+  canvas.addEventListener("touchstart", e => { const t=e.touches[0]; if (t && hit(t.clientX,t.clientY)) e.preventDefault(); }, { passive: false });
+  canvas.addEventListener("pointerdown", e => {
+    const h = hit(e.clientX, e.clientY);
+    if (!h) return;
+    dragTarget=h.target;dragOffX=h.offX;dragOffY=h.offY;canvas.style.cursor='grabbing';
+    try { canvas.setPointerCapture(e.pointerId); } catch(err) {}
   });
   canvas.addEventListener("pointermove", e => {
     if(!dragTarget)return;
@@ -1143,7 +1331,7 @@ class SpatialHash {
     else{rectObs.x=mx-dragOffX;rectObs.y=my-dragOffY;}
   });
   canvas.addEventListener("pointerup", ()=>{dragTarget=null;canvas.style.cursor='grab';});
-  canvas.addEventListener("pointerleave", ()=>{dragTarget=null;canvas.style.cursor='grab';});
+  canvas.addEventListener("pointercancel", ()=>{dragTarget=null;canvas.style.cursor='grab';});
 
   d3.select("#coll-gravity-slider").on("input",function(){gravity=+this.value;d3.select("#coll-gravity-val").text(gravity);});
   d3.select("#coll-count-slider").on("input",function(){maxP=+this.value;d3.select("#coll-count-val").text(maxP);});
@@ -1165,7 +1353,7 @@ class SpatialHash {
 
   function resize() {
     const rect = canvas.parentElement.getBoundingClientRect();
-    simW = Math.floor(rect.width - 48); simH = 360;
+    simW = canvasWidth(canvas); simH = 360;
     canvas.width = simW*dpr; canvas.height = simH*dpr;
     canvas.style.height = simH+'px';
     ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -1184,7 +1372,9 @@ class SpatialHash {
   // Start with one emitter and one sink
   function initSources() {
     emitters = [{ x: simW*0.2, y: simH*0.3 }];
-    sinks = [{ x: simW*0.8, y: simH*0.7, r: 30 }];
+    // The vortex carries the stream along the top and down the right side,
+    // so the default sink is a wide drain in the lower right, across its path.
+    sinks = [{ x: simW - 95, y: simH - 70, r: 80 }];
   }
   initSources();
 
@@ -1286,7 +1476,7 @@ class SpatialHash {
     try {
       adapter = await navigator.gpu.requestAdapter();
       if (!adapter) return null;
-      device = await adapter.requestDevice({ requiredLimits: { maxStorageBufferBindingSize: 256 * 1024 * 1024 } });
+      device = await adapter.requestDevice(); // default limits are enough; see Part 2
     } catch(e) { return null; }
 
     const MAX_PARTICLES = 4096;
@@ -1553,6 +1743,7 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
     let posReadback = new Float32Array(MAX_PARTICLES * 2);
     let velReadback = new Float32Array(MAX_PARTICLES * 2);
     let readbackReady = true;
+    let generation = 0; // bumped whenever particle indices change (sink removal, reset)
 
     function updateParams() {
       paramsData[0] = gpuParticleCount;
@@ -1589,20 +1780,24 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
       const p3 = encoder.beginComputePass(); p3.setPipeline(forcePipeline); p3.setBindGroup(0, bindGroup); p3.dispatchWorkgroups(particleGroups); p3.end();
 
       if (readbackReady) {
+        // Fix the byte count and generation now: particles are added and removed
+        // while the map is pending, and mapping a different range than was copied
+        // throws and leaves the buffer mapped for good.
         const byteCount = gpuParticleCount * 2 * 4;
+        const gen = generation;
         encoder.copyBufferToBuffer(posBuffer, 0, readbackBuffer, 0, byteCount);
         encoder.copyBufferToBuffer(velBuffer, 0, velReadbackBuffer, 0, byteCount);
         readbackReady = false;
         device.queue.submit([encoder.finish()]);
         (async () => {
           try {
-            await readbackBuffer.mapAsync(GPUMapMode.READ, 0, gpuParticleCount * 2 * 4);
-            posReadback.set(new Float32Array(readbackBuffer.getMappedRange(0, gpuParticleCount * 2 * 4)));
-            readbackBuffer.unmap();
-            await velReadbackBuffer.mapAsync(GPUMapMode.READ, 0, gpuParticleCount * 2 * 4);
-            velReadback.set(new Float32Array(velReadbackBuffer.getMappedRange(0, gpuParticleCount * 2 * 4)));
-            velReadbackBuffer.unmap();
-          } catch(e) { /* skip if busy */ }
+            await Promise.all([readbackBuffer.mapAsync(GPUMapMode.READ, 0, byteCount), velReadbackBuffer.mapAsync(GPUMapMode.READ, 0, byteCount)]);
+            if (gen === generation) { // particle indices changed since the copy: drop it
+              posReadback.set(new Float32Array(readbackBuffer.getMappedRange(0, byteCount)));
+              velReadback.set(new Float32Array(velReadbackBuffer.getMappedRange(0, byteCount)));
+            }
+          } catch(e) { /* device lost or tab hidden: keep the last positions */ }
+          try { readbackBuffer.unmap(); velReadbackBuffer.unmap(); } catch(e) {}
           readbackReady = true;
         })();
       } else {
@@ -1639,6 +1834,7 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
           device.queue.writeBuffer(velBuffer, 0, velReadback.subarray(0, write * 2));
         }
         gpuParticleCount = write;
+        generation++;
       }
     }
 
@@ -1663,9 +1859,8 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
       },
       reset() {
         gpuParticleCount = 0;
-        posReadback = new Float32Array(MAX_PARTICLES * 2);
-        velReadback = new Float32Array(MAX_PARTICLES * 2);
-        readbackReady = true;
+        generation++;
+        posReadback.fill(0); velReadback.fill(0);
       },
       addParticles(arr) {
         const startIdx = gpuParticleCount;
@@ -1713,23 +1908,23 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
 
   function render() {
     ctx.clearRect(0,0,simW,simH);
-    ctx.fillStyle='#f0f4f8';ctx.fillRect(0,0,simW,simH);
+    ctx.fillStyle=THEME['canvas-bg'];ctx.fillRect(0,0,simW,simH);
 
     // Vortex field visualization
     if (vortexOn) {
       const cx=simW/2, cy=simH/2;
       ctx.save();
-      ctx.globalAlpha = 0.08;
+      ctx.globalAlpha = 0.3;
       const step = 40;
       for (let x=step; x<simW; x+=step) for (let y=step; y<simH; y+=step) {
         const dx=x-cx, dy=y-cy;
         const dist=Math.sqrt(dx*dx+dy*dy)+1;
         const s = 15 / (dist/100 + 1);
         const nx=-dy/dist, ny=dx/dist;
-        ctx.strokeStyle='#475569';ctx.lineWidth=1.5;
+        ctx.strokeStyle=THEME['wall-2'];ctx.lineWidth=1.5;
         ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+nx*s,y+ny*s);ctx.stroke();
         const ax=x+nx*s, ay=y+ny*s;
-        ctx.beginPath();ctx.arc(ax,ay,1.5,0,Math.PI*2);ctx.fillStyle='#475569';ctx.fill();
+        ctx.beginPath();ctx.arc(ax,ay,1.5,0,Math.PI*2);ctx.fillStyle=THEME['wall-2'];ctx.fill();
       }
       ctx.restore();
     }
@@ -1738,21 +1933,20 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
     for (const em of emitters) {
       ctx.beginPath();ctx.arc(em.x,em.y,12,0,Math.PI*2);
       ctx.fillStyle='rgba(5,150,105,0.15)';ctx.fill();
-      ctx.strokeStyle='#059669';ctx.lineWidth=2;ctx.stroke();
-      ctx.fillStyle='#059669';ctx.font='bold 14px Source Sans 3,system-ui,sans-serif';
+      ctx.strokeStyle=THEME['c-kernel'];ctx.lineWidth=2;ctx.stroke();
+      ctx.fillStyle=THEME['c-kernel'];ctx.font='bold 14px Source Sans 3,system-ui,sans-serif';
       ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('+',em.x,em.y+1);
     }
     // Sinks
     for (const sk of sinks) {
       ctx.beginPath();ctx.arc(sk.x,sk.y,sk.r,0,Math.PI*2);
       ctx.fillStyle='rgba(220,38,38,0.08)';ctx.fill();
-      ctx.strokeStyle='#dc2626';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
-      ctx.fillStyle='#dc2626';ctx.font='bold 14px Source Sans 3,system-ui,sans-serif';
+      ctx.strokeStyle=THEME['c-pressure'];ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle=THEME['c-pressure'];ctx.font='bold 14px Source Sans 3,system-ui,sans-serif';
       ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('\u2212',sk.x,sk.y+1);
     }
 
     // Particles
-    const cs=d3.scaleSequential(t=>d3.interpolateBlues(0.35+t*0.55)).domain([0,150]);
     const positions = backend ? backend.getPositions() : [];
     const velocities = backend ? backend.getVelocities() : [];
     for (let i=0; i<positions.length; i++) {
@@ -1760,22 +1954,15 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
       const [vx, vy] = velocities[i];
       const sp = Math.sqrt(vx*vx + vy*vy);
       ctx.beginPath();ctx.arc(px,py,pR,0,Math.PI*2);
-      ctx.fillStyle=cs(Math.min(sp,130));ctx.fill();
+      ctx.fillStyle=speedColor(sp,150);ctx.fill();
     }
 
     // Label: WebGPU (green) or CPU fallback (red) + count
     const count = backend ? backend.getCount() : 0;
-    ctx.font='11px Source Sans 3,system-ui,sans-serif';
+    ctx.font='13px Source Sans 3,system-ui,sans-serif';
     ctx.textAlign='right';ctx.textBaseline='top';
-    if (backend && backend.type === 'webgpu') {
-      ctx.fillStyle = '#059669';
-      ctx.fillText('WebGPU', simW-10, 4);
-    } else if (backend) {
-      ctx.fillStyle = '#dc2626';
-      ctx.fillText('CPU fallback', simW-10, 4);
-    }
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillText(`${count}`, simW-10, 20);
+    ctx.fillStyle = THEME['text-2'];
+    if (backend) ctx.fillText(`${count} particles, ${backend.type === 'webgpu' ? 'WebGPU' : 'CPU'}`, simW-10, 6);
     ctx.textAlign='left';ctx.textBaseline='alphabetic';
   }
 
@@ -1807,7 +1994,8 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
     const rect=canvas.getBoundingClientRect();
     const mx=(e.clientX-rect.left)*(simW/rect.width);
     const my=(e.clientY-rect.top)*(simH/rect.height);
-    if (e.shiftKey) {
+    const mode = document.querySelector('input[name="emitter-mode"]:checked').value;
+    if (e.shiftKey || mode === 'sink') {
       sinks.push({ x: mx, y: my, r: 25 });
     } else {
       emitters.push({ x: mx, y: my });
@@ -1816,7 +2004,7 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
 
   d3.select("#emitter-vortex").on("change", function() { vortexOn = this.checked; });
   d3.select("#emitter-clear-sources").on("click", () => { emitters = []; sinks = []; });
-  d3.select("#emitter-reset").on("click", () => { if (backend) backend.reset(); });
+  d3.select("#emitter-reset").on("click", () => { if (backend) backend.reset(); initSources(); });
 
   new ResizeObserver(resize).observe(canvas.parentElement);
 
