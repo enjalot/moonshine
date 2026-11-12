@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useEdit } from '../lib/EditContext'
+import { fnv1a, useEdit } from '../lib/EditContext'
+import { postComment } from '../lib/feedback'
 import { useFeedback } from '../lib/FeedbackContext'
 import { locate, wordDiff, type Suggestion } from '../lib/suggestions'
 
@@ -33,9 +34,13 @@ export default function SuggestionCards({ start, end }: Props) {
 }
 
 function SuggestionCard({ s, range }: { s: Suggestion; range: [number, number] }) {
-  const { replaceRanges } = useEdit()
-  const { decideSuggestion } = useFeedback()
+  const { replaceRanges, body, path } = useEdit()
+  const { decideSuggestion, refresh, setHudOpen } = useFeedback()
   const [editing, setEditing] = useState(false)
+  // Handing a remark to the agent: the note becomes a comment on the passage
+  // (editable first), delivered like any other comment via Address.
+  const [sending, setSending] = useState(false)
+  const [message, setMessage] = useState(s.note ?? '')
   const [draft, setDraft] = useState(s.replace ?? s.find)
   const [busy, setBusy] = useState(false)
   const hasChange = typeof s.replace === 'string'
@@ -61,6 +66,24 @@ function SuggestionCard({ s, range }: { s: Suggestion; range: [number, number] }
         )
       }
       await decideSuggestion(s.id, 'accepted', edited ? text : undefined)
+    })
+
+  const send = () =>
+    run(async () => {
+      if (!message.trim()) return
+      await postComment(
+        {
+          kind: 'block',
+          path,
+          range,
+          excerpt: s.find,
+          anchorHash: fnv1a(body),
+        },
+        message.trim(),
+      )
+      await decideSuggestion(s.id, 'sent')
+      await refresh()
+      setHudOpen(true)
     })
 
   return (
@@ -109,10 +132,40 @@ function SuggestionCard({ s, range }: { s: Suggestion; range: [number, number] }
         <p className="mn-sg-diff mn-sg-quote">{s.find}</p>
       )}
 
-      {s.note && <p className="mn-sg-note">{s.note}</p>}
+      {s.note && !sending && <p className="mn-sg-note">{s.note}</p>}
+      {sending && (
+        <textarea
+          className="mn-sg-edit mn-sg-message"
+          aria-label="Message to the agent"
+          value={message}
+          autoFocus
+          rows={Math.min(10, Math.max(3, Math.ceil(message.length / 70) + 1))}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault()
+              setSending(false)
+            }
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault()
+              void send()
+            }
+          }}
+        />
+      )}
 
       <div className="mn-sg-actions">
-        {editing ? (
+        {sending ? (
+          <>
+            <button type="button" className="mn-sg-primary" disabled={busy || !message.trim()} onClick={() => void send()}>
+              Send
+            </button>
+            <button type="button" disabled={busy} onClick={() => setSending(false)}>
+              Cancel
+            </button>
+            <span className="mn-sg-keys">sent as a comment; press Address in the panel to deliver</span>
+          </>
+        ) : editing ? (
           <>
             <button
               type="button"
@@ -149,6 +202,11 @@ function SuggestionCard({ s, range }: { s: Suggestion; range: [number, number] }
             <button type="button" disabled={busy} onClick={() => setEditing(true)}>
               {hasChange ? 'Edit' : 'Edit passage'}
             </button>
+            {!hasChange && (
+              <button type="button" disabled={busy} onClick={() => setSending(true)}>
+                Send to agent
+              </button>
+            )}
             <button
               type="button"
               disabled={busy}

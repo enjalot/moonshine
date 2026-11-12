@@ -7,7 +7,8 @@ import { EDIT_ENABLED } from './EditContext'
 
 const BASE = '/__moonshine/suggestions'
 
-export type SuggestionStatus = 'open' | 'accepted' | 'rejected'
+// `sent`: the author handed it to the agent as a comment (see FEEDBACK.md).
+export type SuggestionStatus = 'open' | 'accepted' | 'rejected' | 'sent'
 
 export type Suggestion = {
   id: string

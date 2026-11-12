@@ -204,8 +204,8 @@ export default function moonshineFeedbackPlugin(): Plugin {
             const id = String(payload.id ?? '')
             if (!/^sg_[\w-]+$/.test(id)) throw httpError(400, 'invalid id')
             const status = String(payload.status ?? '')
-            if (!['accepted', 'rejected', 'open'].includes(status)) {
-              throw httpError(400, 'status must be accepted|rejected|open')
+            if (!['accepted', 'rejected', 'sent', 'open'].includes(status)) {
+              throw httpError(400, 'status must be accepted|rejected|sent|open')
             }
             const file = path.join(suggestionsDir, `${id}.json`)
             const rec = await readJSON(file)

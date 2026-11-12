@@ -252,7 +252,7 @@ agent  ──write──▶  .feedback/suggestions/<id>.json  ◀──accept/ed
 | `note` | the reason, in a sentence or two. Required for a remark. |
 | `source` | who proposed it (`critique`, `editing pass`, an agent name) |
 | `at` | body offset of `find` when written; picks the right copy when the text repeats |
-| `status` | `open` → `accepted` or `rejected`, set by the web app with `resolvedAt` |
+| `status` | `open` → `accepted`, `rejected` or `sent`, set by the web app with `resolvedAt`. `sent` means the author handed a remark to the agent: it is now an ordinary comment in the inbox, anchored to the same passage, and is handled as one. |
 | `appliedText` | present when the author edited the proposal before applying: the text that went into the article |
 
 **Writing them.** Use `scripts/suggest.mjs`, which checks every entry against
@@ -273,8 +273,9 @@ stays unique. The dev server does not need to be running.
 the article; it is on by default and remembered per browser. While on, each
 suggestion renders as a card under the top-level block that contains `find`: a
 word diff of the change, the note, and **Accept**, **Edit** (change the
-proposal, then apply) and **Reject**. A remark offers **Edit passage** and
-**Dismiss**. The HUD panel lists the open suggestions, jumps to a card, and
+proposal, then apply) and **Reject**. A remark offers **Edit passage**,
+**Send to agent** (the note, editable first, becomes a comment on the
+passage, delivered by Address like any other) and **Dismiss**. The HUD panel lists the open suggestions, jumps to a card, and
 has **Accept all** (one save for every non-overlapping change) and **Reject
 all**. Applying uses the same conflict-checked, undoable save as any other
 in-page edit, and in a project that is its own repository it is committed as

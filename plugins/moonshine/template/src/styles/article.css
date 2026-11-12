@@ -1871,6 +1871,9 @@ body.mn-reordering {
   margin: 0 0 0.5rem;
   resize: vertical;
 }
+.mn-sg-message {
+  font-family: var(--heading-font);
+}
 .mn-sg-actions {
   display: flex;
   flex-wrap: wrap;

@@ -715,7 +715,10 @@ Propose, and do not apply, when:
   they are developing, as opposed to asking you to fix something;
 - the change alters a claim, a number, or what a figure shows, and you cannot
   establish the truth yourself. Use a remark (no `replace`) that says what is
-  doubtful and what would settle it.
+  doubtful and what would settle it. The author can send a remark back to you
+  as a comment, so phrase the note so that it also works as the instruction
+  ("Label the table as an illustration, or replace the numbers with ones the
+  figure computes").
 
 Apply directly, as before, when the author asked for the change, when you are
 addressing their comment, or when you are fixing your own draft before they

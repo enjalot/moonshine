@@ -4,7 +4,7 @@
 //
 //   node suggest.mjs <project> <suggestions.json> [--source "editing pass"]
 //   node suggest.mjs <project> --list             what the author decided
-//   node suggest.mjs <project> --prune            delete accepted/rejected records
+//   node suggest.mjs <project> --prune            delete accepted/rejected/sent records
 //
 // <suggestions.json> ("-" reads stdin) is an array of
 //   { "path": "example.md",        content-relative markdown file
@@ -89,7 +89,7 @@ if (list || prune) {
   if (prune) {
     let n = 0
     for (const { file, rec } of records) {
-      if (rec.status === 'accepted' || rec.status === 'rejected') {
+      if (['accepted', 'rejected', 'sent'].includes(rec.status)) {
         await fs.unlink(file)
         n++
       }
