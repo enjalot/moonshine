@@ -1062,7 +1062,10 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
         <g transform={translate(view.x, view.y) + scale(k)}>
           {!isTracking && (
             <rect
-              dragologyKey="canvas"
+              // Under the groups (z -1), so a group's name bar takes its own
+              // clicks. A z-index needs an id.
+              id={`${uid}-canvas`}
+              dragologyZIndex={-2}
               className="mn-dg-canvas"
               x={-1e5}
               y={-1e5}
@@ -1325,6 +1328,26 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
   if (singleSpec && single) {
     toolbar = (
       <>
+        <input
+          key={`${single.id}:${singleSpec.label}`}
+          className="mn-diagram-label-input"
+          type="text"
+          aria-label="Label"
+          placeholder="Label"
+          defaultValue={singleSpec.label.replace(/\n/g, ' ')}
+          onBlur={(e) => {
+            const v = e.target.value.trim()
+            if (v !== singleSpec.label.replace(/\n/g, ' ')) commit(updateNode(single.id, { label: v }))
+          }}
+          onKeyDown={(e) => {
+            e.stopPropagation()
+            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+            if (e.key === 'Escape') {
+              ;(e.target as HTMLInputElement).value = singleSpec.label.replace(/\n/g, ' ')
+              ;(e.target as HTMLInputElement).blur()
+            }
+          }}
+        />
         <span className="mn-diagram-kinds" role="radiogroup" aria-label="Kind">
           {KINDS.map(({ kind, name }) => (
             <button
@@ -1421,9 +1444,22 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
     const g = doc.spec.groups?.find((x) => x.id === single.id)
     toolbar = g && (
       <>
-        <button type="button" onClick={() => setEditing({ kind: 'group', id: single.id })} title="Double-click the name">
-          Rename
-        </button>
+        <input
+          key={`${g.id}:${g.label}`}
+          className="mn-diagram-label-input"
+          type="text"
+          aria-label="Group name"
+          placeholder="Group name"
+          defaultValue={g.label}
+          onBlur={(e) => {
+            const v = e.target.value.trim()
+            if (v !== g.label) commit({ ...docRef.current, spec: { ...docRef.current.spec, groups: (docRef.current.spec.groups ?? []).map((x) => (x.id === g.id ? { ...x, label: v } : x)) } })
+          }}
+          onKeyDown={(e) => {
+            e.stopPropagation()
+            if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur()
+          }}
+        />
         <Sep />
         <span className="mn-diagram-kinds" role="radiogroup" aria-label="Boundary">
           {GROUP_STYLES.map(({ style, name }) => (
@@ -1508,9 +1544,22 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
   const edgeGeomNow = selEdge !== null ? edgeEnds(doc, selEdge) : null
   const edgeToolbar = edgeSpec && selEdge !== null && edgeGeomNow && (
     <>
-      <button type="button" onClick={() => setEditing({ kind: 'edge', id: String(selEdge) })} title="Double-click the arrow, or Enter">
-        {edgeSpec.label ? 'Edit label' : 'Add label'}
-      </button>
+      <input
+        key={`${selEdge}:${edgeSpec.label ?? ''}`}
+        className="mn-diagram-label-input"
+        type="text"
+        aria-label="Link label"
+        placeholder="Label (optional)"
+        defaultValue={edgeSpec.label ?? ''}
+        onBlur={(e) => {
+          const v = e.target.value.trim()
+          if (v !== (edgeSpec.label ?? '')) updateEdge(selEdge, { label: v })
+        }}
+        onKeyDown={(e) => {
+          e.stopPropagation()
+          if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur()
+        }}
+      />
       <button type="button" aria-pressed={Boolean(edgeSpec.dashed)} onClick={() => updateEdge(selEdge, { dashed: !edgeSpec.dashed })}>
         Dashed
       </button>

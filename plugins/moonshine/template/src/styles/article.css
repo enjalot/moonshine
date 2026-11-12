@@ -1330,6 +1330,16 @@
 .mn-diagram-icons .mn-diagram-kinds {
   flex-wrap: wrap;
 }
+.mn-diagram-label-input {
+  width: 11rem;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 4px 7px;
+  margin: 1px 4px 1px 1px;
+}
 .mn-diagram-icon-search {
   display: flex;
   gap: 6px;
