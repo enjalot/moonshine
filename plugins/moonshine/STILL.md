@@ -326,7 +326,11 @@ The figure layer is open. But there are real choices to make per figure:
   arranges it; readers get a live diagram at the article's type size.
   Every node, group and edge has a stable id, so
   `:term[word]{to=diagram-id.node-id}` highlights one part inside the
-  diagram. Choose it whenever you'd reach for Mermaid. Authors can add
+  diagram. Choose it whenever you'd reach for Mermaid and the nodes are
+  labelled boxes. A diagram that needs an icon per node, links coloured by
+  what they carry, zones or per-piece state is a custom figure on a board
+  kit: see `skills/diagram/SKILL.md`, which also covers what a diagram
+  should and should not contain. Authors can add
   their own diagrams with the **+** between blocks, built in the same
   editor.
 

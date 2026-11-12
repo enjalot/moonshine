@@ -14,6 +14,7 @@ AI tools generate complexity faster than people can consume it. Moonshine is for
 - `STILL.md` the structured Vite + React project flavor: markdown directives, figure registry, in-place editing, publishing
 - `ARTICLE.md` the shine substrate: single-file HTML scaffold, CSS foundation, layout patterns, series structure (shine's hand-built kind)
 - `VISUALS.md` visualization patterns, interaction, rendering technology, iteration (both substrates; see its preamble for still differences)
+- `skills/diagram/SKILL.md` system, relationship and process diagrams in a still article: what gets a node, what a link means, when the built-in diagram fits and when a board of glyph tiles does, and how to match the diagrams an article already has
 - `FEEDBACK.md` the authorship-feedback protocol: comments from the rendered still article flow back to the agent, and suggestions flow from the agent to the author, who accepts, edits or rejects each one in the page
 
 ## Articles, Not Dashboards
