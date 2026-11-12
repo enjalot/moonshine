@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react'
+import baked from 'virtual:moonshine-icons'
+import { redrawDiagrams } from './text'
 
 // Glyphs for tile nodes (a SpecNode with `icon`). Each stands for a KIND of
 // thing: every service is the same cube, every database the same cylinder,
@@ -109,7 +111,60 @@ export function registerGlyphs(more: Record<string, ReactNode>) {
 
 export const glyphNames = () => Object.keys(GLYPHS)
 
-export const glyph = (name: string | undefined): ReactNode => (name ? (GLYPHS[name] ?? null) : null)
+// ---- Tabler icons (`tabler:<name>`) --------------------------------------
+// The ones the article uses are bundled (vite-plugin-moonshine-icons). In
+// dev, one picked in the editor a moment ago is fetched and the diagrams
+// redraw when it arrives.
+const tabler = new Map<string, string[] | null>(Object.entries(baked))
+const pending = new Set<string>()
+
+export function cacheTabler(name: string, paths: string[]) {
+  tabler.set(name, paths)
+}
+
+function tablerPaths(name: string): string[] | null {
+  const hit = tabler.get(name)
+  if (hit !== undefined) return hit
+  if (import.meta.env.DEV && !pending.has(name)) {
+    pending.add(name)
+    fetch(`/__moonshine/icons/tabler/${encodeURIComponent(name)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { paths?: string[] } | null) => {
+        tabler.set(name, d?.paths ?? null)
+        redrawDiagrams()
+      })
+      .catch(() => tabler.set(name, null))
+  }
+  return null
+}
+
+// Tabler draws in a 0..24 box; ours is centred on 0,0. One path, so the
+// drawing has a fixed shape whatever the icon.
+const tablerGlyph = (paths: string[]) => (
+  <g>
+    <path className={line} transform="translate(-12,-12)" d={paths.join(' ')} />
+  </g>
+)
+
+// Anything that is not a glyph name is drawn as written: an emoji, or a
+// letter or two.
+const textGlyph = (text: string) => (
+  <g>
+    <text className="mn-dg-glyph-text" textAnchor="middle" dominantBaseline="central">
+      {text}
+    </text>
+  </g>
+)
+
+export function glyph(name: string | undefined): ReactNode {
+  if (!name) return null
+  if (name in GLYPHS) return GLYPHS[name]
+  if (name.startsWith('tabler:')) {
+    const paths = tablerPaths(name.slice(7))
+    return paths ? tablerGlyph(paths) : null
+  }
+  return textGlyph(name)
+}
 
 // A glyph on its own, for a legend or beside a word in the prose:
 //   <Glyph name="database" size={18} tone="data" />

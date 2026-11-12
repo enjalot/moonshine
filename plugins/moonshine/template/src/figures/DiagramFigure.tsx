@@ -200,7 +200,7 @@ function ReaderSvg({
       const placed = { nodes: v.placement.nodes, groups: v.placement.groups }
       return (
         <g transform={translate(Math.max(0, (inner - v.frame.w * z) / 2), 0) + scale(z) + translate(-v.frame.x, -v.frame.y)}>
-          {drawDiagram({ uid, active: activePart }, v.spec, placed, v.baked, (n) =>
+          {drawDiagram({ uid, active: activePart, down: v.spec.direction === 'DOWN' }, v.spec, placed, v.baked, (n) =>
             n.detail
               ? {
                   tabIndex: 0,

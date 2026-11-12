@@ -418,24 +418,41 @@ generated code is bad at it. The template splits a diagram in two:
   ],
   ```
 
-  Node fields: `icon` (`person`, `service`, `database`, `store`, `queue`,
-  `document`, `function`, `key`, `browser`, `cloud`, `folder`, `gear`,
-  `clock`, `bolt`, or one added with `registerGlyphs` from
-  `diagram/glyphs`), `labelSide` (`below` default, `above`, `left`,
-  `right`), `tone` (the glyph's colour family), `badge`, `dashed`. Edge
+  Node fields: `icon`, `labelSide` (`above`, `below`, `left`, `right`;
+  by default below the tile, or to its right in a `DOWN` diagram),
+  `tone` (the glyph's colour family), `badge`, `dashed`. An `icon` is one
+  of three things:
+  - a built-in glyph: `person`, `service`, `database`, `store`, `queue`,
+    `document`, `function`, `key`, `browser`, `cloud`, `folder`, `gear`,
+    `clock`, `bolt`, or one added with `registerGlyphs` from
+    `diagram/glyphs`;
+  - any Tabler icon (tabler.io/icons, over 5,000) as `tabler:<name>`,
+    for example `tabler:flame`. Only the ones an article uses are bundled
+    (`vite-plugin-moonshine-icons.ts` collects them from `src/figures/`
+    and `content/`); a name that does not exist warns at build;
+  - anything else is drawn as written, which is how an emoji is used:
+    `icon: '🌾'`.
+
+  A group takes `style` (`box` default, `corners`, `tint`, `dashed`) and
+  `tone`. Edge
   fields: `family` (the link's colour: `flow`, `data`, `control`,
   `access`, tokens `--dg-*` in `tokens.css`) and `arrows` (`end` default,
   `both`, `start`, `none`). A labelled link shows its direction in the
   label as well as at its end, and a label moves beside the line when the
-  run is too short to show past it. In the editor the author picks the
-  icon, label side, colour and direction from the selection toolbar, and a
-  box added to a diagram of tiles is a tile.
+  run is too short to show past it. A link meets a tile at the middle of
+  its side. In the editor the author picks the icon (a built-in one, a
+  typed emoji, or a search of the Tabler set), label side, colour and
+  direction from the selection toolbar, and a box added to a diagram of
+  tiles is a tile. `content/diagrams.md` in the template shows each of
+  these as a small figure (`src/figures/DiagramGallery.tsx`).
 
 - **Author-owned arrangement.** In `npm run dev`, **edit diagram**
   under the diagram opens a full-screen editor built on direct
   manipulation, drawn by Dragology like the reader's diagram: drag boxes
   (8px grid, alignment guides; dropped inside a group's box, a box joins
-  the group, and the group grows to take it in as you drag), drag the
+  the group, dragged out it leaves, and the group grows to take it in as
+  you drag), add a group with the Group tool (G) and set its boundary
+  style and colour or remove it from its toolbar, drag the
   canvas to select, double-click the canvas for a new box, drag a box's
   side dot to another box to connect (or onto empty canvas for a new
   connected box), Tab for the next box in the flow, double-click (or
@@ -891,8 +908,10 @@ Once the outline is agreed:
    template's demonstration figures are there to show the mechanisms,
    and they have stayed registered in every project that was not told
    to remove them. Delete `content/example.md` (if you made your own
-   file), the demo figure files (`GradientField`, `LossLandscape`,
-   `StepSize`, `Sparkline`, `FlowDiagram` and `lib/lossSurface.ts`),
+   file), `content/diagrams.md` and `content/series/`, the demo figure
+   files (`GradientField`, `LossLandscape`, `StepSize`, `Sparkline`,
+   `FlowDiagram`, `TrainingSystem`, `DiagramGallery` and
+   `lib/lossSurface.ts`),
    their entries in `src/figures/registry.ts`, the demo's
    `content/figures/flow-diagram.json`, and the README sections that
    describe them. Keep the infrastructure they demonstrate: `drag/`,

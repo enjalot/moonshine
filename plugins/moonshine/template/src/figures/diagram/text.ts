@@ -65,6 +65,12 @@ if (typeof document !== 'undefined' && document.fonts) {
     listeners.forEach((l) => l())
   })
 }
+// Anything else that changes what a diagram draws without changing its
+// spec (an icon's paths arriving) redraws the same way.
+export function redrawDiagrams() {
+  epoch++
+  listeners.forEach((l) => l())
+}
 const subscribe = (l: () => void) => {
   listeners.add(l)
   return () => listeners.delete(l)

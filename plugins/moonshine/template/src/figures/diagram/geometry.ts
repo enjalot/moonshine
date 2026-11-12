@@ -1,6 +1,6 @@
 import { edgeKey, type Annotation, type BakedDiagram, type Box, type DiagramSpec, type Pad, type Side, type SpecEdge } from './spec'
 import { edgeLabelWidth } from './text'
-import { nodeExtent, tileLabelBox } from './tile'
+import { isTile, nodeExtent, tileLabelBox } from './tile'
 
 // Where things go: edge routes, the reader frame, bounds. Pure functions
 // of boxes, shared by the reader (DiagramFigure), the editor
@@ -92,7 +92,7 @@ function route(
   a: Box,
   b: Box,
   obstacles: Box[],
-  fix: { ss?: Side; ts?: Side; s?: Pt; t?: Pt },
+  fix: { ss?: Side; ts?: Side; s?: Pt; t?: Pt; aTile?: boolean; bTile?: boolean },
 ): Route {
   const cands: { pts: Pt[]; ss: Side; ts: Side; cost: number }[] = []
   const add = (pts: Pt[], ss: Side, ts: Side) => {
@@ -112,18 +112,30 @@ function route(
       const t = away(onB, ts, TIP_GAP)
       // Straight across, when the boxes face each other and overlap.
       if (!fix.s && !fix.t) {
-        const line = straight(a, ss, b, ts)
+        const line = straight(a, ss, b, ts, fix.aTile, fix.bTile)
         if (line) add(line, ss, ts)
       }
       // One end pinned (sharing its side): the other end slides along its
       // side to meet it straight, when it can.
+      // A tile at the free end keeps the link on its centre: there the
+      // pinned end gives way and slides instead.
       if (fix.s && !fix.t) {
-        const m = alignOn(b, ts, s)
-        if (m) add([s, away(m, ts, TIP_GAP)], ss, ts)
+        if (fix.bTile) {
+          const m = alignOn(a, ss, onB)
+          if (m) add([m, t], ss, ts)
+        } else {
+          const m = alignOn(b, ts, s)
+          if (m) add([s, away(m, ts, TIP_GAP)], ss, ts)
+        }
       }
       if (fix.t && !fix.s) {
-        const m = alignOn(a, ss, fix.t)
-        if (m) add([m, t], ss, ts)
+        if (fix.aTile) {
+          const m = alignOn(b, ts, s)
+          if (m) add([s, away(m, ts, TIP_GAP)], ss, ts)
+        } else {
+          const m = alignOn(a, ss, fix.t)
+          if (m) add([m, t], ss, ts)
+        }
       }
       const A = away(s, ss, STUB)
       const B = away(onB, ts, STUB)
@@ -161,7 +173,19 @@ function route(
 
 // A straight line between two facing sides that overlap, through the
 // middle of the overlap (kept clear of the corners).
-function straight(a: Box, ss: Side, b: Box, ts: Side): Pt[] | null {
+// A link meets a tile at the middle of its side, so a straight line needs
+// the tile's centre to be on it; a larger box lets the line slide. When
+// the centres are too far apart for that, the route jogs instead.
+const TILE_SLACK = 3
+function meet(lo: number, hi: number, ca: number, cb: number, aTile?: boolean, bTile?: boolean): number | null {
+  if (lo > hi) return null
+  if (aTile && bTile) return Math.abs(ca - cb) <= TILE_SLACK ? (ca + cb) / 2 : null
+  if (aTile) return ca >= lo && ca <= hi ? ca : null
+  if (bTile) return cb >= lo && cb <= hi ? cb : null
+  return clamp((ca + cb) / 2, lo, hi)
+}
+
+function straight(a: Box, ss: Side, b: Box, ts: Side, aTile?: boolean, bTile?: boolean): Pt[] | null {
   const facingPair =
     (ss === 'bottom' && ts === 'top' && b.y >= a.y + a.h) ||
     (ss === 'top' && ts === 'bottom' && a.y >= b.y + b.h) ||
@@ -171,8 +195,8 @@ function straight(a: Box, ss: Side, b: Box, ts: Side): Pt[] | null {
   if (horizontal(ss)) {
     const lo = Math.max(a.y, b.y) + INSET
     const hi = Math.min(a.y + a.h, b.y + b.h) - INSET
-    if (lo > hi) return null
-    const y = clamp((a.y + a.h / 2 + b.y + b.h / 2) / 2, lo, hi)
+    const y = meet(lo, hi, a.y + a.h / 2, b.y + b.h / 2, aTile, bTile)
+    if (y === null) return null
     return [
       [ss === 'right' ? a.x + a.w : a.x, y],
       away([ts === 'left' ? b.x : b.x + b.w, y], ts, TIP_GAP),
@@ -180,8 +204,8 @@ function straight(a: Box, ss: Side, b: Box, ts: Side): Pt[] | null {
   }
   const lo = Math.max(a.x, b.x) + INSET
   const hi = Math.min(a.x + a.w, b.x + b.w) - INSET
-  if (lo > hi) return null
-  const x = clamp((a.x + a.w / 2 + b.x + b.w / 2) / 2, lo, hi)
+  const x = meet(lo, hi, a.x + a.w / 2, b.x + b.w / 2, aTile, bTile)
+  if (x === null) return null
   return [
     [x, ss === 'bottom' ? a.y + a.h : a.y],
     away([x, ts === 'top' ? b.y : b.y + b.h], ts, TIP_GAP),
@@ -397,7 +421,7 @@ function routeAll(spec: DiagramSpec, placed: Placed, sides: BakedDiagram['edges'
   // link leaves a tile by a side its label is not on.
   const labels = spec.nodes.flatMap((n) => {
     const b = boxes[n.id]
-    const l = b && tileLabelBox(n, b)
+    const l = b && tileLabelBox(n, b, spec.direction === 'DOWN')
     return l ? [l] : []
   })
   const others = (e: SpecEdge) => [
@@ -407,10 +431,13 @@ function routeAll(spec: DiagramSpec, placed: Placed, sides: BakedDiagram['edges'
     ...labels,
   ]
 
+  const tiles = new Set(spec.nodes.filter(isTile).map((n) => n.id))
+  const tileEnds = (e: SpecEdge) => ({ aTile: tiles.has(e.from), bTile: tiles.has(e.to) })
+
   // First pass: each edge on its own, choosing its sides.
   const first = edges.map((e) => {
     const arr = sides?.[edgeKey(e)]
-    return route(boxes[e.from], boxes[e.to], others(e), { ss: arr?.source, ts: arr?.target })
+    return route(boxes[e.from], boxes[e.to], others(e), { ss: arr?.source, ts: arr?.target, ...tileEnds(e) })
   })
 
   // Edges meeting the same side of a box spread out along it, in the
@@ -449,7 +476,7 @@ function routeAll(spec: DiagramSpec, placed: Placed, sides: BakedDiagram['edges'
   edges.forEach((e, i) => {
     const ps = ports.get(`${i}|s`)
     const pt = ports.get(`${i}|t`)
-    const r = ps || pt ? route(boxes[e.from], boxes[e.to], others(e), { ss: first[i].ss, ts: first[i].ts, s: ps, t: pt }) : first[i]
+    const r = ps || pt ? route(boxes[e.from], boxes[e.to], others(e), { ss: first[i].ss, ts: first[i].ts, s: ps, t: pt, ...tileEnds(e) }) : first[i]
     const arr = sides?.[edgeKey(e)]
     const lw = e.label ? labelWidth(e.label, e.arrows) : 0
     const at = arr?.labelAt ?? (e.label ? labelSpot(r.pts, lw, nodeBoxes) : 0.5)
@@ -470,7 +497,7 @@ export function groupBox(spec: DiagramSpec, gid: string, nodes: Record<string, B
   let box: Box | null = saved ?? null
   for (const n of spec.nodes) {
     if (n.group !== gid || n.id === skip) continue
-    const m = nodes[n.id] && nodeExtent(n, nodes[n.id])
+    const m = nodes[n.id] && nodeExtent(n, nodes[n.id], spec.direction === 'DOWN')
     if (!m) continue
     box = union(box, { x: m.x - GROUP_PAD.side, y: m.y - GROUP_PAD.top, w: m.w + 2 * GROUP_PAD.side, h: m.h + GROUP_PAD.top + GROUP_PAD.bottom })
   }
@@ -528,7 +555,7 @@ export function contentBounds(
   baked: { edges?: BakedDiagram['edges']; annotations?: Annotation[] } | null,
 ): Box {
   const boxes: Box[] = [
-    ...spec.nodes.flatMap((n) => (placed.nodes[n.id] ? [nodeExtent(n, placed.nodes[n.id])] : [])),
+    ...spec.nodes.flatMap((n) => (placed.nodes[n.id] ? [nodeExtent(n, placed.nodes[n.id], spec.direction === 'DOWN')] : [])),
     ...Object.values(placed.nodes),
     ...Object.values(placed.groups),
     ...(baked?.annotations ?? []),

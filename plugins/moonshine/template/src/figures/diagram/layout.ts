@@ -25,7 +25,7 @@ export async function elkLayout(spec: DiagramSpec): Promise<Layout> {
   const groupIds = new Set((spec.groups ?? []).map((g) => g.id))
   // A tile is laid out as the room it and its label take up, then drawn
   // as the tile inside that room.
-  const tileRoom = (n: DiagramSpec['nodes'][number]) => nodeExtent(n, { x: 0, y: 0, w: TILE, h: TILE })
+  const tileRoom = (n: DiagramSpec['nodes'][number]) => nodeExtent(n, { x: 0, y: 0, w: TILE, h: TILE }, spec.direction === 'DOWN')
   const leaf = (n: DiagramSpec['nodes'][number]) => {
     if (isTile(n)) {
       const r = tileRoom(n)
@@ -40,6 +40,41 @@ export async function elkLayout(spec: DiagramSpec): Promise<Layout> {
     if (!n || !isTile(n)) return { x, y, w, h }
     const r = tileRoom(n)
     return { x: x + 8 - r.x, y: y + 4 - r.y, w: TILE, h: TILE }
+  }
+  // Nothing connected (a vocabulary: the pieces, before any figure links
+  // them): a grid in reading order, which a layered layout would stack in
+  // one column.
+  if (!spec.edges.length && !(spec.groups ?? []).length) {
+    const nodes: Record<string, Box> = {}
+    const sizes = spec.nodes.map((n) => leaf(n))
+    const cellW = Math.max(...sizes.map((s) => s.width), 0) + 28
+    const cellH = Math.max(...sizes.map((s) => s.height), 0) + 24
+    const perRow = (spec.direction ?? 'RIGHT') === 'RIGHT' ? Math.min(6, Math.max(1, spec.nodes.length <= 6 ? spec.nodes.length : Math.ceil(spec.nodes.length / 2))) : 1
+    spec.nodes.forEach((n, i) => {
+      const s = sizes[i]
+      const x = (i % perRow) * cellW + (cellW - s.width) / 2
+      const y = Math.floor(i / perRow) * cellH
+      nodes[n.id] = boxIn(n.id, x, y, s.width, s.height)
+    })
+    return { nodes, groups: {} }
+  }
+  // Top-level children in the order the spec first mentions them, a group
+  // standing where its first member does, so the flow starts where the
+  // spec does.
+  const children: unknown[] = []
+  const seen = new Set<string>()
+  for (const n of spec.nodes) {
+    if (n.group && groupIds.has(n.group)) {
+      if (seen.has(n.group)) continue
+      seen.add(n.group)
+      children.push({
+        id: `group:${n.group}`,
+        layoutOptions: {
+          'elk.padding': `[top=${PAD.top},left=${PAD.side},bottom=${PAD.bottom},right=${PAD.side}]`,
+        },
+        children: spec.nodes.filter((m) => m.group === n.group).map(leaf),
+      })
+    } else children.push(leaf(n))
   }
   const graph = {
     id: 'root',
@@ -56,16 +91,7 @@ export async function elkLayout(spec: DiagramSpec): Promise<Layout> {
       'elk.layered.cycleBreaking.strategy': 'MODEL_ORDER',
       'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
     },
-    children: [
-      ...(spec.groups ?? []).map((g) => ({
-        id: `group:${g.id}`,
-        layoutOptions: {
-          'elk.padding': `[top=${PAD.top},left=${PAD.side},bottom=${PAD.bottom},right=${PAD.side}]`,
-        },
-        children: spec.nodes.filter((n) => n.group === g.id).map(leaf),
-      })),
-      ...spec.nodes.filter((n) => !n.group || !groupIds.has(n.group)).map(leaf),
-    ],
+    children,
     edges: spec.edges
       .filter((e) => spec.nodes.some((n) => n.id === e.from) && spec.nodes.some((n) => n.id === e.to))
       .map((e) => ({
@@ -148,7 +174,7 @@ export function merge(
 
   const groups: Record<string, Box> = {}
   for (const g of spec.groups ?? []) {
-    const members = spec.nodes.filter((n) => n.group === g.id).map((n) => nodeExtent(n, nodes[n.id]))
+    const members = spec.nodes.filter((n) => n.group === g.id).map((n) => nodeExtent(n, nodes[n.id], spec.direction === 'DOWN'))
     let box: Box | undefined = saved?.groups?.[g.id]
     for (const m of members) {
       const x0 = Math.min(box?.x ?? Infinity, m.x - PAD.side)

@@ -20,12 +20,17 @@ export function tileLines(n: SpecNode): string[] {
   return n.label ? wrap(n.label, FONTS.tile, LABEL_MAX) : []
 }
 
+// Where a tile's label sits when the node does not say: under the tile in
+// a left-to-right diagram, beside it in a top-to-bottom one, so the label
+// is never on the side the flow leaves by.
+export const labelSideOf = (n: SpecNode, down?: boolean): LabelSide => n.labelSide ?? (down ? 'right' : 'below')
+
 // The label's box, relative to the tile's top-left corner.
-export function tileLabelOffset(n: SpecNode, b: { w: number; h: number }): Box {
+export function tileLabelOffset(n: SpecNode, b: { w: number; h: number }, down?: boolean): Box {
   const lines = tileLines(n)
   const w = lines.length ? Math.ceil(Math.max(...lines.map((l) => textWidth(l, FONTS.tile)))) : 0
   const h = lines.length * LINE.tile
-  switch (n.labelSide ?? 'below') {
+  switch (labelSideOf(n, down)) {
     case 'above':
       return { x: b.w / 2 - w / 2, y: -GAP - h, w, h }
     case 'left':
@@ -38,15 +43,15 @@ export function tileLabelOffset(n: SpecNode, b: { w: number; h: number }): Box {
 }
 
 // The label's box on the page, or null for a box node or an empty label.
-export function tileLabelBox(n: SpecNode, b: Box): Box | null {
+export function tileLabelBox(n: SpecNode, b: Box, down?: boolean): Box | null {
   if (!isTile(n) || !n.label) return null
-  const o = tileLabelOffset(n, b)
+  const o = tileLabelOffset(n, b, down)
   return { x: b.x + o.x, y: b.y + o.y, w: o.w, h: o.h }
 }
 
 // Everything a node occupies: its box, plus a tile's label.
-export function nodeExtent(n: SpecNode, b: Box): Box {
-  const l = tileLabelBox(n, b)
+export function nodeExtent(n: SpecNode, b: Box, down?: boolean): Box {
+  const l = tileLabelBox(n, b, down)
   if (!l) return b
   const x = Math.min(b.x, l.x)
   const y = Math.min(b.y, l.y)

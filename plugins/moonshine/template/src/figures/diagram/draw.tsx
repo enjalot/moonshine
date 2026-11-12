@@ -3,9 +3,9 @@ import { rotateRad, scale, translate } from 'dragology'
 import { each } from '../drag/each'
 import { routeEdges, type EdgeGeom, type Placed } from './geometry'
 import { edgeKey, type Annotation, type BakedDiagram, type Box, type DiagramSpec, type SpecEdge, type SpecGroup, type SpecNode } from './spec'
-import { CHEVRON, edgeLabelWidth, FONTS, LINE, wrap } from './text'
+import { CHEVRON, edgeLabelWidth, FONTS, LINE, textWidth, wrap } from './text'
 import { glyph } from './glyphs'
-import { isTile, TILE, tileLabelOffset, tileLines } from './tile'
+import { isTile, labelSideOf, TILE, tileLabelOffset, tileLines } from './tile'
 
 // Diagrams drawn as SVG, for readers (DiagramFigure) and the editor
 // (DiagramArrange) alike. Each piece is a plain function from boxes to SVG
@@ -27,6 +27,9 @@ export type DrawCtx = {
   uid: string
   // The spec part a :term is lighting up.
   active?: string | null
+  // The diagram flows top to bottom (spec.direction === 'DOWN'): tile
+  // labels then default to the right of their tile.
+  down?: boolean
 }
 
 // Ids for the pieces of a diagram. Spec ids are free-form, so anything
@@ -56,10 +59,15 @@ const RADIUS: Record<string, number> = { process: 5, data: 3, external: 14, deci
 function drawTile(c: DrawCtx, n: SpecNode, b: Box, opts: { on?: string; props?: GProps; children?: ReactNode }) {
   const active = c.active === n.id
   const lines = tileLines(n)
-  const lb = tileLabelOffset(n, b)
-  const side = n.labelSide ?? 'below'
-  const anchor = side === 'left' ? 'end' : side === 'right' ? 'start' : 'middle'
-  const tx = side === 'left' ? lb.x + lb.w : side === 'right' ? lb.x : b.w / 2
+  const lb = tileLabelOffset(n, b, c.down)
+  const side = labelSideOf(n, c.down)
+  // Every line is anchored at its middle whatever the side, so the element
+  // is the same in every state (Dragology can't blend a changed anchor);
+  // a label beside the tile is lined up by placing each line's middle.
+  const lineX = (l: string) => {
+    const w = textWidth(l, FONTS.tile)
+    return side === 'left' ? lb.x + lb.w - w / 2 : side === 'right' ? lb.x + w / 2 : b.w / 2
+  }
   const k = Math.min(b.w, b.h) / TILE
   const rx = Math.min(12, b.w / 4, b.h / 4)
   return (
@@ -76,10 +84,9 @@ function drawTile(c: DrawCtx, n: SpecNode, b: Box, opts: { on?: string; props?: 
       <g dragologyKey={`glyph-${n.icon}`} className="mn-dg-glyph" transform={translate(b.w / 2, b.h / 2) + scale(1.4 * k)}>
         {glyph(n.icon)}
       </g>
-      {/* Keyed by side: the anchor differs, and Dragology can't blend that. */}
-      <text dragologyKey={`label-${side}`} className="mn-dg-tile-label" textAnchor={anchor}>
+      <text className="mn-dg-tile-label" textAnchor="middle">
         {each(lines, (l, i) => (
-          <tspan x={tx} y={lb.y + 13 + i * LINE.tile}>
+          <tspan x={lineX(l)} y={lb.y + 13 + i * LINE.tile}>
             {l}
           </tspan>
         ))}
@@ -131,9 +138,21 @@ export function drawNode(c: DrawCtx, n: SpecNode, b: Box, opts: { on?: string; p
 }
 
 export function drawGroup(c: DrawCtx, g: SpecGroup, b: Box, opts: { props?: GProps; children?: ReactNode } = {}) {
+  // Corner marks, for the `corners` style (hidden for the others).
+  const k = Math.min(18, b.w / 3, b.h / 3)
+  const corners = `M 0 ${k} V 6 Q 0 0 6 0 H ${k} M ${b.w - k} 0 H ${b.w - 6} Q ${b.w} 0 ${b.w} 6 V ${k} M ${b.w} ${b.h - k} V ${b.h - 6} Q ${b.w} ${b.h} ${b.w - 6} ${b.h} H ${b.w - k} M ${k} ${b.h} H 6 Q 0 ${b.h} 0 ${b.h - 6} V ${b.h - k}`
+  const { 'data-on': on, ...props } = opts.props ?? {}
   return (
-    <g id={ids.group(c, g.id)} transform={translate(b.x, b.y)} className="mn-dg-group" data-on={flags(c.active === g.id && 'active')} {...opts.props}>
+    <g
+      id={ids.group(c, g.id)}
+      transform={translate(b.x, b.y)}
+      className="mn-dg-group"
+      data-kind={g.style ?? 'box'}
+      data-on={flags(c.active === g.id && 'active', g.tone && `tone-${g.tone}`, on)}
+      {...props}
+    >
       <rect className="mn-dg-group-box" width={b.w} height={b.h} rx={8} />
+      <path className="mn-dg-group-corners" d={corners} />
       <text className="mn-dg-group-label" x={12} y={22}>
         {g.label}
       </text>

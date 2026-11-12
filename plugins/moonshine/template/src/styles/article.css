@@ -920,6 +920,13 @@
 .mn-dg-glyph-line {
   fill: none;
 }
+.mn-dg-glyph-text {
+  font-family: var(--heading-font);
+  font-size: 15px;
+  font-weight: 600;
+  fill: var(--dg-tone, var(--text));
+  stroke: none;
+}
 .mn-dg-glyph-inline {
   --dg-tone: var(--text);
   vertical-align: -0.18em;
@@ -980,17 +987,58 @@
   box-shadow: 0 4px 14px var(--shadow-edge);
   pointer-events: none;
 }
+.mn-dg-group {
+  --dg-zone: var(--border);
+  --dg-zone-ink: var(--text-2);
+}
+.mn-dg-group[data-on~='tone-flow'] {
+  --dg-zone: var(--dg-flow);
+  --dg-zone-ink: var(--dg-flow);
+}
+.mn-dg-group[data-on~='tone-data'] {
+  --dg-zone: var(--dg-data);
+  --dg-zone-ink: var(--dg-data);
+}
+.mn-dg-group[data-on~='tone-control'] {
+  --dg-zone: var(--dg-control);
+  --dg-zone-ink: var(--dg-control);
+}
+.mn-dg-group[data-on~='tone-access'] {
+  --dg-zone: var(--dg-access);
+  --dg-zone-ink: var(--dg-access);
+}
 .mn-dg-group-box {
   fill: none;
-  stroke: var(--border);
+  stroke: var(--dg-zone);
   stroke-width: 1.5;
   transition: stroke 0.2s;
+}
+.mn-dg-group-corners {
+  display: none;
+  fill: none;
+  stroke: var(--dg-zone-ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.mn-dg-group[data-kind='corners'] .mn-dg-group-box {
+  stroke: none;
+}
+.mn-dg-group[data-kind='corners'] .mn-dg-group-corners {
+  display: inline;
+}
+.mn-dg-group[data-kind='tint'] .mn-dg-group-box {
+  fill: color-mix(in srgb, var(--dg-zone-ink) 9%, transparent);
+  stroke: none;
+}
+.mn-dg-group[data-kind='dashed'] .mn-dg-group-box {
+  stroke: var(--dg-zone-ink);
+  stroke-dasharray: 6 5;
 }
 .mn-dg-group-label {
   font-family: var(--heading-font);
   font-size: 13px;
   font-weight: 600;
-  fill: var(--text-2);
+  fill: var(--dg-zone-ink);
 }
 .mn-dg-group[data-on~='active'] .mn-dg-group-box,
 .mn-dg-annot[data-on~='active'] .mn-dg-annot-box {
@@ -1282,6 +1330,26 @@
 .mn-diagram-icons .mn-diagram-kinds {
   flex-wrap: wrap;
 }
+.mn-diagram-icon-search {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 0 3px;
+}
+.mn-diagram-icon-search input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 4px 7px;
+}
+.mn-diagram-icon-hits {
+  max-height: 132px;
+  overflow-y: auto;
+}
 .mn-diagram-swatch {
   --dg-tone: var(--text-2);
   display: block;
@@ -1355,6 +1423,7 @@
   fill: transparent;
 }
 .mn-diagram-arrange.is-tool-box .mn-dg-canvas,
+.mn-diagram-arrange.is-tool-group .mn-dg-canvas,
 .mn-diagram-arrange.is-tool-text .mn-dg-canvas,
 .mn-diagram-arrange.is-tool-note .mn-dg-canvas {
   cursor: crosshair;
