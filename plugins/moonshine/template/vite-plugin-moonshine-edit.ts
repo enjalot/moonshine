@@ -44,6 +44,9 @@ type SavePayload = {
   path?: string
   body?: string
   baseHash?: string
+  // Optional short reason appended to the auto-commit subject, e.g.
+  // "suggestion sg_ab12 accepted".
+  label?: string
   frontmatter?: Record<string, string>
 }
 
@@ -314,9 +317,13 @@ export default function moonshineEditPlugin(): Plugin {
             await fs.writeFile(tmp, out, 'utf8')
             await fs.rename(tmp, target)
 
+            const label =
+              typeof payload.label === 'string'
+                ? payload.label.replace(/[^\w .,:-]/g, '').slice(0, 80).trim()
+                : ''
             const summary =
               typeof payload.body === 'string'
-                ? `${payload.path} (${target.endsWith('.json') ? 'diagram' : 'prose'})`
+                ? `${payload.path} (${label || (target.endsWith('.json') ? 'diagram' : 'prose')})`
                 : `${payload.path} (${Object.keys(payload.frontmatter ?? {}).join(', ')})`
             await commitSave(target, summary)
           })

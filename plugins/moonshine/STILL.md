@@ -700,6 +700,67 @@ including the reserved comment kinds not yet wired to UI, is specified in
 the environment (which the dev server, the Stop hook, and the listener all
 honor). This loop is still-only — shine articles have no feedback surface.
 
+## Suggestions: Changes the Author Decides On (dev only)
+
+The reverse of a comment. When a change is the author's call, propose it and
+let them accept, edit or reject it in the page. Each suggestion appears as a
+card under the passage it refers to, showing the change as a diff with your
+reason; a switch in the HUD (bottom right) shows and hides them.
+
+Propose, and do not apply, when:
+
+- the passage is the author's own writing (`git log` shows a
+  `moonshine-edit:` commit touching it), and they did not ask you to change it;
+- the author asked for a review, an edit pass or a critique of an article
+  they are developing, as opposed to asking you to fix something;
+- the change alters a claim, a number, or what a figure shows, and you cannot
+  establish the truth yourself. Use a remark (no `replace`) that says what is
+  doubtful and what would settle it.
+
+Apply directly, as before, when the author asked for the change, when you are
+addressing their comment, or when you are fixing your own draft before they
+have read it.
+
+Write the suggestions as a JSON array and hand it to the script, which
+verifies each `find` against the file:
+
+```bash
+node <skill>/scripts/suggest.mjs <project> /path/to/suggestions.json --source "editing pass"
+```
+
+```json
+[
+  { "path": "example.md",
+    "find": "direction to step — every arrow",
+    "replace": "direction to step: every arrow",
+    "note": "Em dash." },
+  { "path": "example.md",
+    "find": "| 0.01 | 1,840 | 0.0031 | converges slowly |",
+    "note": "These rows were not produced by the figure above. Label the table as an illustration, or replace the numbers with ones the figure computes." }
+]
+```
+
+Rules that make a suggestion worth the author's click:
+
+- **One decision per suggestion.** Two unrelated fixes in one paragraph are two
+  suggestions, so one can be accepted without the other. A sentence rewrite is
+  one.
+- **Smallest `find` that is unique.** The card shows a diff of `find` against
+  `replace`; a whole paragraph for a two-word change buries the change.
+- **The note gives the reason, specifically**: which rule, what the reader
+  loses, what the figure actually shows. "Clearer" is not a reason.
+- **`replace` is finished prose** that already passes the Editing Pass. The
+  author should be able to accept without editing.
+- Suggestions on the same passage must not overlap. If one depends on
+  another, make them one suggestion.
+
+Then tell the author how many you left and where. Later, read the outcome
+with `--list`: rejected suggestions and ones the author rewrote before
+accepting show what they want, so do not re-propose a rejected change, and
+match the rewrites in what you propose next. Accepted ones arrive in `git log`
+as `moonshine-edit:` commits like any author edit. The record format and
+endpoints are in `FEEDBACK.md`.
+
 ## Workflow When Building an Article With This Skill
 
 This section is canonical — the `$still` skill (surfaced as

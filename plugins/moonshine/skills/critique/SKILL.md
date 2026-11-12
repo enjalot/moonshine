@@ -84,6 +84,18 @@ Run the block for the substrate you identified. These are concrete, gradeable ch
 - **Layout and type from the scaffold [5].** Follows `ARTICLE.md`'s CSS foundation and layout patterns rather than a bespoke dashboard grid.
 - **Interaction without a framework [9].** Vanilla JS interaction that still teaches; no blank "click to start" canvases.
 
+## Leaving Suggestions (still, when the author asks)
+
+The critique itself stays a critique. If the author asks for the repairs as
+suggestions on a still project, write them after delivering the critique: one
+suggestion per quoted sentence in the Prose Audit, with the repaired sentence
+as `replace` and the machinery you named as `note`; and a remark (no
+`replace`) for each finding that needs the author's decision, such as a number
+you could not verify or a figure that contradicts its caption. Use
+`scripts/suggest.mjs` with `--source critique`, as described in `STILL.md`
+under "Suggestions". The author accepts, edits or rejects each one in the
+page. Never apply them yourself.
+
 ## Slop Repair Examples
 
 When citing prose problems, use this diagnostic scaffold to show what the sentence is doing wrong:

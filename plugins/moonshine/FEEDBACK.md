@@ -220,6 +220,81 @@ off" from "no agent connected at all."
 `version` is a free-form, harness-defined string (the claude-code adapter writes
 the literal `"adapter"`); the HUD does not parse it.
 
+## Suggestions (agent → author)
+
+Comments carry what the author wants changed. Suggestions run the other way:
+an agent proposes a specific change, and the author accepts, edits or rejects
+it in the rendered page. They are files too, beside the inbox:
+
+```
+agent  ──write──▶  .feedback/suggestions/<id>.json  ◀──accept/edit/reject──  web app
+```
+
+```json
+{
+  "id": "sg_mwdua1wf_002",
+  "ts": "2026-11-12T17:46:02.656Z",
+  "status": "open",
+  "path": "example.md",
+  "find": "direction to step — every arrow",
+  "replace": "direction to step: every arrow",
+  "note": "Em dash.",
+  "source": "editing pass",
+  "at": 512
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `path` | content-relative markdown file |
+| `find` | exact source text the suggestion is about; must occur in the file's body |
+| `replace` | proposed replacement. Absent makes the record a **remark** with nothing to apply (a doubtful number, a figure that should change). An empty string deletes `find`. |
+| `note` | the reason, in a sentence or two. Required for a remark. |
+| `source` | who proposed it (`critique`, `editing pass`, an agent name) |
+| `at` | body offset of `find` when written; picks the right copy when the text repeats |
+| `status` | `open` → `accepted` or `rejected`, set by the web app with `resolvedAt` |
+| `appliedText` | present when the author edited the proposal before applying: the text that went into the article |
+
+**Writing them.** Use `scripts/suggest.mjs`, which checks every entry against
+the file and writes nothing if any entry fails:
+
+```bash
+node <skill>/scripts/suggest.mjs <project> suggestions.json --source "editing pass"
+node <skill>/scripts/suggest.mjs <project> --list     # the author's decisions
+node <skill>/scripts/suggest.mjs <project> --prune    # delete resolved records
+```
+
+The input is a JSON array of `{ path, find, replace?, note?, occurrence? }`.
+`find` is matched against the markdown source, so it must reproduce line
+breaks, quote characters and directive syntax exactly; keep it as short as
+stays unique. The dev server does not need to be running.
+
+**In the page.** The HUD shows a switch with the count of open suggestions for
+the article; it is on by default and remembered per browser. While on, each
+suggestion renders as a card under the top-level block that contains `find`: a
+word diff of the change, the note, and **Accept**, **Edit** (change the
+proposal, then apply) and **Reject**. A remark offers **Edit passage** and
+**Dismiss**. The HUD panel lists the open suggestions, jumps to a card, and
+has **Accept all** (one save for every non-overlapping change) and **Reject
+all**. Applying uses the same conflict-checked, undoable save as any other
+in-page edit, and in a project that is its own repository it is committed as
+`moonshine-edit: <path> (suggestion <id> accepted)`.
+
+A suggestion whose `find` no longer occurs (the passage was edited since) has
+no place in the page; the HUD lists it as "passage changed" so it can be
+rejected.
+
+**Reading the outcome.** `--list` prints each record's status and any
+`appliedText`. A rejection or an edited acceptance is the author's taste on
+record: read them before proposing more of the same kind.
+
+| Method | Route | Purpose |
+|---|---|---|
+| `GET`  | `/__moonshine/suggestions` | list every suggestion record |
+| `POST` | `/__moonshine/suggestions/resolve` | `{ id, status, appliedText? }`: record the author's decision |
+
+Same dev-only registration, flag and request guards as the feedback routes.
+
 ## Adapter contract
 
 A harness adapter is **anything that implements these four verbs** against the

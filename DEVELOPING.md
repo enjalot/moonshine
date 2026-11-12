@@ -223,7 +223,10 @@ the spec). Web side: `vite-plugin-moonshine-feedback.ts` (dev-only endpoints,
 gated behind `moonshine.config.json → feedback.enabled` / `MOONSHINE_FEEDBACK`),
 `src/lib/feedback.ts` + `src/lib/FeedbackContext.tsx` (typed client + React
 state), and `src/components/AuthorshipHUD.tsx` / `CommentBox.tsx` (UI, mounted
-from `EditChrome`). Harness side (Claude Code adapter): `hooks/hooks.json`,
+from `EditChrome`). Suggestions (agent → author) share the plugin and the
+directory: `scripts/suggest.mjs` writes `.feedback/suggestions/*.json`,
+`src/lib/suggestions.ts` + `src/components/SuggestionCards.tsx` show them under
+their block, and the HUD carries the on/off switch. Harness side (Claude Code adapter): `hooks/hooks.json`,
 `adapters/claude-code/hooks/moonshine-stop.sh` (turn-boundary claim), and
 `skills/moonshine-listen/` (idle heartbeat/control loop). The invariant:
 **the two sides never call each other** — they share a directory of JSON files

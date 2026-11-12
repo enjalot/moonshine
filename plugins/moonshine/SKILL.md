@@ -14,7 +14,7 @@ AI tools generate complexity faster than people can consume it. Moonshine is for
 - `STILL.md` the structured Vite + React project flavor: markdown directives, figure registry, in-place editing, publishing
 - `ARTICLE.md` the shine substrate: single-file HTML scaffold, CSS foundation, layout patterns, series structure (shine's hand-built kind)
 - `VISUALS.md` visualization patterns, interaction, rendering technology, iteration (both substrates; see its preamble for still differences)
-- `FEEDBACK.md` the authorship-feedback protocol: comments from the rendered still article flow back to the agent
+- `FEEDBACK.md` the authorship-feedback protocol: comments from the rendered still article flow back to the agent, and suggestions flow from the agent to the author, who accepts, edits or rejects each one in the page
 
 ## Articles, Not Dashboards
 
@@ -107,7 +107,7 @@ Build the remaining sections, following the structure from Phase 2. After each m
 
 **Checkpoint:** Before delivering, verify the article. None of these steps is optional, and "it built" is not one of them. The shipped examples in this repo were delivered without them and were later found with blank figures, frozen simulations and captions describing behaviour the figure did not have.
 
-1. Run the Editing Pass (see Editorial Tone) over the prose, section by section.
+1. Run the Editing Pass (see Editorial Tone) over the prose, section by section. On a still article the author has been editing themselves, leave the changes to their passages as suggestions instead of applying them (`STILL.md`, "Suggestions").
 2. Walk the Anti-Slop list below item by item against the actual output, as a literal checklist pass, not from memory. Fix what you find.
 3. Load every page in a browser (headless is fine) and fail on any console error or uncaught exception. One syntax error blanks every figure on a shine page.
 4. Look at each figure at two widths, about 360px and about 1100px, in light and dark (`prefers-color-scheme`). At 360px: no text under 13px, no horizontal page scroll, and a one-finger swipe that starts on a figure still scrolls the page. See "Phones and touch" in `VISUALS.md`.
