@@ -8,7 +8,7 @@ export const FONTS = {
   note: "400 15px 'Source Sans 3', system-ui, sans-serif",
   group: "600 13px 'Source Sans 3', system-ui, sans-serif",
   annot: "400 14px 'Source Sans 3', system-ui, sans-serif",
-  edge: "400 12.5px 'Source Sans 3', system-ui, sans-serif",
+  edge: "400 13px 'Source Sans 3', system-ui, sans-serif",
 }
 export const LINE = { node: 18.75, annot: 18.9 }
 

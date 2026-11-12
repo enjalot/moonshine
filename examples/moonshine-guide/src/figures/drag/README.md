@@ -80,10 +80,11 @@ Two ideas make figures better than "move the dot":
   them per instance: `const uid = useId().replace(/:/g, '')`). No `/` in
   ids. Never `key`: use `each()`.
 - **No fragments** (`<>`): group with `<g>`.
-- **Never vary a `className` between states.** Dragology blends every
-  prop of two drawings and throws on two different strings. Put what
-  varies in `data-*` attributes (not blended) and style with
-  `[data-on~='active']`. Text content may differ.
+- **Never vary a string prop between states.** Dragology blends every
+  prop of two drawings and throws on two different strings. That is
+  `className`, and equally `aria-label`, `textAnchor`, `dy="1em"` or a
+  colour name. Put what varies in `data-*` attributes (not blended) and
+  style with `[data-on~='active']`. Text content may differ.
 - **Clicks inside a draggable** (a button on a card) only work if the
   draggable element itself has an `onClick` (even `() => undefined`):
   only then does Dragology wait to see whether a press becomes a drag.
@@ -96,6 +97,19 @@ Two ideas make figures better than "move the dot":
 - **HTML goes in a component inside `<foreignObject>`**; Dragology
   treats it as opaque.
 - Colors from the tokens (`var(--accent)`), so figures follow dark mode.
+  Pixels baked outside CSS (a canvas image) need one version per scheme:
+  see `lib/useDark.ts` and how `LossLandscape` keys its heatmap.
+- **Text is `font-size: var(--mn-fig-text)`.** `DragFigure` scales the
+  drawing to the column, and that variable divides by the scale, so text
+  renders at 13px at every width. On a phone the labels are therefore
+  larger relative to the drawing: offset them in `em` (`dy="1.7em"`),
+  stagger neighbours onto two rows, and check the figure at 360px.
+  `StepSize` shows the pattern.
+- **Give small handles a finger-sized target**: a transparent circle of
+  about 24 units around the visible mark, inside the draggable group.
+- **Dragging is pointer-only.** When the argument depends on the drag,
+  give the same state a keyboard path (a focusable control or arrow keys
+  that call `onState`) and say so in the hint.
 - Every draggable figure still needs a `label` (what it shows) and a
   one-line `figure-hint` saying what can be dragged.
 

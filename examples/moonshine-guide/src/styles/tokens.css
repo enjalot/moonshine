@@ -19,6 +19,10 @@
   --bg: #fafafa;
   --fig-bg: #ffffff;
   --border: #e2e2e8;
+  /* Text on an accent-filled control */
+  --on-accent: #ffffff;
+  --sg-ins-bg: rgba(46, 158, 91, 0.16);
+  --sg-ins-line: rgba(46, 158, 91, 0.7);
   /* Table row hover + scroll-edge shadow */
   --row-hover: rgba(37, 99, 235, 0.04);
   --shadow-edge: rgba(26, 26, 46, 0.12);
@@ -40,6 +44,9 @@
     --bg: #1a1a2e;
     --fig-bg: #22223a;
     --border: #3a3a52;
+    --on-accent: #10172a;
+    --sg-ins-bg: rgba(90, 200, 130, 0.2);
+    --sg-ins-line: rgba(90, 200, 130, 0.75);
     --row-hover: rgba(96, 165, 250, 0.06);
     --shadow-edge: rgba(0, 0, 0, 0.45);
     --note-bg: #3a3420;

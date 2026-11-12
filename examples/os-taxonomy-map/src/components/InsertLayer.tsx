@@ -76,8 +76,21 @@ function Layer({ containerRef }: Props) {
       const c = container.getBoundingClientRect()
       if (e.clientX < c.left - 48 || e.clientX > c.right + 16) return setGap(null)
       const rects = els.map((el) => el.getBoundingClientRect())
-      const ys = rects.map((r, i) => (i === 0 ? r.top - 6 : (rects[i - 1].bottom + r.top) / 2))
-      ys.push(rects[rects.length - 1].bottom + 10)
+      // Chrome that sits in the flow after a block (suggestion cards) belongs
+      // to that block: the gap starts below it, so the "+" never lands on it.
+      const bottoms = els.map((el, i) => {
+        let bottom = rects[i].bottom
+        for (
+          let sib = el.nextElementSibling;
+          sib && sib.classList.contains('mn-sg-stack');
+          sib = sib.nextElementSibling
+        ) {
+          bottom = Math.max(bottom, sib.getBoundingClientRect().bottom)
+        }
+        return bottom
+      })
+      const ys = rects.map((r, i) => (i === 0 ? r.top - 6 : (bottoms[i - 1] + r.top) / 2))
+      ys.push(bottoms[bottoms.length - 1] + 10)
       let best = -1
       for (let i = 0; i < ys.length; i++) {
         if (Math.abs(e.clientY - ys[i]) < 14 && (best < 0 || Math.abs(e.clientY - ys[i]) < Math.abs(e.clientY - ys[best]))) best = i

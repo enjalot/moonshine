@@ -24,6 +24,13 @@ import path from 'node:path'
 //   POST   /address     {}                   → write address.json (deliver accumulated comments)
 //   GET    /            → list comments (id, ts, status, target, comment, reply)
 //   GET    /capabilities → { enabled, harness, alive, mode, control, addressRequestedAt, project }
+//
+// Suggestions run the other way (agent → author) and live beside the inbox in
+// .feedback/suggestions/<id>.json. An agent writes them (scripts/suggest.mjs
+// validates and writes; see FEEDBACK.md § Suggestions); the browser lists them
+// and records the author's verdict:
+//   GET    /__moonshine/suggestions          → list every suggestion record
+//   POST   /__moonshine/suggestions/resolve  { id, status, appliedText? }
 
 const RESERVED = new Set(['control.json', 'heartbeat.json', 'adapter.json', 'address.json'])
 
@@ -144,6 +151,82 @@ export default function moonshineFeedbackPlugin(): Plugin {
           typeof address?.requestedAt === 'string' ? address.requestedAt : null
         return { enabled: true, harness, alive, mode, control: controlMode, addressRequestedAt, project }
       }
+
+      // ---- suggestions (agent → author) ----------------------------------
+      const suggestionsDir = path.join(feedbackDir, 'suggestions')
+
+      async function listSuggestions(): Promise<Json[]> {
+        let names: string[]
+        try {
+          names = await fs.readdir(suggestionsDir)
+        } catch {
+          return []
+        }
+        const out: Json[] = []
+        for (const name of names) {
+          if (!name.endsWith('.json')) continue
+          const rec = await readJSON(path.join(suggestionsDir, name))
+          if (rec && typeof rec.id === 'string' && typeof rec.find === 'string') out.push(rec)
+        }
+        // Oldest first: the order the agent wrote them is the reading order.
+        out.sort((a, b) => String(a.ts ?? '').localeCompare(String(b.ts ?? '')))
+        return out
+      }
+
+      server.middlewares.use('/__moonshine/suggestions', async (req, res) => {
+        const url = (req.url || '/').split('?')[0] || '/'
+        const method = req.method || 'GET'
+        try {
+          if (method === 'GET') {
+            if (url === '/' || url === '') {
+              send(res, 200, { ok: true, suggestions: await listSuggestions() })
+              return
+            }
+            send(res, 404, { ok: false, error: 'not found' })
+            return
+          }
+          if (method !== 'POST') {
+            send(res, 405, { ok: false, error: 'method not allowed' })
+            return
+          }
+          const ctype = String(req.headers['content-type'] ?? '').toLowerCase()
+          if (!ctype.startsWith('application/json')) {
+            send(res, 403, { ok: false, error: 'content-type must be application/json' })
+            return
+          }
+          const fetchSite = req.headers['sec-fetch-site']
+          if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') {
+            send(res, 403, { ok: false, error: 'cross-site requests are not allowed' })
+            return
+          }
+          const payload = await readBody(req)
+          if (url === '/resolve') {
+            const id = String(payload.id ?? '')
+            if (!/^sg_[\w-]+$/.test(id)) throw httpError(400, 'invalid id')
+            const status = String(payload.status ?? '')
+            if (!['accepted', 'rejected', 'sent', 'open'].includes(status)) {
+              throw httpError(400, 'status must be accepted|rejected|sent|open')
+            }
+            const file = path.join(suggestionsDir, `${id}.json`)
+            const rec = await readJSON(file)
+            if (!rec) throw httpError(404, 'suggestion not found')
+            rec.status = status
+            rec.resolvedAt = status === 'open' ? null : new Date().toISOString()
+            // What actually went into the article when the author edited the
+            // proposal before accepting — the agent reads this to learn what
+            // the author wanted instead.
+            if (typeof payload.appliedText === 'string') rec.appliedText = payload.appliedText
+            else delete rec.appliedText
+            await writeJSON(file, rec)
+            send(res, 200, { ok: true })
+            return
+          }
+          send(res, 404, { ok: false, error: 'not found' })
+        } catch (err) {
+          const status = (err as { status?: number }).status ?? 400
+          send(res, status, { ok: false, error: err instanceof Error ? err.message : String(err) })
+        }
+      })
 
       server.middlewares.use('/__moonshine/feedback', async (req, res) => {
         const url = (req.url || '/').split('?')[0] || '/'
