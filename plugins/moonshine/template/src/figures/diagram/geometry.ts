@@ -1,5 +1,6 @@
 import { edgeKey, type Annotation, type BakedDiagram, type Box, type DiagramSpec, type Pad, type Side, type SpecEdge } from './spec'
 import { edgeLabelWidth } from './text'
+import { nodeExtent, tileLabelBox } from './tile'
 
 // Where things go: edge routes, the reader frame, bounds. Pure functions
 // of boxes, shared by the reader (DiagramFigure), the editor
@@ -48,10 +49,16 @@ export type EdgeGeom = {
   p2: Pt
   // Direction the arrow arrives in at p2, in radians.
   angle: number
-  // Label position, and how far along the route it is (0..1).
+  // Direction a start arrowhead points in at p1 (back out of the route).
+  angle1: number
+  // Label position, and how far along the route it is (0..1). When the run
+  // it sits on is too short to show on both sides of the label, the label
+  // is moved beside the line so it never hides its own link.
   lx: number
   ly: number
   at: number
+  // Which way the link travels where the label sits: an axis unit vector.
+  ldir: Pt
 }
 
 // How edges are drawn. Every edge runs orthogonally, leaving and entering
@@ -72,7 +79,8 @@ const CLEAR = 8 // room kept around boxes in the way
 const INSET = 12 // how close to a corner a straight line may attach
 const PORT_GAP = 16 // between edges sharing a side
 const TIP_GAP = 1 // between the arrow's tip and the box
-const HEAD = 9 // arrowhead length (draw.tsx)
+const HEAD = 12 // arrowhead length (draw.tsx)
+const LABEL_SHOW = 14 // how much line must show on each side of a label
 const SIDES: Side[] = ['top', 'right', 'bottom', 'left']
 const horizontal = (s: Side) => s === 'left' || s === 'right'
 
@@ -255,8 +263,11 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 const away = ([x, y]: Pt, s: Side, d: number): Pt => [x + OUT[s][0] * d, y + OUT[s][1] * d]
 
 // The path for a polyline with rounded corners, ending `trim` short.
-function rounded(pts: Pt[], trim: number): string {
-  let d = `M ${pts[0][0]} ${pts[0][1]}`
+function rounded(pts: Pt[], trim: number, trimStart = 0): string {
+  const first = trimStart
+    ? towards(pts[0], pts[1], Math.min(trimStart, Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]) / 2))
+    : pts[0]
+  let d = `M ${first[0]} ${first[1]}`
   for (let i = 1; i < pts.length - 1; i++) {
     const [px, py] = pts[i - 1]
     const [x, y] = pts[i]
@@ -298,9 +309,12 @@ function labelSpot(pts: Pt[], w: number, boxes: Box[]): number {
   const lens = pts.slice(1).map((p, i) => Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]))
   const total = lens.reduce((s, l) => s + l, 0) || 1
   const starts = lens.map((_, i) => lens.slice(0, i).reduce((s, l) => s + l, 0))
+  // Runs long enough to show the line on both sides of the label come
+  // first (longest first), then the rest.
+  const fits = (i: number) => lens[i] >= labelSpan(pts[i], pts[i + 1], w) + 2 * LABEL_SHOW
   const tries = lens
-    .map((l, i) => ({ l, t: (starts[i] + l / 2) / total }))
-    .sort((p, q) => q.l - p.l)
+    .map((l, i) => ({ l, fit: fits(i), t: (starts[i] + l / 2) / total }))
+    .sort((p, q) => Number(q.fit) - Number(p.fit) || q.l - p.l)
     .map((x) => x.t)
   for (const t of [...tries, 0.5, 0.35, 0.65, 0.2, 0.8]) {
     const [x, y] = pointAlong(pts, t)
@@ -310,12 +324,51 @@ function labelSpot(pts: Pt[], w: number, boxes: Box[]): number {
   return tries[0] ?? 0.5
 }
 
-function geom(pts: Pt[], labelAt: number): EdgeGeom {
+// How much of a run a label covers: its width along a horizontal run, its
+// height along a vertical one.
+const labelSpan = (p: Pt, q: Pt, w: number) => (Math.abs(q[0] - p[0]) >= Math.abs(q[1] - p[1]) ? w : 20)
+
+// The run of a polyline that holds the point a fraction `t` along it.
+function runAt(pts: Pt[], t: number): number {
+  const lens = pts.slice(1).map((p, i) => Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]))
+  let left = Math.max(0, Math.min(1, t)) * lens.reduce((s, l) => s + l, 0)
+  for (let i = 0; i < lens.length; i++) {
+    if (left <= lens[i] || i === lens.length - 1) return i
+    left -= lens[i]
+  }
+  return 0
+}
+
+function geom(pts: Pt[], labelAt: number, e: SpecEdge, labelW: number): EdgeGeom {
   const p1 = pts[0]
   const p2 = pts[pts.length - 1]
   const q = pts[pts.length - 2]
-  const [lx, ly] = pointAlong(pts, labelAt)
-  return { path: rounded(pts, HEAD - 3), pts, p1, p2, angle: Math.atan2(p2[1] - q[1], p2[0] - q[0]), lx, ly, at: labelAt }
+  let [lx, ly] = pointAlong(pts, labelAt)
+  const i = runAt(pts, labelAt)
+  const ldir = dir(pts[i], pts[i + 1])
+  if (labelW) {
+    const len = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1])
+    if (len < labelSpan(pts[i], pts[i + 1], labelW) + 2 * LABEL_SHOW) {
+      // Too short to show past the label: sit beside the line.
+      if (ldir[0] !== 0) ly -= 16
+      else lx += labelW / 2 + 7
+    }
+  }
+  const arrows = e.arrows ?? 'end'
+  const endHead = arrows === 'end' || arrows === 'both'
+  const startHead = arrows === 'start' || arrows === 'both'
+  return {
+    path: rounded(pts, endHead ? HEAD - 3.5 : 0, startHead ? HEAD - 3.5 : 0),
+    pts,
+    p1,
+    p2,
+    angle: Math.atan2(p2[1] - q[1], p2[0] - q[0]),
+    angle1: Math.atan2(p1[1] - pts[1][1], p1[0] - pts[1][0]),
+    lx,
+    ly,
+    at: labelAt,
+    ldir,
+  }
 }
 
 // Every edge's geometry, by edge key; edges to missing nodes are skipped.
@@ -327,7 +380,7 @@ export function routeEdges(
   spec: DiagramSpec,
   placed: Placed,
   sides: BakedDiagram['edges'],
-  labelWidth: (label: string) => number = edgeLabelWidth,
+  labelWidth: (label: string, arrows?: SpecEdge['arrows']) => number = edgeLabelWidth,
 ): Map<string, EdgeGeom> {
   const hit = recent.find((r) => r.spec === spec && r.nodes === placed.nodes && r.sides === sides && r.labelWidth === labelWidth)
   if (hit) return hit.out
@@ -337,13 +390,22 @@ export function routeEdges(
   return out
 }
 
-function routeAll(spec: DiagramSpec, placed: Placed, sides: BakedDiagram['edges'], labelWidth: (label: string) => number): Map<string, EdgeGeom> {
+function routeAll(spec: DiagramSpec, placed: Placed, sides: BakedDiagram['edges'], labelWidth: (label: string, arrows?: SpecEdge['arrows']) => number): Map<string, EdgeGeom> {
   const boxes = placed.nodes
   const edges = spec.edges.filter((e) => boxes[e.from] && boxes[e.to] && e.from !== e.to)
-  const others = (e: SpecEdge) =>
-    Object.entries(boxes)
+  // A tile's label is in the way of every link, its own included, so a
+  // link leaves a tile by a side its label is not on.
+  const labels = spec.nodes.flatMap((n) => {
+    const b = boxes[n.id]
+    const l = b && tileLabelBox(n, b)
+    return l ? [l] : []
+  })
+  const others = (e: SpecEdge) => [
+    ...Object.entries(boxes)
       .filter(([id]) => id !== e.from && id !== e.to)
-      .map(([, o]) => o)
+      .map(([, o]) => o),
+    ...labels,
+  ]
 
   // First pass: each edge on its own, choosing its sides.
   const first = edges.map((e) => {
@@ -383,14 +445,15 @@ function routeAll(spec: DiagramSpec, placed: Placed, sides: BakedDiagram['edges'
   }
 
   const out = new Map<string, EdgeGeom>()
-  const nodeBoxes = Object.values(boxes)
+  const nodeBoxes = [...Object.values(boxes), ...labels]
   edges.forEach((e, i) => {
     const ps = ports.get(`${i}|s`)
     const pt = ports.get(`${i}|t`)
     const r = ps || pt ? route(boxes[e.from], boxes[e.to], others(e), { ss: first[i].ss, ts: first[i].ts, s: ps, t: pt }) : first[i]
     const arr = sides?.[edgeKey(e)]
-    const at = arr?.labelAt ?? (e.label ? labelSpot(r.pts, labelWidth(e.label), nodeBoxes) : 0.5)
-    out.set(edgeKey(e), geom(r.pts, at))
+    const lw = e.label ? labelWidth(e.label, e.arrows) : 0
+    const at = arr?.labelAt ?? (e.label ? labelSpot(r.pts, lw, nodeBoxes) : 0.5)
+    out.set(edgeKey(e), geom(r.pts, at, e, lw))
   })
   return out
 }
@@ -407,7 +470,7 @@ export function groupBox(spec: DiagramSpec, gid: string, nodes: Record<string, B
   let box: Box | null = saved ?? null
   for (const n of spec.nodes) {
     if (n.group !== gid || n.id === skip) continue
-    const m = nodes[n.id]
+    const m = nodes[n.id] && nodeExtent(n, nodes[n.id])
     if (!m) continue
     box = union(box, { x: m.x - GROUP_PAD.side, y: m.y - GROUP_PAD.top, w: m.w + 2 * GROUP_PAD.side, h: m.h + GROUP_PAD.top + GROUP_PAD.bottom })
   }
@@ -464,14 +527,19 @@ export function contentBounds(
   placed: Placed,
   baked: { edges?: BakedDiagram['edges']; annotations?: Annotation[] } | null,
 ): Box {
-  const boxes: Box[] = [...Object.values(placed.nodes), ...Object.values(placed.groups), ...(baked?.annotations ?? [])]
+  const boxes: Box[] = [
+    ...spec.nodes.flatMap((n) => (placed.nodes[n.id] ? [nodeExtent(n, placed.nodes[n.id])] : [])),
+    ...Object.values(placed.nodes),
+    ...Object.values(placed.groups),
+    ...(baked?.annotations ?? []),
+  ]
   const routes = routeEdges(spec, placed, baked?.edges)
   for (const e of spec.edges) {
     const g = routes.get(edgeKey(e))
     if (!g) continue
     boxes.push(pathBounds(g.pts))
     if (e.label) {
-      const w = edgeLabelWidth(e.label)
+      const w = edgeLabelWidth(e.label, e.arrows)
       boxes.push({ x: g.lx - w / 2, y: g.ly - 10, w, h: 20 })
     }
   }
@@ -483,7 +551,7 @@ export function contentBounds(
 function pathBounds(pts: Pt[]): Box {
   const xs = pts.map((p) => p[0])
   const ys = pts.map((p) => p[1])
-  const x0 = Math.min(...xs) - 6
-  const y0 = Math.min(...ys) - 6
-  return { x: x0, y: y0, w: Math.max(...xs) + 6 - x0, h: Math.max(...ys) + 6 - y0 }
+  const x0 = Math.min(...xs) - 7
+  const y0 = Math.min(...ys) - 7
+  return { x: x0, y: y0, w: Math.max(...xs) + 7 - x0, h: Math.max(...ys) + 7 - y0 }
 }

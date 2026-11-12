@@ -20,6 +20,8 @@ import {
   type EdgeGeom,
 } from './geometry'
 import { elkLayout, narrowSpec, nodeSize, place, type Placement } from './layout'
+import { glyph, glyphNames } from './glyphs'
+import { isTile, TILE, tileLabelBox } from './tile'
 import { useFontEpoch } from './text'
 import {
   edgeKey,
@@ -34,6 +36,7 @@ import {
   type Pad,
   type Side,
   type SpecEdge,
+  type SpecNode,
 } from './spec'
 
 // Dev-only full-screen diagram editor. Lazy-loaded behind
@@ -132,6 +135,13 @@ type Item = { kind: 'node' | 'group' | 'annot'; id: string } | { kind: 'frame'; 
 type View = { x: number; y: number; k: number }
 type Editing = { kind: 'node' | 'group' | 'annot' | 'edge'; id: string } | null
 
+// Colour families for links and glyphs (tokens.css); null is plain.
+const TONES: (string | null)[] = [null, 'flow', 'data', 'control', 'access']
+const ARROWS: { v: NonNullable<SpecEdge['arrows']>; glyph: string; name: string }[] = [
+  { v: 'end', glyph: '→', name: 'One way' },
+  { v: 'both', glyph: '↔', name: 'Both ways' },
+  { v: 'none', glyph: '—', name: 'No direction' },
+]
 const KINDS: { kind: NodeKind; name: string }[] = [
   { kind: 'process', name: 'Process' },
   { kind: 'accent', name: 'Highlight: the one the prose is about' },
@@ -147,7 +157,7 @@ const END_SNAP = 30
 // Small diagrams open at about reading size, not blown up to fill the screen.
 const FIT_MAX = 1.25
 const GAP = { RIGHT: 64, DOWN: 56 }
-const MIN = { node: { w: 64, h: 32 }, annot: { w: 40, h: 24 }, group: { w: 80, h: 60 } }
+const MIN = { node: { w: 40, h: 32 }, annot: { w: 40, h: 24 }, group: { w: 80, h: 60 } }
 
 function toDoc(spec: DiagramSpec, placement: Placement, baked: Pick<BakedDiagram, 'edges' | 'annotations' | 'framePad' | 'frame'> | null): Doc {
   const nodes: Record<string, Box> = {}
@@ -213,15 +223,19 @@ const clashes = (doc: Doc, i: number, next: SpecEdge) => doc.spec.edges.some((e,
 
 function addBoxDoc(doc: Doc, cx: number, cy: number, from?: string): { doc: Doc; id: string } {
   const id = freshId('n', (k) => doc.spec.nodes.some((n) => n.id === k))
-  const label = 'Box'
-  const { w, h } = nodeSize(label)
+  // In a diagram of tiles a new node is a tile too, with the glyph of the
+  // node it was pulled out of (or the first one in use).
+  const like = doc.spec.nodes.find((n) => n.id === from && n.icon) ?? doc.spec.nodes.find((n) => n.icon)
+  const label = like ? 'Name' : 'Box'
+  const { w, h } = like ? { w: TILE, h: TILE } : nodeSize(label)
+  const node: SpecNode = like ? { id, label, icon: like.icon, tone: like.tone, labelSide: like.labelSide } : { id, label }
   return {
     id,
     doc: {
       ...doc,
       spec: {
         ...doc.spec,
-        nodes: [...doc.spec.nodes, { id, label }],
+        nodes: [...doc.spec.nodes, node],
         edges: from ? [...doc.spec.edges, { from, to: id }] : doc.spec.edges,
       },
       nodes: { ...doc.nodes, [id]: { x: snap8(cx - w / 2), y: snap8(cy - h / 2), w, h } },
@@ -296,6 +310,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
   const [dragging, setDragging] = useState(false)
   const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [iconOpen, setIconOpen] = useState(false)
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
   const [figWide, setFigWide] = useState(Boolean(layout?.wide))
@@ -441,12 +456,31 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
     setEditing({ kind: 'annot', id })
   }
 
-  const updateNode = (id: string, patch: { label?: string; kind?: NodeKind; detail?: string }) => {
+  const updateNode = (id: string, patch: Partial<Pick<SpecNode, 'label' | 'kind' | 'detail' | 'icon' | 'labelSide' | 'tone' | 'dashed'>>) => {
     const d0 = docRef.current
-    const nodes = d0.spec.nodes.map((n) => (n.id === id ? { ...n, ...patch, detail: (patch.detail ?? n.detail) || undefined } : n))
-    // Grow the box to fit a longer label; never shrink what the author sized.
-    const fit = patch.label !== undefined ? nodeSize(patch.label) : null
+    const before = d0.spec.nodes.find((n) => n.id === id)
+    const nodes = d0.spec.nodes.map((n) => {
+      if (n.id !== id) return n
+      const next: SpecNode = { ...n, ...patch, detail: (patch.detail ?? n.detail) || undefined }
+      // Unset fields leave the saved spec.
+      for (const k of ['icon', 'labelSide', 'tone', 'dashed'] as const) if (!next[k]) delete next[k]
+      return next
+    })
+    const after = nodes.find((n) => n.id === id)
     const b = d0.nodes[id]
+    // Box ↔ tile: the node becomes a tile (or a box sized to its label)
+    // around the same centre.
+    if (b && before && after && isTile(before) !== isTile(after)) {
+      const size = isTile(after) ? { w: TILE, h: TILE } : nodeSize(after.label)
+      return {
+        ...d0,
+        spec: { ...d0.spec, nodes },
+        nodes: { ...d0.nodes, [id]: { x: snap8(b.x + b.w / 2 - size.w / 2), y: snap8(b.y + b.h / 2 - size.h / 2), ...size } },
+      }
+    }
+    // Grow the box to fit a longer label; never shrink what the author
+    // sized. A tile's label is outside it, so the tile keeps its size.
+    const fit = patch.label !== undefined && after && !isTile(after) ? nodeSize(patch.label) : null
     return {
       ...d0,
       spec: { ...d0.spec, nodes },
@@ -1247,6 +1281,26 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
           ))}
         </span>
         <Sep />
+        <button type="button" aria-pressed={iconOpen} onClick={() => setIconOpen((o) => !o)} title="Draw this as an icon tile with the label outside">
+          {singleSpec.icon ? 'Icon ✓' : 'Icon'}
+        </button>
+        {singleSpec.icon && (
+          <button
+            type="button"
+            title="Where the label sits"
+            onClick={() => {
+              const order = ['below', 'right', 'above', 'left'] as const
+              const cur = order.indexOf(singleSpec.labelSide ?? 'below')
+              commit(updateNode(single.id, { labelSide: order[(cur + 1) % 4] === 'below' ? undefined : order[(cur + 1) % 4] }))
+            }}
+          >
+            Label: {singleSpec.labelSide ?? 'below'}
+          </button>
+        )}
+        <button type="button" aria-pressed={Boolean(singleSpec.dashed)} onClick={() => commit(updateNode(single.id, { dashed: !singleSpec.dashed }))} title="Dashed outline: not there yet, or proposed">
+          Dashed
+        </button>
+        <Sep />
         <button type="button" aria-pressed={detailOpen} onClick={() => setDetailOpen((o) => !o)} title="Shown to readers when they hover the box">
           {singleSpec.detail ? 'Hover text ✓' : 'Hover text'}
         </button>
@@ -1254,6 +1308,51 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
         <button type="button" className="is-danger" onClick={deleteSelection} title="Backspace">
           Delete
         </button>
+        {iconOpen && (
+          <div className="mn-diagram-icons">
+            <span className="mn-diagram-kinds" role="radiogroup" aria-label="Icon">
+              <button type="button" role="radio" aria-checked={!singleSpec.icon} className="mn-diagram-kind" title="No icon: a labelled box" onClick={() => commit(updateNode(single.id, { icon: undefined }))}>
+                <svg viewBox="-12 -12 24 24" width="22" height="22" aria-hidden="true">
+                  <rect className="mn-dg-shape" x={-10} y={-6} width={20} height={12} rx={2} />
+                </svg>
+              </button>
+              {glyphNames().map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  role="radio"
+                  aria-checked={singleSpec.icon === name}
+                  title={name}
+                  aria-label={name}
+                  className="mn-diagram-kind"
+                  onClick={() => commit(updateNode(single.id, { icon: name }))}
+                >
+                  <svg viewBox="-12 -12 24 24" width="22" height="22" aria-hidden="true" className="mn-dg-node" data-on={singleSpec.tone ? `tone-${singleSpec.tone}` : undefined}>
+                    <g className="mn-dg-glyph">{glyph(name)}</g>
+                  </svg>
+                </button>
+              ))}
+            </span>
+            {singleSpec.icon && (
+              <span className="mn-diagram-kinds" role="radiogroup" aria-label="Colour">
+                {TONES.map((t) => (
+                  <button
+                    key={t ?? 'plain'}
+                    type="button"
+                    role="radio"
+                    aria-checked={(singleSpec.tone ?? null) === t}
+                    title={t ?? 'plain'}
+                    aria-label={`Colour: ${t ?? 'plain'}`}
+                    className="mn-diagram-kind"
+                    onClick={() => commit(updateNode(single.id, { tone: t ?? undefined }))}
+                  >
+                    <span className="mn-diagram-swatch" data-tone={t ?? 'plain'} />
+                  </button>
+                ))}
+              </span>
+            )}
+          </div>
+        )}
         {detailOpen && (
           <textarea
             className="mn-diagram-detail"
@@ -1353,6 +1452,39 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
       <button type="button" onClick={() => reverseEdge(selEdge)} title="Point the arrow the other way">
         Reverse
       </button>
+      <Sep />
+      <span className="mn-diagram-kinds" role="radiogroup" aria-label="Direction">
+        {ARROWS.map((a) => (
+          <button
+            key={a.v}
+            type="button"
+            role="radio"
+            aria-checked={(edgeSpec.arrows ?? 'end') === a.v}
+            title={a.name}
+            aria-label={a.name}
+            className="mn-diagram-kind"
+            onClick={() => updateEdge(selEdge, { arrows: a.v === 'end' ? undefined : a.v })}
+          >
+            {a.glyph}
+          </button>
+        ))}
+      </span>
+      <span className="mn-diagram-kinds" role="radiogroup" aria-label="Colour">
+        {TONES.map((t) => (
+          <button
+            key={t ?? 'plain'}
+            type="button"
+            role="radio"
+            aria-checked={(edgeSpec.family ?? null) === t}
+            title={t ?? 'plain'}
+            aria-label={`Colour: ${t ?? 'plain'}`}
+            className="mn-diagram-kind"
+            onClick={() => updateEdge(selEdge, { family: t ?? undefined })}
+          >
+            <span className="mn-diagram-swatch" data-tone={t ?? 'plain'} />
+          </button>
+        ))}
+      </span>
       {(doc.sides[edgeKey(edgeSpec)]?.source || doc.sides[edgeKey(edgeSpec)]?.target) && (
         <button type="button" onClick={() => autoSides(selEdge)} title="Let the arrow pick its own sides again">
           Auto sides
@@ -1544,7 +1676,21 @@ function TextEditor({ doc, editing, view, onDone }: { doc: Doc; editing: NonNull
   let value = ''
   let cls = ''
   let multiline = true
-  if (editing.kind === 'node') {
+  const tileNode = editing.kind === 'node' ? doc.spec.nodes.find((n) => n.id === editing.id && isTile(n)) : undefined
+  if (editing.kind === 'node' && tileNode && doc.nodes[editing.id]) {
+    // A tile's label is edited where it is drawn, outside the tile.
+    const l = tileLabelBox({ ...tileNode, label: tileNode.label || 'Name' }, doc.nodes[editing.id])
+    const w = Math.max(150, (l?.w ?? 0) + 24)
+    const side = tileNode.labelSide ?? 'below'
+    box = l && {
+      x: side === 'left' ? l.x + l.w - w + 6 : side === 'right' ? l.x - 6 : l.x + l.w / 2 - w / 2,
+      y: l.y - 3,
+      w,
+      h: Math.max(24, l.h + 6),
+    }
+    value = tileNode.label
+    cls = `is-tile is-${side}`
+  } else if (editing.kind === 'node') {
     box = doc.nodes[editing.id] ?? null
     value = doc.spec.nodes.find((n) => n.id === editing.id)?.label ?? ''
     cls = 'is-node'
@@ -1564,7 +1710,7 @@ function TextEditor({ doc, editing, view, onDone }: { doc: Doc; editing: NonNull
     const e = doc.spec.edges[i]
     const g = e && routeEdges(doc.spec, { nodes: doc.nodes, groups: {} }, doc.sides).get(edgeKey(e))
     if (g) {
-      const w = Math.max(120, edgeLabelWidth(e.label ?? '') + 20)
+      const w = Math.max(120, edgeLabelWidth(e.label ?? '', e.arrows) + 20)
       box = { x: g.lx - w / 2, y: g.ly - 12, w, h: 24 }
     }
     value = e?.label ?? ''
@@ -1592,7 +1738,7 @@ function TextEditor({ doc, editing, view, onDone }: { doc: Doc; editing: NonNull
         height: box.h,
         transform: `scale(${view.k})`,
         // A box's label sits in the middle, as it's drawn.
-        ...(editing.kind === 'node' ? { paddingTop: Math.max(0, (box.h - draft.split('\n').length * 18.75) / 2) } : {}),
+        ...(editing.kind === 'node' && !tileNode ? { paddingTop: Math.max(0, (box.h - draft.split('\n').length * 18.75) / 2) } : {}),
       }}
       value={draft}
       aria-label="Edit text"

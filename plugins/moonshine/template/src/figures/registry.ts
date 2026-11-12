@@ -5,6 +5,7 @@ import LossLandscape, {
   PARAM_HINTS as lossLandscapeHints,
 } from './LossLandscape'
 import FlowDiagram from './FlowDiagram'
+import TrainingSystem from './TrainingSystem'
 import Sparkline, {
   DEFAULTS as sparklineDefaults,
   PARAM_HINTS as sparklineHints,
@@ -82,6 +83,7 @@ export const figures: Record<string, FigureEntry> = {
     paramHints: stepSizeHints,
   },
   'flow-diagram': { component: FlowDiagram, height: 280, wide: true },
+  'training-system': { component: TrainingSystem, height: 300 },
   sparkline: {
     component: Sparkline,
     height: 120,

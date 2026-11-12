@@ -23,3 +23,14 @@ and you overshoot.
 One iteration as a small data flow: parameters in, loss and gradient
 computed, parameters updated. Repeat.
 :::
+
+In practice the loop runs inside a job that reads batches, is paced by a
+schedule, and saves its progress:
+
+:::figure{id=training-system}
+### What the loop runs inside
+Each icon is a kind of thing: a database, a service, a schedule, a store,
+a person. Link colour says what travels (green for data, orange for
+control), and the mark in each label says which way. The badge counts
+four trainer replicas.
+:::

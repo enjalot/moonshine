@@ -33,6 +33,20 @@ export type SpecNode = {
   // Optional reader-facing detail, shown when a reader hovers or focuses
   // the node.
   detail?: string
+  // A glyph name (see glyphs.tsx). With one, the node is drawn as a tile:
+  // a rounded square holding the glyph, with the label outside it. The
+  // label is part of the node and moves with it. Use one glyph per kind of
+  // thing, so two nodes with the same glyph differ only by their label.
+  icon?: string
+  // Where a tile's label sits (default below).
+  labelSide?: 'below' | 'above' | 'left' | 'right'
+  // The glyph's hue: one of the families in tokens.css (`flow`, `data`,
+  // `control`, `access`), saying what kind of thing this is.
+  tone?: string
+  // A short mark on the tile's corner, such as a count ("4").
+  badge?: string
+  // Dashed outline: not there yet, or proposed. Say which in the caption.
+  dashed?: boolean
 }
 
 export type SpecEdge = {
@@ -44,6 +58,12 @@ export type SpecEdge = {
   dashed?: boolean
   // Marching-ants animation, for edges that carry a flow the prose is about.
   animated?: boolean
+  // What the link carries, as a colour family from tokens.css (`flow`,
+  // `data`, `control`, `access`). Leave unset for a plain link.
+  family?: string
+  // Which ends have an arrowhead (default `end`). `both` is a two-way
+  // link; `none` is an undirected one. The label's direction marks follow.
+  arrows?: 'end' | 'start' | 'both' | 'none'
 }
 
 export type SpecGroup = { id: string; label: string }

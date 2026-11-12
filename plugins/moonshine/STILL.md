@@ -326,11 +326,11 @@ The figure layer is open. But there are real choices to make per figure:
   arranges it; readers get a live diagram at the article's type size.
   Every node, group and edge has a stable id, so
   `:term[word]{to=diagram-id.node-id}` highlights one part inside the
-  diagram. Choose it whenever you'd reach for Mermaid and the nodes are
-  labelled boxes. A diagram that needs an icon per node, links coloured by
-  what they carry, zones or per-piece state is a custom figure on a board
-  kit: see `skills/diagram/SKILL.md`, which also covers what a diagram
-  should and should not contain. Authors can add
+  diagram. Choose it whenever you'd reach for Mermaid. Nodes are labelled
+  boxes, or icon tiles with the label outside (`icon`); links can be
+  coloured by what they carry (`family`) and one-way, two-way or
+  undirected (`arrows`). `skills/diagram/SKILL.md` covers what a diagram
+  should contain and how to match the ones an article already has. Authors can add
   their own diagrams with the **+** between blocks, built in the same
   editor.
 
@@ -400,6 +400,36 @@ generated code is bad at it. The template splits a diagram in two:
   arrangement and are the part ids terms target (edges default to
   `from--to`; groups and author annotations by their ids). Rename an id
   only when the thing changed.
+
+  **Icon tiles.** Give a node an `icon` and it is drawn as a tile: a
+  rounded square holding a glyph, with the label outside it (the label is
+  part of the node and moves with it). Use them for systems, where each
+  node is a kind of thing (a service, a database, a person), and keep
+  labelled boxes for nodes that are sentences.
+
+  ```ts
+  nodes: [
+    { id: 'api', label: 'API', icon: 'service', tone: 'flow', badge: '3' },
+    { id: 'db', label: 'Orders', icon: 'database', tone: 'data', labelSide: 'right' },
+    { id: 'cache', label: 'Cache', icon: 'store', dashed: true },
+  ],
+  edges: [
+    { from: 'api', to: 'db', label: 'reads, writes', family: 'data', arrows: 'both' },
+  ],
+  ```
+
+  Node fields: `icon` (`person`, `service`, `database`, `store`, `queue`,
+  `document`, `function`, `key`, `browser`, `cloud`, `folder`, `gear`,
+  `clock`, `bolt`, or one added with `registerGlyphs` from
+  `diagram/glyphs`), `labelSide` (`below` default, `above`, `left`,
+  `right`), `tone` (the glyph's colour family), `badge`, `dashed`. Edge
+  fields: `family` (the link's colour: `flow`, `data`, `control`,
+  `access`, tokens `--dg-*` in `tokens.css`) and `arrows` (`end` default,
+  `both`, `start`, `none`). A labelled link shows its direction in the
+  label as well as at its end, and a label moves beside the line when the
+  run is too short to show past it. In the editor the author picks the
+  icon, label side, colour and direction from the selection toolbar, and a
+  box added to a diagram of tiles is a tile.
 
 - **Author-owned arrangement.** In `npm run dev`, **edit diagram**
   under the diagram opens a full-screen editor built on direct

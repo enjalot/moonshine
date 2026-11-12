@@ -9,8 +9,9 @@ export const FONTS = {
   group: "600 13px 'Source Sans 3', system-ui, sans-serif",
   annot: "400 14px 'Source Sans 3', system-ui, sans-serif",
   edge: "400 13px 'Source Sans 3', system-ui, sans-serif",
+  tile: "500 14px 'Source Sans 3', system-ui, sans-serif",
 }
-export const LINE = { node: 18.75, annot: 18.9 }
+export const LINE = { node: 18.75, annot: 18.9, tile: 17.5 }
 
 let ctx: CanvasRenderingContext2D | null | undefined
 export function textWidth(text: string, font: string): number {
@@ -44,9 +45,12 @@ export function wrap(text: string, font: string, max: number): string[] {
   return out
 }
 
-// An edge label's width, with its padding (.mn-dg-edge-label).
-export function edgeLabelWidth(label: string): number {
-  return textWidth(label, FONTS.edge) + 14
+// An edge label's width, with its padding (.mn-dg-edge-label) and room for
+// its direction marks: one for a one-way link, two for a two-way one.
+export const CHEVRON = 11
+export function edgeLabelWidth(label: string, arrows: 'end' | 'start' | 'both' | 'none' = 'end'): number {
+  const marks = arrows === 'both' ? 2 : arrows === 'none' ? 0 : 1
+  return textWidth(label, FONTS.edge) + 14 + marks * CHEVRON
 }
 
 // Web fonts can arrive after a diagram first measured its text. When any

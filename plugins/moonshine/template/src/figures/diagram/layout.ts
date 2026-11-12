@@ -1,6 +1,7 @@
 import { GROUP_PAD } from './geometry'
 import { edgeKey, type Box, type DiagramSpec } from './spec'
 import { FONTS, textWidth } from './text'
+import { isTile, nodeExtent, TILE } from './tile'
 
 // Automatic layout for a DiagramSpec (ELK "layered", the usual choice for
 // system and pipeline diagrams), merged with whatever the author has
@@ -22,9 +23,23 @@ export async function elkLayout(spec: DiagramSpec): Promise<Layout> {
   const { default: ELK } = await import('elkjs/lib/elk.bundled.js')
   const elk = new ELK()
   const groupIds = new Set((spec.groups ?? []).map((g) => g.id))
+  // A tile is laid out as the room it and its label take up, then drawn
+  // as the tile inside that room.
+  const tileRoom = (n: DiagramSpec['nodes'][number]) => nodeExtent(n, { x: 0, y: 0, w: TILE, h: TILE })
   const leaf = (n: DiagramSpec['nodes'][number]) => {
+    if (isTile(n)) {
+      const r = tileRoom(n)
+      return { id: n.id, width: r.w + 16, height: r.h + 8 }
+    }
     const { w, h } = nodeSize(n.label)
     return { id: n.id, width: w, height: h }
+  }
+  const byId = new Map(spec.nodes.map((n) => [n.id, n]))
+  const boxIn = (id: string, x: number, y: number, w: number, h: number): Box => {
+    const n = byId.get(id)
+    if (!n || !isTile(n)) return { x, y, w, h }
+    const r = tileRoom(n)
+    return { x: x + 8 - r.x, y: y + 4 - r.y, w: TILE, h: TILE }
   }
   const graph = {
     id: 'root',
@@ -69,10 +84,10 @@ export async function elkLayout(spec: DiagramSpec): Promise<Layout> {
     if (String(c.id).startsWith('group:')) {
       groups[c.id.slice(6)] = { x: c.x, y: c.y, w: c.width, h: c.height }
       for (const k of c.children ?? []) {
-        nodes[k.id] = { x: c.x + k.x, y: c.y + k.y, w: k.width, h: k.height }
+        nodes[k.id] = boxIn(k.id, c.x + k.x, c.y + k.y, k.width, k.height)
       }
     } else {
-      nodes[c.id] = { x: c.x, y: c.y, w: c.width, h: c.height }
+      nodes[c.id] = boxIn(c.id, c.x, c.y, c.width, c.height)
     }
   }
   return { nodes, groups }
@@ -106,10 +121,10 @@ export function merge(
     const b = saved?.nodes?.[n.id]
     if (b) {
       // A saved position without a size (pre-0.9 saves) gets the label's.
-      nodes[n.id] = { ...(b.w && b.h ? b : { ...b, ...nodeSize(n.label) }), unarranged: false }
+      nodes[n.id] = { ...(b.w && b.h ? b : { ...b, ...(isTile(n) ? { w: TILE, h: TILE } : nodeSize(n.label)) }), unarranged: false }
       continue
     }
-    const e = elk?.nodes[n.id] ?? { x: 0, y: 0, ...nodeSize(n.label) }
+    const e = elk?.nodes[n.id] ?? { x: 0, y: 0, ...(isTile(n) ? { w: TILE, h: TILE } : nodeSize(n.label)) }
     const nbrs = spec.edges
       .flatMap((x) => (x.from === n.id ? [x.to] : x.to === n.id ? [x.from] : []))
       .map(delta)
@@ -133,7 +148,7 @@ export function merge(
 
   const groups: Record<string, Box> = {}
   for (const g of spec.groups ?? []) {
-    const members = spec.nodes.filter((n) => n.group === g.id).map((n) => nodes[n.id])
+    const members = spec.nodes.filter((n) => n.group === g.id).map((n) => nodeExtent(n, nodes[n.id]))
     let box: Box | undefined = saved?.groups?.[g.id]
     for (const m of members) {
       const x0 = Math.min(box?.x ?? Infinity, m.x - PAD.side)
