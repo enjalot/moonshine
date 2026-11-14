@@ -26,14 +26,33 @@ export async function elkLayout(spec: DiagramSpec): Promise<Layout> {
   // A tile is laid out as the room it and its label take up, then drawn
   // as the tile inside that room.
   const tileRoom = (n: DiagramSpec['nodes'][number]) => nodeExtent(n, { x: 0, y: 0, w: TILE, h: TILE }, spec.direction === 'DOWN')
+  // A tile's links leave and arrive at the tile, not at the middle of the
+  // room it shares with its label, so ELK is given ports at the tile's
+  // centre line: tiles along a flow then line up and their links run
+  // straight.
+  const down = spec.direction === 'DOWN'
+  const portId = (id: string, end: 'in' | 'out') => `port:${id}:${end}`
   const leaf = (n: DiagramSpec['nodes'][number]) => {
     if (isTile(n)) {
       const r = tileRoom(n)
-      return { id: n.id, width: r.w + 16, height: r.h + 8 }
+      const width = r.w + 16
+      const height = r.h + 8
+      const cx = 8 - r.x + TILE / 2
+      const cy = 4 - r.y + TILE / 2
+      const port = (end: 'in' | 'out') => ({
+        id: portId(n.id, end),
+        width: 0,
+        height: 0,
+        x: down ? cx : end === 'in' ? 0 : width,
+        y: down ? (end === 'in' ? 0 : height) : cy,
+        layoutOptions: { 'elk.port.side': down ? (end === 'in' ? 'NORTH' : 'SOUTH') : end === 'in' ? 'WEST' : 'EAST' },
+      })
+      return { id: n.id, width, height, layoutOptions: { 'elk.portConstraints': 'FIXED_POS' }, ports: [port('in'), port('out')] }
     }
     const { w, h } = nodeSize(n.label)
     return { id: n.id, width: w, height: h }
   }
+  const tiles = new Set(spec.nodes.filter(isTile).map((n) => n.id))
   const byId = new Map(spec.nodes.map((n) => [n.id, n]))
   const boxIn = (id: string, x: number, y: number, w: number, h: number): Box => {
     const n = byId.get(id)
@@ -83,7 +102,9 @@ export async function elkLayout(spec: DiagramSpec): Promise<Layout> {
       'elk.direction': spec.direction ?? 'RIGHT',
       'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
       'elk.spacing.nodeNode': '28',
-      'elk.layered.spacing.nodeNodeBetweenLayers': '56',
+      // Tiles are small and their links carry the labels, so they sit
+      // closer than boxes do.
+      'elk.layered.spacing.nodeNodeBetweenLayers': tiles.size ? '32' : '56',
       'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
       'elk.edgeLabels.inline': 'true',
       // Follow the spec's node order: the first node is where the flow
@@ -96,8 +117,8 @@ export async function elkLayout(spec: DiagramSpec): Promise<Layout> {
       .filter((e) => spec.nodes.some((n) => n.id === e.from) && spec.nodes.some((n) => n.id === e.to))
       .map((e) => ({
         id: edgeKey(e),
-        sources: [e.from],
-        targets: [e.to],
+        sources: [tiles.has(e.from) ? portId(e.from, 'out') : e.from],
+        targets: [tiles.has(e.to) ? portId(e.to, 'in') : e.to],
         labels: e.label ? [{ text: e.label, width: e.label.length * 7 + 12, height: 18 }] : [],
       })),
   }

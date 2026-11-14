@@ -9,9 +9,9 @@ export const FONTS = {
   group: "600 13px 'Source Sans 3', system-ui, sans-serif",
   annot: "400 14px 'Source Sans 3', system-ui, sans-serif",
   edge: "400 13px 'Source Sans 3', system-ui, sans-serif",
-  tile: "500 14px 'Source Sans 3', system-ui, sans-serif",
+  tile: "500 15px 'Source Sans 3', system-ui, sans-serif",
 }
-export const LINE = { node: 18.75, annot: 18.9, tile: 17.5 }
+export const LINE = { node: 18.75, annot: 18.9, tile: 18.75 }
 
 let ctx: CanvasRenderingContext2D | null | undefined
 export function textWidth(text: string, font: string): number {

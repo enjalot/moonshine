@@ -933,7 +933,7 @@
 }
 .mn-dg-tile-label {
   font-family: var(--heading-font);
-  font-size: 14px;
+  font-size: 15px; /* same as a box label: the 13px floor is measured against it */
   font-weight: 500;
   fill: var(--text);
 }

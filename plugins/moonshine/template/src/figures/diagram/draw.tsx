@@ -87,7 +87,7 @@ function drawTile(c: DrawCtx, n: SpecNode, b: Box, opts: { on?: string; props?: 
       </g>
       <text className="mn-dg-tile-label" textAnchor="middle">
         {each(lines, (l, i) => (
-          <tspan x={lineX(l)} y={lb.y + 13 + i * LINE.tile}>
+          <tspan x={lineX(l)} y={lb.y + 14 + i * LINE.tile}>
             {l}
           </tspan>
         ))}
