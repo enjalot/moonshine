@@ -118,7 +118,7 @@ Named alternatives, and when each fits:
 
 ## 6. Size and phones
 
-The built-in diagram draws at reading size (tile labels 14px, link labels 13px) and has a second arrangement for narrow screens, automatic until the author saves one from the editor's "Narrow (phones)" tab. Keep to the node count in section 2 and both stay readable.
+The built-in diagram draws at reading size (node labels 15px, link labels and group names 13px; shrunk to fit, node labels stop at 13px and link labels at about 11px) and has a second arrangement for narrow screens, automatic until the author saves one from the editor's "Narrow (phones)" tab. Keep to the node count in section 2 and both stay readable.
 
 A custom figure has to do this itself. A diagram drawn into a fixed `viewBox` and scaled to the column renders its labels at 5 to 6px on a phone. That failure was present in diagrams accepted on a desktop screen, where nobody had looked at a phone. Give it a narrow layout (the same tiles restacked top to bottom) switched on the measured width, with sideways scroll inside the figure as the fallback. See "Phones and touch" in VISUALS.md.
 

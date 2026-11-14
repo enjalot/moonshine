@@ -497,8 +497,11 @@ run border to border, or orthogonally out of an author-chosen side; an
 edge that would cross a node bows around the row. Nodes with `detail`
 show it on hover or focus.
 
-**Readability floor.** Node labels are 15px at full size and never
-render below 13px (the caption size), at any screen width. A diagram
+**Readability floor.** Node labels (in a box or beside a tile) are
+15px at full size and never render below 13px (the caption size), at
+any screen width. Link labels and group names are 13px at full size
+and shrink with the diagram, to about 11px at the floor: an accepted
+exception, since they are secondary to the node names. A diagram
 wider than its figure (column or wide: always a choice, never
 automatic), in order:
 
@@ -910,8 +913,8 @@ Once the outline is agreed:
    to remove them. Delete `content/example.md` (if you made your own
    file), `content/diagrams.md` and `content/series/`, the demo figure
    files (`GradientField`, `LossLandscape`, `StepSize`, `Sparkline`,
-   `FlowDiagram`, `TrainingSystem`, `DiagramGallery` and
-   `lib/lossSurface.ts`),
+   `FlowDiagram`, `TrainingSystem`, `DiagramGallery`, `StepSize.css`
+   and `lib/lossSurface.ts`),
    their entries in `src/figures/registry.ts`, the demo's
    `content/figures/flow-diagram.json`, and the README sections that
    describe them. Keep the infrastructure they demonstrate: `drag/`,

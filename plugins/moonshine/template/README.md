@@ -49,6 +49,10 @@ During `npm run dev` the rendered article is an editing surface:
   feedback about that exact passage into `.feedback/`; the authoring
   agent picks it up and replies in the HUD (bottom corner), which also
   shows whether a listener is running.
+- **Suggestions** the agent leaves (proposed rewrites, or remarks)
+  show under their passage with **Accept / Edit / Reject**; the HUD
+  switches them on and off and can accept or reject all. A remark can
+  be sent back to the agent as a comment.
 - Every successful save **auto-commits** (message prefix
   `moonshine-edit:`) when the project is its own git repo, so you and
   the agent share one history. Older wording lives in `git log`.

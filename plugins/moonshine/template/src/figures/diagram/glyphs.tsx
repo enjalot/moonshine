@@ -158,7 +158,7 @@ const textGlyph = (text: string) => (
 
 export function glyph(name: string | undefined): ReactNode {
   if (!name) return null
-  if (name in GLYPHS) return GLYPHS[name]
+  if (Object.hasOwn(GLYPHS, name)) return GLYPHS[name]
   if (name.startsWith('tabler:')) {
     const paths = tablerPaths(name.slice(7))
     return paths ? tablerGlyph(paths) : null
