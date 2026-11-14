@@ -3,68 +3,148 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Finding Structure — Latent Verse</title>
+<title>Clustering and labeling a map | Latent Verse</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
+  color-scheme: light dark;
   --article-width: 740px;
   --body-font: 'Source Serif 4', Georgia, serif;
   --heading-font: 'Source Sans 3', system-ui, sans-serif;
   --mono-font: 'Source Code Pro', monospace;
-  --body-size: 1.125rem; --line-height: 1.6;
-  --text: #1a1a2e; --text-2: #4a4a6a;
-  --accent: #2563eb; --accent-light: #dbeafe;
-  --bg: #fafafa; --fig-bg: #ffffff; --border: #e2e2e8;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --accent: #2563eb;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+  --rule: #ececf2;
+  --track: #ececf2;
+  --code-bg: #f0f0f5;
+  /* figure colours, the same in every chapter */
+  --pos: #d9722a;        /* positive embedding values */
+  --neg: #3f7fbf;        /* negative embedding values */
+  --diff: #8a5fb5;       /* difference between two embeddings */
+  --axis: #b9b9c8;
+  --dot: #4a6fa5;        /* a joke on a map */
+  --dot-muted: #c4c4d2;  /* noise, unselected, background */
+  --context: #d8d8e2;    /* basemap training texts */
+  --hl: #e8791d;         /* neighbours and featured jokes */
+  --mark: #d62839;       /* the selected joke */
+  --specific: #d1495b;   /* SAE feature that fires on few jokes */
+  --broad: #a9a9bd;      /* SAE feature that fires on many */
 }
-body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e6e6ef; --text-2: #a9a9c0; --accent: #7aa5f8;
+    --bg: #14141c; --fig-bg: #1c1c27; --border: #34344a;
+    --rule: #2a2a3a; --track: #2a2a3a; --code-bg: #2a2a3a;
+    --pos: #f0934f; --neg: #6aa5e0; --diff: #b592dd; --axis: #5a5a72;
+    --dot: #7ea6dc; --dot-muted: #4a4a60; --context: #33334a;
+    --hl: #ffa04d; --mark: #ff5d6c; --specific: #f0707f; --broad: #6c6c86;
+  }
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
 .article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
 h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
 h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
 h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+h3 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
 p { margin: 0 0 1rem; }
 a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-code { font-family: var(--mono-font); font-size: 0.9em; background: #f0f0f5; padding: 0.15em 0.35em; border-radius: 3px; }
+code { font-family: var(--mono-font); font-size: 0.9em; background: var(--code-bg); padding: 0.15em 0.35em; border-radius: 3px; }
+.kicker { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.25rem; }
+.kicker a { color: var(--text-2); text-decoration: none; }
+.subtitle { font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2); }
+.byline { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem; }
+
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .figure-wide { margin-left: -2rem; margin-right: -2rem; }
 .figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
 .figure-label { font-weight: 600; color: var(--text); }
-.insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
-.insight p { margin: 0; }
-.margin-note { font-size: 0.8125rem; color: var(--text-2); line-height: 1.4; border-left: 2px solid var(--border); padding-left: 0.75rem; margin: 1rem 0; }
-.controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
-svg text { font-family: var(--heading-font); }
-.tip { position: fixed; pointer-events: none; background: rgba(26,26,46,0.92); color: #fff; font-family: var(--heading-font); font-size: 0.8rem; padding: 0.5rem 0.75rem; border-radius: 4px; max-width: 320px; line-height: 1.4; z-index: 100; }
-.cluster-legend-item { display: inline-flex; align-items: center; gap: 0.3rem; margin-right: 0.75rem; margin-bottom: 0.4rem; font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-2); cursor: pointer; }
-.cluster-legend-item:hover { color: var(--text); }
-.cluster-swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
-.cluster-joke-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; margin-top: 0.75rem; }
-.cluster-joke { padding: 0.3rem 0; border-bottom: 1px solid #f0f0f5; font-size: 0.9rem; }
+.fig-status { font-family: var(--heading-font); font-size: 0.9rem; color: var(--text-2); padding: 1.25rem 0; margin: 0; }
+.fig-status.error { color: var(--text); border-left: 3px solid var(--pos); padding: 0.5rem 0 0.5rem 0.75rem; }
+.fig-status[hidden], .fig-body[hidden] { display: none; }
+.field-label { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.3rem; display: block; }
+.joke-picker {
+  font-family: var(--body-font); font-size: 1rem; padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg);
+  color: var(--text); cursor: pointer; width: 100%; min-width: 0;
+}
+.controls { display: flex; align-items: center; gap: 0.4rem 1.25rem; flex-wrap: wrap; margin-bottom: 0.75rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.btn-group { display: inline-flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
+.btn {
+  font-family: var(--heading-font); font-size: 0.85rem; padding: 0.3rem 0.65rem; min-height: 2rem;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text); cursor: pointer;
+}
+.btn:hover { border-color: var(--accent); }
+.btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--fig-bg); }
+.map-box { width: 100%; height: 460px; position: relative; }
+.map-box canvas { display: block; touch-action: pan-y; }
+.map-box canvas:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.readout { font-family: var(--heading-font); font-size: 0.9rem; color: var(--text-2); margin-top: 0.6rem; min-height: 4.4em; }
+.readout .picked { font-family: var(--body-font); font-style: italic; color: var(--text); font-size: 0.95rem; display: block; overflow-wrap: anywhere; }
+.swatch { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; margin-right: 0.25rem; vertical-align: -1px; }
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .figure { padding: 1rem; }
+  .figure-wide { margin-left: 0; margin-right: 0; }
+  .map-box { height: 320px; }
+  .btn-group { display: flex; width: 100%; }
+  .btn-group .lbl { flex-basis: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+.legend { margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.3rem 0.4rem; }
+.legend-item {
+  display: inline-flex; align-items: center; gap: 0.35rem; font-family: var(--heading-font); font-size: 0.8125rem;
+  color: var(--text-2); cursor: pointer; background: none; border: 1px solid transparent; border-radius: 4px; padding: 0.2rem 0.4rem;
+}
+.legend-item:hover { color: var(--text); border-color: var(--border); }
+.legend-item[aria-pressed="true"] { color: var(--text); border-color: var(--text-2); }
+.legend-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.cluster-swatch { width: 0.7rem; height: 0.7rem; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
+.cluster-detail-title { font-family: var(--heading-font); font-weight: 600; font-size: 0.95rem; margin-top: 0.9rem; }
+.cluster-joke-list { max-height: 220px; overflow-y: auto; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); margin-top: 0.4rem; }
+.cluster-joke { padding: 0.35rem 0; border-bottom: 1px solid var(--rule); font-size: 0.9rem; overflow-wrap: anywhere; }
 .cluster-joke:last-child { border-bottom: none; }
-@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+.size-bar { display: flex; height: 14px; margin: 0.25rem 0 0.75rem; border-radius: 2px; overflow: hidden; background: var(--track); }
+.size-bar span { display: block; height: 100%; box-shadow: inset -1px 0 0 var(--fig-bg); }
 </style>
 </head>
 <body>
 <div class="article">
   <header>
-    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.25rem;">
-      <a href="index.html" style="color: var(--text-2); text-decoration: none;">Latent Verse</a> / Part 3
+    <p class="kicker"><a href="index.html">Latent Verse</a> / Part 3: finding structure</p>
+    <h1>Clustering and labeling a map</h1>
+    <p class="subtitle">
+      Clustering algorithms find groups in the data and labels give those groups names. Both depend on choices we make.
     </p>
-    <h1>Finding Structure</h1>
-    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
-      Clustering algorithms find groups in the data. Labels give those groups names. Both are choices, not facts.
-    </p>
-    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">By Ian Johnson</p>
+    <p class="byline">By Ian Johnson</p>
   </header>
 
-  <h2>Your eye already clusters</h2>
+  <h2>Grouping the dots with HDBSCAN</h2>
 
   <p>
     Looking at the <a href="02-the-projector.html">UMAP scatter plot</a>, your eye naturally groups
-    the dots into clumps. Some areas are dense, others sparse. You can already see structure.
+    the dots into clumps. Some areas are dense, others sparse.
     Clustering algorithms do this systematically: they assign every point to a group (or mark it
     as noise that doesn't belong to any group).
   </p>
@@ -72,66 +152,78 @@ svg text { font-family: var(--heading-font); }
   <p>
     Here are the same 1,000 jokes, now colored by cluster. The algorithm we use is HDBSCAN,
     which finds clusters of varying density and size. Gray points are "noise": jokes that don't
-    fit neatly into any group.
+    fit neatly into any group. One cluster is selected, and its jokes are listed under the map.
   </p>
 
   <div class="figure figure-wide" id="fig-clusters">
-    <div id="cluster-container" style="width: 100%; height: 500px; position: relative;"></div>
-    <div id="cluster-legend" style="margin-top: 0.75rem; line-height: 2;"></div>
-    <div id="cluster-detail" style="display: none;">
-      <div id="cluster-detail-title" style="font-family: var(--heading-font); font-weight: 600; margin-top: 0.75rem;"></div>
-      <div id="cluster-detail-list" class="cluster-joke-list"></div>
+    <p class="fig-status" role="status">Loading the clusters…</p>
+    <div class="fig-body" hidden>
+      <div id="cluster-container" class="map-box"></div>
+      <div id="cluster-legend" class="legend" role="group" aria-label="Clusters, largest first"></div>
+      <div id="cluster-detail-title" class="cluster-detail-title" aria-live="polite"></div>
+      <div id="cluster-detail-list" class="cluster-joke-list" tabindex="0" aria-label="Jokes in the selected cluster"></div>
     </div>
     <div class="figure-caption">
       <span class="figure-label">Figure 1.</span>
-      HDBSCAN clustering with min_cluster_size=5. Click a colored cluster in the legend to see its jokes. Gray dots are noise points.
+      HDBSCAN with min_cluster_size 5 finds 39 clusters. The legend lists the 20 largest, each
+      named by three keywords from its jokes. Pick a cluster in the legend, or tap one of its
+      dots, to read its jokes. The doctor cluster reads as a theme; the largest cluster,
+      "dad, one, said", does not.
     </div>
   </div>
 
-  <h2>Resolution is a choice</h2>
+  <h2>How many clusters should there be?</h2>
 
   <p>
-    How many clusters should there be? This isn't a question with one right answer. Clustering
+    This isn't a question with one right answer. Clustering
     algorithms have parameters that control the granularity. With HDBSCAN, the key parameter is
     <code>min_cluster_size</code>: the minimum number of points required to form a cluster.
   </p>
 
   <p>
-    A small value finds many fine-grained groups. A large value merges them into fewer,
-    broader categories. Adjust the slider below and watch the clusters reorganize:
+    A small value finds many fine-grained groups. A larger value asks for bigger groups, and
+    small ones either merge or dissolve into noise. Figure 2 starts at 10, twice the setting
+    used above:
   </p>
 
   <div class="figure figure-wide" id="fig-resolution">
-    <div class="controls">
-      <label>min_cluster_size:
-        <select id="mcs-select" style="font-family: var(--mono-font); padding: 0.2rem 0.4rem;">
-          <option value="5" selected>5 (fine)</option>
-          <option value="10">10</option>
-          <option value="25">25</option>
-          <option value="50">50 (coarse)</option>
-        </select>
-      </label>
-      <span id="mcs-info" style="font-family: var(--mono-font);"></span>
+    <p class="fig-status" role="status">Loading the clusters…</p>
+    <div class="fig-body" hidden>
+      <div class="controls" id="mcs-controls" role="group" aria-label="min_cluster_size"></div>
+      <div id="mcs-info" class="readout" style="min-height: 1.5em; margin: 0;" aria-live="polite"></div>
+      <div id="mcs-bar" class="size-bar" role="img"></div>
+      <div id="resolution-container" class="map-box"></div>
     </div>
-    <div id="resolution-container" style="width: 100%; height: 500px; position: relative;"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 2.</span>
-      The same jokes clustered at different resolutions. Fine settings find many small groups. Coarse settings find a few large ones. Both are valid ways to look at the data.
+      The same jokes clustered at four values of min_cluster_size. The bar shows how the 1,000
+      jokes are divided: one segment per cluster, gray for noise. Colors are assigned per
+      setting, so a color does not mean the same cluster from one setting to the next.
     </div>
   </div>
 
   <p>
-    At the finest setting, you might find a cluster of just 5 jokes about bicycles. At the coarsest,
-    those jokes get absorbed into a broader "transportation" group or dissolved into noise. Neither
-    view is more correct. They answer different questions. Fine clustering helps you find specific
-    themes. Coarse clustering gives you a high-level map of the territory.
+    At 5, HDBSCAN finds 39 clusters and leaves 373 of the 1,000 jokes as noise. At 10 the result
+    is very different: 802 jokes merge into one cluster with two small ones beside it. At 25 and
+    50 it goes the other way, and two or three clusters survive while about 70% of the jokes
+    become noise. Neither view is more correct. On this map the fine setting is the one that
+    finds specific themes, like the doctor jokes. The coarser settings mostly tell us that these
+    1,000 jokes form one cloud, without large groups that stand apart.
   </p>
 
-  <h2>Naming what you find</h2>
+  <h2>Naming the clusters</h2>
 
   <p>
-    A cluster is just a set of indices until someone gives it a name. One approach is to sample
-    a few items from each cluster and ask a language model to summarize what they have in common.
+    A cluster is just a set of indices until someone gives it a name. The legend in Figure 1 uses
+    a simple kind of label, three keywords taken from each cluster's jokes. It works when a
+    cluster has a subject with its own vocabulary, as in "doctor, dentist, tooth" or
+    "into, bar, bartender". It says little for "dad, one, said", where the jokes share a
+    storytelling format more than a topic.
+  </p>
+
+  <p>
+    Another approach is to sample a few items from each cluster and ask a language model to
+    summarize what they have in common.
     The model reads 10-20 jokes from a cluster and proposes a label like "animal puns" or
     "jokes about family meals."
   </p>
@@ -143,12 +235,11 @@ svg text { font-family: var(--heading-font); }
     the same cluster.
   </p>
 
-
-  <h2>Many valid decompositions</h2>
+  <h2>Which grouping is the right one?</h2>
 
   <p>
-    Everything in this pipeline is interchangeable. You can swap the embedding model (a different
-    lens), the dimensionality reduction algorithm, the clustering method, the labeling approach.
+    Everything in this pipeline is interchangeable. You can swap the embedding model, the
+    dimensionality reduction algorithm, the clustering method, the labeling approach.
     Each combination produces a different view of the same data.
   </p>
 
@@ -162,185 +253,253 @@ svg text { font-family: var(--heading-font); }
     So far, every tool we've used has been <strong>local</strong> to this dataset. The UMAP
     projection reshuffles when the data changes. The clusters depend on the projection. In the
     next two articles, we'll build <strong>global</strong> tools: a set of features and a map
-    that work the same way on any text, because they're trained to match the lens itself.
+    that work the same way on any text, because they're trained to match the embedding model itself.
   </p>
 
   <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
-    <p>Part of <a href="index.html" style="color: var(--text-2);">Latent Verse</a>. Previous: <a href="02-the-projector.html" style="color: var(--accent);">The Projector</a>. Next: <a href="04-the-filter.html" style="color: var(--accent);">The Filter</a>.</p>
+    <p>Part of <a href="index.html" style="color: var(--text-2);">Latent Verse</a>. Previous: <a href="02-the-projector.html">Projecting embeddings to 2D with UMAP</a>. Next: <a href="04-the-filter.html">Decomposing embeddings with a sparse autoencoder</a>.</p>
     <p style="margin-top: 0.5rem;">Clustering by <a href="https://hdbscan.readthedocs.io/" style="color: var(--text-2);">HDBSCAN</a>.</p>
   </footer>
 </div>
 
 <script>
-const tip = d3.select("body").append("div").attr("class", "tip").style("opacity", 0);
+// ---- shared helpers (the same block is inlined in every chapter) -------
+const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+const short = (t, n) => { t = t.replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n).trimEnd() + '…' : t; };
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Color palette for clusters
-const clusterColors = d3.schemeTableau10.concat(d3.schemePastel1).concat(d3.schemeSet3);
-function clusterColor(i) {
-  if (i < 0) return '#d0d0d8';
-  return clusterColors[i % clusterColors.length];
+// Data lives in data/ next to this page. A failed or blocked request becomes
+// a readable message inside the figure that needed it.
+async function loadJSON(path) {
+  let res;
+  try { res = await fetch(path); }
+  catch (e) {
+    throw new Error(location.protocol === 'file:'
+      ? `This figure reads ${path}, and browsers block that when the page is opened straight from disk. Serve the folder (for example python3 -m http.server) and open it over http.`
+      : `Could not load ${path}. Check the connection and reload the page.`);
+  }
+  if (!res.ok) throw new Error(`Could not load ${path} (HTTP ${res.status}).`);
+  try { return await res.json(); }
+  catch (e) { throw new Error(`${path} arrived but could not be read as JSON.`); }
+}
+function figReady(figId) {
+  const fig = document.getElementById(figId);
+  fig.querySelector('.fig-status').hidden = true;
+  fig.querySelector('.fig-body').hidden = false;
+}
+function figError(figId, err) {
+  const fig = document.getElementById(figId);
+  const s = fig.querySelector('.fig-status');
+  s.hidden = false; s.classList.add('error'); s.textContent = err.message;
+  if (!/^(This figure reads|Could not load)/.test(err.message)) console.error(err);
+  fig.querySelector('.fig-body').hidden = true;
 }
 
-function drawClusterScatter(containerId, x, y, labels, texts, opts = {}) {
-  const el = document.getElementById(containerId);
-  el.innerHTML = '';
+// Redraw canvases when the window is resized or the colour scheme flips.
+const redraws = [];
+function redrawAll() { redraws.forEach(f => f()); }
+{
+  let timer;
+  window.addEventListener('resize', () => { clearTimeout(timer); timer = setTimeout(redrawAll, 150); });
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redrawAll);
+}
+
+// A canvas sized to its container, in CSS pixels.
+function fitCanvas(el, canvas) {
   const rect = el.getBoundingClientRect();
   const W = rect.width, H = rect.height;
-
-  const canvas = document.createElement('canvas');
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
-  el.appendChild(canvas);
-
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
+  if (el !== canvas) { canvas.style.width = W + 'px'; canvas.style.height = H + 'px'; }
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
   const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, W, H };
+}
 
-  const pad = 0.05;
-  const xExt = d3.extent(x), yExt = d3.extent(y);
+// Scales that fit [x0,x1] x [y0,y1] into a W x H box, keeping the aspect ratio.
+function fitScales(xExt, yExt, W, H, margin = 12) {
   const xR = (xExt[1] - xExt[0]) || 1, yR = (yExt[1] - yExt[0]) || 1;
-  const paddedX = xR * (1 + pad * 2);
-  const paddedY = yR * (1 + pad * 2);
-  const m = 10;
-  const availW = W - m*2, availH = H - m*2;
-  const s = Math.min(availW / paddedX, availH / paddedY);
-  const dataW = paddedX * s, dataH = paddedY * s;
-  const offX = m + (availW - dataW) / 2;
-  const offY = m + (availH - dataH) / 2;
-  const xScale = d3.scaleLinear().domain([xExt[0] - xR*pad, xExt[1] + xR*pad]).range([offX, offX + dataW]);
-  const yScale = d3.scaleLinear().domain([yExt[0] - yR*pad, yExt[1] + yR*pad]).range([offY + dataH, offY]);
+  const pad = 0.04;
+  const pX = xR * (1 + pad * 2), pY = yR * (1 + pad * 2);
+  const aW = W - margin * 2, aH = H - margin * 2;
+  const s = Math.min(aW / pX, aH / pY);
+  const ox = margin + (aW - pX * s) / 2, oy = margin + (aH - pY * s) / 2;
+  return {
+    x: v => ox + (v - xExt[0] + xR * pad) * s,
+    y: v => oy + pY * s - (v - yExt[0] + yR * pad) * s,
+  };
+}
+// Extent that ignores the most extreme 0.5% at each end, so a few far-flung
+// points don't shrink the map.
+function robustExtent(vals, q = 0.005) {
+  const v = Float64Array.from(vals).sort();
+  return [d3.quantileSorted(v, q), d3.quantileSorted(v, 1 - q)];
+}
+function dot(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+function ring(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke(); }
+// Mid-tone categorical colours that hold up on light and dark backgrounds.
+const clusterColors = [...d3.schemeTableau10, ...d3.schemeDark2, ...d3.schemeSet1, ...d3.schemeSet2];
+const clusterColor = i => clusterColors[i % clusterColors.length];
 
+// Scatter of the jokes coloured by cluster label (-1 is noise).
+// highlight: a cluster id to emphasise, or null. onPick(clusterId) on click.
+function clusterMap(containerId, x, y) {
+  const el = document.getElementById(containerId);
+  const canvas = document.createElement('canvas');
+  canvas.setAttribute('role', 'img');
+  el.appendChild(canvas);
   const n = x.length;
-  const r = 3;
-  const highlight = opts.highlight;
+  let ctx, W, H, pos, labels = null, highlight = null;
 
-  // Draw noise first, then clusters on top
-  ctx.globalAlpha = 0.25;
-  for (let i = 0; i < n; i++) {
-    if (labels[i] !== -1) continue;
-    ctx.fillStyle = '#d0d0d8';
-    ctx.beginPath();
-    ctx.arc(xScale(x[i]), yScale(y[i]), r, 0, Math.PI * 2);
-    ctx.fill();
+  function draw() {
+    if (!labels) return;
+    ctx.clearRect(0, 0, W, H);
+    const r = W < 500 ? 2.2 : 3;
+    ctx.fillStyle = cssVar('--dot-muted');
+    ctx.globalAlpha = 0.55;
+    for (let i = 0; i < n; i++) if (labels[i] === -1) dot(ctx, pos[i][0], pos[i][1], r - 0.5);
+    for (let i = 0; i < n; i++) {
+      if (labels[i] === -1 || labels[i] === highlight) continue;
+      ctx.globalAlpha = highlight === null ? 0.85 : 0.45;
+      ctx.fillStyle = clusterColor(labels[i]);
+      dot(ctx, pos[i][0], pos[i][1], r);
+    }
+    if (highlight !== null) {
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = clusterColor(highlight);
+      ctx.strokeStyle = cssVar('--text'); ctx.lineWidth = 1;
+      for (let i = 0; i < n; i++) if (labels[i] === highlight) { dot(ctx, pos[i][0], pos[i][1], r + 1.5); ring(ctx, pos[i][0], pos[i][1], r + 1.5); }
+    }
+    ctx.globalAlpha = 1;
   }
-  ctx.globalAlpha = 0.7;
-  for (let i = 0; i < n; i++) {
-    if (labels[i] === -1) continue;
-    const isHighlighted = highlight == null || labels[i] === highlight;
-    ctx.globalAlpha = isHighlighted ? 0.8 : 0.15;
-    ctx.fillStyle = clusterColor(labels[i]);
-    ctx.beginPath();
-    ctx.arc(xScale(x[i]), yScale(y[i]), isHighlighted ? r + 0.5 : r, 0, Math.PI * 2);
-    ctx.fill();
+  function resize() {
+    ({ ctx, W, H } = fitCanvas(el, canvas));
+    const s = fitScales(d3.extent(x), d3.extent(y), W, H);
+    pos = x.map((v, i) => [s.x(v), s.y(y[i])]);
+    draw();
   }
-  ctx.globalAlpha = 1;
+  resize();
+  redraws.push(resize);
+  return {
+    canvas,
+    set(newLabels, newHighlight = null) { labels = newLabels; highlight = newHighlight; draw(); },
+    onPick(fn) {
+      canvas.style.cursor = 'pointer';
+      canvas.addEventListener('click', event => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = event.clientX - rect.left, my = event.clientY - rect.top;
+        let best = -1, bestD = 400;
+        for (let i = 0; i < n; i++) {
+          if (labels[i] === -1) continue;
+          const d = (pos[i][0] - mx) ** 2 + (pos[i][1] - my) ** 2;
+          if (d < bestD) { bestD = d; best = i; }
+        }
+        if (best >= 0) fn(labels[best]);
+      });
+    },
+  };
+}
 
-  // Hover
-  if (texts) {
-    canvas.addEventListener('pointermove', (event) => {
-      const crect = canvas.getBoundingClientRect();
-      const mx = event.clientX - crect.left, my = event.clientY - crect.top;
-      let bestI = -1, bestD = Infinity;
-      for (let i = 0; i < n; i++) {
-        const d = (xScale(x[i]) - mx)**2 + (yScale(y[i]) - my)**2;
-        if (d < bestD) { bestD = d; bestI = i; }
-      }
-      if (bestD < 400 && bestI >= 0) {
-        const clabel = labels[bestI] === -1 ? 'noise' : `cluster ${labels[bestI]}`;
-        tip.html(`<strong>${clabel}</strong><br>${escapeHtml(texts[bestI])}`)
-          .style('opacity', 1);
-        const tw = tip.node().offsetWidth;
-        tip.style('left', Math.min(event.clientX + 12, window.innerWidth - tw - 8) + 'px')
-           .style('top', Math.max(event.clientY - 40, 8) + 'px');
-      } else {
-        tip.style('opacity', 0);
-      }
-    });
-    canvas.addEventListener('pointerleave', () => tip.style('opacity', 0));
+function initFigures(projData, clusterData, labelData) {
+  const proj = projData.projections.find(p => p.n_neighbors === 15 && p.min_dist === 0.1);
+  const x = proj.x, y = proj.y;
+  const sizes = labels => {
+    const counts = new Map();
+    labels.forEach(l => { if (l >= 0) counts.set(l, (counts.get(l) || 0) + 1); });
+    return [...counts].map(([id, count]) => ({ id, count })).sort((a, b) => b.count - a.count);
+  };
+
+  // ---- Figure 1: min_cluster_size 5, legend, jokes of one cluster ----
+  const labels5 = clusterData.clusterings.find(c => c.min_cluster_size === 5).labels;
+  const names5 = labelData['5'] || {};
+  const name = id => names5[String(id)] || `cluster ${id}`;
+  const top = sizes(labels5).slice(0, 20);
+  figReady('fig-clusters');
+  const map1 = clusterMap('cluster-container', x, y);
+  const legend = document.getElementById('cluster-legend');
+  const title = document.getElementById('cluster-detail-title');
+  const list = document.getElementById('cluster-detail-list');
+  const buttons = new Map();
+  let texts = null, selected = 25; // "doctor, dentist, tooth"
+
+  function select(id) {
+    selected = id;
+    map1.set(labels5, id);
+    buttons.forEach((b, bid) => b.setAttribute('aria-pressed', String(bid === id)));
+    const members = [];
+    labels5.forEach((l, i) => { if (l === id) members.push(i); });
+    title.textContent = `${name(id)}: ${members.length} jokes`;
+    map1.canvas.setAttribute('aria-label',
+      `Scatter plot of 1,000 jokes coloured by 39 clusters, with gray noise points between them. The cluster "${name(id)}" (${members.length} jokes) is outlined.`);
+    list.innerHTML = texts
+      ? members.slice(0, 25).map(i => `<div class="cluster-joke">${escapeHtml(short(texts[i], 220))}</div>`).join('')
+      : `<div class="cluster-joke" style="color: var(--text-2)">${escapeHtml(list.dataset.msg || 'Loading the joke texts (2 MB)…')}</div>`;
   }
+  top.forEach(({ id, count }) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'legend-item';
+    b.innerHTML = `<span class="cluster-swatch" style="background: ${clusterColor(id)}"></span>${escapeHtml(name(id))} (${count})`;
+    b.addEventListener('click', () => select(id));
+    buttons.set(id, b); legend.appendChild(b);
+  });
+  map1.onPick(select);
+  select(selected);
+
+  // ---- Figure 2: four values of min_cluster_size ----
+  figReady('fig-resolution');
+  const map2 = clusterMap('resolution-container', x, y);
+  const info = document.getElementById('mcs-info');
+  const bar = document.getElementById('mcs-bar');
+  const controls = document.getElementById('mcs-controls');
+  controls.append('min_cluster_size: ');
+  const group = document.createElement('span');
+  group.className = 'btn-group';
+  controls.appendChild(group);
+  const mcsButtons = [];
+  function setMcs(mcs) {
+    const c = clusterData.clusterings.find(k => k.min_cluster_size === mcs);
+    const sz = sizes(c.labels);
+    const total = c.labels.length;
+    const summary = `${c.n_clusters} clusters, the largest with ${sz[0].count} jokes; ${c.n_noise} of ${total.toLocaleString()} jokes are noise.`;
+    info.textContent = summary;
+    bar.innerHTML = sz.map(s => `<span style="width:${s.count / total * 100}%; background:${clusterColor(s.id)}"></span>`).join('') +
+      `<span style="width:${c.n_noise / total * 100}%; background: var(--dot-muted)"></span>`;
+    bar.setAttribute('aria-label', `Bar dividing the 1,000 jokes: ${summary}`);
+    map2.set(c.labels);
+    map2.canvas.setAttribute('aria-label', `The same scatter plot coloured by HDBSCAN clusters at min_cluster_size ${mcs}. ${summary}`);
+    mcsButtons.forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.mcs === mcs)));
+  }
+  clusterData.clusterings.map(c => c.min_cluster_size).sort((a, b) => a - b).forEach(mcs => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn'; b.textContent = mcs; b.dataset.mcs = mcs;
+    b.addEventListener('click', () => setMcs(mcs));
+    mcsButtons.push(b); group.appendChild(b);
+  });
+  setMcs(10);
+
+  return {
+    setTexts(t) { texts = t; select(selected); },
+    textsFailed(err) { list.dataset.msg = err.message + ' The map and legend still work, without the joke texts.'; select(selected); },
+  };
 }
 
 async function init() {
-  const [projData, clusterData, labelData, jokesData] = await Promise.all([
-    fetch('data/umap-projections.json').then(r => r.json()),
-    fetch('data/clusters.json').then(r => r.json()),
-    fetch('data/cluster-labels.json').then(r => r.json()),
-    fetch('data/jokes-1k.json').then(r => r.json()),
-  ]);
-
-  const texts = jokesData.texts;
-  const proj = projData.projections[1]; // nn=15, md=0.1
-  const x = proj.x, y = proj.y;
-
-  // Figure 1: Cluster scatter with legend
-  const mcs5 = clusterData.clusterings.find(c => c.min_cluster_size === 5);
-  const labels5 = mcs5.labels;
-
-  // Count clusters
-  const clusterCounts = {};
-  labels5.forEach(l => { if (l >= 0) clusterCounts[l] = (clusterCounts[l] || 0) + 1; });
-  const sortedClusters = Object.entries(clusterCounts)
-    .sort((a, b) => b[1] - a[1])
-    .map(([id, count]) => ({ id: +id, count }));
-
-  drawClusterScatter('cluster-container', x, y, labels5, texts);
-
-  // Build legend
-  const legend = document.getElementById('cluster-legend');
-  const clusterLabels5 = labelData["5"] || {};
-
-  sortedClusters.slice(0, 20).forEach(({ id, count }) => {
-    const label = clusterLabels5[String(id)] || `cluster ${id}`;
-    const item = document.createElement('span');
-    item.className = 'cluster-legend-item';
-    item.innerHTML = `<span class="cluster-swatch" style="background: ${clusterColor(id)}"></span>${label} (${count})`;
-    item.addEventListener('click', () => {
-      drawClusterScatter('cluster-container', x, y, labels5, texts, { highlight: id });
-      // Show jokes in this cluster
-      const detail = document.getElementById('cluster-detail');
-      detail.style.display = 'block';
-      document.getElementById('cluster-detail-title').textContent = `${label} (${count} jokes)`;
-      const jokesList = labels5.reduce((acc, l, i) => {
-        if (l === id) acc.push(texts[i]);
-        return acc;
-      }, []);
-      document.getElementById('cluster-detail-list').innerHTML =
-        jokesList.slice(0, 20).map(j => `<div class="cluster-joke">${escapeHtml(j)}</div>`).join('');
-    });
-    legend.appendChild(item);
-  });
-
-  // Add "show all" link
-  const showAll = document.createElement('span');
-  showAll.className = 'cluster-legend-item';
-  showAll.style.color = 'var(--accent)';
-  showAll.textContent = '[show all]';
-  showAll.addEventListener('click', () => {
-    drawClusterScatter('cluster-container', x, y, labels5, texts);
-    document.getElementById('cluster-detail').style.display = 'none';
-  });
-  legend.appendChild(showAll);
-
-  // Figure 2: Resolution slider
-  const clusterMap = {};
-  clusterData.clusterings.forEach(c => {
-    clusterMap[c.min_cluster_size] = c;
-  });
-
-  function updateResolution() {
-    const mcs = +document.getElementById('mcs-select').value;
-    const clustering = clusterMap[mcs];
-    if (!clustering) return;
-    document.getElementById('mcs-info').textContent =
-      `${clustering.n_clusters} clusters, ${clustering.n_noise} noise`;
-    drawClusterScatter('resolution-container', x, y, clustering.labels, texts);
-  }
-
-  document.getElementById('mcs-select').addEventListener('change', updateResolution);
-  updateResolution();
+  // The maps need three small files (about 110 KB together). The joke texts
+  // come from the 2.2 MB corpus file and fill in the list when they arrive.
+  const corpusPromise = loadJSON('data/jokes-1k.json');
+  corpusPromise.catch(() => {});
+  let figs;
+  try {
+    const [projData, clusterData, labelData] = await Promise.all([
+      loadJSON('data/umap-projections.json'),
+      loadJSON('data/clusters.json'),
+      loadJSON('data/cluster-labels.json'),
+    ]);
+    figs = initFigures(projData, clusterData, labelData);
+  } catch (err) { figError('fig-clusters', err); figError('fig-resolution', err); return; }
+  try { figs.setTexts((await corpusPromise).texts); }
+  catch (err) { figs.textsFailed(err); }
 }
 
 init();

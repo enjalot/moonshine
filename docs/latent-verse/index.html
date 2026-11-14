@@ -9,47 +9,131 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
+  color-scheme: light dark;
   --article-width: 740px;
   --body-font: 'Source Serif 4', Georgia, serif;
   --heading-font: 'Source Sans 3', system-ui, sans-serif;
   --mono-font: 'Source Code Pro', monospace;
-  --body-size: 1.125rem; --line-height: 1.6;
-  --text: #1a1a2e; --text-2: #4a4a6a;
-  --accent: #2563eb; --accent-light: #dbeafe;
-  --bg: #fafafa; --fig-bg: #ffffff; --border: #e2e2e8;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --accent: #2563eb;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+  --rule: #ececf2;
+  --track: #ececf2;
+  --code-bg: #f0f0f5;
+  /* figure colours, the same in every chapter */
+  --pos: #d9722a;        /* positive embedding values */
+  --neg: #3f7fbf;        /* negative embedding values */
+  --diff: #8a5fb5;       /* difference between two embeddings */
+  --axis: #b9b9c8;
+  --dot: #4a6fa5;        /* a joke on a map */
+  --dot-muted: #c4c4d2;  /* noise, unselected, background */
+  --context: #d8d8e2;    /* basemap training texts */
+  --hl: #e8791d;         /* neighbours and featured jokes */
+  --mark: #d62839;       /* the selected joke */
+  --specific: #d1495b;   /* SAE feature that fires on few jokes */
+  --broad: #a9a9bd;      /* SAE feature that fires on many */
 }
-body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e6e6ef; --text-2: #a9a9c0; --accent: #7aa5f8;
+    --bg: #14141c; --fig-bg: #1c1c27; --border: #34344a;
+    --rule: #2a2a3a; --track: #2a2a3a; --code-bg: #2a2a3a;
+    --pos: #f0934f; --neg: #6aa5e0; --diff: #b592dd; --axis: #5a5a72;
+    --dot: #7ea6dc; --dot-muted: #4a4a60; --context: #33334a;
+    --hl: #ffa04d; --mark: #ff5d6c; --specific: #f0707f; --broad: #6c6c86;
+  }
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
 .article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
 h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
 h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
+h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+h3 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
 p { margin: 0 0 1rem; }
 a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+code { font-family: var(--mono-font); font-size: 0.9em; background: var(--code-bg); padding: 0.15em 0.35em; border-radius: 3px; }
+.kicker { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.25rem; }
+.kicker a { color: var(--text-2); text-decoration: none; }
+.subtitle { font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2); }
+.byline { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem; }
 
+.figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.figure-wide { margin-left: -2rem; margin-right: -2rem; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
+.figure-label { font-weight: 600; color: var(--text); }
+.fig-status { font-family: var(--heading-font); font-size: 0.9rem; color: var(--text-2); padding: 1.25rem 0; margin: 0; }
+.fig-status.error { color: var(--text); border-left: 3px solid var(--pos); padding: 0.5rem 0 0.5rem 0.75rem; }
+.fig-status[hidden], .fig-body[hidden] { display: none; }
+.field-label { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.3rem; display: block; }
+.joke-picker {
+  font-family: var(--body-font); font-size: 1rem; padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg);
+  color: var(--text); cursor: pointer; width: 100%; min-width: 0;
+}
+.controls { display: flex; align-items: center; gap: 0.4rem 1.25rem; flex-wrap: wrap; margin-bottom: 0.75rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.btn-group { display: inline-flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
+.btn {
+  font-family: var(--heading-font); font-size: 0.85rem; padding: 0.3rem 0.65rem; min-height: 2rem;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text); cursor: pointer;
+}
+.btn:hover { border-color: var(--accent); }
+.btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--fig-bg); }
+.map-box { width: 100%; height: 460px; position: relative; }
+.map-box canvas { display: block; touch-action: pan-y; }
+.map-box canvas:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.readout { font-family: var(--heading-font); font-size: 0.9rem; color: var(--text-2); margin-top: 0.6rem; min-height: 4.4em; }
+.readout .picked { font-family: var(--body-font); font-style: italic; color: var(--text); font-size: 0.95rem; display: block; overflow-wrap: anywhere; }
+.swatch { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; margin-right: 0.25rem; vertical-align: -1px; }
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .figure { padding: 1rem; }
+  .figure-wide { margin-left: 0; margin-right: 0; }
+  .map-box { height: 320px; }
+  .btn-group { display: flex; width: 100%; }
+  .btn-group .lbl { flex-basis: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
 .card-list { display: flex; flex-direction: column; gap: 1rem; margin: 2.5rem 0; }
 .card {
   display: grid; grid-template-columns: 80px 1fr; gap: 1.25rem;
   background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px;
   padding: 1.25rem 1.5rem; text-decoration: none; transition: border-color 0.15s;
 }
-.card:hover { border-color: var(--accent); }
-.card-thumb {
-  width: 80px; height: 80px; border-radius: 4px; overflow: hidden;
-  display: flex; align-items: center; justify-content: center;
-}
-.card-thumb canvas { width: 80px; height: 80px; }
-.card-body { display: flex; flex-direction: column; justify-content: center; }
-.card-number { font-family: var(--mono-font); font-size: 0.8rem; color: var(--text-2); }
-.card-title { font-family: var(--heading-font); font-weight: 700; font-size: 1.2rem; color: var(--text); margin-bottom: 0.3rem; }
+.card:hover, .card:focus-visible { border-color: var(--accent); }
+.card-thumb { width: 80px; height: 80px; align-self: center; }
+.card-thumb canvas { width: 80px; height: 80px; display: block; }
+.card-body { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.card-number { font-family: var(--mono-font); font-size: 0.8125rem; color: var(--text-2); }
+.card-title { font-family: var(--heading-font); font-weight: 700; font-size: 1.2rem; line-height: 1.25; color: var(--text); margin-bottom: 0.3rem; }
 .card-desc { font-size: 0.95rem; color: var(--text-2); margin: 0; }
-.card-tags { font-family: var(--heading-font); font-size: 0.75rem; color: var(--accent); margin-top: 0.5rem; }
+.card-tags { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--accent); margin-top: 0.5rem; }
 
-.header-scatter { width: 100%; height: 180px; margin: 1.25rem 0 0.5rem; border-radius: 4px; display: block; background: #f5f5fa; }
+.header-scatter { width: 100%; height: 200px; margin: 1.25rem 0 0; display: block; }
+.header-note { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin: 0.25rem 0 1.25rem; }
 
 @media (max-width: 640px) {
-  h1 { font-size: 1.75rem; }
-  .card { grid-template-columns: 1fr; }
+  .card { grid-template-columns: 1fr; padding: 1rem 1.1rem; }
   .card-thumb { display: none; }
+  .header-scatter { height: 170px; }
 }
 </style>
 </head>
@@ -57,10 +141,10 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
 <div class="article">
   <header>
     <h1>Latent Verse</h1>
-    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
-      A workbench for studying latent spaces.
-    </p>
-    <canvas id="header-scatter" class="header-scatter"></canvas>
+    <p class="subtitle">A workbench for studying latent spaces.</p>
+    <canvas id="header-scatter" class="header-scatter" role="img"
+      aria-label="Scatter plot of 53,133 dad jokes projected to two dimensions: a dense central mass ringed by small islands."></canvas>
+    <p class="header-note" id="header-note">53,133 dad jokes, each a dot, placed by the similarity of their embeddings. Part 2 builds this map.</p>
   </header>
 
   <p>
@@ -70,64 +154,68 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
   </p>
 
   <p>
-    This series explores that structure. Using 53,000 dad jokes as our specimen, we build up a
-    set of tools for seeing what models have learned: projecting high-dimensional spaces into
-    visible landscapes, finding and naming groups, decomposing embeddings into interpretable
-    features, and constructing permanent maps of meaning.
+    Using 53,000 dad jokes as our specimen, we build up a set of tools for seeing that
+    structure: projecting embeddings onto a 2D map, finding and naming groups, decomposing
+    embeddings into interpretable features, and training a map that stays fixed from one
+    dataset to the next.
   </p>
 
   <p>
-    Each article adds one piece: an embedding model as the lens, UMAP as the projector,
-    clustering, a sparse autoencoder as the filter, and a basemap that ties them together.
+    Each article adds one piece, and each piece has a nickname we use along the way: the
+    embedding model is the lens, UMAP the projector, the sparse autoencoder the filter, and
+    the fixed map with its feature names the atlas. The tools are open source:
+    <a href="https://github.com/enjalot/latent-scope">Latent Scope</a> covers Parts 1 to 3,
+    <a href="https://github.com/enjalot/latent-sae">latent-sae</a> trains the features in Part 4
+    and <a href="https://github.com/enjalot/latent-basemap">latent-basemap</a> the map in Part 5.
   </p>
 
   <div class="card-list">
     <a class="card" href="01-the-lens.html">
-      <div class="card-thumb"><canvas id="thumb-1"></canvas></div>
+      <div class="card-thumb" aria-hidden="true"><canvas id="thumb-1"></canvas></div>
       <div class="card-body">
-        <div class="card-number">01</div>
-        <div class="card-title">The Lens</div>
-        <p class="card-desc">An embedding model turns text into numbers that encode meaning. Similar texts get similar numbers.</p>
+        <div class="card-number">01 · the lens</div>
+        <div class="card-title">Embeddings: text as a list of numbers</div>
+        <p class="card-desc">An embedding model turns a joke into 384 numbers. We compare pairs of jokes by cosine similarity and search 1,000 jokes by meaning.</p>
         <div class="card-tags">embeddings &middot; cosine similarity &middot; nearest neighbor search</div>
       </div>
     </a>
 
     <a class="card" href="02-the-projector.html">
-      <div class="card-thumb"><canvas id="thumb-2"></canvas></div>
+      <div class="card-thumb" aria-hidden="true"><canvas id="thumb-2"></canvas></div>
       <div class="card-body">
-        <div class="card-number">02</div>
-        <div class="card-title">The Projector</div>
-        <p class="card-desc">UMAP flattens high-dimensional embeddings into two dimensions so you can see the whole landscape.</p>
+        <div class="card-number">02 · the projector</div>
+        <div class="card-title">Projecting embeddings to 2D with UMAP</div>
+        <p class="card-desc">UMAP flattens 384 dimensions into a map. We look at which neighbors it keeps, how its parameters change the layout, and why the map moves when the data does.</p>
         <div class="card-tags">UMAP &middot; dimensionality reduction &middot; scatter plot</div>
       </div>
     </a>
 
     <a class="card" href="03-finding-structure.html">
-      <div class="card-thumb"><canvas id="thumb-3"></canvas></div>
+      <div class="card-thumb" aria-hidden="true"><canvas id="thumb-3"></canvas></div>
       <div class="card-body">
-        <div class="card-number">03</div>
-        <div class="card-title">Finding Structure</div>
-        <p class="card-desc">Clustering algorithms find groups in the data. Labels give those groups names. Both are choices, not facts.</p>
+        <div class="card-number">03 · finding structure</div>
+        <div class="card-title">Clustering and labeling a map</div>
+        <p class="card-desc">HDBSCAN groups the dots and keywords name the groups. One parameter takes the same 1,000 jokes from 39 clusters to 3.</p>
         <div class="card-tags">HDBSCAN &middot; clustering &middot; labeling</div>
       </div>
     </a>
 
     <a class="card" href="04-the-filter.html">
-      <div class="card-thumb"><canvas id="thumb-4"></canvas></div>
+      <div class="card-thumb" aria-hidden="true"><canvas id="thumb-4"></canvas></div>
       <div class="card-body">
-        <div class="card-number">04</div>
-        <div class="card-title">The Filter</div>
-        <p class="card-desc">A Sparse Autoencoder decomposes embeddings into interpretable features. It works on any text, not just this dataset.</p>
+        <div class="card-number">04 · the filter</div>
+        <div class="card-title">Decomposing embeddings with a sparse autoencoder</div>
+        <p class="card-desc">A sparse autoencoder describes each joke with 64 of 49,152 labeled features. The features were learned from web text, and they name a joke's subject but not its pun.</p>
         <div class="card-tags">sparse autoencoder &middot; features &middot; taxonomy</div>
       </div>
     </a>
 
     <a class="card" href="05-the-atlas.html">
-      <div class="card-thumb"><canvas id="thumb-5"></canvas></div>
+      <div class="card-thumb" aria-hidden="true"><canvas id="thumb-5"></canvas></div>
       <div class="card-body">
-        <div class="card-number">05</div>
-        <div class="card-title">The Atlas</div>
-        <p class="card-desc">A parametric UMAP gives every text a permanent address. Paired with an SAE, it lets you name the regions of the map.</p>
+        <div class="card-number">05 · the atlas</div>
+        <div class="card-title">A basemap: one fixed map for every dataset</div>
+        <p class="card-desc">A parametric UMAP trained on 50 million web texts gives every text a permanent position. Coloring it by SAE features shows which regions can be named.</p>
         <div class="card-tags">parametric UMAP &middot; basemap &middot; global features</div>
       </div>
     </a>
@@ -140,6 +228,81 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
 </div>
 
 <script>
+// ---- shared helpers (the same block is inlined in every chapter) -------
+const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+const short = (t, n) => { t = t.replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n).trimEnd() + '…' : t; };
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Data lives in data/ next to this page. A failed or blocked request becomes
+// a readable message inside the figure that needed it.
+async function loadJSON(path) {
+  let res;
+  try { res = await fetch(path); }
+  catch (e) {
+    throw new Error(location.protocol === 'file:'
+      ? `This figure reads ${path}, and browsers block that when the page is opened straight from disk. Serve the folder (for example python3 -m http.server) and open it over http.`
+      : `Could not load ${path}. Check the connection and reload the page.`);
+  }
+  if (!res.ok) throw new Error(`Could not load ${path} (HTTP ${res.status}).`);
+  try { return await res.json(); }
+  catch (e) { throw new Error(`${path} arrived but could not be read as JSON.`); }
+}
+function figReady(figId) {
+  const fig = document.getElementById(figId);
+  fig.querySelector('.fig-status').hidden = true;
+  fig.querySelector('.fig-body').hidden = false;
+}
+function figError(figId, err) {
+  const fig = document.getElementById(figId);
+  const s = fig.querySelector('.fig-status');
+  s.hidden = false; s.classList.add('error'); s.textContent = err.message;
+  if (!/^(This figure reads|Could not load)/.test(err.message)) console.error(err);
+  fig.querySelector('.fig-body').hidden = true;
+}
+
+// Redraw canvases when the window is resized or the colour scheme flips.
+const redraws = [];
+function redrawAll() { redraws.forEach(f => f()); }
+{
+  let timer;
+  window.addEventListener('resize', () => { clearTimeout(timer); timer = setTimeout(redrawAll, 150); });
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redrawAll);
+}
+
+// A canvas sized to its container, in CSS pixels.
+function fitCanvas(el, canvas) {
+  const rect = el.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  const dpr = window.devicePixelRatio || 1;
+  if (el !== canvas) { canvas.style.width = W + 'px'; canvas.style.height = H + 'px'; }
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, W, H };
+}
+
+// Scales that fit [x0,x1] x [y0,y1] into a W x H box, keeping the aspect ratio.
+function fitScales(xExt, yExt, W, H, margin = 12) {
+  const xR = (xExt[1] - xExt[0]) || 1, yR = (yExt[1] - yExt[0]) || 1;
+  const pad = 0.04;
+  const pX = xR * (1 + pad * 2), pY = yR * (1 + pad * 2);
+  const aW = W - margin * 2, aH = H - margin * 2;
+  const s = Math.min(aW / pX, aH / pY);
+  const ox = margin + (aW - pX * s) / 2, oy = margin + (aH - pY * s) / 2;
+  return {
+    x: v => ox + (v - xExt[0] + xR * pad) * s,
+    y: v => oy + pY * s - (v - yExt[0] + yR * pad) * s,
+  };
+}
+// Extent that ignores the most extreme 0.5% at each end, so a few far-flung
+// points don't shrink the map.
+function robustExtent(vals, q = 0.005) {
+  const v = Float64Array.from(vals).sort();
+  return [d3.quantileSorted(v, q), d3.quantileSorted(v, 1 - q)];
+}
+function dot(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+function ring(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke(); }
 function decodeF32(b64) {
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
@@ -147,180 +310,92 @@ function decodeF32(b64) {
   return new Float32Array(bytes.buffer);
 }
 
-function drawMiniScatter(canvasId, x, y, opts = {}) {
-  const canvas = document.getElementById(canvasId);
-  if (!canvas) return;
-  const dpr = window.devicePixelRatio || 1;
-  const size = opts.size || 80;
-  canvas.width = size * dpr;
-  canvas.height = size * dpr;
-  canvas.style.width = size + 'px';
-  canvas.style.height = size + 'px';
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  const n = x.length;
-  const xExt = d3.extent(x), yExt = d3.extent(y);
-  const pad = 0.08;
-  const xR = (xExt[1] - xExt[0]) || 1, yR = (yExt[1] - yExt[0]) || 1;
-  const paddedXR = xR * (1 + pad * 2);
-  const paddedYR = yR * (1 + pad * 2);
-
-  // Preserve aspect ratio
-  const inner = size - 8;
-  const scale = Math.min(inner / paddedXR, inner / paddedYR);
-  const dataW = paddedXR * scale;
-  const dataH = paddedYR * scale;
-  const offX = (size - dataW) / 2;
-  const offY = (size - dataH) / 2;
-
-  const xS = d3.scaleLinear().domain([xExt[0]-xR*pad, xExt[1]+xR*pad]).range([offX, offX + dataW]);
-  const yS = d3.scaleLinear().domain([yExt[0]-yR*pad, yExt[1]+yR*pad]).range([offY + dataH, offY]);
-
-  ctx.fillStyle = '#f5f5fa';
-  ctx.fillRect(0, 0, size, size);
-
-  const r = opts.pointR || (n > 5000 ? 0.5 : n > 500 ? 1 : 1.5);
-  ctx.globalAlpha = n > 5000 ? 0.15 : n > 500 ? 0.35 : 0.5;
-  ctx.fillStyle = opts.color || '#4a6fa5';
-
-  for (let i = 0; i < n; i++) {
-    ctx.beginPath();
-    ctx.arc(xS(x[i]), yS(y[i]), r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
+// An 80px thumbnail: draw(ctx, size) is called now and on every redraw.
+function thumb(id, draw) {
+  const canvas = document.getElementById(id);
+  const render = () => {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = 80 * dpr; canvas.height = 80 * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw(ctx, 80);
+  };
+  render(); redraws.push(render);
 }
-
-// Header scatter using full UMAP data
-async function init() {
-  const [fullData, projData, clusterData, basemapData] = await Promise.all([
-    fetch('data/umap-full.json').then(r => r.json()),
-    fetch('data/umap-projections.json').then(r => r.json()),
-    fetch('data/clusters.json').then(r => r.json()),
-    fetch('data/atlas-thumb.json').then(r => r.json()),
-  ]);
-
-  // Header: wide scatter of all 53k jokes, preserving aspect ratio
-  const fullX = decodeF32(fullData.x_b64);
-  const fullY = decodeF32(fullData.y_b64);
-
-  const headerCanvas = document.getElementById('header-scatter');
-  const dpr = window.devicePixelRatio || 1;
-  const rect = headerCanvas.getBoundingClientRect();
-  const W = rect.width, H = rect.height;
-  headerCanvas.width = W * dpr;
-  headerCanvas.height = H * dpr;
-  const ctx = headerCanvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  const xExt = d3.extent(fullX), yExt = d3.extent(fullY);
-  const pad = 0.05;
-  const xR = (xExt[1]-xExt[0]) * (1 + pad * 2);
-  const yR = (yExt[1]-yExt[0]) * (1 + pad * 2);
-
-  // Preserve aspect ratio: fit data into canvas with letterboxing
-  const scale = Math.min(W / xR, H / yR);
-  const dataW = xR * scale;
-  const dataH = yR * scale;
-  const offsetX = (W - dataW) / 2;
-  const offsetY = (H - dataH) / 2;
-
-  const xS = d3.scaleLinear()
-    .domain([xExt[0] - (xExt[1]-xExt[0])*pad, xExt[1] + (xExt[1]-xExt[0])*pad])
-    .range([offsetX, offsetX + dataW]);
-  const yS = d3.scaleLinear()
-    .domain([yExt[0] - (yExt[1]-yExt[0])*pad, yExt[1] + (yExt[1]-yExt[0])*pad])
-    .range([offsetY + dataH, offsetY]);
-
-  ctx.clearRect(0, 0, W, H);
-  ctx.globalAlpha = 0.15;
-  ctx.fillStyle = '#4a6fa5';
-  for (let i = 0; i < fullX.length; i++) {
-    ctx.beginPath();
-    ctx.arc(xS(fullX[i]), yS(fullY[i]), 0.9, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  // Thumbnails
-  // 1: Embedding bars (simple colored bars)
-  const t1 = document.getElementById('thumb-1');
-  const t1ctx = t1.getContext('2d');
-  const t1dpr = dpr;
-  t1.width = 80 * t1dpr; t1.height = 80 * t1dpr;
-  t1ctx.scale(t1dpr, t1dpr);
-  t1ctx.fillStyle = '#f5f5fa';
-  t1ctx.fillRect(0, 0, 80, 80);
-  const pos = d3.interpolateOranges, neg = d3.interpolateBlues;
-  for (let i = 0; i < 80; i++) {
-    const v = Math.sin(i * 0.3) * Math.cos(i * 0.17) + Math.sin(i * 0.7) * 0.5;
-    const norm = Math.abs(v);
-    const barH = norm * 35;
-    if (v >= 0) {
-      t1ctx.fillStyle = pos(0.3 + norm * 0.5);
-      t1ctx.fillRect(i, 40 - barH, 1, barH);
-    } else {
-      t1ctx.fillStyle = neg(0.3 + norm * 0.5);
-      t1ctx.fillRect(i, 40, 1, barH);
-    }
-  }
-
-  // 2: UMAP scatter
-  const proj = projData.projections[1];
-  drawMiniScatter('thumb-2', proj.x, proj.y);
-
-  // 3: Clustered scatter (preserve aspect ratio)
-  const mcs5 = clusterData.clusterings.find(c => c.min_cluster_size === 5);
-  const t3 = document.getElementById('thumb-3');
-  t3.width = 80 * dpr; t3.height = 80 * dpr;
-  t3.style.width = '80px'; t3.style.height = '80px';
-  const t3ctx = t3.getContext('2d');
-  t3ctx.scale(dpr, dpr);
-  t3ctx.fillStyle = '#f5f5fa';
-  t3ctx.fillRect(0, 0, 80, 80);
-  const colors = d3.schemeTableau10;
-  const nPts = proj.x.length;
-  const pxExt = d3.extent(proj.x), pyExt = d3.extent(proj.y);
-  const pxR = pxExt[1] - pxExt[0], pyR = pyExt[1] - pyExt[0];
-  const innerT3 = 72;
-  const scT3 = Math.min(innerT3 / pxR, innerT3 / pyR);
-  const dwT3 = pxR * scT3, dhT3 = pyR * scT3;
-  const oxT3 = (80 - dwT3) / 2, oyT3 = (80 - dhT3) / 2;
-  const t3xS = d3.scaleLinear().domain(pxExt).range([oxT3, oxT3 + dwT3]);
-  const t3yS = d3.scaleLinear().domain(pyExt).range([oyT3 + dhT3, oyT3]);
-  t3ctx.globalAlpha = 0.5;
-  for (let i = 0; i < nPts; i++) {
-    const c = mcs5.labels[i];
-    t3ctx.fillStyle = c < 0 ? '#d0d0d8' : colors[c % 10];
-    t3ctx.beginPath();
-    t3ctx.arc(t3xS(proj.x[i]), t3yS(proj.y[i]), 1.5, 0, Math.PI * 2);
-    t3ctx.fill();
-  }
-  t3ctx.globalAlpha = 1;
-
-  // 4: Feature bars
-  const t4 = document.getElementById('thumb-4');
-  t4.width = 80 * dpr; t4.height = 80 * dpr;
-  const t4ctx = t4.getContext('2d');
-  t4ctx.scale(dpr, dpr);
-  t4ctx.fillStyle = '#f5f5fa';
-  t4ctx.fillRect(0, 0, 80, 80);
-  const featureHeights = [0.92, 0.88, 0.85, 0.82, 0.65, 0.58, 0.45, 0.38];
-  const barColor = d3.scaleSequential(d3.interpolateYlOrRd).domain([0, 1]);
-  featureHeights.forEach((h, i) => {
-    const y = 6 + i * 9;
-    t4ctx.fillStyle = barColor(h);
-    t4ctx.fillRect(6, y, h * 68, 7);
+function thumbScatter(id, x, y, colorOf, r = 1.2, alpha = 0.5) {
+  thumb(id, (ctx, size) => {
+    const s = fitScales(robustExtent(x), robustExtent(y), size, size, 3);
+    ctx.globalAlpha = alpha;
+    for (let i = 0; i < x.length; i++) { ctx.fillStyle = colorOf(i); dot(ctx, s.x(x[i]), s.y(y[i]), r); }
   });
-
-  // 5: Basemap scatter
-  const bx = basemapData.jokes.map(p => p[0]);
-  const by = basemapData.jokes.map(p => p[1]);
-  drawMiniScatter('thumb-5', bx, by, { color: '#6b5b95' });
 }
 
-init();
+// Header: all 53,133 jokes
+loadJSON('data/umap-full.json').then(full => {
+  const x = decodeF32(full.x_b64), y = decodeF32(full.y_b64);
+  const xe = robustExtent(x), ye = robustExtent(y);
+  const canvas = document.getElementById('header-scatter');
+  const draw = () => {
+    const { ctx, W, H } = fitCanvas(canvas, canvas);
+    const s = fitScales(xe, ye, W, H, 4);
+    ctx.fillStyle = cssVar('--dot');
+    ctx.globalAlpha = 0.25;
+    for (let i = 0; i < x.length; i++) ctx.fillRect(s.x(x[i]) - 0.5, s.y(y[i]) - 0.5, 1, 1);
+  };
+  draw(); redraws.push(draw);
+}).catch(err => {
+  document.getElementById('header-scatter').style.display = 'none';
+  document.getElementById('header-note').textContent = 'The map of all 53,133 jokes did not load. ' + err.message;
+});
+
+// Card thumbnails are miniatures of each chapter's first figure, drawn from
+// that chapter's data. They are hidden on phones, so skip the downloads there.
+if (!window.matchMedia('(max-width: 640px)').matches) {
+  const quiet = () => {}; // a missing thumbnail leaves its square empty
+
+  // 1: the embedding of the first joke
+  loadJSON('data/fixtures.json').then(f => {
+    const emb = decodeF32(f.joke_embeddings_b64).subarray(0, f.dimensions);
+    const scale = d3.max(emb, Math.abs);
+    thumb('thumb-1', (ctx, size) => {
+      const step = emb.length / size; // one bar per pixel: the largest value in each bin
+      for (let px = 0; px < size; px++) {
+        let v = 0;
+        for (let d = Math.floor(px * step); d < Math.floor((px + 1) * step); d++) if (Math.abs(emb[d]) > Math.abs(v)) v = emb[d];
+        const h = Math.abs(v) / scale * size * 0.45;
+        ctx.fillStyle = cssVar(v >= 0 ? '--pos' : '--neg');
+        ctx.fillRect(px, v >= 0 ? size / 2 - h : size / 2, 1, h);
+      }
+    });
+  }).catch(quiet);
+
+  // 2 and 3: the 1,000-joke UMAP, plain and coloured by cluster
+  const projP = loadJSON('data/umap-projections.json').then(d => d.projections.find(p => p.n_neighbors === 15 && p.min_dist === 0.1));
+  projP.then(p => thumbScatter('thumb-2', p.x, p.y, () => cssVar('--dot'))).catch(quiet);
+  Promise.all([projP, loadJSON('data/clusters.json')]).then(([p, c]) => {
+    const labels = c.clusterings.find(k => k.min_cluster_size === 5).labels;
+    const palette = [...d3.schemeTableau10, ...d3.schemeDark2, ...d3.schemeSet1, ...d3.schemeSet2];
+    thumbScatter('thumb-3', p.x, p.y, i => labels[i] < 0 ? cssVar('--dot-muted') : palette[labels[i] % palette.length], 1.4, 0.7);
+  }).catch(quiet);
+
+  // 4: the eight strongest SAE features of the first joke
+  loadJSON('data/sae-real.json').then(sae => {
+    const feats = sae.jokes[0].features.slice(0, 8);
+    const max = d3.max(feats, f => f[1]);
+    thumb('thumb-4', (ctx, size) => {
+      feats.forEach(([idx, act], i) => {
+        const specific = (sae.fires[String(idx)] || 0) / sae.provenance.n_jokes < 0.05;
+        ctx.fillStyle = cssVar(specific ? '--specific' : '--broad');
+        ctx.fillRect(4, 5 + i * 9, act / max * (size - 8), 6);
+      });
+    });
+  }).catch(quiet);
+
+  // 5: jokes on the basemap
+  loadJSON('data/atlas-thumb.json').then(b => {
+    thumbScatter('thumb-5', b.jokes.map(p => p[0]), b.jokes.map(p => p[1]), () => cssVar('--dot'));
+  }).catch(quiet);
+}
 </script>
 </body>
 </html>

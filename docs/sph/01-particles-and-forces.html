@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Particles, Neighborhoods, and Forces — SPH</title>
+<title>Particles, Neighborhoods, and Forces · SPH</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
@@ -26,6 +26,12 @@
   --bg: #fafafa;
   --fig-bg: #ffffff;
   --border: #e2e2e8;
+  --canvas-bg: #f0f4f8;
+  --wall: #94a3b8;
+  --wall-2: #64748b;
+  --eq-bg: #f8f7ff;
+  --code-bg: #f6f8fa;
+  --comment: #6b7280;
   --c-kernel: #059669;
   --c-density: #7c3aed;
   --c-pressure: #dc2626;
@@ -33,6 +39,17 @@
   --c-mass: #d97706;
   --c-position: #0891b2;
   --c-velocity: #be185d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e6dd; --text-2: #a8a8bc; --accent: #7aa7ff; --accent-light: #26335c;
+    --bg: #16162a; --fig-bg: #1f1f36; --border: #3a3a52;
+    --canvas-bg: #14142a; --wall: #64748b; --wall-2: #94a3b8;
+    --eq-bg: #24243f; --code-bg: #1a1a30; --comment: #8b93a7;
+    --c-kernel: #34d399; --c-density: #a78bfa; --c-pressure: #f87171; --c-viscosity: #60a5fa;
+    --c-mass: #fbbf24; --c-position: #22d3ee; --c-velocity: #f472b6;
+  }
 }
 
 body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
@@ -47,30 +64,28 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
 
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .figure-wide { margin-left: -2rem; margin-right: -2rem; }
-.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.75rem; }
 .figure-label { font-weight: 600; color: var(--text); }
 
-.insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
-.insight p { margin: 0; }
-
 .controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
-.controls input[type="range"] { width: 140px; accent-color: var(--accent); }
+.controls input[type="range"] { width: 140px; max-width: 100%; accent-color: var(--accent); }
 .controls label { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
-.controls button { font-family: var(--heading-font); font-size: 0.85rem; padding: 0.25rem 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); cursor: pointer; }
+.controls button, .motion-btn { font-family: var(--heading-font); font-size: 0.85rem; padding: 0.35rem 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text); cursor: pointer; }
+.motion-btn { margin-bottom: 1rem; }
 .controls button:hover { background: var(--bg); }
 
 svg text { font-family: var(--heading-font); }
 
-.eq-code-stack { margin: 1.5rem 0; border-radius: 6px; overflow: hidden; border: 1px solid #e8e6f0; }
-.eq-block { padding: 1rem 1.25rem; background: #f8f7ff; text-align: center; border-bottom: 1px solid #e8e6f0; }
-.eq-block .eq-label { font-family: var(--heading-font); font-size: 0.75rem; color: var(--text-2); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.eq-code-stack { margin: 1.5rem 0; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+.eq-block { padding: 1rem 1.25rem; background: var(--eq-bg); text-align: center; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.eq-block .eq-label { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-2); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
 .eq-rows { position: relative; }
-.eq-values-row { height: 2.2em; display: flex; align-items: center; justify-content: center; margin-top: 0.4rem; transition: opacity 0.15s; }
+.eq-values-row { min-height: 2.2em; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 0.4rem; }
 .eq-values-row.visible { opacity: 1; }
-.eq-hint { font-family: var(--heading-font); font-size: 0.7rem; color: var(--text-2); opacity: 0.5; font-style: italic; }
+.eq-hint { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-2); font-style: italic; }
 
-.code-block { padding: 1rem 1.25rem; background: #f6f8fa; color: #1a1a2e; font-family: var(--mono-font); font-size: 0.8rem; line-height: 1.6; overflow-x: auto; }
-.code-block .comment { color: #6b7280; }
+.code-block { padding: 1rem 1.25rem; background: var(--code-bg); color: var(--text); font-family: var(--mono-font); font-size: 0.8125rem; line-height: 1.6; overflow-x: auto; white-space: nowrap; }
+.code-block .comment { color: var(--comment); }
 .code-block .c-kernel { color: var(--c-kernel); }
 .code-block .c-density { color: var(--c-density); }
 .code-block .c-pressure { color: var(--c-pressure); }
@@ -88,10 +103,12 @@ svg text { font-family: var(--heading-font); }
 .t-velocity { color: var(--c-velocity); font-weight: 600; }
 
 /* Sparkline container */
-.sparkline-container { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; font-family: var(--heading-font); font-size: 0.75rem; color: var(--text-2); }
+.sparkline-container { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-2); }
+.sim-canvas { display: block; width: 100%; border-radius: 4px; touch-action: pan-y; }
+svg [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .sparkline-container svg { display: block; }
 
-@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } }
+@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } .figure { padding: 1rem; } .eq-block { padding: 0.75rem 0.5rem; } .eq-block .katex { font-size: 1em; } .code-block { padding: 0.75rem; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
 </style>
 </head>
@@ -103,23 +120,26 @@ svg text { font-family: var(--heading-font); }
       How a fluid can emerge from particles that only know about their neighbors.
     </p>
     <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">
-      Part 1 of <a href="index.html">Smooth Particle Hydrodynamics</a>
+      Part 1 of <a href="index.html">Smoothed Particle Hydrodynamics</a>
     </p>
   </header>
 
   <h2>Particles Instead of Grid Cells</h2>
   <p>
     One way to simulate a fluid is to divide space into a grid and track
-    how much fluid is in each cell. Click and drag below to inject dye into a
-    grid-based fluid. The simulation advects density and velocity through fixed cells.
+    how much fluid is in each cell. The simulation below moves dye and velocity
+    from cell to cell through a fixed grid, and you can drag across it to inject more of both.
   </p>
 
   <div class="figure figure-wide" id="fig-grid">
-    <canvas id="grid-canvas" style="width:100%;border-radius:4px;cursor:crosshair;"></canvas>
+    <canvas id="grid-canvas" class="sim-canvas" style="cursor:crosshair;" role="img"
+      aria-label="A grid of square cells. A dye source moves in a circle and leaves a blue swirl that spreads and fades from cell to cell."></canvas>
     <div class="figure-caption">
       <span class="figure-label">Grid-based fluid.</span>
-      Click and drag to inject dye and force. The grid approach works well for enclosed flows
-      but struggles with splashing, free surfaces, and mixing.
+      A dye source circles the middle of the grid and the swirl it leaves is carried from
+      cell to cell. Drag across the grid to add dye and push the flow. Every cell is
+      updated on every step, including the ones with no dye in them. The grid approach
+      works well for enclosed flows but struggles with splashing, free surfaces, and mixing.
     </div>
   </div>
 
@@ -140,15 +160,17 @@ svg text { font-family: var(--heading-font); }
       <label>Alignment: <input type="range" id="boids-ali-slider" min="0" max="3" value="1.0" step="0.1"> <span id="boids-ali-val">1.0</span></label>
       <label>Cohesion: <input type="range" id="boids-coh-slider" min="0" max="3" value="1.0" step="0.1"> <span id="boids-coh-val">1.0</span></label>
     </div>
-    <canvas id="boids-canvas" style="width:100%;border-radius:4px;"></canvas>
+    <canvas id="boids-canvas" class="sim-canvas" style="cursor:pointer;" role="img"
+      aria-label="About a hundred small triangles moving as loose flocks. One is ringed, with a dashed circle for its neighbor radius and three short colored lines for the forces acting on it."></canvas>
     <div class="figure-caption">
       <span class="figure-label">Flocking (boids).</span>
-      Click a boid to select it and see its
-      <span class="t-kernel">neighbor radius</span> and force breakdown:
+      One boid is ringed. The dashed circle is its
+      <span class="t-kernel">neighbor radius</span> and the three lines are the forces it feels:
       <span style="color:var(--c-pressure)">separation</span>,
       <span style="color:var(--c-viscosity)">alignment</span>,
       <span style="color:var(--c-kernel)">cohesion</span>.
-      Each boid only knows about its neighbors, yet flocking emerges.
+      Click another boid to follow it instead. Each boid reacts only to the neighbors
+      inside that circle, and flocks form anyway.
     </div>
   </div>
 
@@ -162,9 +184,8 @@ svg text { font-family: var(--heading-font); }
 
   <h2>The Smoothing Kernel</h2>
   <p>
-    The "smooth" in SPH comes from the <span class="t-kernel">kernel function</span>.
-    It answers a simple question: how much should a particle care about a neighbor
-    at a given distance?
+    The "smoothed" in SPH comes from the <span class="t-kernel">kernel function</span>,
+    which says how much a particle should care about a neighbor at a given distance.
   </p>
   <p>
     A particle at the center of its <span class="t-kernel">smoothing radius</span>
@@ -178,7 +199,7 @@ svg text { font-family: var(--heading-font); }
         <div class="eq-label">Kernel function</div>
         <div class="eq-rows">
           <div id="eq-kernel"></div>
-          <div class="eq-values-row" id="eq-kernel-values"><span class="eq-hint">drag a neighbor particle</span></div>
+          <div class="eq-values-row" id="eq-kernel-values"></div>
         </div>
       </div>
       <div class="code-block">
@@ -188,13 +209,16 @@ svg text { font-family: var(--heading-font); }
       </div>
     </div>
     <div class="controls">
-      <label>Smoothing radius (h): <input type="range" id="kernel-h-slider" min="40" max="140" value="80" step="1"> <span id="kernel-h-val">80</span>px</label>
+      <label>Smoothing radius (h): <input type="range" id="kernel-h-slider" min="40" max="140" value="100" step="1"> <span id="kernel-h-val">100</span>px</label>
     </div>
     <div id="kernel-viz" style="display: flex; gap: 1rem; flex-wrap: wrap;"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 1.</span>
-      Drag <span class="t-position">neighbor particles</span> to see how the
-      <span class="t-kernel">kernel weight</span> changes. The equation updates with actual values.
+      Each <span class="t-position">neighbor</span> is labeled with its
+      <span class="t-kernel">kernel weight</span>, and the same neighbors sit on the curve
+      at right. The weight falls off fast: a neighbor halfway to the dashed radius already
+      counts for only an eighth. Drag a neighbor (or focus it and use the arrow keys) and
+      the equation fills in with its distance.
     </div>
   </div>
 
@@ -207,10 +231,12 @@ svg text { font-family: var(--heading-font); }
 
   <h2>Estimating Density</h2>
   <p>
-    The first thing each particle needs to figure out is: how crowded is it here?
+    First each particle needs to know how crowded it is where it sits.
     This is the <span class="t-density">density</span> at the particle's location.
     A particle estimates its density by summing up kernel-weighted contributions
-    from all neighbors within the smoothing radius.
+    from all neighbors within the smoothing radius. Every particle in these figures
+    has <span class="t-mass">mass</span> 1, and a particle counts itself, at distance zero
+    and so with weight 1.
   </p>
 
   <div class="figure figure-wide" id="fig-density">
@@ -219,7 +245,7 @@ svg text { font-family: var(--heading-font); }
         <div class="eq-label">Density estimation</div>
         <div class="eq-rows">
           <div id="eq-density"></div>
-          <div class="eq-values-row visible" id="eq-density-values"><span class="eq-hint">loading...</span></div>
+          <div class="eq-values-row visible" id="eq-density-values"></div>
         </div>
       </div>
       <div class="code-block">
@@ -229,23 +255,26 @@ svg text { font-family: var(--heading-font); }
       </div>
     </div>
     <div class="controls">
-      <label>Smoothing radius (h): <input type="range" id="density-h-slider" min="40" max="140" value="80" step="1"> <span id="density-h-val">80</span>px</label>
+      <label>Smoothing radius (h): <input type="range" id="density-h-slider" min="40" max="140" value="90" step="1"> <span id="density-h-val">90</span>px</label>
     </div>
     <div id="density-viz"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 2.</span>
-      Click to select a particle, drag any particle to rearrange.
-      The selected particle (ringed) shows its density sum in the equation.
+      Particles on the crowded left come out darker than the ones spread out on the right.
+      The ringed particle's sum is written out in the equation, starting with its own 1.
+      Click or tap another particle to select it, or drag any particle to change the crowding.
     </div>
   </div>
 
   <h2>Pressure: Pushing Apart</h2>
   <p>
     Fluids resist compression. When particles are packed too tightly, they push apart.
-    The <span class="t-pressure">pressure force</span> on a particle points away from
+    A particle's <span class="t-pressure">pressure</span> is a stiffness <em>k</em> times
+    how far its <span class="t-density">density</span> sits above a rest density
+    <span class="t-density">&rho;<sub>0</sub></span>, and the
+    <span class="t-pressure">pressure force</span> on a particle points away from
     regions of high density.
   </p>
-
 
   <div class="figure figure-wide" id="fig-pressure">
     <div class="eq-code-stack">
@@ -253,7 +282,7 @@ svg text { font-family: var(--heading-font); }
         <div class="eq-label">Pressure force (probe particle)</div>
         <div class="eq-rows">
           <div id="eq-pressure"></div>
-          <div class="eq-values-row visible" id="eq-pressure-values"><span class="eq-hint">loading...</span></div>
+          <div class="eq-values-row visible" id="eq-pressure-values"></div>
         </div>
       </div>
       <div class="code-block">
@@ -269,18 +298,29 @@ svg text { font-family: var(--heading-font); }
     <div id="pressure-viz"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 3.</span>
-      The <span class="t-pressure">probe particle</span> orbits through an uneven ring of neighbors.
-      <span class="t-pressure">Red arrows</span> show pressure forces. The dashed circle shows the
-      <span class="t-kernel">smoothing radius</span>. Uncheck "Animate" to drag particles.
+      The <span class="t-pressure">probe particle</span> circles inside an uneven ring of neighbors.
+      <span class="t-pressure">Red arrows</span> show pressure forces, and the probe's arrow swings
+      away from whichever side is more crowded. The dashed circle is the
+      <span class="t-kernel">smoothing radius</span>. Drag any neighbor, or uncheck
+      "Animate probe" to drag the probe too.
     </div>
   </div>
+
+  <p>
+    Raise the rest density past a particle's density and its pressure goes negative, so
+    it pulls on its neighbors instead of pushing. The full simulation at the end of this
+    article clamps pressure at zero to avoid that clumping.
+  </p>
 
   <h2>Viscosity: Smoothing Velocities</h2>
   <p>
     Pressure alone gives you something like an ideal gas. Real fluids have
     <span class="t-viscosity">viscosity</span>, which makes neighboring particles
     tend to move at similar speeds. The viscosity force is proportional to the
-    velocity difference between a particle and its neighbors.
+    velocity difference between a particle and its neighbors. For
+    <span class="t-kernel">&nabla;&sup2;W</span> we use the kernel's second derivative,
+    6(1 &minus; r/h)/h&sup2;, which is never negative, so the force always drags a
+    particle's velocity toward its neighbors'.
   </p>
 
   <div class="figure figure-wide" id="fig-viscosity">
@@ -289,7 +329,7 @@ svg text { font-family: var(--heading-font); }
         <div class="eq-label">Viscosity force</div>
         <div class="eq-rows">
           <div id="eq-viscosity"></div>
-          <div class="eq-values-row visible" id="eq-viscosity-values"><span class="eq-hint">loading...</span></div>
+          <div class="eq-values-row visible" id="eq-viscosity-values"></div>
         </div>
       </div>
       <div class="code-block">
@@ -303,14 +343,15 @@ svg text { font-family: var(--heading-font); }
     </div>
     <div id="viscosity-viz"></div>
     <div class="sparkline-container" id="viscosity-spark-container">
-      Speed: <svg id="viscosity-sparkline" width="200" height="30"></svg>
+      Speed: <svg id="viscosity-sparkline" width="200" height="30" aria-hidden="true"></svg>
       <span id="viscosity-speed-readout"></span>
     </div>
     <div class="figure-caption">
       <span class="figure-label">Figure 4.</span>
       The <span class="t-velocity">pink particle</span> moves through a field of resting particles.
-      <span class="t-viscosity">Blue arrows</span> show viscosity forces pulling neighbors along.
-      The sparkline tracks how the mover slows down. It loops when it reaches the edge.
+      <span class="t-viscosity">Blue arrows</span> show viscosity forces pulling neighbors along,
+      and the speed trace below shows the mover slowing as it hands them its momentum. The run restarts
+      from the left when the mover stalls or reaches the edge.
     </div>
   </div>
 
@@ -319,67 +360,76 @@ svg text { font-family: var(--heading-font); }
     We now have all the forces. At each time step, we update velocity and position.
     The order of operations and the number of intermediate evaluations determine how
     accurately the integration tracks the true path. Here are four methods, from
-    simplest to most accurate.
+    simplest to most accurate, each sent around the same circular orbit.
   </p>
 
   <div class="figure figure-wide" id="fig-integration">
     <div class="eq-code-stack">
       <div class="eq-block">
-        <div class="eq-label">Integration methods</div>
+        <div class="eq-label">Symplectic Euler update, and each method's energy error</div>
         <div class="eq-rows">
           <div id="eq-integration"></div>
-          <div class="eq-values-row visible" id="eq-integration-values"><span class="eq-hint">scrub the step slider</span></div>
+          <div class="eq-values-row visible" id="eq-integration-values"></div>
         </div>
       </div>
       <div class="code-block">
-        <span class="comment">// Symplectic Euler: velocity first, then position</span><br>
+        <span class="comment">// Explicit Euler: position first, using the old velocity</span><br>
+        <span class="c-position">pos</span> += <span class="c-velocity">vel</span> * dt; &nbsp;<span class="c-velocity">vel</span> += <span class="c-pressure">F</span>/<span class="c-density">ρ</span> * dt<br>
+        <span class="comment">// Symplectic Euler: velocity first, then position (shown above)</span><br>
         <span class="c-velocity">vel</span> += <span class="c-pressure">F</span>/<span class="c-density">ρ</span> * dt; &nbsp;<span class="c-position">pos</span> += <span class="c-velocity">vel</span> * dt<br>
-        <span class="comment">// RK4: four force evaluations per step, much more accurate</span>
+        <span class="comment">// Verlet: next position from the last two positions</span><br>
+        <span class="comment">// RK4: four force evaluations per step</span>
       </div>
     </div>
     <div class="controls">
       <label>dt: <input type="range" id="int-dt-slider" min="0.005" max="0.08" value="0.035" step="0.005"> <span id="int-dt-val">0.035</span></label>
       <label>Steps: <input type="range" id="int-steps-slider" min="5" max="40" value="25" step="1"> <span id="int-steps-val">25</span></label>
       <label>Step: <input type="range" id="int-step-slider" min="0" max="25" value="0" step="1"> <span id="int-step-val">0</span></label>
+      <button id="int-play" type="button">Pause</button>
     </div>
     <div id="integration-viz"></div>
-    <div id="integration-legend" style="display:flex;gap:1.2rem;flex-wrap:wrap;font-family:var(--heading-font);font-size:0.8rem;margin-top:0.5rem;"></div>
+    <div id="integration-legend" style="display:flex;gap:1.2rem;flex-wrap:wrap;font-family:var(--heading-font);font-size:0.8125rem;margin-top:0.5rem;"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 5.</span>
-      Four integration methods on the same orbit. Scrub to walk through steps.
-      At larger dt, cheaper methods spiral outward while RK4 stays on track.
+      Four integration methods on the same orbit (dashed), with each one's energy error
+      in the row above. Explicit Euler gains energy on every step and spirals outward.
+      Symplectic Euler does the same work in the other order and stays on a closed loop,
+      which is why the simulations in this series use it. Raise dt to widen the gaps, or
+      scrub the step slider to walk through one step at a time.
     </div>
   </div>
 
   <h2>Putting It Together</h2>
   <p>
-    A spout on the left wall emits particles into a shallow container where they
-    feel pressure, viscosity, and gravity. Watch the fluid fill up and splash.
+    A spout to the left of a shallow container emits particles, which
+    feel pressure, viscosity, and gravity as they fill it up and splash.
   </p>
 
   <div class="figure figure-wide" id="fig-sim">
     <div class="controls">
-      <label>Max: <input type="range" id="sim-count-slider" min="50" max="500" value="300" step="10"> <span id="sim-count-val">300</span></label>
+      <label>Max particles: <input type="range" id="sim-count-slider" min="50" max="500" value="300" step="10"> <span id="sim-count-val">300</span></label>
       <label>Gravity: <input type="range" id="sim-gravity-slider" min="0" max="500" value="200" step="10"> <span id="sim-gravity-val">200</span></label>
       <label>Viscosity: <input type="range" id="sim-viscosity-slider" min="0" max="200" value="100" step="5"> <span id="sim-viscosity-val">100</span></label>
       <button id="sim-reset">Reset</button>
     </div>
-    <canvas id="sim-canvas" style="width:100%;border-radius:4px;cursor:crosshair;"></canvas>
+    <canvas id="sim-canvas" class="sim-canvas" style="cursor:crosshair;" role="img"
+      aria-label="A stream of blue particles arcs from a spout into an open-topped container, piles up against the far wall and levels out into a pool."></canvas>
     <div class="figure-caption">
       <span class="figure-label">Figure 6.</span>
       2D SPH fluid filling a container from a spout. Particles are colored by speed:
-      dark blue is slow, lighter blue is fast. Click and drag to push particles around.
+      dark blue is slow, lighter blue is fast. Drag across the fluid to push particles around.
     </div>
   </div>
 
   <p>
-    The simulation loop is straightforward: compute densities, compute forces, update
-    velocities, update positions. The expensive part is finding neighbors, which we'll
-    solve with spatial hashing on the GPU in <a href="02-gpu.html">Part 2</a>.
+    On every step the simulation loop computes densities, computes forces, updates
+    velocities, and updates positions. The expensive part is finding neighbors: this
+    figure checks every particle against every other one, which is why it stops at
+    500 particles. We'll fix that with spatial hashing on the GPU in <a href="02-gpu.html">Part 2</a>.
   </p>
 
   <footer style="margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border);font-family:var(--heading-font);font-size:0.85rem;color:var(--text-2);">
-    <p>Part of <a href="index.html" style="color:var(--text-2);">Smooth Particle Hydrodynamics</a>. Next: <a href="02-gpu.html" style="color:var(--accent);">Moving to the GPU</a>.</p>
+    <p>Part of <a href="index.html" style="color:var(--text-2);">Smoothed Particle Hydrodynamics</a>. Next: <a href="02-gpu.html" style="color:var(--accent);">Moving to the GPU</a>.</p>
     <p>Built with <a href="https://github.com/enjalot/moonshine" style="color:var(--text-2);">moonshine</a>.</p>
   </footer>
 </div>
@@ -395,7 +445,22 @@ const SPH = {
   distance(a, b) { const dx=a.x-b.x, dy=a.y-b.y; return Math.sqrt(dx*dx+dy*dy); }
 };
 function fmt(v, d=2) { return typeof v==='number' ? v.toFixed(d) : v; }
-function renderEq(el, tex) { katex.render(tex, el, { displayMode: false, throwOnError: false }); }
+// KaTeX bakes \color{#hex} into inline styles. Point those at the palette's
+// custom properties so equation colors follow the theme like the prose does.
+const EQ_COLORS = { '#059669': 'c-kernel', '#7c3aed': 'c-density', '#dc2626': 'c-pressure', '#2563eb': 'c-viscosity',
+  '#d97706': 'c-mass', '#0891b2': 'c-position', '#be185d': 'c-velocity', '#f59e0b': 'c-spring',
+  '#9333ea': 'c-friction', '#e11d48': 'c-temperature' };
+const EQ_RGB = {}; // the browser reports inline colors as "rgb(r, g, b)"
+for (const [hex, name] of Object.entries(EQ_COLORS)) {
+  EQ_RGB[`rgb(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)})`] = name;
+}
+function themeEq(el) {
+  el.querySelectorAll('[style*="color"]').forEach(s => {
+    const name = EQ_RGB[s.style.color] || EQ_COLORS[s.style.color];
+    if (name) s.style.color = `var(--${name})`;
+  });
+}
+function renderEq(el, tex) { katex.render(tex, el, { displayMode: false, throwOnError: false }); themeEq(el); }
 
 // Symbolic equations
 (function() {
@@ -403,26 +468,106 @@ function renderEq(el, tex) { katex.render(tex, el, { displayMode: false, throwOn
     'eq-kernel': String.raw`{\color{#059669}W}({\color{#0891b2}r}, {\color{#059669}h}) = \left(1 - \frac{{\color{#0891b2}r}}{{\color{#059669}h}}\right)^{\!3}`,
     'eq-density': String.raw`{\color{#7c3aed}\rho_i} = \sum_j {\color{#d97706}m_j} \cdot {\color{#059669}W}\!\left({\color{#0891b2}r_{ij}},\; {\color{#059669}h}\right)`,
     'eq-pressure': String.raw`{\color{#dc2626}\mathbf{F}_i^{press}} = -\sum_j {\color{#d97706}m_j}\frac{{\color{#dc2626}P_i}+{\color{#dc2626}P_j}}{2{\color{#7c3aed}\rho_j}} {\color{#059669}\nabla W}`,
-    'eq-viscosity': String.raw`{\color{#2563eb}\mathbf{F}_i^{visc}} = {\color{#2563eb}\mu} \sum_j \frac{{\color{#be185d}\mathbf{v}_j}-{\color{#be185d}\mathbf{v}_i}}{{\color{#7c3aed}\rho_j}} {\color{#059669}\nabla^2 W}`,
+    'eq-viscosity': String.raw`{\color{#2563eb}\mathbf{F}_i^{visc}} = {\color{#2563eb}\mu} \sum_j {\color{#d97706}m_j}\frac{{\color{#be185d}\mathbf{v}_j}-{\color{#be185d}\mathbf{v}_i}}{{\color{#7c3aed}\rho_j}} {\color{#059669}\nabla^2 W}`,
     'eq-integration': String.raw`{\color{#be185d}\mathbf{v}} \mathrel{+}= \frac{{\color{#dc2626}\mathbf{F}}}{{\color{#7c3aed}\rho}} \Delta t \qquad {\color{#0891b2}\mathbf{r}} \mathrel{+}= {\color{#be185d}\mathbf{v}} \cdot \Delta t`
   };
   for (const [id, tex] of Object.entries(eqs)) {
     const el = document.getElementById(id);
-    if (el) katex.render(tex, el, { displayMode: true, throwOnError: false });
+    if (el) { katex.render(tex, el, { displayMode: true, throwOnError: false }); themeEq(el); }
   }
 })();
 
-// Visibility-based animation: only run rAF loops when figure is in view
-function visibleLoop(elementId, loopFn) {
-  let running = false, animId;
-  function tick() { if (!running) return; loopFn(); animId = requestAnimationFrame(tick); }
+// Canvas can't resolve var(), so figures read the palette's computed values
+// from here and pick up a color-scheme change without a reload.
+const THEME = {};
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['text', 'text-2', 'bg', 'fig-bg', 'border', 'accent', 'canvas-bg', 'wall', 'wall-2',
+    'c-kernel', 'c-density', 'c-pressure', 'c-viscosity', 'c-mass', 'c-position', 'c-velocity',
+    'c-spring', 'c-friction', 'c-temperature', 'c-water', 'c-sand', 'c-jelly']) {
+    THEME[k] = cs.getPropertyValue('--' + k).trim();
+  }
+  THEME.dark = matchMedia('(prefers-color-scheme: dark)').matches;
+}
+readTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTheme);
+
+// One convention for speed in every simulation of the series:
+// settled particles are deep blue, fast ones pale.
+function speedColor(speed, max = 200) {
+  const t = Math.min(speed / max, 1);
+  return d3.interpolateBlues((THEME.dark ? 0.75 : 0.85) - t * 0.45);
+}
+
+// Canvas width in CSS pixels (the canvas is styled width:100%).
+function canvasWidth(canvas) { return Math.max(120, Math.floor(canvas.clientWidth)); }
+
+// Run a figure's animation loop only while the figure is on screen and the tab
+// is visible. With prefers-reduced-motion the loop does not start by itself:
+// the figure is advanced to a representative still and gets a Play button.
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function visibleLoop(elementId, loopFn, opts = {}) {
   const el = document.getElementById(elementId);
-  const obs = new IntersectionObserver(([e]) => {
-    if (e.isIntersecting && !running) { running = true; tick(); }
-    else if (!e.isIntersecting && running) { running = false; cancelAnimationFrame(animId); }
-  }, { threshold: 0.1 });
-  obs.observe(el);
-  return { start() { if (!running) { running = true; tick(); } }, stop() { running = false; cancelAnimationFrame(animId); } };
+  let running = false, visible = false, paused = REDUCED, warmed = false, animId;
+  function tick() { if (!running) return; loopFn(); animId = requestAnimationFrame(tick); }
+  function sync() {
+    const should = visible && !paused && !document.hidden;
+    if (should && !running) { running = true; tick(); }
+    else if (!should && running) { running = false; cancelAnimationFrame(animId); }
+  }
+  new IntersectionObserver(([e]) => {
+    visible = e.isIntersecting;
+    if (visible && REDUCED && !warmed) {
+      warmed = true;
+      for (let i = 0; i < (opts.warm ?? 90); i++) loopFn();
+      setTimeout(() => { if (!running) loopFn(); }, 400); // lets an async GPU readback land
+    }
+    sync();
+  }, { threshold: 0.05 }).observe(el);
+  document.addEventListener('visibilitychange', sync);
+  if (REDUCED) {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'motion-btn'; btn.textContent = 'Play animation';
+    btn.addEventListener('click', () => { paused = !paused; btn.textContent = paused ? 'Play animation' : 'Pause animation'; sync(); });
+    el.insertBefore(btn, el.querySelector('.eq-code-stack') ? el.querySelector('.eq-code-stack').nextSibling : el.firstChild);
+  }
+}
+
+// Run up to `n` simulation substeps but stop once `budgetMs` is spent, so a slow
+// device gets slow motion instead of a frozen page.
+function budgetSteps(n, stepFn, budgetMs = 10) {
+  const t0 = performance.now();
+  for (let s = 0; s < n; s++) { stepFn(); if (s >= 1 && performance.now() - t0 > budgetMs) break; }
+}
+
+// SVG figures are drawn in a fixed viewBox and scaled to the column, which would
+// shrink their text on a phone. fitText keeps text at 13 CSS px whatever the scale
+// (text uses font-size: var(--fs)) and reports the scale so a figure can thin out labels.
+function fitText(svg, viewBoxWidth, onScale) {
+  const node = svg.node();
+  const apply = () => {
+    const w = node.getBoundingClientRect().width;
+    if (!w) return;
+    const k = Math.min(1, w / viewBoxWidth);
+    svg.style('--fs', (13 / k).toFixed(1) + 'px');
+    if (onScale) onScale(k);
+  };
+  new ResizeObserver(apply).observe(node);
+  apply();
+}
+
+// Keyboard access for draggable SVG particles: Tab to one, arrow keys move it.
+function keyboardMove(selection, label, onMove, onFocus) {
+  selection.attr('tabindex', 0).attr('role', 'button').attr('aria-label', label)
+    .on('focus', function(e, d) { if (onFocus) onFocus(d); })
+    .on('keydown', function(e, d) {
+      const step = e.shiftKey ? 2 : 8;
+      const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+      const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+      if (!dx && !dy) return;
+      e.preventDefault();
+      onMove(d, dx, dy);
+    });
 }
 
 
@@ -433,18 +578,18 @@ function visibleLoop(elementId, loopFn) {
   const canvas = document.getElementById("grid-canvas");
   const ctx = canvas.getContext("2d");
   const dpr = window.devicePixelRatio||1;
-  const N = 64; // grid resolution
   let cW=680, cH=200;
 
   function resize() {
     const rect=canvas.parentElement.getBoundingClientRect();
-    cW=Math.floor(rect.width-48); cH=200;
+    cW=canvasWidth(canvas); cH=200;
     canvas.width=cW*dpr; canvas.height=cH*dpr;
     canvas.style.height=cH+'px';
     ctx.setTransform(dpr,0,0,dpr,0,0);
   }
   resize();
 
+  const N = cW < 420 ? 40 : 64; // fewer, larger cells on a phone
   const NY = Math.round(N*cH/cW);
   const size = (N+2)*(NY+2);
   let u = new Float32Array(size), v = new Float32Array(size);
@@ -452,6 +597,7 @@ function visibleLoop(elementId, loopFn) {
   let dens = new Float32Array(size), dens0 = new Float32Array(size);
   const visc = 0.0002, diff = 0.0002, dt2 = 0.1;
   const ITERS = 12; // Gauss-Seidel iterations (more = more stable)
+  const DYE_FULL = 0.6; // dye amount drawn as fully opaque
 
   function IX(i,j){return i+(N+2)*j;}
 
@@ -568,32 +714,30 @@ function visibleLoop(elementId, loopFn) {
 
   function render(){
     const cellW=cW/N, cellH=cH/NY;
-    // Dark background
-    ctx.fillStyle='#1a1a2e';ctx.fillRect(0,0,cW,cH);
+    ctx.fillStyle=THEME['canvas-bg'];ctx.fillRect(0,0,cW,cH);
 
-    // Density field
+    // Dye: empty cells stay the background color, more dye is a more opaque blue
+    ctx.fillStyle=THEME.dark?'#60a5fa':'#1d4ed8';
     for(let i=1;i<=N;i++) for(let j=1;j<=NY;j++){
-      const d=Math.min(dens[IX(i,j)],5)/5;
-      if(d<0.005)continue;
-      ctx.fillStyle=d3.interpolateBlues(0.25+d*0.65);
+      const d=Math.min(dens[IX(i,j)]/DYE_FULL,1);
+      if(d<0.02)continue;
+      ctx.globalAlpha=Math.pow(d,0.7);
       ctx.fillRect((i-1)*cellW,(j-1)*cellH,cellW+0.5,cellH+0.5);
     }
+    ctx.globalAlpha=1;
 
-    // Grid lines ON TOP of dye, in gray so visible against both dark bg and blue dye
-    ctx.strokeStyle='rgba(120,120,140,0.2)';ctx.lineWidth=0.5;
+    // Grid lines on top of the dye
+    ctx.strokeStyle=THEME['text-2'];ctx.globalAlpha=0.18;ctx.lineWidth=0.5;
     for(let i=0;i<=N;i++){ctx.beginPath();ctx.moveTo(i*cellW,0);ctx.lineTo(i*cellW,cH);ctx.stroke();}
     for(let j=0;j<=NY;j++){ctx.beginPath();ctx.moveTo(0,j*cellH);ctx.lineTo(cW,j*cellH);ctx.stroke();}
-
-    // Source path indicator
-    ctx.beginPath();ctx.arc(srcCx*cellW,srcCy*cellH,srcR*cellW,0,Math.PI*2);
-    ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=0.5;ctx.stroke();
+    ctx.globalAlpha=1;
   }
 
   function step(){
     addPersistentSource();
     velStep();densStep();
     // Decay density and clear source buffers
-    for(let i=0;i<size;i++){dens[i]*=0.985;dens0[i]=0;u0[i]*=0.85;v0[i]*=0.85;}
+    for(let i=0;i<size;i++){dens[i]*=0.965;dens0[i]=0;u0[i]*=0.85;v0[i]*=0.85;}
     render();
   }
 
@@ -613,14 +757,14 @@ function visibleLoop(elementId, loopFn) {
 
   function resize(){
     const rect=canvas.parentElement.getBoundingClientRect();
-    cW=Math.floor(rect.width-48); cH=280;
+    cW=canvasWidth(canvas); cH=280;
     canvas.width=cW*dpr; canvas.height=cH*dpr;
     canvas.style.height=cH+'px';
     ctx.setTransform(dpr,0,0,dpr,0,0);
   }
   resize();
 
-  const nBoids = 120;
+  const nBoids = cW < 420 ? 70 : 120;
   const radius = 60; // neighbor radius
   const maxSpeed = 3, maxForce = 0.08;
   let sepW=1.5, aliW=1.0, cohW=1.0;
@@ -699,31 +843,31 @@ function visibleLoop(elementId, loopFn) {
   }
 
   function render(){
-    ctx.fillStyle='#f0f4f8';ctx.fillRect(0,0,cW,cH);
+    ctx.fillStyle=THEME['canvas-bg'];ctx.fillRect(0,0,cW,cH);
 
     const sel=boids[selectedId];
 
     // Selected boid radius
     ctx.beginPath();ctx.arc(sel.x,sel.y,radius,0,Math.PI*2);
-    ctx.strokeStyle='var(--c-kernel)';ctx.lineWidth=1.5;ctx.setLineDash([6,3]);ctx.globalAlpha=0.3;ctx.stroke();
+    ctx.strokeStyle=THEME['c-kernel'];ctx.lineWidth=1.5;ctx.setLineDash([6,3]);ctx.globalAlpha=0.6;ctx.stroke();
     ctx.setLineDash([]);ctx.globalAlpha=1;
 
     // Force arrows on selected boid
-    const aS=120;
+    const aS=320; // force lines are drawn long enough to read; magnitudes are tiny
     // Separation
     if(Math.abs(sel.sepFx)+Math.abs(sel.sepFy)>0.001){
       ctx.beginPath();ctx.moveTo(sel.x,sel.y);ctx.lineTo(sel.x+sel.sepFx*aS,sel.y+sel.sepFy*aS);
-      ctx.strokeStyle='var(--c-pressure)';ctx.lineWidth=2.5;ctx.stroke();
+      ctx.strokeStyle=THEME['c-pressure'];ctx.lineWidth=3;ctx.stroke();
     }
     // Alignment
     if(Math.abs(sel.aliFx)+Math.abs(sel.aliFy)>0.001){
       ctx.beginPath();ctx.moveTo(sel.x,sel.y);ctx.lineTo(sel.x+sel.aliFx*aS,sel.y+sel.aliFy*aS);
-      ctx.strokeStyle='var(--c-viscosity)';ctx.lineWidth=2.5;ctx.stroke();
+      ctx.strokeStyle=THEME['c-viscosity'];ctx.lineWidth=3;ctx.stroke();
     }
     // Cohesion
     if(Math.abs(sel.cohFx)+Math.abs(sel.cohFy)>0.001){
       ctx.beginPath();ctx.moveTo(sel.x,sel.y);ctx.lineTo(sel.x+sel.cohFx*aS,sel.y+sel.cohFy*aS);
-      ctx.strokeStyle='var(--c-kernel)';ctx.lineWidth=2.5;ctx.stroke();
+      ctx.strokeStyle=THEME['c-kernel'];ctx.lineWidth=3;ctx.stroke();
     }
 
     // All boids as triangles
@@ -734,7 +878,7 @@ function visibleLoop(elementId, loopFn) {
       ctx.translate(b.x,b.y);ctx.rotate(angle);
       ctx.beginPath();
       ctx.moveTo(sz,0);ctx.lineTo(-sz*0.6,-sz*0.5);ctx.lineTo(-sz*0.6,sz*0.5);ctx.closePath();
-      ctx.fillStyle=b.id===selectedId?'var(--c-velocity)':'#4a6fa5';
+      ctx.fillStyle=b.id===selectedId?THEME['c-velocity']:THEME['text-2'];
       ctx.globalAlpha=b.id===selectedId?1:0.7;
       ctx.fill();
       ctx.restore();
@@ -743,7 +887,7 @@ function visibleLoop(elementId, loopFn) {
 
     // Selection ring
     ctx.beginPath();ctx.arc(sel.x,sel.y,10,0,Math.PI*2);
-    ctx.strokeStyle='var(--c-velocity)';ctx.lineWidth=2;ctx.stroke();
+    ctx.strokeStyle=THEME['c-velocity'];ctx.lineWidth=2;ctx.stroke();
   }
 
   // Click to select
@@ -771,120 +915,137 @@ function visibleLoop(elementId, loopFn) {
 (function() {
   const container = d3.select("#kernel-viz");
   const w1=380, w2=300, h=320;
-  const svg1 = container.append("svg").attr("viewBox",`0 0 ${w1} ${h}`).attr("width",w1).style("max-width","100%").style("flex","1 1 380px");
-  const svg2 = container.append("svg").attr("viewBox",`0 0 ${w2} ${h}`).attr("width",w2).style("max-width","100%").style("flex","1 1 280px");
+  const svg1 = container.append("svg").attr("viewBox",`0 0 ${w1} ${h}`).attr("width",w1).style("max-width","100%").style("flex","1 1 300px")
+    .attr("role","group").attr("aria-label","A center particle with six draggable neighbors. Neighbors inside the dashed smoothing radius are labeled with their kernel weight.");
+  const svg2 = container.append("svg").attr("viewBox",`0 0 ${w2} ${h}`).attr("width",w2).style("max-width","100%").style("flex","1 1 260px")
+    .attr("role","img").attr("aria-label","The kernel weight plotted against distance over h: 1 at distance zero, falling as a cubic curve to 0 at the smoothing radius.");
 
-  let H = 80;
+  let H = 100;
   const center = {x:w1/2, y:h/2};
+  // Neighbors at 25, 42, 60, 80, 112 and 140 px from the center, so the default
+  // weights span the whole curve (0.42 down to 0.008) and two neighbors fall outside h.
   const neighbors = [
-    {x:135,y:130,id:'a'},{x:240,y:110,id:'b'},{x:290,y:200,id:'c'},
-    {x:160,y:240,id:'d'},{x:90,y:190,id:'e'},{x:320,y:130,id:'f'}
+    {x:166,y:151,id:'a'},{x:222,y:133,id:'b'},{x:180,y:219,id:'c'},
+    {x:259,y:200,id:'d'},{x:80,y:179,id:'e'},{x:317,y:101,id:'f'}
   ];
+  let selected = neighbors[1];
 
   const radiusCircle = svg1.append("circle").attr("cx",center.x).attr("cy",center.y)
-    .attr("fill","none").attr("stroke","var(--c-kernel)").attr("stroke-width",1.5).attr("stroke-dasharray","6,3").attr("opacity",0.5);
+    .attr("fill","none").attr("stroke","var(--c-kernel)").attr("stroke-width",1.5).attr("stroke-dasharray","6,3").attr("opacity",0.6);
   const linesG = svg1.append("g");
-  svg1.append("circle").attr("cx",center.x).attr("cy",center.y).attr("r",8).attr("fill","var(--c-kernel)").attr("opacity",0.8);
-  svg1.append("text").attr("x",center.x).attr("y",center.y-14).attr("text-anchor","middle").attr("font-size",11).attr("fill","var(--text-2)").text("particle i");
+  svg1.append("circle").attr("cx",center.x).attr("cy",center.y).attr("r",8).attr("fill","var(--c-kernel)");
+  svg1.append("text").attr("x",center.x).attr("y",center.y+26).attr("text-anchor","middle").style("font-size","var(--fs)").attr("fill","var(--text-2)").text("particle i");
 
+  const selRing = svg1.append("circle").attr("r",12).attr("fill","none").attr("stroke","var(--c-position)").attr("stroke-width",2);
   const nCircles = svg1.selectAll(".nb").data(neighbors).join("circle").attr("class","nb")
-    .attr("r",7).attr("fill","var(--c-position)").attr("opacity",0.7).attr("cursor","grab");
+    .attr("r",8).attr("fill","var(--c-position)").attr("stroke","var(--fig-bg)").attr("stroke-width",1.5).attr("cursor","grab");
   const wLabels = svg1.selectAll(".wl").data(neighbors).join("text").attr("class","wl")
-    .attr("font-size",10).attr("text-anchor","middle").attr("fill","var(--c-kernel)");
+    .style("font-size","var(--fs)").attr("text-anchor","middle").attr("fill","var(--c-kernel)").attr("pointer-events","none");
 
-  const cm={top:30,right:20,bottom:40,left:45}, cw=w2-cm.left-cm.right, ch=h-cm.top-cm.bottom;
+  const cm={top:30,right:20,bottom:44,left:45}, cw=w2-cm.left-cm.right, ch=h-cm.top-cm.bottom;
   const cG = svg2.append("g").attr("transform",`translate(${cm.left},${cm.top})`);
   const xS = d3.scaleLinear().domain([0,1.3]).range([0,cw]);
   const yS = d3.scaleLinear().domain([0,1.1]).range([ch,0]);
-  cG.append("g").attr("transform",`translate(0,${ch})`).call(d3.axisBottom(xS).ticks(5).tickFormat(d=>d===0?'0':d===1?'h':'')).selectAll("text").attr("fill","var(--text-2)");
-  cG.append("g").call(d3.axisLeft(yS).ticks(4)).selectAll("text").attr("fill","var(--text-2)");
-  cG.append("text").attr("x",cw/2).attr("y",ch+32).attr("text-anchor","middle").attr("font-size",11).attr("fill","var(--text-2)").text("distance / h");
-  const hLineC = cG.append("line").attr("y1",0).attr("y2",ch).attr("stroke","var(--c-kernel)").attr("stroke-width",1).attr("stroke-dasharray","4,3").attr("opacity",0.5);
-  const cArea = cG.append("path").attr("fill","var(--c-kernel)").attr("opacity",0.08);
-  const cPath = cG.append("path").attr("fill","none").attr("stroke","var(--c-kernel)").attr("stroke-width",2.5).attr("opacity",0.8);
-  const hlLine = cG.append("line").attr("stroke","var(--c-position)").attr("stroke-width",1).attr("stroke-dasharray","3,2").attr("opacity",0);
-  const cDots = cG.selectAll(".cd").data(neighbors).join("circle").attr("class","cd").attr("r",5).attr("fill","var(--c-position)").attr("stroke","#fff").attr("stroke-width",1.5);
+  const axX = cG.append("g").attr("transform",`translate(0,${ch})`).call(d3.axisBottom(xS).tickValues([0,1]).tickFormat(d=>d===0?'0':'h'));
+  const axY = cG.append("g").call(d3.axisLeft(yS).ticks(4));
+  [axX,axY].forEach(a=>{ a.attr("font-size",null).selectAll("text").attr("fill","var(--text-2)").style("font-size","var(--fs)"); a.selectAll("path,line").attr("stroke","var(--text-2)"); });
+  cG.append("text").attr("x",cw/2).attr("y",ch+40).attr("text-anchor","middle").style("font-size","var(--fs)").attr("fill","var(--text-2)").text("distance / h");
+  cG.append("text").attr("x",8).attr("y",-12).style("font-size","var(--fs)").attr("fill","var(--c-kernel)").text("weight W");
+  const hLineC = cG.append("line").attr("y1",0).attr("y2",ch).attr("stroke","var(--c-kernel)").attr("stroke-width",1).attr("stroke-dasharray","4,3").attr("opacity",0.6);
+  const cArea = cG.append("path").attr("fill","var(--c-kernel)").attr("opacity",0.1);
+  const cPath = cG.append("path").attr("fill","none").attr("stroke","var(--c-kernel)").attr("stroke-width",2.5);
+  const hlLine = cG.append("line").attr("stroke","var(--c-position)").attr("stroke-width",1.5).attr("stroke-dasharray","3,2");
+  const cDots = cG.selectAll(".cd").data(neighbors).join("circle").attr("class","cd").attr("fill","var(--c-position)").attr("stroke","var(--fig-bg)").attr("stroke-width",1.5);
 
+  // The selected neighbor's numbers stay in the equation row (no hover needed, so it works on touch).
   function showVal(d) {
     const dist=SPH.distance(center,d), q=dist/H, w=SPH.kernel(dist,H);
-    const tex = String.raw`{\color{#059669}W}({\color{#0891b2}${fmt(dist,0)}},{\color{#059669}${H}}) = (1-\tfrac{{\color{#0891b2}${fmt(dist,0)}}}{{\color{#059669}${H}}})^3 = {\color{#059669}${q<1?fmt(w,3):'0'}}`;
-    const el = document.getElementById("eq-kernel-values");
-    renderEq(el, tex); el.classList.add('visible');
-    hlLine.attr("x1",xS(Math.min(q,1.3))).attr("x2",xS(Math.min(q,1.3)))
-      .attr("y1",yS(q<1?w:0)).attr("y2",ch).attr("opacity",0.6);
+    const tex = String.raw`{\color{#059669}W}({\color{#0891b2}${fmt(dist,0)}},{\color{#059669}${H}}) = (1-\tfrac{{\color{#0891b2}${fmt(dist,0)}}}{{\color{#059669}${H}}})^3 = {\color{#059669}${q<1?fmt(w,3):'0'}}`
+      + (q<1 ? '' : String.raw`\quad\text{(outside } {\color{#059669}h}\text{)}`);
+    renderEq(document.getElementById("eq-kernel-values"), tex);
+    hlLine.attr("x1",xS(Math.min(q,1.3))).attr("x2",xS(Math.min(q,1.3))).attr("y1",yS(q<1?w:0)).attr("y2",ch);
   }
-  function clearVal() {
-    const el=document.getElementById("eq-kernel-values");
-    el.innerHTML='<span class="eq-hint">drag a neighbor particle</span>'; el.classList.remove('visible');
-    hlLine.attr("opacity",0);
-  }
+  function move(d,x,y){ d.x=Math.max(12,Math.min(w1-12,x)); d.y=Math.max(24,Math.min(h-12,y)); }
 
   nCircles.call(d3.drag()
-    .on("start",function(){d3.select(this).attr("cursor","grabbing");})
-    .on("drag",function(e,d){d.x=Math.max(10,Math.min(w1-10,e.x));d.y=Math.max(10,Math.min(h-10,e.y));update();showVal(d);})
-    .on("end",function(e,d){d3.select(this).attr("cursor","grab");showVal(d);}))
-    .on("pointerenter",function(e,d){showVal(d);}).on("pointerleave",clearVal);
+    .on("start",function(e,d){selected=d;d3.select(this).attr("cursor","grabbing");update();})
+    .on("drag",function(e,d){move(d,e.x,e.y);update();})
+    .on("end",function(){d3.select(this).attr("cursor","grab");}))
+    .on("pointerenter",function(e,d){selected=d;update();})
+    .on("touchstart.noscroll", e => e.preventDefault(), { passive: false }); // a touch that starts on a particle drags it instead of scrolling
+  keyboardMove(nCircles, "Neighbor particle. Arrow keys move it.", (d,dx,dy)=>{selected=d;move(d,d.x+dx,d.y+dy);update();}, d=>{selected=d;update();});
 
-  d3.select("#kernel-h-slider").on("input",function(){H=+this.value;d3.select("#kernel-h-val").text(H);update();});
+  d3.select("#kernel-h-slider").property("value",H).on("input",function(){H=+this.value;d3.select("#kernel-h-val").text(H);update();});
+  d3.select("#kernel-h-val").text(H);
 
   function update() {
+    const inside = d => SPH.distance(center,d)<H;
     radiusCircle.attr("r",H);
-    nCircles.attr("cx",d=>d.x).attr("cy",d=>d.y);
+    nCircles.attr("cx",d=>d.x).attr("cy",d=>d.y).attr("opacity",d=>inside(d)?0.9:0.3);
+    selRing.attr("cx",selected.x).attr("cy",selected.y);
     linesG.selectAll("line").data(neighbors,d=>d.id).join("line")
       .attr("x1",center.x).attr("y1",center.y).attr("x2",d=>d.x).attr("y2",d=>d.y)
-      .attr("stroke",d=>SPH.distance(center,d)<H?"var(--c-kernel)":"var(--border)")
-      .attr("stroke-width",d=>SPH.distance(center,d)<H?1.5:0.8)
-      .attr("stroke-dasharray",d=>SPH.distance(center,d)<H?"none":"3,3")
-      .attr("opacity",d=>SPH.distance(center,d)<H?0.4:0.3);
-    wLabels.attr("x",d=>d.x).attr("y",d=>d.y-12)
-      .text(d=>{const w=SPH.kernel(SPH.distance(center,d),H);return w>0?fmt(w,3):'';});
-    nCircles.attr("opacity",d=>SPH.distance(center,d)<H?0.8:0.25);
-    const maxW=SPH.kernel(0,H)||1;
-    const nd=d3.range(101).map(i=>{const q=i/100*1.3;return{q,w:SPH.kernel(q*H,H)/maxW};});
-    cPath.attr("d",d3.line().x(d=>xS(d.q)).y(d=>yS(d.w)).curve(d3.curveBasis)(nd));
-    cArea.attr("d",d3.area().x(d=>xS(d.q)).y0(ch).y1(d=>yS(d.w)).curve(d3.curveBasis)(nd));
+      .attr("stroke",d=>inside(d)?"var(--c-kernel)":"var(--text-2)")
+      // line thickness carries the weight too, so the falloff reads without the numbers
+      .attr("stroke-width",d=>inside(d)?1+7*SPH.kernel(SPH.distance(center,d),H):0.8)
+      .attr("stroke-dasharray",d=>inside(d)?"none":"3,3")
+      .attr("opacity",d=>inside(d)?0.55:0.35);
+    wLabels.attr("x",d=>d.x).attr("y",d=>d.y-14)
+      .text(d=>{const w=SPH.kernel(SPH.distance(center,d),H);return w>0?fmt(w,w<0.1?3:2):'';});
+    const nd=d3.range(101).map(i=>{const q=i/100*1.3;return{q,w:SPH.kernel(q*H,H)};});
+    cPath.attr("d",d3.line().x(d=>xS(d.q)).y(d=>yS(d.w))(nd));
+    cArea.attr("d",d3.area().x(d=>xS(d.q)).y0(ch).y1(d=>yS(d.w))(nd));
     hLineC.attr("x1",xS(1)).attr("x2",xS(1));
-    cDots.each(function(d){const dist=SPH.distance(center,d),q=dist/H,w=q<1?SPH.kernel(dist,H)/maxW:0;
-      d3.select(this).attr("cx",xS(Math.min(q,1.3))).attr("cy",yS(w)).attr("opacity",q<1?0.8:0.25);});
+    cDots.each(function(d){const dist=SPH.distance(center,d),q=dist/H,w=SPH.kernel(dist,H);
+      d3.select(this).attr("cx",xS(Math.min(q,1.3))).attr("cy",yS(w)).attr("r",d===selected?7:5).attr("opacity",q<1?0.9:0.3);});
+    showVal(selected);
   }
+  fitText(svg1, w1); fitText(svg2, w2);
   update();
 })();
 
 
 // ============================================================
-// Figure 2: Density (persistent selection, unchanged)
+// Figure 2: Density
 // ============================================================
 (function() {
   const container = d3.select("#density-viz");
   const width=680, height=340;
-  const svg = container.append("svg").attr("viewBox",`0 0 ${width} ${height}`).style("width","100%");
-  let H = 80;
+  const svg = container.append("svg").attr("viewBox",`0 0 ${width} ${height}`).style("width","100%")
+    .attr("role","group").attr("aria-label","Thirty-two particles, packed tightly on the left and spread out on the right, shaded by density. One is ringed and its smoothing radius is drawn as a dashed circle.");
+  let H = 90;
+  // Crowded on the left, sparse on the right, so density visibly varies across the figure.
+  const rng = d3.randomLcg(7);
   const particles = [];
   const cols=8, rows=4;
-  for (let r=0;r<rows;r++) for (let c=0;c<cols;c++)
-    particles.push({x:80+c*65+(Math.random()-0.5)*20, y:60+r*65+(Math.random()-0.5)*20, id:r*cols+c});
+  for (let r=0;r<rows;r++) for (let c=0;c<cols;c++) {
+    const t=c/(cols-1);
+    particles.push({
+      x: 50+570*Math.pow(t,1.6)+(rng()-0.5)*10,
+      y: height/2-8+(r-1.5)*(34+44*t)+(rng()-0.5)*10,
+      id:r*cols+c});
+  }
 
-  const densityColor = d3.scaleSequential(d3.interpolatePurples).domain([0,1]);
   const radiusG = svg.append("g");
   const connG = svg.append("g");
   const circles = svg.selectAll(".p").data(particles).join("circle").attr("class","p")
-    .attr("r",10).attr("stroke","#fff").attr("stroke-width",2).attr("cursor","pointer");
+    .attr("r",10).attr("fill","var(--c-density)").attr("stroke","var(--c-density)").attr("stroke-width",1.5).attr("cursor","grab");
   const labels = svg.selectAll(".dl").data(particles).join("text").attr("class","dl")
-    .attr("text-anchor","middle").attr("font-size",9).attr("fill","var(--text-2)").attr("pointer-events","none");
-  const selRing = svg.append("circle").attr("r",14).attr("fill","none").attr("stroke","var(--c-density)")
-    .attr("stroke-width",2.5);
-  let selectedIdx = Math.floor(cols*rows/2) + Math.floor(cols/2);
+    .attr("text-anchor","middle").style("font-size","var(--fs)").attr("fill","var(--text-2)").attr("pointer-events","none");
+  const selRing = svg.append("circle").attr("r",15).attr("fill","none").attr("stroke","var(--c-density)")
+    .attr("stroke-width",2.5).attr("pointer-events","none");
+  let selectedIdx = 1*cols+2;
+  let scale = 1;
 
   function showDensityEq(d) {
     const contribs = [];
     particles.forEach(q=>{if(q===d)return;const dist=SPH.distance(d,q);if(dist<H)contribs.push(SPH.kernel(dist,H));});
-    const selfW = SPH.kernel(0,H);
-    const terms = [`{\\color{#059669}${fmt(selfW,3)}}`];
-    contribs.slice(0,3).forEach(w=>terms.push(`{\\color{#059669}${fmt(w,3)}}`));
+    contribs.sort((a,b)=>b-a);
+    const terms = [`{\\color{#059669}1}`];
+    contribs.slice(0,3).forEach(w=>terms.push(`{\\color{#059669}${fmt(w,2)}}`));
     if(contribs.length>3) terms.push(`\\cdots`);
-    const tex = `{\\color{#7c3aed}\\rho} = ${terms.join('+')} = {\\color{#7c3aed}\\mathbf{${fmt(d.density,3)}}}\\;(${contribs.length}\\text{ nbrs})`;
-    const el = document.getElementById("eq-density-values");
-    renderEq(el, tex); el.classList.add('visible');
+    const tex = `{\\color{#7c3aed}\\rho} = ${terms.join('+')} = {\\color{#7c3aed}\\mathbf{${fmt(d.density,2)}}}\;(${contribs.length}\\text{ neighbors})`;
+    renderEq(document.getElementById("eq-density-values"), tex);
   }
 
   function showSelection() {
@@ -893,25 +1054,32 @@ function visibleLoop(elementId, loopFn) {
     radiusG.selectAll("*").remove(); connG.selectAll("*").remove();
     radiusG.append("circle").attr("cx",d.x).attr("cy",d.y).attr("r",H)
       .attr("fill","none").attr("stroke","var(--c-kernel)")
-      .attr("stroke-width",1.5).attr("stroke-dasharray","6,3").attr("opacity",0.35);
+      .attr("stroke-width",1.5).attr("stroke-dasharray","6,3").attr("opacity",0.6);
     particles.forEach(q=>{if(q===d)return;if(SPH.distance(d,q)<H)
       connG.append("line").attr("x1",d.x).attr("y1",d.y).attr("x2",q.x).attr("y2",q.y)
-        .attr("stroke","var(--c-kernel)").attr("stroke-width",1).attr("opacity",0.25);});
+        .attr("stroke","var(--c-kernel)").attr("stroke-width",1).attr("opacity",0.35);});
     showDensityEq(d);
   }
+  function move(d,x,y){ d.x=Math.max(15,Math.min(width-15,x)); d.y=Math.max(15,Math.min(height-30,y)); }
 
-  circles.on("click",function(e,d){selectedIdx=d.id;update();})
-    .call(d3.drag().on("drag",function(e,d){d.x=Math.max(15,Math.min(width-15,e.x));d.y=Math.max(15,Math.min(height-15,e.y));update();}));
+  circles.call(d3.drag()
+    .on("start",function(e,d){selectedIdx=d.id;update();})
+    .on("drag",function(e,d){move(d,e.x,e.y);update();}))
+    .on("touchstart.noscroll", e => e.preventDefault(), { passive: false });
+  keyboardMove(circles, "Particle. Arrow keys move it.", (d,dx,dy)=>{selectedIdx=d.id;move(d,d.x+dx,d.y+dy);update();}, d=>{selectedIdx=d.id;update();});
   d3.select("#density-h-slider").on("input",function(){H=+this.value;d3.select("#density-h-val").text(H);update();});
 
   function update() {
     particles.forEach(p=>{p.density=0;particles.forEach(q=>{p.density+=SPH.kernel(SPH.distance(p,q),H);});});
-    const maxD=d3.max(particles,d=>d.density)||1;
-    particles.forEach(p=>p.normDensity=p.density/maxD);
-    circles.attr("cx",d=>d.x).attr("cy",d=>d.y).attr("fill",d=>densityColor(d.normDensity));
-    labels.attr("x",d=>d.x).attr("y",d=>d.y+22).text(d=>fmt(d.density,3));
+    // A lone particle has density 1 (itself). Shade from there up to the most crowded particle.
+    const maxD=Math.max(d3.max(particles,d=>d.density),1.5);
+    circles.attr("cx",d=>d.x).attr("cy",d=>d.y).attr("fill-opacity",d=>0.12+0.88*(d.density-1)/(maxD-1));
+    // On a phone there is only room for the selected particle's number.
+    labels.attr("x",d=>d.x).attr("y",d=>d.y+10+13/scale)
+      .text(d=>(scale>0.7||d.id===selectedIdx)?fmt(d.density,2):'');
     showSelection();
   }
+  fitText(svg, width, k=>{scale=k;update();});
   update();
 })();
 
@@ -923,7 +1091,8 @@ function visibleLoop(elementId, loopFn) {
   const container = d3.select("#pressure-viz");
   const width=680, height=360;
   const H = 75;
-  const svg = container.append("svg").attr("viewBox",`0 0 ${width} ${height}`).style("width","100%");
+  const svg = container.append("svg").attr("viewBox",`0 0 ${width} ${height}`).style("width","100%")
+    .attr("role","img").attr("aria-label","A red probe particle circles inside three uneven rings of purple neighbors. Red arrows on every particle show the pressure force, pointing away from crowded regions.");
 
   let stiffness=6, restDensity=0.8, animating=true;
   const particles = [];
@@ -970,13 +1139,13 @@ function visibleLoop(elementId, loopFn) {
 
   const circles = svg.selectAll(".p").data(particles).join("circle").attr("class","p")
     .attr("r",d=>d.isProbe?10:7).attr("fill",d=>d.isProbe?"var(--c-pressure)":"var(--c-density)")
-    .attr("opacity",d=>d.isProbe?0.9:0.6).attr("stroke","#fff").attr("stroke-width",2).attr("cursor","grab");
+    .attr("opacity",d=>d.isProbe?0.9:0.6).attr("stroke","var(--fig-bg)").attr("stroke-width",2).attr("cursor","grab");
 
   circles.call(d3.drag().on("drag",function(e,d){
     if(animating&&d.isProbe) return;
     d.x=Math.max(15,Math.min(width-15,e.x));d.y=Math.max(15,Math.min(height-15,e.y));
     compute(); render();
-  }));
+  })).on("touchstart.noscroll", e => e.preventDefault(), { passive: false });
 
   d3.select("#pressure-k-slider").on("input",function(){stiffness=+this.value;d3.select("#pressure-k-val").text(stiffness.toFixed(1));});
   d3.select("#pressure-rest-slider").on("input",function(){restDensity=+this.value;d3.select("#pressure-rest-val").text(restDensity.toFixed(1));});
@@ -1038,7 +1207,8 @@ function visibleLoop(elementId, loopFn) {
   const container = d3.select("#viscosity-viz");
   const width=680, height=320;
   let H = 70;
-  const svg = container.append("svg").attr("viewBox",`0 0 ${width} ${height}`).style("width","100%");
+  const svg = container.append("svg").attr("viewBox",`0 0 ${width} ${height}`).style("width","100%")
+    .attr("role","img").attr("aria-label","A pink particle travels left to right through a field of resting teal particles. Blue arrows on the particles near it show viscosity forces dragging them along as the pink particle slows.");
 
   let mu = 10;
   const initSpeed = 12; // very slow, easy to follow
@@ -1076,9 +1246,9 @@ function visibleLoop(elementId, loopFn) {
   const viscG = svg.append("g");
   const bgCircles = svg.selectAll(".bg").data(bgParticles).join("circle").attr("class","bg")
     .attr("cx",d=>d.x).attr("cy",d=>d.y)
-    .attr("r",5).attr("fill","var(--c-position)").attr("opacity",0.45).attr("stroke","#fff").attr("stroke-width",1);
+    .attr("r",5).attr("fill","var(--c-position)").attr("opacity",0.45).attr("stroke","var(--fig-bg)").attr("stroke-width",1);
   const moverCircle = svg.append("circle").attr("r",7).attr("fill","var(--c-velocity)")
-    .attr("stroke","#fff").attr("stroke-width",2);
+    .attr("stroke","var(--fig-bg)").attr("stroke-width",2);
   const velArrow = svg.append("line").attr("stroke","var(--c-velocity)").attr("stroke-width",2.5);
 
   // Sparkline
@@ -1204,20 +1374,23 @@ function visibleLoop(elementId, loopFn) {
   const container = d3.select("#integration-viz");
   const w=680, h=380;
   const svg = container.append("svg").attr("viewBox",`0 0 ${w} ${h}`).style("width","100%")
-    .style("border","1px solid var(--border)").style("border-radius","4px");
+    .style("border","1px solid var(--border)").style("border-radius","4px")
+    .attr("role","img").attr("aria-label","Four numerical paths around one dashed circular orbit. The explicit Euler path spirals outward; symplectic Euler, Verlet and RK4 stay close to the circle.");
 
   const cx=w/2, cy=h/2, k=40;
   let dt=0.035, numSteps=25, currentStep=0;
 
   const methods = [
-    { name: 'Euler', color: '#dc2626', key: 'euler' },
-    { name: 'Verlet', color: '#2563eb', key: 'verlet' },
-    { name: 'RK4', color: '#7c3aed', key: 'rk4' },
+    // hex is for KaTeX (themeEq maps it to the same custom property)
+    { name: 'Explicit Euler', short: 'Euler', color: 'var(--c-pressure)', hex: '#dc2626', key: 'euler' },
+    { name: 'Symplectic Euler', short: 'Sympl.', color: 'var(--c-kernel)', hex: '#059669', key: 'symplectic' },
+    { name: 'Verlet', short: 'Verlet', color: 'var(--c-viscosity)', hex: '#2563eb', key: 'verlet' },
+    { name: 'RK4', short: 'RK4', color: 'var(--c-density)', hex: '#7c3aed', key: 'rk4' },
   ];
 
   // Ideal orbit
   svg.append("circle").attr("cx",cx).attr("cy",cy).attr("r",100)
-    .attr("fill","none").attr("stroke","var(--border)").attr("stroke-width",1).attr("stroke-dasharray","4,4");
+    .attr("fill","none").attr("stroke","var(--text-2)").attr("stroke-width",1).attr("stroke-dasharray","4,4").attr("opacity",0.7);
   svg.append("circle").attr("cx",cx).attr("cy",cy).attr("r",4).attr("fill","var(--text-2)").attr("opacity",0.5);
 
   // Create arrow markers per method
@@ -1233,20 +1406,20 @@ function visibleLoop(elementId, loopFn) {
   methods.forEach(m=>{
     const g = svg.append("g");
     methodGroups[m.key] = {
-      path: g.append("path").attr("fill","none").attr("stroke",m.color).attr("stroke-width",1.5).attr("opacity",0.4),
+      path: g.append("path").attr("fill","none").attr("stroke",m.color).attr("stroke-width",1.5).attr("opacity",0.5),
       dots: g.append("g"),
-      dot: g.append("circle").attr("r",6).attr("fill",m.color).attr("stroke","#fff").attr("stroke-width",2),
+      dot: g.append("circle").attr("r",6).attr("fill",m.color).attr("stroke","var(--fig-bg)").attr("stroke-width",2),
       velArr: g.append("line").attr("stroke",m.color).attr("stroke-width",1.5),
       steps: []
     };
   });
 
-  const stepLabel = svg.append("text").attr("x",15).attr("y",20).attr("font-size",11).attr("fill","var(--text-2)");
+  const stepLabel = svg.append("text").attr("x",15).attr("y",12).attr("dominant-baseline","hanging").style("font-size","var(--fs)").attr("fill","var(--text-2)");
 
   // Legend
   const legend = d3.select("#integration-legend");
   methods.forEach(m=>{
-    legend.append("span").html(`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${m.color};margin-right:3px;"></span>${m.name}`);
+    legend.append("span").html(`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${m.color};margin-right:4px;"></span>${m.name}`);
   });
 
   function accel(px, py) { return [-k*(px-cx), -k*(py-cy)]; }
@@ -1255,8 +1428,6 @@ function visibleLoop(elementId, loopFn) {
     methods.forEach(m=>{
       const steps = [];
       let px=cx+100, py=cy, vx=0, vy=-Math.sqrt(k)*100;
-      // For Verlet we need prev position
-      let prevX=px-vx*dt, prevY=py-vy*dt;
       steps.push({x:px,y:py,vx,vy});
 
       for (let i=0;i<numSteps;i++) {
@@ -1266,13 +1437,18 @@ function visibleLoop(elementId, loopFn) {
         if (m.key==='euler') {
           newPx=px+vx*dt; newPy=py+vy*dt;
           newVx=vx+ax*dt; newVy=vy+ay*dt;
+        } else if (m.key==='symplectic') {
+          // velocity first, then position with the new velocity (what the simulations use)
+          newVx=vx+ax*dt; newVy=vy+ay*dt;
+          newPx=px+newVx*dt; newPy=py+newVy*dt;
         } else if (m.key==='verlet') {
-          // Stormer-Verlet: x(n+1) = 2x(n) - x(n-1) + a*dt^2
-          newPx = 2*px - prevX + ax*dt*dt;
-          newPy = 2*py - prevY + ay*dt*dt;
-          newVx = (newPx - prevX)/(2*dt);
-          newVy = (newPy - prevY)/(2*dt);
-          prevX=px; prevY=py;
+          // Velocity form of Verlet: same positions as x(n+1) = 2x(n) - x(n-1) + a*dt^2,
+          // with a velocity that belongs to the same instant as the position.
+          newPx = px + vx*dt + 0.5*ax*dt*dt;
+          newPy = py + vy*dt + 0.5*ay*dt*dt;
+          const [ax2,ay2] = accel(newPx,newPy);
+          newVx = vx + 0.5*(ax+ax2)*dt;
+          newVy = vy + 0.5*(ay+ay2)*dt;
         } else { // rk4
           const [k1ax,k1ay] = accel(px,py);
           const k1vx=vx, k1vy=vy;
@@ -1326,24 +1502,42 @@ function visibleLoop(elementId, loopFn) {
 
     stepLabel.text(`step ${currentStep} / ${numSteps}, dt = ${dt.toFixed(3)}`);
 
-    // Energy comparison in equation row
-    const E0 = 0.5*k*100*100;
+    // Energy error in the equation row. On the true orbit kinetic and potential
+    // energy are each k*r^2/2, so E0 = k*r^2.
+    const E0 = k*100*100;
     const parts = methods.map(m=>{
       const s = methodGroups[m.key].steps[currentStep];
       const E = 0.5*(s.vx*s.vx+s.vy*s.vy) + 0.5*k*((s.x-cx)*(s.x-cx)+(s.y-cy)*(s.y-cy));
       const drift = ((E-E0)/E0*100);
-      return `{\\color{${m.color}}\\text{${m.name}}: ${drift>0?'+':''}${fmt(drift,1)}\\%}`;
+      return `{\\color{${m.hex}}\\text{${m.short}}\\,${drift>=0?'+':''}${fmt(drift,1)}\\%}`;
     });
-    const tex = `E_0=${fmt(E0,0)}\\quad ${parts.join('\\quad ')}`;
-    const el=document.getElementById("eq-integration-values");
-    renderEq(el,tex); el.classList.add('visible');
+    // one KaTeX span per method so the row can wrap on a phone
+    const row = d3.select("#eq-integration-values");
+    row.selectAll("span.int-err").data(parts).join("span").attr("class","int-err").style("margin","0 0.5em")
+      .each(function(tex){ renderEq(this, tex); });
   }
+
+  // Walk through the steps by itself until the reader takes over the step slider.
+  let playing = !REDUCED, holdTicks = 0, visible = false;
+  const playBtn = d3.select("#int-play");
+  function setPlaying(v){ playing=v; playBtn.text(playing?'Pause':'Play'); }
+  function setStep(v){ currentStep=v; d3.select("#int-step-slider").property("value",v); d3.select("#int-step-val").text(v); render(); }
+  playBtn.on("click",()=>{ if(!playing&&currentStep>=numSteps) setStep(0); setPlaying(!playing); });
+  new IntersectionObserver(([e])=>{visible=e.isIntersecting;},{threshold:0.05}).observe(document.getElementById("fig-integration"));
+  setInterval(()=>{
+    if(!playing||!visible||document.hidden) return;
+    if(currentStep>=numSteps){ if(++holdTicks>8){holdTicks=0;setStep(0);} return; } // hold the finished paths, then restart
+    setStep(currentStep+1);
+  },220);
 
   d3.select("#int-dt-slider").on("input",function(){dt=+this.value;d3.select("#int-dt-val").text(dt.toFixed(3));computeSteps();render();});
   d3.select("#int-steps-slider").on("input",function(){numSteps=+this.value;d3.select("#int-steps-val").text(numSteps);computeSteps();render();});
-  d3.select("#int-step-slider").on("input",function(){currentStep=+this.value;d3.select("#int-step-val").text(currentStep);render();});
+  d3.select("#int-step-slider").on("input",function(){setPlaying(false);currentStep=+this.value;d3.select("#int-step-val").text(currentStep);render();});
 
-  computeSteps(); render();
+  computeSteps();
+  if (REDUCED) currentStep = numSteps; // show the finished paths as a still
+  fitText(svg, w);
+  setStep(currentStep); setPlaying(playing);
 })();
 
 
@@ -1358,7 +1552,7 @@ function visibleLoop(elementId, loopFn) {
 
   function resizeCanvas() {
     const rect=canvas.parentElement.getBoundingClientRect();
-    simW=Math.floor(rect.width-48);
+    simW=canvasWidth(canvas);
     simH=320;
     canvas.width=simW*dpr; canvas.height=simH*dpr;
     canvas.style.height=simH+'px';
@@ -1372,10 +1566,11 @@ function visibleLoop(elementId, loopFn) {
   const emitInt=3, emitN=2;
 
   // Container: open-top box, centered
-  const containerW=300, wallH=100, wallT=5;
-  let containerX, containerY;
+  const wallH=100, wallT=5;
+  let containerW=300, containerX, containerY;
   function updateContainerPos() {
-    containerX = simW/2 - containerW/2;
+    containerW = Math.min(300, simW - 70); // leave room for the spout on a phone
+    containerX = simW/2 - containerW/2 + 10;
     containerY = simH - wallH - 10;
   }
   updateContainerPos();
@@ -1452,11 +1647,11 @@ function visibleLoop(elementId, loopFn) {
 
   function render(){
     ctx.clearRect(0,0,simW,simH);
-    ctx.fillStyle='#f0f4f8';ctx.fillRect(0,0,simW,simH);
+    ctx.fillStyle=THEME['canvas-bg'];ctx.fillRect(0,0,simW,simH);
 
     // Container walls (U-shape, no lid)
     updateContainerPos();
-    ctx.fillStyle='#94a3b8';
+    ctx.fillStyle=THEME['wall'];
     // Left wall
     ctx.fillRect(containerX, containerY, wallT, wallH+10);
     // Right wall
@@ -1466,29 +1661,28 @@ function visibleLoop(elementId, loopFn) {
 
     // Hose nozzle (left of container, angled right)
     const hx=containerX-15, hy=containerY-63;
-    ctx.fillStyle='#64748b';
+    ctx.fillStyle=THEME['wall-2'];
     ctx.fillRect(hx, hy, hoseW+4, hoseH);
     // Small arrow showing flow direction
-    ctx.strokeStyle='#64748b';ctx.lineWidth=1.5;
+    ctx.strokeStyle=THEME['wall-2'];ctx.lineWidth=1.5;
     ctx.beginPath();ctx.moveTo(hx+hoseW+4,hy+hoseH/2);ctx.lineTo(hx+hoseW+14,hy+hoseH/2+2);ctx.stroke();
     ctx.beginPath();ctx.moveTo(hx+hoseW+11,hy+hoseH/2-1);ctx.lineTo(hx+hoseW+14,hy+hoseH/2+2);ctx.lineTo(hx+hoseW+11,hy+hoseH/2+5);ctx.stroke();
 
     // Particles
-    // Color by speed: slow=dark blue, fast=medium blue (never white)
-    const cs=d3.scaleSequential(t=>d3.interpolateBlues(0.35 + t*0.55)).domain([0,200]);
+    // Color by speed: slow = dark blue, fast = lighter blue (same in every chapter)
     for(const p of particles){const sp=Math.sqrt(p.vx*p.vx+p.vy*p.vy);
-      ctx.beginPath();ctx.arc(p.x,p.y,pR,0,Math.PI*2);ctx.fillStyle=cs(Math.min(sp,180));ctx.fill();
+      ctx.beginPath();ctx.arc(p.x,p.y,pR,0,Math.PI*2);ctx.fillStyle=speedColor(sp);ctx.fill();
       ctx.strokeStyle='rgba(30,64,175,0.15)';ctx.lineWidth=0.5;ctx.stroke();}
 
-    ctx.fillStyle='#94a3b8';ctx.font='11px Source Sans 3,system-ui,sans-serif';
-    ctx.fillText(`${particles.length}/${maxP}`,simW-60,14);
+    ctx.fillStyle=THEME['text-2'];ctx.font='13px Source Sans 3,system-ui,sans-serif';
+    ctx.textAlign='right';ctx.fillText(`${particles.length} / ${maxP} particles`,simW-8,16);ctx.textAlign='left';
 
     if(mouseDown){ctx.beginPath();ctx.arc(mouseX,mouseY,H*4,0,Math.PI*2);
       ctx.strokeStyle='rgba(220,38,38,0.25)';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);}
   }
 
   function loopStep2(){emitTimer++;if(emitTimer>=emitInt){emitTimer=0;emit();}
-    for(let s=0;s<substeps;s++)step();render();}
+    budgetSteps(substeps,step,12);render();}
 
   canvas.addEventListener("pointerdown",e=>{mouseDown=true;const r=canvas.getBoundingClientRect();mouseX=(e.clientX-r.left)*(simW/r.width);mouseY=(e.clientY-r.top)*(simH/r.height);});
   canvas.addEventListener("pointermove",e=>{if(mouseDown){const r=canvas.getBoundingClientRect();mouseX=(e.clientX-r.left)*(simW/r.width);mouseY=(e.clientY-r.top)*(simH/r.height);}});

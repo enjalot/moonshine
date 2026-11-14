@@ -56,6 +56,11 @@
   font-family: var(--mono-font);
   font-size: 0.9rem;
 }
+/* Inline code is 0.9em, which in a 0.85rem caption lands at 12.2px. */
+.figure-caption code,
+.figure-hint code {
+  font-size: 0.8125rem;
+}
 .article pre code {
   background: none;
   padding: 0;
@@ -235,10 +240,9 @@
 /* Interaction hint under a figure's canvas, above the caption. */
 .figure-hint {
   font-family: var(--heading-font);
-  font-size: 0.75rem;
+  font-size: 0.8125rem; /* 13px: the smallest text a reader is given */
   color: var(--text-2);
   margin: 0.35rem 0 0;
-  opacity: 0.8;
 }
 
 .figure-missing {
@@ -344,7 +348,7 @@
 }
 .card-tags {
   font-family: var(--heading-font);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--accent);
   margin-top: 0.6rem;
 }
@@ -373,7 +377,7 @@
   padding-top: 1.25rem;
   border-top: 1px solid var(--border);
   font-family: var(--heading-font);
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
   color: var(--text-2);
 }
 .moonshine-footer p {
@@ -520,7 +524,7 @@
   line-height: 1;
   width: 1.7rem;
   height: 1.7rem;
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
   border: none;
   border-radius: 4px;
@@ -756,6 +760,12 @@
    stops a swipe over a figure (or a diagram readers can't drag at all)
    from scrolling the page. Only what can be dragged keeps it: Dragology
    gives those elements cursor: grab. */
+/* Text inside a DragFigure is scaled with the drawing. Dividing by the
+   scale (set by DragFigure) holds it at 13px on screen at every width. */
+.mn-drag-figure {
+  --mn-fig-text: calc(13px / var(--mn-drag-k, 1));
+}
+
 .mn-drag-figure > svg,
 .mn-diagram-flow > svg,
 .mn-reorder-overlay > svg {
@@ -775,68 +785,6 @@
   background: var(--error-bg);
   border: 1px solid var(--error-border);
   border-radius: 4px;
-}
-
-/* StepSize: gradient descent on a parabola, with an η ruler. */
-.mn-ss-curve {
-  fill: none;
-  stroke: var(--text-2);
-  stroke-width: 1.5;
-}
-.mn-ss-hops {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 1.5;
-  stroke-dasharray: 4 3;
-  opacity: 0.7;
-}
-.mn-ss-iter {
-  fill: var(--accent);
-}
-.mn-ss-handle,
-.mn-ss-start {
-  fill: var(--fig-bg);
-  stroke: var(--accent);
-  stroke-width: 2.5;
-  cursor: grab;
-}
-.mn-ss-start {
-  fill: var(--accent);
-  stroke: var(--fig-bg);
-  stroke-width: 2;
-}
-.mn-ss-note,
-.mn-ss-tick-label,
-.mn-ss-tick-word,
-.mn-ss-knob text {
-  font-family: var(--heading-font);
-  font-size: 13px;
-  fill: var(--text-2);
-}
-.mn-ss-note {
-  font-size: 13.5px;
-}
-.mn-ss-ruler,
-.mn-ss-tick {
-  stroke: var(--text-2);
-  stroke-width: 1.25;
-}
-.mn-ss-tick-word {
-  font-size: 12px;
-  opacity: 0.8;
-}
-.mn-ss-knob {
-  cursor: grab;
-}
-.mn-ss-knob circle {
-  fill: var(--accent);
-  stroke: var(--fig-bg);
-  stroke-width: 2.5;
-}
-.mn-ss-knob text {
-  fill: var(--accent);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Diagrams (DiagramFigure: live SVG drawn by Dragology, incl. kind=diagram)
@@ -862,7 +810,7 @@
   left: 0;
   margin: 0.25rem 0 0;
   font-family: var(--heading-font);
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
   color: var(--text-2);
 }
 .mn-diagram-flow {
@@ -922,6 +870,85 @@
 .mn-dg-node[data-kind='note'] .mn-dg-label {
   font-weight: 400;
 }
+/* Tiles: a node with an icon. The glyph is drawn in the node's tone over a
+   pale wash of it; the label sits outside the tile. */
+.mn-dg-node {
+  --dg-tone: var(--text);
+}
+.mn-dg-node[data-on~='tone-flow'],
+.mn-diagram-swatch[data-tone='flow'],
+.mn-dg-glyph-inline[data-tone='flow'] {
+  --dg-tone: var(--dg-flow);
+}
+.mn-dg-node[data-on~='tone-data'],
+.mn-diagram-swatch[data-tone='data'],
+.mn-dg-glyph-inline[data-tone='data'] {
+  --dg-tone: var(--dg-data);
+}
+.mn-dg-node[data-on~='tone-control'],
+.mn-diagram-swatch[data-tone='control'],
+.mn-dg-glyph-inline[data-tone='control'] {
+  --dg-tone: var(--dg-control);
+}
+.mn-dg-node[data-on~='tone-access'],
+.mn-diagram-swatch[data-tone='access'],
+.mn-dg-glyph-inline[data-tone='access'] {
+  --dg-tone: var(--dg-access);
+}
+.mn-dg-node[data-kind='tile'] .mn-dg-shape {
+  stroke: var(--border);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 1px 1.5px var(--shadow-edge));
+}
+.mn-dg-node[data-on~='dashed'] .mn-dg-shape {
+  stroke: var(--text-2);
+  stroke-dasharray: 5 3.5;
+  filter: none;
+}
+.mn-dg-glyph {
+  color: var(--dg-tone, var(--text));
+  fill: color-mix(in srgb, currentColor 14%, transparent);
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.mn-dg-glyph * {
+  vector-effect: non-scaling-stroke;
+}
+.mn-dg-glyph-line {
+  fill: none;
+}
+.mn-dg-glyph-text {
+  font-family: var(--heading-font);
+  font-size: 15px;
+  font-weight: 600;
+  fill: var(--dg-tone, var(--text));
+  stroke: none;
+}
+.mn-dg-glyph-inline {
+  --dg-tone: var(--text);
+  vertical-align: -0.18em;
+}
+.mn-dg-tile-label {
+  font-family: var(--heading-font);
+  font-size: 15px; /* same as a box label: the 13px floor is measured against it */
+  font-weight: 500;
+  fill: var(--text);
+}
+.mn-dg-node[data-on~='dashed'] .mn-dg-tile-label {
+  fill: var(--text-2);
+}
+.mn-dg-badge rect {
+  fill: var(--text);
+}
+.mn-dg-badge text {
+  font-family: var(--heading-font);
+  font-size: 13px;
+  font-weight: 700;
+  fill: var(--bg);
+}
 .mn-dg-halo {
   fill: none;
   stroke: var(--accent-light);
@@ -960,17 +987,70 @@
   box-shadow: 0 4px 14px var(--shadow-edge);
   pointer-events: none;
 }
+.mn-dg-group,
+.mn-dg-group-label {
+  --dg-zone: var(--border);
+  --dg-zone-ink: var(--text-2);
+}
+.mn-dg-group[data-on~='tone-flow'],
+.mn-dg-group-label[data-on~='tone-flow'] {
+  --dg-zone: var(--dg-flow);
+  --dg-zone-ink: var(--dg-flow);
+}
+.mn-dg-group[data-on~='tone-data'],
+.mn-dg-group-label[data-on~='tone-data'] {
+  --dg-zone: var(--dg-data);
+  --dg-zone-ink: var(--dg-data);
+}
+.mn-dg-group[data-on~='tone-control'],
+.mn-dg-group-label[data-on~='tone-control'] {
+  --dg-zone: var(--dg-control);
+  --dg-zone-ink: var(--dg-control);
+}
+.mn-dg-group[data-on~='tone-access'],
+.mn-dg-group-label[data-on~='tone-access'] {
+  --dg-zone: var(--dg-access);
+  --dg-zone-ink: var(--dg-access);
+}
 .mn-dg-group-box {
   fill: none;
-  stroke: var(--border);
+  stroke: var(--dg-zone);
   stroke-width: 1.5;
   transition: stroke 0.2s;
+}
+.mn-dg-group-corners {
+  display: none;
+  fill: none;
+  stroke: var(--dg-zone-ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.mn-dg-group[data-kind='corners'] .mn-dg-group-box {
+  stroke: none;
+}
+.mn-dg-group[data-kind='corners'] .mn-dg-group-corners {
+  display: inline;
+}
+.mn-dg-group[data-kind='tint'] .mn-dg-group-box {
+  fill: color-mix(in srgb, var(--dg-zone-ink) 9%, transparent);
+  stroke: none;
+}
+.mn-dg-group[data-kind='dashed'] .mn-dg-group-box {
+  stroke: var(--dg-zone-ink);
+  stroke-dasharray: 6 5;
 }
 .mn-dg-group-label {
   font-family: var(--heading-font);
   font-size: 13px;
   font-weight: 600;
-  fill: var(--text-2);
+  fill: var(--dg-zone-ink);
+  /* Its own layer over the links: a halo keeps a link behind the name,
+     and clicks pass through to the group's name bar. */
+  stroke: var(--fig-bg);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  paint-order: stroke;
+  pointer-events: none;
 }
 .mn-dg-group[data-on~='active'] .mn-dg-group-box,
 .mn-dg-annot[data-on~='active'] .mn-dg-annot-box {
@@ -996,13 +1076,34 @@
   fill: none;
   stroke: none;
 }
+.mn-dg-edge,
+.mn-dg-edge-label {
+  --dg-link: var(--text-2);
+}
+.mn-dg-edge[data-kind='flow'],
+.mn-dg-edge-label[data-kind='flow'] {
+  --dg-link: var(--dg-flow);
+}
+.mn-dg-edge[data-kind='data'],
+.mn-dg-edge-label[data-kind='data'] {
+  --dg-link: var(--dg-data);
+}
+.mn-dg-edge[data-kind='control'],
+.mn-dg-edge-label[data-kind='control'] {
+  --dg-link: var(--dg-control);
+}
+.mn-dg-edge[data-kind='access'],
+.mn-dg-edge-label[data-kind='access'] {
+  --dg-link: var(--dg-access);
+}
 .mn-dg-edge-line {
   fill: none;
-  stroke: var(--text-2);
-  stroke-width: 1.4;
+  stroke: var(--dg-link);
+  stroke-width: 1.6;
 }
-.mn-dg-arrow {
-  fill: var(--text-2);
+.mn-dg-arrow,
+.mn-dg-chevron {
+  fill: var(--dg-link);
 }
 .mn-dg-edge[data-on~='dashed'] .mn-dg-edge-line {
   stroke-dasharray: 5 4;
@@ -1025,7 +1126,8 @@
   stroke: var(--accent);
   stroke-width: 2.2;
 }
-.mn-dg-edge[data-on~='active'] .mn-dg-arrow {
+.mn-dg-edge[data-on~='active'] .mn-dg-arrow,
+.mn-dg-edge[data-on~='active'] .mn-dg-chevron {
   fill: var(--accent);
 }
 .mn-dg-edge-label rect {
@@ -1033,8 +1135,11 @@
 }
 .mn-dg-edge-label text {
   font-family: var(--heading-font);
-  font-size: 12.5px;
+  font-size: 13px;
   fill: var(--text-2);
+}
+.mn-dg-edge-label:not([data-kind='plain']) text {
+  fill: var(--dg-link);
 }
 .mn-dg-edge[data-on~='active'] .mn-dg-edge-label text {
   fill: var(--accent);
@@ -1100,7 +1205,7 @@
 .mn-diagram-editor-bar button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 /* wide / narrow arrangement tabs in the editor bar */
 .mn-diagram-variant {
@@ -1183,7 +1288,7 @@
 }
 .mn-diagram-toolbar button[aria-pressed='true'],
 .mn-diagram-tools button[aria-pressed='true'] {
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
 }
 .mn-diagram-toolbar button.is-danger:hover {
@@ -1224,6 +1329,68 @@
 .mn-diagram-toolbar .mn-diagram-kind[aria-checked='true'] {
   background: var(--accent-light);
   box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+.mn-diagram-icons {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 2px 2px;
+  border-top: 1px solid var(--border);
+  margin-top: 3px;
+}
+.mn-diagram-icons .mn-diagram-kinds {
+  flex-wrap: wrap;
+}
+.mn-diagram-label-input {
+  width: 11rem;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 4px 7px;
+  margin: 1px 4px 1px 1px;
+}
+.mn-diagram-icon-search {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 0 3px;
+}
+.mn-diagram-icon-search input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 4px 7px;
+}
+.mn-diagram-icon-hits {
+  max-height: 132px;
+  overflow-y: auto;
+}
+.mn-diagram-swatch {
+  --dg-tone: var(--text-2);
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--dg-tone);
+}
+.mn-dg-text-edit.is-tile {
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  padding: 3px 4px;
+}
+.mn-dg-text-edit.is-tile.is-right {
+  text-align: left;
+}
+.mn-dg-text-edit.is-tile.is-left {
+  text-align: right;
 }
 .mn-diagram-detail {
   flex-basis: 100%;
@@ -1278,6 +1445,7 @@
   fill: transparent;
 }
 .mn-diagram-arrange.is-tool-box .mn-dg-canvas,
+.mn-diagram-arrange.is-tool-group .mn-dg-canvas,
 .mn-diagram-arrange.is-tool-text .mn-dg-canvas,
 .mn-diagram-arrange.is-tool-note .mn-dg-canvas {
   cursor: crosshair;
@@ -1432,7 +1600,7 @@
 }
 .mn-dg-frame-label {
   font-family: var(--heading-font);
-  font-size: 12px;
+  font-size: 13px;
   fill: var(--text-2);
   cursor: pointer;
 }
@@ -1477,7 +1645,7 @@
 }
 .mn-dg-text-edit.is-edge {
   padding: 2px 6px;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 400;
 }
 .mn-diagram-marquee {
@@ -1528,7 +1696,7 @@
   cursor: pointer;
 }
 .mn-insert-plus[aria-expanded='true'] {
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
 }
 .mn-insert-menu {
@@ -1604,7 +1772,7 @@
   gap: 0.3rem;
 }
 .mn-figure-controls button[aria-pressed='true'] {
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
   border-color: var(--accent);
 }
@@ -1844,6 +2012,175 @@ body.mn-reordering {
   align-items: flex-end;
   z-index: 41;
 }
+/* Suggestions: an agent's proposed changes, shown under the block they refer
+   to while the HUD toggle is on. Dev-only chrome. */
+.mn-sg-stack {
+  margin: -0.4rem 0 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.figure .mn-sg-stack {
+  margin: 0.8rem 0 0;
+  text-align: left;
+}
+.mn-sg {
+  font-family: var(--heading-font);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--note-bg);
+  border: 1px solid var(--note-border);
+  border-left-width: 3px;
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem 0.65rem;
+  scroll-margin: 6rem;
+}
+.mn-sg-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-2);
+  margin-bottom: 0.3rem;
+}
+.mn-sg-source {
+  font-weight: 400;
+}
+.mn-sg-diff {
+  font-family: var(--body-font);
+  font-size: 1rem;
+  line-height: 1.55;
+  margin: 0 0 0.4rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.mn-sg-diff del {
+  color: var(--error);
+  background: var(--error-bg);
+  text-decoration-thickness: 1px;
+}
+.mn-sg-diff ins {
+  text-decoration: none;
+  background: var(--sg-ins-bg);
+  box-shadow: inset 0 -1px 0 var(--sg-ins-line);
+}
+.mn-sg-quote {
+  border-left: 2px solid var(--note-border);
+  padding-left: 0.6rem;
+  color: var(--text-2);
+}
+.mn-sg-note {
+  margin: 0 0 0.5rem;
+  color: var(--text-2);
+}
+.mn-sg-edit {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--mono-font);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.5rem 0.6rem;
+  margin: 0 0 0.5rem;
+  resize: vertical;
+}
+.mn-sg-message {
+  font-family: var(--heading-font);
+}
+.mn-sg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.mn-sg-actions button {
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--text);
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.3rem 0.8rem;
+  min-height: 2rem;
+  cursor: pointer;
+}
+.mn-sg-actions button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.mn-sg-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.mn-sg-actions .mn-sg-primary {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.mn-sg-keys {
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+.mn-hud-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  max-width: 100%;
+}
+.mn-hud-switch {
+  position: relative;
+  flex: none;
+  width: 1.5rem;
+  height: 0.85rem;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background 0.15s;
+}
+.mn-hud-switch::after {
+  content: '';
+  position: absolute;
+  top: 0.1rem;
+  left: 0.1rem;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: var(--fig-bg);
+  transition: transform 0.15s;
+}
+.mn-hud-sg-toggle.is-on .mn-hud-switch {
+  background: var(--accent);
+}
+.mn-hud-sg-toggle.is-on .mn-hud-switch::after {
+  transform: translateX(0.65rem);
+}
+.mn-hud-sg-jump {
+  display: block;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  color: var(--text);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.mn-hud-sg-jump:hover {
+  color: var(--accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mn-hud-switch,
+  .mn-hud-switch::after {
+    transition: none;
+  }
+}
+
 .mn-hud-bar {
   display: flex;
   align-items: center;

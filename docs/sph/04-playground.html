@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Playground — SPH</title>
+<title>Playground · SPH</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
@@ -24,6 +24,12 @@
   --bg: #fafafa;
   --fig-bg: #ffffff;
   --border: #e2e2e8;
+  --canvas-bg: #f0f4f8;
+  --wall: #94a3b8;
+  --wall-2: #64748b;
+  --eq-bg: #f8f7ff;
+  --code-bg: #f6f8fa;
+  --comment: #6b7280;
   --c-kernel: #059669;
   --c-density: #7c3aed;
   --c-pressure: #dc2626;
@@ -34,6 +40,18 @@
   --c-water: #2563eb;
   --c-sand: #d97706;
   --c-jelly: #7c3aed;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e6dd; --text-2: #a8a8bc; --accent: #7aa7ff; --accent-light: #26335c;
+    --bg: #16162a; --fig-bg: #1f1f36; --border: #3a3a52;
+    --canvas-bg: #14142a; --wall: #64748b; --wall-2: #94a3b8;
+    --eq-bg: #24243f; --code-bg: #1a1a30; --comment: #8b93a7;
+    --c-kernel: #34d399; --c-density: #a78bfa; --c-pressure: #f87171; --c-viscosity: #60a5fa;
+    --c-mass: #fbbf24; --c-position: #22d3ee; --c-velocity: #f472b6;
+    --c-water: #60a5fa; --c-sand: #fbbf24; --c-jelly: #a78bfa;
+  }
 }
 
 body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
@@ -48,25 +66,24 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
 
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .figure-wide { margin-left: -2rem; margin-right: -2rem; }
-.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.75rem; }
 .figure-label { font-weight: 600; color: var(--text); }
-
-.insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
-.insight p { margin: 0; }
 
 svg text { font-family: var(--heading-font); }
 
 /* Toolbar-specific styles */
-.toolbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-2); }
-.toolbar-group { display: flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.4rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); }
-.toolbar-group label { font-size: 0.75rem; color: var(--text-2); margin-right: 0.25rem; white-space: nowrap; }
-.tool-btn { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.2rem 0.6rem; border: 1px solid var(--border); border-radius: 3px; background: var(--fig-bg); cursor: pointer; color: var(--text-2); transition: background 0.1s, border-color 0.1s; }
+.sim-canvas { display: block; width: 100%; border-radius: 4px; touch-action: pan-y; }
+.toolbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-2); }
+.motion-btn { font-family: var(--heading-font); font-size: 0.85rem; padding: 0.35rem 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text); cursor: pointer; margin-bottom: 0.75rem; }
+.toolbar-group { display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem; padding: 0.2rem 0.4rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); }
+.toolbar-group label { font-size: 0.8125rem; color: var(--text-2); margin-right: 0.25rem; white-space: nowrap; }
+.tool-btn { font-family: var(--heading-font); font-size: 0.8125rem; padding: 0.35rem 0.6rem; border: 1px solid var(--border); border-radius: 3px; background: var(--fig-bg); cursor: pointer; color: var(--text-2); transition: background 0.1s, border-color 0.1s; }
 .tool-btn:hover { background: var(--bg); }
 .tool-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-.status-text { font-family: var(--mono-font); font-size: 0.7rem; color: var(--text-2); margin-left: auto; white-space: nowrap; }
+.status-text { font-family: var(--mono-font); font-size: 0.8125rem; color: var(--text-2); margin-left: auto; }
 .legend-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; margin-right: 3px; }
 
-@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } }
+@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } .figure { padding: 1rem; } .eq-block { padding: 0.75rem 0.5rem; } .eq-block .katex { font-size: 1em; } .code-block { padding: 0.75rem; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
 </style>
 </head>
@@ -75,26 +92,27 @@ svg text { font-family: var(--heading-font); }
   <header>
     <h1>Playground</h1>
     <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
-      A multi-material sandbox with three streams that mix in mid-air.
+      A sandbox where water, sand, and jelly share one simulation.
     </p>
     <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">
-      Part 4 of <a href="index.html">Smooth Particle Hydrodynamics</a>
+      Part 4 of <a href="index.html">Smoothed Particle Hydrodynamics</a>
     </p>
   </header>
 
   <p>
-    Everything from the previous articles comes together here. Water, sand, and
-    jelly all run in one simulation, side by side. Each particle carries a material
-    tag, and the shader looks up its own stiffness, viscosity, and rest density
-    before computing forces. Jelly particles hold onto each other through
-    springs; sand sticks to itself through high viscosity and static friction;
-    water just flows.
+    Water, sand, and jelly all run in one simulation here. Each particle carries a
+    material tag, and the shader looks up that material's stiffness, viscosity, and
+    rest density before computing forces. Jelly particles hold onto each other through
+    springs, sand resists sliding through high viscosity and the tangential friction
+    from <a href="03-beyond-water.html">Part 3</a>, and water gets neither.
   </p>
   <p>
-    Three emitters are already running. Your job is to get in the way. Drop
-    obstacles, paint air blowers that push particles up or sideways, and watch
-    the streams tangle. On WebGPU the scene holds up to 5,000 particles. On
-    machines without WebGPU it falls back to CPU and caps at 500.
+    Two emitters are already running, one pouring water and one pouring sand, and a
+    blob of jelly drops in on the right. The tools let you get in their way: drop
+    obstacles, paint air blowers that push particles up or sideways, and stamp more
+    jelly into the streams. On WebGPU the scene holds up to 5,000 particles. On
+    machines without WebGPU it falls back to CPU and caps at 500. The emitters stop
+    when that budget is used up, and Reset starts the scene over.
   </p>
 
   <div class="figure figure-wide" id="fig-sandbox">
@@ -112,19 +130,21 @@ svg text { font-family: var(--heading-font); }
       </div>
       <span class="status-text" id="status-text"><span id="backend-label">...</span> &middot; <span id="particle-count">0</span> particles &middot; <span id="fps">--</span> fps</span>
     </div>
-    <div style="font-family:var(--heading-font);font-size:0.75rem;color:var(--text-2);margin-bottom:0.5rem;">
-      <span class="legend-swatch" style="background:#2563eb;"></span>Water
-      &nbsp;<span class="legend-swatch" style="background:#d97706;"></span>Sand
-      &nbsp;<span class="legend-swatch" style="background:#7c3aed;"></span>Jelly (springs)
+    <div style="font-family:var(--heading-font);font-size:0.8125rem;color:var(--text-2);margin-bottom:0.5rem;">
+      <span class="legend-swatch" style="background:var(--c-water);"></span>Water
+      &nbsp;<span class="legend-swatch" style="background:var(--c-sand);"></span>Sand
+      &nbsp;<span class="legend-swatch" style="background:var(--c-jelly);"></span>Jelly (springs)
     </div>
-    <canvas id="sandbox-canvas" style="width:100%;border-radius:4px;cursor:crosshair;"></canvas>
+    <canvas id="sandbox-canvas" class="sim-canvas" style="cursor:crosshair;" role="img"
+      aria-label="A sandbox. A blue stream of water and an orange stream of sand pour in from the left, a purple block of jelly falls on the right, and a dashed rectangle near the floor blows particles upward."></canvas>
     <div class="figure-caption">
       <span class="figure-label">Playground.</span>
-      Water and sand pour in continuously from the left. Use Stamp Jelly to place
-      a connected blob of jelly particles anywhere on the canvas. Obstacles are
-      circles (click and drag to set the radius). Blowers are rectangles that push
-      particles in a direction; click an existing blower to rotate its direction.
-      The erase tool removes anything you click.
+      Water and sand pour in from the left, and the dashed rectangle is a blower
+      throwing whatever reaches it back up. With Obstacle selected, click or tap to drop
+      a circle, or drag sideways to set its radius. Blowers are rectangles you drag out;
+      click an existing one to turn it a quarter turn. Stamp Jelly places a connected
+      block of jelly particles where you click. Erase removes the obstacle or blower
+      you click.
     </div>
   </div>
 
@@ -132,26 +152,25 @@ svg text { font-family: var(--heading-font); }
     The physics for all three materials runs in a single compute shader. Each
     particle reads its material index, looks up the right stiffness and
     viscosity from a small uniform array, and computes its own forces. The
-    neighbor loop does not care which material a particle is; it treats them
-    uniformly through the same SPH kernel. Mixtures fall out for free.
+    neighbor loop treats every neighbor the same way through the same SPH kernel,
+    whatever its material, so water pushes on sand and sand on jelly with no extra code.
   </p>
   <p>
     Springs for jelly run in their own compute pass before forces. Each jelly
-    particle stores up to four neighbor indices that were within range at
+    particle stores up to eight neighbor indices that were within range at
     spawn time, and the spring pass applies a stiff restoring force toward
     each one&apos;s rest length. The fixed-size buffer keeps it simple and fast,
     with sentinel values marking empty slots.
   </p>
 
   <p>
-    Everything stays on a single thread of JavaScript above the GPU, mostly to
-    handle the user tools and particle spawning. The compute shader does the
-    real work. If your browser does not support WebGPU the same physics still
-    runs on CPU, just at a lower particle budget.
+    JavaScript handles the tools and the particle spawning on one thread, and the
+    compute shader does the physics. If your browser does not support WebGPU, the
+    same physics runs in JavaScript at a lower particle budget.
   </p>
 
   <footer style="margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border);font-family:var(--heading-font);font-size:0.85rem;color:var(--text-2);">
-    <p>Part of <a href="index.html" style="color:var(--text-2);">Smooth Particle Hydrodynamics</a>. Prev: <a href="03-beyond-water.html" style="color:var(--accent);">Beyond Water</a>.</p>
+    <p>Part of <a href="index.html" style="color:var(--text-2);">Smoothed Particle Hydrodynamics</a>. Prev: <a href="03-beyond-water.html" style="color:var(--accent);">Beyond Water</a>.</p>
     <p>Built with <a href="https://github.com/enjalot/moonshine" style="color:var(--text-2);">moonshine</a>.</p>
   </footer>
 </div>
@@ -167,16 +186,67 @@ const SPH = {
   distance(a, b) { const dx=a.x-b.x, dy=a.y-b.y; return Math.sqrt(dx*dx+dy*dy); }
 };
 
-// Visibility-based animation: only run rAF loops when figure is in view
-function visibleLoop(elementId, loopFn) {
-  let running = false, animId;
-  function tick() { if (!running) return; loopFn(); animId = requestAnimationFrame(tick); }
+// Canvas can't resolve var(), so figures read the palette's computed values
+// from here and pick up a color-scheme change without a reload.
+const THEME = {};
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['text', 'text-2', 'bg', 'fig-bg', 'border', 'accent', 'canvas-bg', 'wall', 'wall-2',
+    'c-kernel', 'c-density', 'c-pressure', 'c-viscosity', 'c-mass', 'c-position', 'c-velocity',
+    'c-spring', 'c-friction', 'c-temperature', 'c-water', 'c-sand', 'c-jelly']) {
+    THEME[k] = cs.getPropertyValue('--' + k).trim();
+  }
+  THEME.dark = matchMedia('(prefers-color-scheme: dark)').matches;
+}
+readTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTheme);
+
+// One convention for speed in every simulation of the series:
+// settled particles are deep blue, fast ones pale.
+function speedColor(speed, max = 200) {
+  const t = Math.min(speed / max, 1);
+  return d3.interpolateBlues((THEME.dark ? 0.75 : 0.85) - t * 0.45);
+}
+
+// Canvas width in CSS pixels (the canvas is styled width:100%).
+function canvasWidth(canvas) { return Math.max(120, Math.floor(canvas.clientWidth)); }
+
+// Run a figure's animation loop only while the figure is on screen and the tab
+// is visible. With prefers-reduced-motion the loop does not start by itself:
+// the figure is advanced to a representative still and gets a Play button.
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function visibleLoop(elementId, loopFn, opts = {}) {
   const el = document.getElementById(elementId);
-  const obs = new IntersectionObserver(([e]) => {
-    if (e.isIntersecting && !running) { running = true; tick(); }
-    else if (!e.isIntersecting && running) { running = false; cancelAnimationFrame(animId); }
-  }, { threshold: 0.05 });
-  obs.observe(el);
+  let running = false, visible = false, paused = REDUCED, warmed = false, animId;
+  function tick() { if (!running) return; loopFn(); animId = requestAnimationFrame(tick); }
+  function sync() {
+    const should = visible && !paused && !document.hidden;
+    if (should && !running) { running = true; tick(); }
+    else if (!should && running) { running = false; cancelAnimationFrame(animId); }
+  }
+  new IntersectionObserver(([e]) => {
+    visible = e.isIntersecting;
+    if (visible && REDUCED && !warmed) {
+      warmed = true;
+      for (let i = 0; i < (opts.warm ?? 90); i++) loopFn();
+      setTimeout(() => { if (!running) loopFn(); }, 400); // lets an async GPU readback land
+    }
+    sync();
+  }, { threshold: 0.05 }).observe(el);
+  document.addEventListener('visibilitychange', sync);
+  if (REDUCED) {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'motion-btn'; btn.textContent = 'Play animation';
+    btn.addEventListener('click', () => { paused = !paused; btn.textContent = paused ? 'Play animation' : 'Pause animation'; sync(); });
+    el.insertBefore(btn, el.querySelector('.eq-code-stack') ? el.querySelector('.eq-code-stack').nextSibling : el.firstChild);
+  }
+}
+
+// Run up to `n` simulation substeps but stop once `budgetMs` is spent, so a slow
+// device gets slow motion instead of a frozen page.
+function budgetSteps(n, stepFn, budgetMs = 10) {
+  const t0 = performance.now();
+  for (let s = 0; s < n; s++) { stepFn(); if (s >= 1 && performance.now() - t0 > budgetMs) break; }
 }
 
 // ============================================================
@@ -190,7 +260,7 @@ function visibleLoop(elementId, loopFn) {
 
   function resizeCanvas() {
     const rect = canvas.parentElement.getBoundingClientRect();
-    simW = Math.min(700, Math.floor(rect.width - 48));
+    simW = Math.min(700, canvasWidth(canvas));
     simH = 450;
     canvas.width = simW * dpr; canvas.height = simH * dpr;
     canvas.style.height = simH + 'px';
@@ -209,7 +279,7 @@ function visibleLoop(elementId, loopFn) {
   const MAT_DAMPING   = [0.9995, 0.997, 0.9995];
   const MAT_STATIC_VC = [0,      0,    0];
   const MAT_SPRINGY   = [0,      0,    1];
-  const MAT_COLORS    = ['#2563eb', '#d97706', '#7c3aed'];
+  const MAT_COLORS = { get 0() { return THEME['c-water']; }, get 1() { return THEME['c-sand']; }, get 2() { return THEME['c-jelly']; } };
 
   // ---- Simulation constants ----
   const H = 12, pR = 4;
@@ -433,7 +503,7 @@ function visibleLoop(elementId, loopFn) {
 
     return {
       type: 'cpu',
-      step() { for (let s = 0; s < substeps; s++) step(); },
+      step() { budgetSteps(substeps, step, 12); },
       addParticles(arr) {
         const room = maxP - particles.length;
         const n = Math.min(arr.length, room);
@@ -460,11 +530,11 @@ function visibleLoop(elementId, loopFn) {
               const d = Math.sqrt(dx * dx + dy * dy);
               if (d < JELLY_SPRING_RANGE && d > 0.1) {
                 nbr[slot] = j;
-                nbrRest[slot] = d;
+                nbrRest[slot] = JELLY_REST_LEN; // same fixed rest length as the WebGPU backend
                 slot++;
                 // Also back-link (find free slot in pj)
                 for (let k = 0; k < MAX_SPRINGS_PER_PARTICLE; k++) {
-                  if (pj.nbr[k] === 0xFFFFFFFF) { pj.nbr[k] = newIdx; pj.nbrRest[k] = d; break; }
+                  if (pj.nbr[k] === 0xFFFFFFFF) { pj.nbr[k] = newIdx; pj.nbrRest[k] = JELLY_REST_LEN; break; }
                 }
               }
             }
@@ -1183,15 +1253,16 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
   // ---- Rendering ----
   function render() {
     ctx.clearRect(0, 0, simW, simH);
-    ctx.fillStyle = '#f0f4f8';
+    ctx.fillStyle = THEME['canvas-bg'];
     ctx.fillRect(0, 0, simW, simH);
 
     // Blowers (draw under particles)
     for (const b of blowers) {
       ctx.save();
-      ctx.fillStyle = 'rgba(148,163,184,0.15)';
+      ctx.fillStyle = THEME['wall']; ctx.globalAlpha = 0.18;
       ctx.fillRect(b.x, b.y, b.w, b.h);
-      ctx.strokeStyle = 'rgba(100,116,139,0.6)';
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = THEME['wall-2'];
       ctx.setLineDash([4, 4]);
       ctx.lineWidth = 1;
       ctx.strokeRect(b.x, b.y, b.w, b.h);
@@ -1200,7 +1271,7 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
       const [dx, dy] = blowerDir(b.dir);
       const cxr = b.x + b.w / 2, cyr = b.y + b.h / 2;
       const arrLen = Math.min(b.w, b.h) * 0.35;
-      ctx.strokeStyle = '#475569';
+      ctx.strokeStyle = THEME['wall-2'];
       ctx.lineWidth = 2;
       const ax = cxr + dx * arrLen, ay = cyr + dy * arrLen;
       const bx = cxr - dx * arrLen, by = cyr - dy * arrLen;
@@ -1222,9 +1293,10 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
     for (const o of obstacles) {
       ctx.beginPath();
       ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(71,85,105,0.28)';
+      ctx.fillStyle = THEME['wall']; ctx.globalAlpha = 0.45;
       ctx.fill();
-      ctx.strokeStyle = '#475569';
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = THEME['wall-2'];
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
@@ -1256,13 +1328,14 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
       const p = particles[i];
       const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
       const t = Math.min(speed / 200, 1);
+      // Same speed convention as the rest of the series: slow is deep, fast is pale
       let base;
       if (p.material === MAT_WATER) {
-        base = d3.interpolateBlues(0.45 + t * 0.3);
+        base = speedColor(speed);
       } else if (p.material === MAT_SAND) {
-        base = d3.interpolateOranges(0.45 + t * 0.3);
+        base = d3.interpolateOranges(0.75 - t * 0.45);
       } else {
-        base = d3.interpolatePurples(0.45 + t * 0.3);
+        base = d3.interpolatePurples(0.8 - t * 0.4);
       }
       ctx.beginPath();
       ctx.arc(p.x, p.y, pR, 0, Math.PI * 2);
@@ -1273,7 +1346,7 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
     // Drag preview
     if (pointerDown && isDragging) {
       ctx.save();
-      ctx.strokeStyle = 'rgba(71,85,105,0.6)';
+      ctx.strokeStyle = THEME['wall-2'];
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 4]);
       if (activeTool === 'obstacle') {
@@ -1293,7 +1366,7 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
     }
 
     // Border
-    ctx.strokeStyle = '#cbd5e1';
+    ctx.strokeStyle = THEME['wall'];
     ctx.lineWidth = 2;
     ctx.strokeRect(1, 1, simW - 2, simH - 2);
   }
@@ -1420,11 +1493,11 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
     if (gpu) {
       backend = gpu;
       maxP = 5000;
-      d3.select("#backend-label").text("WebGPU").style("color", "var(--c-kernel)");
+      d3.select("#backend-label").text("WebGPU");
     } else {
       backend = createCPUBackend();
       maxP = 500;
-      d3.select("#backend-label").text("CPU fallback").style("color", "var(--c-pressure)");
+      d3.select("#backend-label").text("CPU (no WebGPU)");
     }
     initialized = true;
   }

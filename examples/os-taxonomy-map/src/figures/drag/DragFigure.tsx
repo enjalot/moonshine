@@ -16,6 +16,11 @@ import DraggableRenderer from './Renderer'
 // to the column. Dragology measures the pointer in screen pixels and has
 // no viewBox, so the scale is a transform on the root group, which its
 // position tracking follows.
+//
+// Scaling the drawing would scale its text too, to 7px on a phone. Text
+// that uses font-size: var(--mn-fig-text) is counter-scaled and renders
+// at 13px at every width, so leave room for labels to grow relative to
+// the drawing: place them with em offsets (dy="1.7em"), not pixels.
 
 type Props<T extends object> = {
   draggable: Draggable<T>
@@ -69,7 +74,10 @@ export default function DragFigure<T extends object>(props: Props<T>) {
       className={`mn-drag-figure${className ? ` ${className}` : ''}`}
       role="group"
       aria-label={label}
-      style={{ position: 'relative', maxWidth: width * maxScale, aspectRatio: `${width} / ${height}`, margin: '0 auto', ...style }}
+      // --mn-drag-k is the drawing's scale. Figure CSS divides by it so
+      // text stays 13px on a phone while the drawing shrinks: use
+      // font-size: var(--mn-fig-text) (article.css).
+      style={{ position: 'relative', maxWidth: width * maxScale, aspectRatio: `${width} / ${height}`, margin: '0 auto', ['--mn-drag-k' as string]: k > 0 ? Math.min(1, k) : 1, ...style }}
     >
       {k > 0 &&
         (props.state !== undefined ? (

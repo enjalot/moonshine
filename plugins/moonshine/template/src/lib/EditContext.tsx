@@ -72,6 +72,13 @@ type EditContextValue = {
   // Remove the top-level block at `index` (e.g. a figure's delete button);
   // undoable like any other save.
   deleteBlock: (index: number) => Promise<void>
+  // Replace source ranges outside the block editor (accepting suggestions).
+  // Ranges must not overlap; they are applied in one conflict-checked,
+  // undoable save. `label` lands in the auto-commit subject.
+  replaceRanges: (
+    edits: { start: number; end: number; text: string }[],
+    label?: string,
+  ) => Promise<void>
 }
 
 const EditContext = createContext<EditContextValue | null>(null)
@@ -345,6 +352,21 @@ export function EditProvider({ body, path, children }: ProviderProps) {
         next = body.slice(0, pos) + '\n\n' + clean + body.slice(pos)
       }
       await postSave({ path, body: next, baseHash: fnv1a(body) })
+      setLastSavedBody(body)
+    },
+    replaceRanges: async (edits, label) => {
+      const sorted = [...edits].sort((a, b) => b.start - a.start)
+      let next = body
+      let floor = Infinity
+      for (const e of sorted) {
+        if (e.start < 0 || e.end < e.start || e.end > floor) {
+          throw new Error('overlapping or invalid replacement ranges')
+        }
+        next = next.slice(0, e.start) + e.text + next.slice(e.end)
+        floor = e.start
+      }
+      if (next === body) return
+      await postSave({ path, body: next, baseHash: fnv1a(body), label })
       setLastSavedBody(body)
     },
     deleteBlock: async (index) => {

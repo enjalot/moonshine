@@ -10,9 +10,6 @@
 // consistent across figures.
 import type { PointerEvent as ReactPointerEvent, MouseEvent as ReactMouseEvent } from 'react'
 
-export const SIM_GESTURE_LABEL = 'Click'
-export const SIM_DRAG_LABEL = 'Drag'
-
 // True when an event is a plain primary-button interaction: no Cmd/Ctrl
 // (those open the real editor) and not a secondary/middle click.
 export function isSimActivate(

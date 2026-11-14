@@ -326,7 +326,11 @@ The figure layer is open. But there are real choices to make per figure:
   arranges it; readers get a live diagram at the article's type size.
   Every node, group and edge has a stable id, so
   `:term[word]{to=diagram-id.node-id}` highlights one part inside the
-  diagram. Choose it whenever you'd reach for Mermaid. Authors can add
+  diagram. Choose it whenever you'd reach for Mermaid. Nodes are labelled
+  boxes, or icon tiles with the label outside (`icon`); links can be
+  coloured by what they carry (`family`) and one-way, two-way or
+  undirected (`arrows`). `skills/diagram/SKILL.md` covers what a diagram
+  should contain and how to match the ones an article already has. Authors can add
   their own diagrams with the **+** between blocks, built in the same
   editor.
 
@@ -397,11 +401,58 @@ generated code is bad at it. The template splits a diagram in two:
   `from--to`; groups and author annotations by their ids). Rename an id
   only when the thing changed.
 
+  **Icon tiles.** Give a node an `icon` and it is drawn as a tile: a
+  rounded square holding a glyph, with the label outside it (the label is
+  part of the node and moves with it). Use them for systems, where each
+  node is a kind of thing (a service, a database, a person), and keep
+  labelled boxes for nodes that are sentences.
+
+  ```ts
+  nodes: [
+    { id: 'api', label: 'API', icon: 'service', tone: 'flow', badge: '3' },
+    { id: 'db', label: 'Orders', icon: 'database', tone: 'data', labelSide: 'right' },
+    { id: 'cache', label: 'Cache', icon: 'store', dashed: true },
+  ],
+  edges: [
+    { from: 'api', to: 'db', label: 'reads, writes', family: 'data', arrows: 'both' },
+  ],
+  ```
+
+  Node fields: `icon`, `labelSide` (`above`, `below`, `left`, `right`;
+  by default below the tile, or to its right in a `DOWN` diagram),
+  `tone` (the glyph's colour family), `badge`, `dashed`. An `icon` is one
+  of three things:
+  - a built-in glyph: `person`, `service`, `database`, `store`, `queue`,
+    `document`, `function`, `key`, `browser`, `cloud`, `folder`, `gear`,
+    `clock`, `bolt`, or one added with `registerGlyphs` from
+    `diagram/glyphs`;
+  - any Tabler icon (tabler.io/icons, over 5,000) as `tabler:<name>`,
+    for example `tabler:flame`. Only the ones an article uses are bundled
+    (`vite-plugin-moonshine-icons.ts` collects them from `src/figures/`
+    and `content/`); a name that does not exist warns at build;
+  - anything else is drawn as written, which is how an emoji is used:
+    `icon: '🌾'`.
+
+  A group takes `style` (`box` default, `corners`, `tint`, `dashed`) and
+  `tone`. Edge
+  fields: `family` (the link's colour: `flow`, `data`, `control`,
+  `access`, tokens `--dg-*` in `tokens.css`) and `arrows` (`end` default,
+  `both`, `start`, `none`). A labelled link shows its direction in the
+  label as well as at its end, and a label moves beside the line when the
+  run is too short to show past it. A link meets a tile at the middle of
+  its side. In the editor the author picks the icon (a built-in one, a
+  typed emoji, or a search of the Tabler set), label side, colour and
+  direction from the selection toolbar, and a box added to a diagram of
+  tiles is a tile. `content/diagrams.md` in the template shows each of
+  these as a small figure (`src/figures/DiagramGallery.tsx`).
+
 - **Author-owned arrangement.** In `npm run dev`, **edit diagram**
   under the diagram opens a full-screen editor built on direct
   manipulation, drawn by Dragology like the reader's diagram: drag boxes
   (8px grid, alignment guides; dropped inside a group's box, a box joins
-  the group, and the group grows to take it in as you drag), drag the
+  the group, dragged out it leaves, and the group grows to take it in as
+  you drag), add a group with the Group tool (G) and set its boundary
+  style and colour or remove it from its toolbar, drag the
   canvas to select, double-click the canvas for a new box, drag a box's
   side dot to another box to connect (or onto empty canvas for a new
   connected box), Tab for the next box in the flow, double-click (or
@@ -446,8 +497,11 @@ run border to border, or orthogonally out of an author-chosen side; an
 edge that would cross a node bows around the row. Nodes with `detail`
 show it on hover or focus.
 
-**Readability floor.** Node labels are 15px at full size and never
-render below 13px (the caption size), at any screen width. A diagram
+**Readability floor.** Node labels (in a box or beside a tile) are
+15px at full size and never render below 13px (the caption size), at
+any screen width. Link labels and group names are 13px at full size
+and shrink with the diagram, to about 11px at the floor: an accepted
+exception, since they are secondary to the node names. A diagram
 wider than its figure (column or wide: always a choice, never
 automatic), in order:
 
@@ -662,7 +716,8 @@ zoomed out." Each comment is written as a file under `<project>/.feedback/`.
 
 Comments **accumulate by default** — nothing is delivered until the author
 asks. When they press **Address** in the HUD (or turn on auto-address), the
-Claude Code **Stop hook** injects the pending comments at a turn boundary and
+Claude Code **Stop hook** (registered by the plugin's own
+`hooks/hooks.json`; a project needs no hook configuration) injects the pending comments at a turn boundary and
 blocks the stop until you handle them. Delivery requests carry the article's
 authoring `sessionId`, so another active session leaves them untouched. The
 author may also just ask you
@@ -698,6 +753,70 @@ including the reserved comment kinds not yet wired to UI, is specified in
 `feedback.enabled: false`, or per-invocation with `MOONSHINE_FEEDBACK=off` in
 the environment (which the dev server, the Stop hook, and the listener all
 honor). This loop is still-only — shine articles have no feedback surface.
+
+## Suggestions: Changes the Author Decides On (dev only)
+
+The reverse of a comment. When a change is the author's call, propose it and
+let them accept, edit or reject it in the page. Each suggestion appears as a
+card under the passage it refers to, showing the change as a diff with your
+reason; a switch in the HUD (bottom right) shows and hides them.
+
+Propose, and do not apply, when:
+
+- the passage is the author's own writing (`git log` shows a
+  `moonshine-edit:` commit touching it), and they did not ask you to change it;
+- the author asked for a review, an edit pass or a critique of an article
+  they are developing, as opposed to asking you to fix something;
+- the change alters a claim, a number, or what a figure shows, and you cannot
+  establish the truth yourself. Use a remark (no `replace`) that says what is
+  doubtful and what would settle it. The author can send a remark back to you
+  as a comment, so phrase the note so that it also works as the instruction
+  ("Label the table as an illustration, or replace the numbers with ones the
+  figure computes").
+
+Apply directly, as before, when the author asked for the change, when you are
+addressing their comment, or when you are fixing your own draft before they
+have read it.
+
+Write the suggestions as a JSON array and hand it to the script, which
+verifies each `find` against the file:
+
+```bash
+node <skill>/scripts/suggest.mjs <project> /path/to/suggestions.json --source "editing pass"
+```
+
+```json
+[
+  { "path": "example.md",
+    "find": "direction to step — every arrow",
+    "replace": "direction to step: every arrow",
+    "note": "Em dash." },
+  { "path": "example.md",
+    "find": "| 0.01 | 1,840 | 0.0031 | converges slowly |",
+    "note": "These rows were not produced by the figure above. Label the table as an illustration, or replace the numbers with ones the figure computes." }
+]
+```
+
+Rules that make a suggestion worth the author's click:
+
+- **One decision per suggestion.** Two unrelated fixes in one paragraph are two
+  suggestions, so one can be accepted without the other. A sentence rewrite is
+  one.
+- **Smallest `find` that is unique.** The card shows a diff of `find` against
+  `replace`; a whole paragraph for a two-word change buries the change.
+- **The note gives the reason, specifically**: which rule, what the reader
+  loses, what the figure actually shows. "Clearer" is not a reason.
+- **`replace` is finished prose** that already passes the Editing Pass. The
+  author should be able to accept without editing.
+- Suggestions on the same passage must not overlap. If one depends on
+  another, make them one suggestion.
+
+Then tell the author how many you left and where. Later, read the outcome
+with `--list`: rejected suggestions and ones the author rewrote before
+accepting show what they want, so do not re-propose a rejected change, and
+match the rewrites in what you propose next. Accepted ones arrive in `git log`
+as `moonshine-edit:` commits like any author edit. The record format and
+endpoints are in `FEEDBACK.md`.
 
 ## Workflow When Building an Article With This Skill
 
@@ -765,6 +884,7 @@ Once the outline is agreed:
 
 2. **Open in browser.** The reader sees the example content. Don't
    delete it yet — it's the demonstration that everything works.
+   It is scaffolding, though: see step 7.
 
 3. **Write the first section.** Edit `content/example.md` (or create
    `content/your-topic.md` and delete the example). Use directives to
@@ -787,6 +907,29 @@ Once the outline is agreed:
    `content/example.md`. The root URL renders a series index when more
    than one article exists, and a single article when only one does.
 
+7. **Remove the scaffolding once the first real figure exists.** The
+   template's demonstration figures are there to show the mechanisms,
+   and they have stayed registered in every project that was not told
+   to remove them. Delete `content/example.md` (if you made your own
+   file), `content/diagrams.md` and `content/series/`, the demo figure
+   files (`GradientField`, `LossLandscape`, `StepSize`, `Sparkline`,
+   `FlowDiagram`, `TrainingSystem`, `DiagramGallery`, `StepSize.css`
+   and `lib/lossSurface.ts`),
+   their entries in `src/figures/registry.ts`, the demo's
+   `content/figures/flow-diagram.json`, and the README sections that
+   describe them. Keep the infrastructure they demonstrate: `drag/`,
+   `diagram/`, `DiagramFigure.tsx`, `lib/params.ts`. `npm run build`
+   afterwards confirms nothing still imports them.
+
+8. **Verify before delivering.** The checkpoint in `SKILL.md` Phase 4
+   applies in full: console clean, 360px and 1100px, light and dark,
+   the Honest Figures pass. Check the built output
+   (`npm run build && npx vite preview`), not only the dev server,
+   since the reader never sees the dev chrome. A figure's own CSS goes
+   in a stylesheet beside the figure (`src/figures/<name>.css`,
+   imported by the component), not appended to `src/styles/article.css`,
+   which the template upgrade replaces.
+
 ## Publishing
 
 `npm run build` produces a static site in `dist/` — typecheck, Velite
@@ -807,6 +950,9 @@ is dev-only and absent from the bundle.
 - **Publishing an example to the moonshine repo's own Pages site**: use
   `scripts/publish-example.sh` in the plugin repo (see `DEVELOPING.md`),
   which does the base, title, and 404 steps and syncs into `docs/<slug>/`.
+  If the build needs environment variables or must leave large assets
+  out, record them in the project's `moonshine.publish.json` (see the
+  script's header) so the next publish repeats them.
 
 The static `<title>` in `index.html` is the template's generic one
 (article titles are set at runtime); patch it in `dist/` after building
@@ -834,6 +980,11 @@ falls back to frontmatter and loses the session linkage.
   `DiagramFigure` instead.
 - **Don't hardcode colors in figure files.** Reference the CSS custom
   properties (`var(--accent)`, `var(--text-2)`) from `tokens.css`.
+  Canvas and WebGL can't use `var()`: add the colour to `tokens.css`
+  with a dark value and read it with `getComputedStyle`.
+- **Don't put text under 13px in a figure**, and don't trap the page
+  scroll: see "Phones and touch" in `VISUALS.md`.
+- **Don't leave the demo figures registered** in a real article.
 - **Don't mount heavy figures eagerly.** Wrap them in `<LazyIsland>`
   (the default `<Figure>` already does this).
 - **Don't write KPI cards, status badges, or metric grids.** Same

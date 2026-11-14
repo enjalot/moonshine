@@ -1,6 +1,7 @@
 import { GROUP_PAD } from './geometry'
 import { edgeKey, type Box, type DiagramSpec } from './spec'
 import { FONTS, textWidth } from './text'
+import { isTile, nodeExtent, TILE } from './tile'
 
 // Automatic layout for a DiagramSpec (ELK "layered", the usual choice for
 // system and pipeline diagrams), merged with whatever the author has
@@ -22,9 +23,77 @@ export async function elkLayout(spec: DiagramSpec): Promise<Layout> {
   const { default: ELK } = await import('elkjs/lib/elk.bundled.js')
   const elk = new ELK()
   const groupIds = new Set((spec.groups ?? []).map((g) => g.id))
+  // A tile is laid out as the room it and its label take up, then drawn
+  // as the tile inside that room.
+  const tileRoom = (n: DiagramSpec['nodes'][number]) => nodeExtent(n, { x: 0, y: 0, w: TILE, h: TILE }, spec.direction === 'DOWN')
+  // A tile's links leave and arrive at the tile, not at the middle of the
+  // room it shares with its label, so ELK is given ports at the tile's
+  // centre line: tiles along a flow then line up and their links run
+  // straight.
+  const down = spec.direction === 'DOWN'
+  const portId = (id: string, end: 'in' | 'out') => `port:${id}:${end}`
   const leaf = (n: DiagramSpec['nodes'][number]) => {
+    if (isTile(n)) {
+      const r = tileRoom(n)
+      const width = r.w + 16
+      const height = r.h + 8
+      const cx = 8 - r.x + TILE / 2
+      const cy = 4 - r.y + TILE / 2
+      const port = (end: 'in' | 'out') => ({
+        id: portId(n.id, end),
+        width: 0,
+        height: 0,
+        x: down ? cx : end === 'in' ? 0 : width,
+        y: down ? (end === 'in' ? 0 : height) : cy,
+        layoutOptions: { 'elk.port.side': down ? (end === 'in' ? 'NORTH' : 'SOUTH') : end === 'in' ? 'WEST' : 'EAST' },
+      })
+      return { id: n.id, width, height, layoutOptions: { 'elk.portConstraints': 'FIXED_POS' }, ports: [port('in'), port('out')] }
+    }
     const { w, h } = nodeSize(n.label)
     return { id: n.id, width: w, height: h }
+  }
+  const tiles = new Set(spec.nodes.filter(isTile).map((n) => n.id))
+  const byId = new Map(spec.nodes.map((n) => [n.id, n]))
+  const boxIn = (id: string, x: number, y: number, w: number, h: number): Box => {
+    const n = byId.get(id)
+    if (!n || !isTile(n)) return { x, y, w, h }
+    const r = tileRoom(n)
+    return { x: x + 8 - r.x, y: y + 4 - r.y, w: TILE, h: TILE }
+  }
+  // Nothing connected (a vocabulary: the pieces, before any figure links
+  // them): a grid in reading order, which a layered layout would stack in
+  // one column.
+  if (!spec.edges.length && !(spec.groups ?? []).length) {
+    const nodes: Record<string, Box> = {}
+    const sizes = spec.nodes.map((n) => leaf(n))
+    const cellW = Math.max(...sizes.map((s) => s.width), 0) + 28
+    const cellH = Math.max(...sizes.map((s) => s.height), 0) + 24
+    const perRow = (spec.direction ?? 'RIGHT') === 'RIGHT' ? Math.min(6, Math.max(1, spec.nodes.length <= 6 ? spec.nodes.length : Math.ceil(spec.nodes.length / 2))) : 1
+    spec.nodes.forEach((n, i) => {
+      const s = sizes[i]
+      const x = (i % perRow) * cellW + (cellW - s.width) / 2
+      const y = Math.floor(i / perRow) * cellH
+      nodes[n.id] = boxIn(n.id, x, y, s.width, s.height)
+    })
+    return { nodes, groups: {} }
+  }
+  // Top-level children in the order the spec first mentions them, a group
+  // standing where its first member does, so the flow starts where the
+  // spec does.
+  const children: unknown[] = []
+  const seen = new Set<string>()
+  for (const n of spec.nodes) {
+    if (n.group && groupIds.has(n.group)) {
+      if (seen.has(n.group)) continue
+      seen.add(n.group)
+      children.push({
+        id: `group:${n.group}`,
+        layoutOptions: {
+          'elk.padding': `[top=${PAD.top},left=${PAD.side},bottom=${PAD.bottom},right=${PAD.side}]`,
+        },
+        children: spec.nodes.filter((m) => m.group === n.group).map(leaf),
+      })
+    } else children.push(leaf(n))
   }
   const graph = {
     id: 'root',
@@ -33,7 +102,9 @@ export async function elkLayout(spec: DiagramSpec): Promise<Layout> {
       'elk.direction': spec.direction ?? 'RIGHT',
       'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
       'elk.spacing.nodeNode': '28',
-      'elk.layered.spacing.nodeNodeBetweenLayers': '56',
+      // Tiles are small and their links carry the labels, so they sit
+      // closer than boxes do.
+      'elk.layered.spacing.nodeNodeBetweenLayers': tiles.size ? '32' : '56',
       'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
       'elk.edgeLabels.inline': 'true',
       // Follow the spec's node order: the first node is where the flow
@@ -41,22 +112,13 @@ export async function elkLayout(spec: DiagramSpec): Promise<Layout> {
       'elk.layered.cycleBreaking.strategy': 'MODEL_ORDER',
       'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
     },
-    children: [
-      ...(spec.groups ?? []).map((g) => ({
-        id: `group:${g.id}`,
-        layoutOptions: {
-          'elk.padding': `[top=${PAD.top},left=${PAD.side},bottom=${PAD.bottom},right=${PAD.side}]`,
-        },
-        children: spec.nodes.filter((n) => n.group === g.id).map(leaf),
-      })),
-      ...spec.nodes.filter((n) => !n.group || !groupIds.has(n.group)).map(leaf),
-    ],
+    children,
     edges: spec.edges
       .filter((e) => spec.nodes.some((n) => n.id === e.from) && spec.nodes.some((n) => n.id === e.to))
       .map((e) => ({
         id: edgeKey(e),
-        sources: [e.from],
-        targets: [e.to],
+        sources: [tiles.has(e.from) ? portId(e.from, 'out') : e.from],
+        targets: [tiles.has(e.to) ? portId(e.to, 'in') : e.to],
         labels: e.label ? [{ text: e.label, width: e.label.length * 7 + 12, height: 18 }] : [],
       })),
   }
@@ -69,10 +131,10 @@ export async function elkLayout(spec: DiagramSpec): Promise<Layout> {
     if (String(c.id).startsWith('group:')) {
       groups[c.id.slice(6)] = { x: c.x, y: c.y, w: c.width, h: c.height }
       for (const k of c.children ?? []) {
-        nodes[k.id] = { x: c.x + k.x, y: c.y + k.y, w: k.width, h: k.height }
+        nodes[k.id] = boxIn(k.id, c.x + k.x, c.y + k.y, k.width, k.height)
       }
     } else {
-      nodes[c.id] = { x: c.x, y: c.y, w: c.width, h: c.height }
+      nodes[c.id] = boxIn(c.id, c.x, c.y, c.width, c.height)
     }
   }
   return { nodes, groups }
@@ -106,10 +168,10 @@ export function merge(
     const b = saved?.nodes?.[n.id]
     if (b) {
       // A saved position without a size (pre-0.9 saves) gets the label's.
-      nodes[n.id] = { ...(b.w && b.h ? b : { ...b, ...nodeSize(n.label) }), unarranged: false }
+      nodes[n.id] = { ...(b.w && b.h ? b : { ...b, ...(isTile(n) ? { w: TILE, h: TILE } : nodeSize(n.label)) }), unarranged: false }
       continue
     }
-    const e = elk?.nodes[n.id] ?? { x: 0, y: 0, ...nodeSize(n.label) }
+    const e = elk?.nodes[n.id] ?? { x: 0, y: 0, ...(isTile(n) ? { w: TILE, h: TILE } : nodeSize(n.label)) }
     const nbrs = spec.edges
       .flatMap((x) => (x.from === n.id ? [x.to] : x.to === n.id ? [x.from] : []))
       .map(delta)
@@ -133,7 +195,7 @@ export function merge(
 
   const groups: Record<string, Box> = {}
   for (const g of spec.groups ?? []) {
-    const members = spec.nodes.filter((n) => n.group === g.id).map((n) => nodes[n.id])
+    const members = spec.nodes.filter((n) => n.group === g.id).map((n) => nodeExtent(n, nodes[n.id], spec.direction === 'DOWN'))
     let box: Box | undefined = saved?.groups?.[g.id]
     for (const m of members) {
       const x0 = Math.min(box?.x ?? Infinity, m.x - PAD.side)

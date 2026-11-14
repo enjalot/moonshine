@@ -5,6 +5,8 @@ import LossLandscape, {
   PARAM_HINTS as lossLandscapeHints,
 } from './LossLandscape'
 import FlowDiagram from './FlowDiagram'
+import TrainingSystem from './TrainingSystem'
+import { DiagramAnyIcon, DiagramBoxes, DiagramLinks, DiagramSystem, DiagramVocabulary, DiagramZones } from './DiagramGallery'
 import Sparkline, {
   DEFAULTS as sparklineDefaults,
   PARAM_HINTS as sparklineHints,
@@ -82,6 +84,14 @@ export const figures: Record<string, FigureEntry> = {
     paramHints: stepSizeHints,
   },
   'flow-diagram': { component: FlowDiagram, height: 280, wide: true },
+  'training-system': { component: TrainingSystem, height: 300 },
+  // The "Diagrams" page (content/diagrams.md).
+  'dg-vocabulary': { component: DiagramVocabulary, height: 220 },
+  'dg-system': { component: DiagramSystem, height: 320 },
+  'dg-links': { component: DiagramLinks, height: 300 },
+  'dg-zones': { component: DiagramZones, height: 200 },
+  'dg-any-icon': { component: DiagramAnyIcon, height: 220 },
+  'dg-boxes': { component: DiagramBoxes, height: 480 },
   sparkline: {
     component: Sparkline,
     height: 120,

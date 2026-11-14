@@ -5,6 +5,7 @@ import DragFigure from './drag/DragFigure'
 import { each } from './drag/each'
 import { loss, grad } from './lib/lossSurface'
 import { num } from './lib/params'
+import { useDark } from './lib/useDark'
 
 // A heatmap of a synthetic two-well loss surface, with a starting point
 // that traces the path gradient descent takes downhill.
@@ -51,6 +52,7 @@ export default function LossLandscape(props: FigureProps) {
   const [state, setState] = useState<State>({ x: startX, y: startY })
   // Dragology ids end up in the DOM, so scope them to this instance.
   const uid = useId().replace(/:/g, '')
+  const dark = useDark()
   // Follow live param changes (knob panel, markdown edit); the reader's
   // own drags win until the params change again.
   useEffect(() => setState({ x: startX, y: startY }), [startX, startY])
@@ -69,7 +71,7 @@ export default function LossLandscape(props: FigureProps) {
               tracking where the dragged dot lands. */}
           {!isTracking && (
             <image
-              href={heatmap()}
+              href={heatmap(dark)}
               width={W}
               height={H}
               preserveAspectRatio="none"
@@ -118,7 +120,7 @@ export default function LossLandscape(props: FigureProps) {
         </g>
       )
     },
-    [lr, steps, uid],
+    [lr, steps, uid, dark],
   )
 
   return (
@@ -152,9 +154,12 @@ function descend(initial: [number, number], lr: number, steps: number): [number,
 
 // The surface as one image, drawn once: dark = low loss (valleys),
 // light = high loss (peaks).
-let heat: string | null = null
-function heatmap(): string {
-  if (heat) return heat
+// Baked pixels can't follow the palette through CSS, so there is one
+// image per colour scheme.
+const heat: { light?: string; dark?: string } = {}
+function heatmap(dark: boolean): string {
+  const key = dark ? 'dark' : 'light'
+  if (heat[key]) return heat[key]
   const cw = 120
   const ch = 80
   const canvas = document.createElement('canvas')
@@ -164,16 +169,18 @@ function heatmap(): string {
   if (!ctx) return ''
   for (let j = 0; j < ch; j++) {
     for (let i = 0; i < cw; i++) {
-      ctx.fillStyle = lossColor(loss(((i + 0.5) / cw) * 2 - 1, ((j + 0.5) / ch) * 2 - 1))
+      ctx.fillStyle = lossColor(loss(((i + 0.5) / cw) * 2 - 1, ((j + 0.5) / ch) * 2 - 1), dark)
       ctx.fillRect(i, j, 1, 1)
     }
   }
-  heat = canvas.toDataURL()
-  return heat
+  heat[key] = canvas.toDataURL()
+  return heat[key]
 }
 
 // Map loss value (roughly [-0.4, 1]) to a gray scale.
-function lossColor(v: number) {
+// Valleys are darkest in both schemes; the dark ramp stops well short
+// of white so the surface doesn't glare against a dark page.
+function lossColor(v: number, dark: boolean) {
   const t = Math.max(0, Math.min(1, (v + 0.4) / 1.4))
-  return `hsl(220, 14%, ${22 + t * 68}%)`
+  return dark ? `hsl(240, 22%, ${9 + t * 42}%)` : `hsl(220, 14%, ${22 + t * 68}%)`
 }

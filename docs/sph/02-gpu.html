@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Moving to the GPU — SPH</title>
+<title>Moving to the GPU · SPH</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
@@ -26,6 +26,12 @@
   --bg: #fafafa;
   --fig-bg: #ffffff;
   --border: #e2e2e8;
+  --canvas-bg: #f0f4f8;
+  --wall: #94a3b8;
+  --wall-2: #64748b;
+  --eq-bg: #f8f7ff;
+  --code-bg: #f6f8fa;
+  --comment: #6b7280;
   --c-kernel: #059669;
   --c-density: #7c3aed;
   --c-pressure: #dc2626;
@@ -33,6 +39,17 @@
   --c-mass: #d97706;
   --c-position: #0891b2;
   --c-velocity: #be185d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e6dd; --text-2: #a8a8bc; --accent: #7aa7ff; --accent-light: #26335c;
+    --bg: #16162a; --fig-bg: #1f1f36; --border: #3a3a52;
+    --canvas-bg: #14142a; --wall: #64748b; --wall-2: #94a3b8;
+    --eq-bg: #24243f; --code-bg: #1a1a30; --comment: #8b93a7;
+    --c-kernel: #34d399; --c-density: #a78bfa; --c-pressure: #f87171; --c-viscosity: #60a5fa;
+    --c-mass: #fbbf24; --c-position: #22d3ee; --c-velocity: #f472b6;
+  }
 }
 
 body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
@@ -47,30 +64,28 @@ a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px
 
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .figure-wide { margin-left: -2rem; margin-right: -2rem; }
-.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.75rem; }
 .figure-label { font-weight: 600; color: var(--text); }
 
-.insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
-.insight p { margin: 0; }
-
 .controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
-.controls input[type="range"] { width: 140px; accent-color: var(--accent); }
+.controls input[type="range"] { width: 140px; max-width: 100%; accent-color: var(--accent); }
 .controls label { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
-.controls button { font-family: var(--heading-font); font-size: 0.85rem; padding: 0.25rem 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); cursor: pointer; }
+.controls button, .motion-btn { font-family: var(--heading-font); font-size: 0.85rem; padding: 0.35rem 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text); cursor: pointer; }
+.motion-btn { margin-bottom: 1rem; }
 .controls button:hover { background: var(--bg); }
 
 svg text { font-family: var(--heading-font); }
 
-.eq-code-stack { margin: 1.5rem 0; border-radius: 6px; overflow: hidden; border: 1px solid #e8e6f0; }
-.eq-block { padding: 1rem 1.25rem; background: #f8f7ff; text-align: center; }
-.eq-block .eq-label { font-family: var(--heading-font); font-size: 0.75rem; color: var(--text-2); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.eq-code-stack { margin: 1.5rem 0; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+.eq-block { padding: 1rem 1.25rem; background: var(--eq-bg); text-align: center; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.eq-block .eq-label { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-2); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
 .eq-rows { position: relative; }
-.eq-values-row { height: 2.2em; display: flex; align-items: center; justify-content: center; margin-top: 0.4rem; transition: opacity 0.15s; }
+.eq-values-row { min-height: 2.2em; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 0.4rem; }
 .eq-values-row.visible { opacity: 1; }
-.eq-hint { font-family: var(--heading-font); font-size: 0.7rem; color: var(--text-2); opacity: 0.5; font-style: italic; }
+.eq-hint { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-2); font-style: italic; }
 
-.code-block { padding: 1rem 1.25rem; background: #f6f8fa; color: #1a1a2e; font-family: var(--mono-font); font-size: 0.8rem; line-height: 1.6; overflow-x: auto; border-top: 1px solid #e8e6f0; }
-.code-block .comment { color: #6b7280; }
+.code-block { padding: 1rem 1.25rem; background: var(--code-bg); color: var(--text); font-family: var(--mono-font); font-size: 0.8125rem; line-height: 1.6; overflow-x: auto; white-space: nowrap; }
+.code-block .comment { color: var(--comment); }
 .code-block .c-kernel { color: var(--c-kernel); }
 .code-block .c-density { color: var(--c-density); }
 .code-block .c-pressure { color: var(--c-pressure); }
@@ -87,22 +102,17 @@ svg text { font-family: var(--heading-font); }
 .t-position { color: var(--c-position); font-weight: 600; }
 .t-velocity { color: var(--c-velocity); font-weight: 600; }
 
-/* Pipeline diagram */
-.pipeline { display: flex; gap: 0; align-items: stretch; margin: 1rem 0; flex-wrap: wrap; justify-content: center; }
-.pipeline-pass { flex: 1 1 120px; max-width: 180px; padding: 0.75rem; border: 2px solid var(--border); border-radius: 6px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; font-family: var(--heading-font); font-size: 0.8rem; }
-.pipeline-pass:hover { background: #f0f4f8; }
-.pipeline-pass.active { border-color: var(--accent); background: var(--accent-light); }
-.pipeline-pass .pass-num { font-size: 0.65rem; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
-.pipeline-pass .pass-name { font-weight: 700; font-size: 0.95rem; }
-.pipeline-pass .pass-desc { font-size: 0.7rem; color: var(--text-2); margin-top: 0.25rem; }
-.pipeline-arrow { display: flex; align-items: center; font-size: 1.2rem; color: var(--text-2); padding: 0 0.25rem; }
+.sim-canvas { display: block; width: 100%; border-radius: 4px; touch-action: pan-y; }
 
 /* Sequential vs Parallel viz */
 .seq-par-container { display: flex; gap: 2rem; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
-.seq-par-side { flex: 1; min-width: 240px; max-width: 320px; text-align: center; }
+.seq-par-side { flex: 1 1 240px; min-width: 0; max-width: 320px; text-align: center; }
+.seq-par-side canvas { display: block; width: 100%; max-width: 300px; height: auto; margin: 0 auto; border-radius: 4px; background: var(--canvas-bg); }
+.seq-par-status { font-family: var(--mono-font); font-size: 0.8125rem; color: var(--text-2); margin-top: 0.25rem; text-align: center; }
+.pass { cursor: pointer; }
 .seq-par-side .side-label { font-family: var(--heading-font); font-weight: 700; font-size: 0.9rem; margin-bottom: 0.5rem; }
 
-@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } .seq-par-container { flex-direction: column; align-items: center; } }
+@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } .figure { padding: 1rem; } .eq-block { padding: 0.75rem 0.5rem; } .eq-block .katex { font-size: 1em; } .code-block { padding: 0.75rem; } .seq-par-container { flex-direction: column; align-items: center; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
 </style>
 </head>
@@ -114,7 +124,7 @@ svg text { font-family: var(--heading-font); }
       Spatial hashing, parallel passes, and scaling from dozens to thousands of particles.
     </p>
     <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">
-      Part 2 of <a href="index.html">Smooth Particle Hydrodynamics</a>
+      Part 2 of <a href="index.html">Smoothed Particle Hydrodynamics</a>
     </p>
   </header>
 
@@ -123,14 +133,13 @@ svg text { font-family: var(--heading-font); }
     In <a href="01-particles-and-forces.html">Part 1</a> we built a fluid simulation
     that computes <span class="t-density">density</span>, <span class="t-pressure">pressure</span>,
     and <span class="t-viscosity">viscosity</span> for each particle by looking at its neighbors.
-    The expensive part of that loop is not the physics but something much simpler:
-    finding who those neighbors are.
+    The expensive part of that loop is finding who those neighbors are.
   </p>
   <p>
     For each particle, we scan every other particle and check whether it falls within
     the <span class="t-kernel">smoothing radius</span>. With <em>n</em> particles, that
-    means <em>n</em> &times; (<em>n</em> &minus; 1) distance checks per frame. Double the
-    particle count, quadruple the work.
+    means <em>n</em> &times; (<em>n</em> &minus; 1) distance checks per frame, so doubling
+    the particle count quadruples the work.
   </p>
 
   <div class="figure figure-wide" id="fig-brute">
@@ -139,7 +148,7 @@ svg text { font-family: var(--heading-font); }
         <div class="eq-label">Brute force neighbor search</div>
         <div class="eq-rows">
           <div id="eq-brute"></div>
-          <div class="eq-values-row visible" id="eq-brute-values"><span class="eq-hint">adjust particle count</span></div>
+          <div class="eq-values-row visible" id="eq-brute-values"></div>
         </div>
       </div>
       <div class="code-block">
@@ -150,14 +159,16 @@ svg text { font-family: var(--heading-font); }
       </div>
     </div>
     <div class="controls">
-      <label>Particles: <input type="range" id="brute-n-slider" min="3" max="20" value="6" step="1"> <span id="brute-n-val">6</span></label>
+      <label>Particles: <input type="range" id="brute-n-slider" min="3" max="20" value="12" step="1"> <span id="brute-n-val">12</span></label>
     </div>
     <div id="brute-viz"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 1.</span>
-      Each line is a distance check. With <span id="brute-n-display">6</span> particles,
-      we need <span id="brute-checks-display">30</span> checks. The count grows as
-      n &times; (n &minus; 1).
+      Each thin line is a pair of particles, checked once from each end. With
+      <span id="brute-n-display">12</span> particles that is
+      <span id="brute-checks-display">132</span> checks, and only the few thick green
+      lines turn out to be neighbors of the ringed particle. Drag any particle, or move the
+      slider to watch the tangle grow as n &times; (n &minus; 1).
     </div>
   </div>
 
@@ -170,7 +181,7 @@ svg text { font-family: var(--heading-font); }
 
   <h2>Spatial Hashing</h2>
   <p>
-    The idea is straightforward: divide the simulation space into a grid of cells,
+    We divide the simulation space into a grid of cells,
     each sized to match the <span class="t-kernel">smoothing radius H</span>.
     Each particle drops into the cell that contains its position. When we need
     a particle's neighbors, we only check the 9 cells surrounding it (a 3&times;3
@@ -183,7 +194,7 @@ svg text { font-family: var(--heading-font); }
         <div class="eq-label">Spatial hash cell lookup</div>
         <div class="eq-rows">
           <div id="eq-hash"></div>
-          <div class="eq-values-row visible" id="eq-hash-values"><span class="eq-hint">click a particle</span></div>
+          <div class="eq-values-row visible" id="eq-hash-values"></div>
         </div>
       </div>
       <div class="code-block">
@@ -205,13 +216,14 @@ svg text { font-family: var(--heading-font); }
     <div id="hash-viz"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 2.</span>
-      Click a particle to select it. Its cell is highlighted in
-      <span style="color:var(--c-position);font-weight:600">teal</span> and the
-      9-cell search region in light blue. Particles within
-      <span class="t-kernel">H</span> are true neighbors (green circles).
-      Drag particles to see cells update.
-      <strong>Brute force: <span id="hash-brute-count">0</span> checks.
-      Spatial hash: <span id="hash-smart-count">0</span> checks.</strong>
+      The ringed particle's cell is shaded
+      <span style="color:var(--c-position);font-weight:600">teal</span> and the rest of its
+      9-cell search region blue. Anything within <span class="t-kernel">H</span> of it has to
+      be inside those cells, so only the particles there get a distance check, and the ones
+      that pass are its neighbors (green).
+      <strong>Brute force checks this particle against all <span id="hash-brute-count">0</span>
+      others. The hash checks <span id="hash-smart-count">0</span>.</strong>
+      Drag a particle to select it and move it across cells.
     </div>
   </div>
 
@@ -224,8 +236,8 @@ svg text { font-family: var(--heading-font); }
   <h2>From Sequential to Parallel</h2>
   <p>
     On the CPU, we loop through particles one at a time. On the GPU, every particle
-    runs the same computation simultaneously. The inner loop (checking neighbors) is
-    the same. The outer loop disappears.
+    runs the same computation simultaneously. The inner loop (checking neighbors) stays
+    the same and the outer loop disappears.
   </p>
 
   <div class="figure figure-wide" id="fig-seq-par">
@@ -233,27 +245,28 @@ svg text { font-family: var(--heading-font); }
       <button id="seq-par-play">Play</button>
       <button id="seq-par-reset">Reset</button>
       <label>Particles: <input type="range" id="seq-par-n" min="4" max="20" value="8" step="1"> <span id="seq-par-n-val">8</span></label>
-      <span id="seq-par-timestep" style="font-family:var(--mono-font);"></span>
+      <span id="seq-par-timestep" style="font-family:var(--mono-font);font-size:0.8125rem;"></span>
     </div>
     <div class="seq-par-container">
       <div class="seq-par-side">
         <div class="side-label">CPU: Sequential</div>
-        <canvas id="seq-canvas" style="width:100%;border-radius:4px;background:#f0f4f8;"></canvas>
-        <div id="seq-status" style="font-family:var(--mono-font);font-size:0.75rem;color:var(--text-2);margin-top:0.25rem;text-align:center;">Waiting</div>
+        <canvas id="seq-canvas" role="img" aria-label="Eight particles falling and bouncing. One at a time is highlighted red and moves a single step while the others wait."></canvas>
+        <div id="seq-status" class="seq-par-status">Waiting</div>
       </div>
       <div class="seq-par-side">
         <div class="side-label">GPU: Parallel</div>
-        <canvas id="par-canvas" style="width:100%;border-radius:4px;background:#f0f4f8;"></canvas>
-        <div id="par-status" style="font-family:var(--mono-font);font-size:0.75rem;color:var(--text-2);margin-top:0.25rem;text-align:center;">Waiting</div>
+        <canvas id="par-canvas" role="img" aria-label="The same eight particles. All of them flash red and move together, once per step, and finish the 20 steps long before the sequential side."></canvas>
+        <div id="par-status" class="seq-par-status">Waiting</div>
       </div>
     </div>
     <div class="figure-caption">
       <span class="figure-label">Figure 3.</span>
-      Both sides simulate <span id="caption-n">8</span> particles over 20 timesteps. The CPU
-      updates one particle at a time (200ms each, <span id="caption-cpu-time">1.6</span>s per timestep).
-      The GPU updates all <span id="caption-n2">8</span> simultaneously (200ms per timestep).
-      Try <a href="#" id="caption-more-link" style="cursor:pointer;">increasing to 20 particles</a>
-      to see the CPU fall hopelessly behind.
+      Both sides simulate <span id="caption-n">8</span> particles over 20 timesteps, slowed
+      down so each update takes 200ms. The CPU updates one particle at a time, so a timestep
+      costs it <span id="caption-cpu-time">1.6</span>s. The GPU updates all
+      <span id="caption-n2">8</span> at once, so a timestep costs 200ms however many particles
+      there are. <a href="#" id="caption-more-link" style="cursor:pointer;">Rerun with 20 particles</a>
+      and the GPU finishes in the same 4 seconds while the CPU needs 80.
     </div>
   </div>
 
@@ -278,22 +291,31 @@ svg text { font-family: var(--heading-font); }
       <span id="pipe-phase-label" style="font-family:var(--mono-font);">Pass 1 of 4: Density</span>
     </div>
     <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-start;">
-      <div id="pipeline-viz" style="flex:0 0 auto;"></div>
-      <div id="pipeline-example" style="flex:1 1 260px;font-family:var(--mono-font);font-size:0.82rem;line-height:1.8;padding:1rem 1.25rem;background:#f6f8fa;border-radius:6px;border:1px solid #e8e6f0;"></div>
+      <div id="pipeline-viz" style="flex:0 0 auto;max-width:100%;"></div>
+      <div id="pipeline-example" aria-live="polite" style="flex:1 1 240px;min-width:0;font-family:var(--mono-font);font-size:0.8125rem;line-height:1.7;padding:1rem;background:var(--code-bg);border-radius:6px;border:1px solid var(--border);overflow-wrap:anywhere;"></div>
     </div>
     <div class="figure-caption">
       <span class="figure-label">Figure 4.</span>
-      Each column is one particle. All columns compute simultaneously within a pass.
-      Passes run sequentially top to bottom: density feeds pressure, forces feed integration.
-      Outputs from each pass become inputs to the next. Step through to see the example
-      equation for one particle on the right.
+      Each column is one particle, and all columns compute simultaneously within a pass.
+      Passes run one after another, top to bottom, and the arrays a pass writes are the ones
+      a later pass reads: density feeds pressure, both feed forces, forces feed integration.
+      Step through with Next (or click a pass) to see what one particle computes in it.
     </div>
   </div>
 
   <h2>Scaling Up</h2>
   <p>
-    This simulation runs on your GPU using WebGPU compute shaders. The same four passes
-    from the pipeline diagram above, each dispatching one thread per particle.
+    The simulation below runs those passes as WebGPU compute shaders when your browser
+    supports WebGPU, and the label under the canvas says which backend you got. The
+    shader follows the diagram with two changes. Pressure is computed at the end of the
+    density pass, since it needs nothing but the density that pass just produced. And two
+    short passes come first to rebuild the spatial hash on the GPU: one clears the grid,
+    one has every particle add its index to its cell. Each frame runs the whole sequence
+    16 times with a small time step.
+  </p>
+  <p>
+    Without WebGPU the same physics runs in JavaScript with the same spatial hash, one
+    particle at a time, and the figure stops at a few hundred particles instead of 4,000.
   </p>
 
   <div class="figure figure-wide" id="fig-sim">
@@ -309,30 +331,32 @@ svg text { font-family: var(--heading-font); }
       <label>Substeps: <input type="range" id="sim-substeps-slider" min="1" max="24" value="16" step="1"> <span id="sim-substeps-val">16</span></label>
       <label>dt: <input type="range" id="sim-dt-slider" min="0.0005" max="0.004" value="0.001" step="0.0001"> <span id="sim-dt-val">0.001</span></label>
     </div>
-    <canvas id="sim-canvas" style="width:100%;border-radius:4px;cursor:crosshair;"></canvas>
-    <div style="display:flex;gap:1.5rem;font-family:var(--heading-font);font-size:0.8rem;color:var(--text-2);margin-top:0.5rem;">
-      <span id="sim-backend-label" style="font-weight:600;color:var(--accent);">Initializing...</span>
+    <canvas id="sim-canvas" class="sim-canvas" style="cursor:crosshair;" role="img"
+      aria-label="A container already half full of blue particles. A spout at upper left keeps pouring more in, and the surface sloshes as the stream lands."></canvas>
+    <div style="display:flex;gap:1.5rem;flex-wrap:wrap;font-family:var(--heading-font);font-size:0.8125rem;color:var(--text-2);margin-top:0.5rem;">
+      <span id="sim-backend-label" style="font-weight:600;color:var(--text);">Starting&hellip;</span>
       <span>Particles: <strong id="sim-particle-count">0</strong></span>
       <span>FPS: <strong id="sim-fps">0</strong></span>
     </div>
     <div class="figure-caption">
       <span class="figure-label">Figure 5.</span>
-      SPH with spatial hashing. Same physics as Part 1's final figure, running
-      the four compute passes on GPU (or CPU fallback).
-      Click and drag to push particles.
-      Particles are colored by speed: dark blue is settled, lighter blue is moving fast.
+      The same physics as Part 1's final figure, with the spatial hash in place of the all-pairs loop.
+      The container starts part full and the spout keeps pouring until the particle
+      budget is used up. Drag across the fluid to push it around.
+      Particles are colored by speed: dark blue is slow, lighter blue is fast.
     </div>
   </div>
 
   <p>
     The GPU runs thousands of particles in parallel, each thread executing the same
-    density/force/integration code. The spatial hash keeps the neighbor search cheap,
-    and the parallelism handles the rest. In Part 3 we explore what we can do with that
+    density/force/integration code. The spatial hash keeps each particle's neighbor
+    search down to a few dozen candidates, and the GPU runs all of those searches at
+    once. In <a href="03-beyond-water.html">Part 3</a> we explore what we can do with that
     headroom: springs, friction, temperature, and collisions with solid objects.
   </p>
 
   <footer style="margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border);font-family:var(--heading-font);font-size:0.85rem;color:var(--text-2);">
-    <p>Part of <a href="index.html" style="color:var(--text-2);">Smooth Particle Hydrodynamics</a>. Previous: <a href="01-particles-and-forces.html" style="color:var(--accent);">Particles, Neighborhoods, and Forces</a>. Next: <a href="03-beyond-water.html" style="color:var(--accent);">Beyond Water</a>.</p>
+    <p>Part of <a href="index.html" style="color:var(--text-2);">Smoothed Particle Hydrodynamics</a>. Prev: <a href="01-particles-and-forces.html" style="color:var(--accent);">Particles, Neighborhoods, and Forces</a>. Next: <a href="03-beyond-water.html" style="color:var(--accent);">Beyond Water</a>.</p>
     <p>Built with <a href="https://github.com/enjalot/moonshine" style="color:var(--text-2);">moonshine</a>.</p>
   </footer>
 </div>
@@ -349,7 +373,22 @@ const SPH = {
 };
 
 function fmt(v, d=2) { return typeof v==='number' ? v.toFixed(d) : v; }
-function renderEq(el, tex) { katex.render(tex, el, { displayMode: false, throwOnError: false }); }
+// KaTeX bakes \color{#hex} into inline styles. Point those at the palette's
+// custom properties so equation colors follow the theme like the prose does.
+const EQ_COLORS = { '#059669': 'c-kernel', '#7c3aed': 'c-density', '#dc2626': 'c-pressure', '#2563eb': 'c-viscosity',
+  '#d97706': 'c-mass', '#0891b2': 'c-position', '#be185d': 'c-velocity', '#f59e0b': 'c-spring',
+  '#9333ea': 'c-friction', '#e11d48': 'c-temperature' };
+const EQ_RGB = {}; // the browser reports inline colors as "rgb(r, g, b)"
+for (const [hex, name] of Object.entries(EQ_COLORS)) {
+  EQ_RGB[`rgb(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)})`] = name;
+}
+function themeEq(el) {
+  el.querySelectorAll('[style*="color"]').forEach(s => {
+    const name = EQ_RGB[s.style.color] || EQ_COLORS[s.style.color];
+    if (name) s.style.color = `var(--${name})`;
+  });
+}
+function renderEq(el, tex) { katex.render(tex, el, { displayMode: false, throwOnError: false }); themeEq(el); }
 
 // Symbolic equations
 (function() {
@@ -359,21 +398,71 @@ function renderEq(el, tex) { katex.render(tex, el, { displayMode: false, throwOn
   };
   for (const [id, tex] of Object.entries(eqs)) {
     const el = document.getElementById(id);
-    if (el) katex.render(tex, el, { displayMode: true, throwOnError: false });
+    if (el) { katex.render(tex, el, { displayMode: true, throwOnError: false }); themeEq(el); }
   }
 })();
 
-// Visibility-based animation: only run rAF loops when figure is in view
-function visibleLoop(elementId, loopFn) {
-  let running = false, animId;
-  function tick() { if (!running) return; loopFn(); animId = requestAnimationFrame(tick); }
+// Canvas can't resolve var(), so figures read the palette's computed values
+// from here and pick up a color-scheme change without a reload.
+const THEME = {};
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['text', 'text-2', 'bg', 'fig-bg', 'border', 'accent', 'canvas-bg', 'wall', 'wall-2',
+    'c-kernel', 'c-density', 'c-pressure', 'c-viscosity', 'c-mass', 'c-position', 'c-velocity',
+    'c-spring', 'c-friction', 'c-temperature', 'c-water', 'c-sand', 'c-jelly']) {
+    THEME[k] = cs.getPropertyValue('--' + k).trim();
+  }
+  THEME.dark = matchMedia('(prefers-color-scheme: dark)').matches;
+}
+readTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTheme);
+
+// One convention for speed in every simulation of the series:
+// settled particles are deep blue, fast ones pale.
+function speedColor(speed, max = 200) {
+  const t = Math.min(speed / max, 1);
+  return d3.interpolateBlues((THEME.dark ? 0.75 : 0.85) - t * 0.45);
+}
+
+// Canvas width in CSS pixels (the canvas is styled width:100%).
+function canvasWidth(canvas) { return Math.max(120, Math.floor(canvas.clientWidth)); }
+
+// Run a figure's animation loop only while the figure is on screen and the tab
+// is visible. With prefers-reduced-motion the loop does not start by itself:
+// the figure is advanced to a representative still and gets a Play button.
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function visibleLoop(elementId, loopFn, opts = {}) {
   const el = document.getElementById(elementId);
-  const obs = new IntersectionObserver(([e]) => {
-    if (e.isIntersecting && !running) { running = true; tick(); }
-    else if (!e.isIntersecting && running) { running = false; cancelAnimationFrame(animId); }
-  }, { threshold: 0.1 });
-  obs.observe(el);
-  return { start() { if (!running) { running = true; tick(); } }, stop() { running = false; cancelAnimationFrame(animId); } };
+  let running = false, visible = false, paused = REDUCED, warmed = false, animId;
+  function tick() { if (!running) return; loopFn(); animId = requestAnimationFrame(tick); }
+  function sync() {
+    const should = visible && !paused && !document.hidden;
+    if (should && !running) { running = true; tick(); }
+    else if (!should && running) { running = false; cancelAnimationFrame(animId); }
+  }
+  new IntersectionObserver(([e]) => {
+    visible = e.isIntersecting;
+    if (visible && REDUCED && !warmed) {
+      warmed = true;
+      for (let i = 0; i < (opts.warm ?? 90); i++) loopFn();
+      setTimeout(() => { if (!running) loopFn(); }, 400); // lets an async GPU readback land
+    }
+    sync();
+  }, { threshold: 0.05 }).observe(el);
+  document.addEventListener('visibilitychange', sync);
+  if (REDUCED) {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'motion-btn'; btn.textContent = 'Play animation';
+    btn.addEventListener('click', () => { paused = !paused; btn.textContent = paused ? 'Play animation' : 'Pause animation'; sync(); });
+    el.insertBefore(btn, el.querySelector('.eq-code-stack') ? el.querySelector('.eq-code-stack').nextSibling : el.firstChild);
+  }
+}
+
+// Run up to `n` simulation substeps but stop once `budgetMs` is spent, so a slow
+// device gets slow motion instead of a frozen page.
+function budgetSteps(n, stepFn, budgetMs = 10) {
+  const t0 = performance.now();
+  for (let s = 0; s < n; s++) { stepFn(); if (s >= 1 && performance.now() - t0 > budgetMs) break; }
 }
 
 
@@ -383,10 +472,11 @@ function visibleLoop(elementId, loopFn) {
 (function() {
   const container = d3.select("#brute-viz");
   const width = 680, height = 320;
-  const svg = container.append("svg").attr("viewBox", `0 0 ${width} ${height}`).style("width", "100%");
-  const BH = 60; // smoothing radius for this figure
+  const svg = container.append("svg").attr("viewBox", `0 0 ${width} ${height}`).style("width", "100%")
+    .attr("role", "img").attr("aria-label", "Particles with a thin line between every pair, forming a dense tangle. One particle is ringed; thick green lines join it to the few particles inside its dashed smoothing radius.");
+  const BH = 90; // smoothing radius for this figure
 
-  let n = 6;
+  let n = 12;
   const rng = d3.randomLcg(77);
   let selectedIdx = 2; // start with a particle that will have neighbors
   let orbitAngle = 0;
@@ -419,6 +509,17 @@ function visibleLoop(elementId, loopFn) {
   const circlesG = svg.append("g");
   const selRing = svg.append("circle").attr("r", 12).attr("fill", "none")
     .attr("stroke", "var(--c-position)").attr("stroke-width", 2.5);
+  // Generous invisible drag targets. Only these capture touches, so a swipe
+  // anywhere else on the figure still scrolls the page.
+  const hitG = svg.append("g");
+  const drag = d3.drag()
+    .on("start", function(e, d) { selectedIdx = d.id; update(); })
+    .on("drag", function(e, d) {
+      d.baseX = Math.max(5, Math.min(width - 5, e.x));
+      d.baseY = Math.max(5, Math.min(height - 5, e.y));
+      d.x = d.baseX; d.y = d.baseY;
+      update();
+    });
 
   function update() {
     const checks = n * (n - 1);
@@ -463,8 +564,10 @@ function visibleLoop(elementId, loopFn) {
       .attr("r", d => trueNeighbors.has(d.id) ? 8 : 7)
       .attr("fill", d => trueNeighbors.has(d.id) ? "var(--c-kernel)" : "var(--c-position)")
       .attr("opacity", d => trueNeighbors.has(d.id) || d.id === selectedIdx ? 0.85 : 0.5)
-      .attr("stroke", "#fff").attr("stroke-width", 2)
-      .attr("cursor", "pointer");
+      .attr("stroke", "var(--fig-bg)").attr("stroke-width", 2);
+    hitG.selectAll("circle").data(particles, d => d.id).join(
+      enter => enter.append("circle").attr("r", 22).attr("fill", "transparent").attr("cursor", "grab").call(drag).on("touchstart.noscroll", e => e.preventDefault(), { passive: false }))
+      .attr("cx", d => d.x).attr("cy", d => d.y);
 
     selRing.attr("cx", sel.x).attr("cy", sel.y);
 
@@ -473,48 +576,8 @@ function visibleLoop(elementId, loopFn) {
     d3.select("#brute-checks-display").text(checks);
 
     const tex = `n=${n},\\quad \\text{checks}=${n} \\times ${n-1} = {\\color{#dc2626}${checks}}`;
-    const el = document.getElementById("eq-brute-values");
-    renderEq(el, tex); el.classList.add('visible');
+    renderEq(document.getElementById("eq-brute-values"), tex);
   }
-
-  // Click to select
-  circlesG.on("click", function(e) {
-    const [mx, my] = d3.pointer(e);
-    let best = Infinity, bestIdx = 0;
-    particles.forEach((p, i) => {
-      const d = (p.x - mx) ** 2 + (p.y - my) ** 2;
-      if (d < best) { best = d; bestIdx = i; }
-    });
-    selectedIdx = bestIdx;
-    update();
-  });
-
-  // Drag any particle
-  const drag = d3.drag()
-    .on("start", function(e) {
-      const [mx, my] = d3.pointer(e, svg.node());
-      let best = Infinity, bestIdx = -1;
-      particles.forEach((p, i) => {
-        const d = (p.x - mx) ** 2 + (p.y - my) ** 2;
-        if (d < best) { best = d; bestIdx = i; }
-      });
-      if (best < 400) {
-        e.subject.dragIdx = bestIdx;
-        selectedIdx = bestIdx;
-      } else {
-        e.subject.dragIdx = -1;
-      }
-    })
-    .on("drag", function(e) {
-      if (e.subject.dragIdx < 0) return;
-      const p = particles[e.subject.dragIdx];
-      p.baseX = Math.max(5, Math.min(width - 5, e.x));
-      p.baseY = Math.max(5, Math.min(height - 5, e.y));
-      p.x = p.baseX;
-      p.y = p.baseY;
-      update();
-    });
-  svg.call(drag);
 
   d3.select("#brute-n-slider").on("input", function() {
     n = +this.value;
@@ -543,7 +606,8 @@ function visibleLoop(elementId, loopFn) {
 (function() {
   const container = d3.select("#hash-viz");
   const width = 680, height = 400;
-  const svg = container.append("svg").attr("viewBox", `0 0 ${width} ${height}`).style("width", "100%");
+  const svg = container.append("svg").attr("viewBox", `0 0 ${width} ${height}`).style("width", "100%")
+    .attr("role", "img").attr("aria-label", "Scattered particles on a square grid. One particle is ringed; its cell and the eight cells around it are shaded, and only the particles in those cells are tested against its dashed smoothing radius.");
   const H = 60; // cell size = smoothing radius
 
   let numParticles = 40;
@@ -578,11 +642,11 @@ function visibleLoop(elementId, loopFn) {
   const gridG = svg.append("g");
   for (let c = 0; c <= cols; c++) {
     gridG.append("line").attr("x1", c * H).attr("y1", 0).attr("x2", c * H).attr("y2", height)
-      .attr("stroke", "var(--border)").attr("stroke-width", 0.5);
+      .attr("stroke", "var(--text-2)").attr("stroke-width", 0.5).attr("opacity", 0.35);
   }
   for (let r = 0; r <= rows; r++) {
     gridG.append("line").attr("x1", 0).attr("y1", r * H).attr("x2", width).attr("y2", r * H)
-      .attr("stroke", "var(--border)").attr("stroke-width", 0.5);
+      .attr("stroke", "var(--text-2)").attr("stroke-width", 0.5).attr("opacity", 0.35);
   }
 
   const cellHighlightG = svg.append("g");
@@ -594,6 +658,16 @@ function visibleLoop(elementId, loopFn) {
   const circlesG = svg.append("g");
   const selRing = svg.append("circle").attr("r", 12).attr("fill", "none")
     .attr("stroke", "var(--c-position)").attr("stroke-width", 2.5);
+  // Invisible drag targets, as in Figure 1 (touches elsewhere scroll the page)
+  const hitG = svg.append("g");
+  const drag = d3.drag()
+    .on("start", function(e, d) { selectedIdx = d.id; update(); })
+    .on("drag", function(e, d) {
+      d.baseX = Math.max(5, Math.min(width - 5, e.x));
+      d.baseY = Math.max(5, Math.min(height - 5, e.y));
+      d.x = d.baseX; d.y = d.baseY;
+      update();
+    });
 
   function buildHash() {
     const grid = new Map();
@@ -624,8 +698,8 @@ function visibleLoop(elementId, loopFn) {
     searchHighlightG.selectAll("rect").data(searchCells).join("rect")
       .attr("x", d => d.cx * H).attr("y", d => d.cy * H)
       .attr("width", H).attr("height", H)
-      .attr("fill", d => d.isCenter ? "var(--c-position)" : "var(--accent-light)")
-      .attr("opacity", d => d.isCenter ? 0.15 : 0.2);
+      .attr("fill", d => d.isCenter ? "var(--c-position)" : "var(--accent)")
+      .attr("opacity", d => d.isCenter ? 0.25 : 0.1);
 
     // Smoothing radius
     radiusCircle.attr("cx", sel.x).attr("cy", sel.y).attr("r", H);
@@ -647,7 +721,8 @@ function visibleLoop(elementId, loopFn) {
       }
     }
 
-    const bruteChecks = particles.length * (particles.length - 1);
+    // Compare like with like: checks needed to find THIS particle's neighbors.
+    const bruteChecks = particles.length - 1;
 
     // Lines to true neighbors
     const neighborData = particles.filter(p => trueNeighbors.has(p.id));
@@ -662,8 +737,10 @@ function visibleLoop(elementId, loopFn) {
       .attr("r", d => trueNeighbors.has(d.id) ? 8 : 6)
       .attr("fill", d => trueNeighbors.has(d.id) ? "var(--c-kernel)" : "var(--c-position)")
       .attr("opacity", d => trueNeighbors.has(d.id) || d.id === selectedIdx ? 0.85 : 0.4)
-      .attr("stroke", "#fff").attr("stroke-width", 1.5)
-      .attr("cursor", "pointer");
+      .attr("stroke", "var(--fig-bg)").attr("stroke-width", 1.5);
+    hitG.selectAll("circle").data(particles, d => d.id).join(
+      enter => enter.append("circle").attr("r", 18).attr("fill", "transparent").attr("cursor", "grab").call(drag).on("touchstart.noscroll", e => e.preventDefault(), { passive: false }))
+      .attr("cx", d => d.x).attr("cy", d => d.y);
 
     selRing.attr("cx", sel.x).attr("cy", sel.y);
 
@@ -674,49 +751,9 @@ function visibleLoop(elementId, loopFn) {
     // Equation values
     const tex = `\\text{cell}(${fmt(sel.x, 0)},${fmt(sel.y, 0)}) = (${scx},${scy}),\\;` +
       `{\\color{#059669}${trueNeighbors.size}}\\text{ neighbors},\\;` +
-      `{\\color{#dc2626}${hashChecks}}\\text{ vs }${bruteChecks}\\text{ checks}`;
-    const el = document.getElementById("eq-hash-values");
-    renderEq(el, tex); el.classList.add('visible');
+      `{\\color{#dc2626}${hashChecks}}\\text{ checks instead of }${bruteChecks}`;
+    renderEq(document.getElementById("eq-hash-values"), tex);
   }
-
-  // Interactions
-  circlesG.on("click", function(e) {
-    const [mx, my] = d3.pointer(e);
-    let best = Infinity, bestIdx = 0;
-    particles.forEach((p, i) => {
-      const d = (p.x - mx) ** 2 + (p.y - my) ** 2;
-      if (d < best) { best = d; bestIdx = i; }
-    });
-    selectedIdx = bestIdx;
-    update();
-  });
-
-  // Drag
-  const drag = d3.drag()
-    .on("start", function(e) {
-      const [mx, my] = d3.pointer(e, svg.node());
-      let best = Infinity, bestIdx = 0;
-      particles.forEach((p, i) => {
-        const d = (p.x - mx) ** 2 + (p.y - my) ** 2;
-        if (d < best) { best = d; bestIdx = i; }
-      });
-      if (best < 400) { // within 20px
-        e.subject.dragIdx = bestIdx;
-        selectedIdx = bestIdx;
-      } else {
-        e.subject.dragIdx = -1;
-      }
-    })
-    .on("drag", function(e) {
-      if (e.subject.dragIdx < 0) return;
-      const p = particles[e.subject.dragIdx];
-      p.baseX = Math.max(5, Math.min(width - 5, e.x));
-      p.baseY = Math.max(5, Math.min(height - 5, e.y));
-      p.x = p.baseX;
-      p.y = p.baseY;
-      update();
-    });
-  svg.call(drag);
 
   d3.select("#hash-n-slider").on("input", function() {
     numParticles = +this.value;
@@ -753,8 +790,7 @@ function visibleLoop(elementId, loopFn) {
   // Setup canvases
   function setupCanvas(id) {
     const c = document.getElementById(id);
-    c.width = W * dpr; c.height = H_C * dpr;
-    c.style.width = W + 'px'; c.style.height = H_C + 'px';
+    c.width = W * dpr; c.height = H_C * dpr; // CSS scales it down on a narrow screen
     const ctx = c.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     return ctx;
@@ -814,8 +850,9 @@ function visibleLoop(elementId, loopFn) {
   // completedSteps: how many timesteps are done
   function drawSide(ctx, particles, activeSet, completedSteps) {
     ctx.clearRect(0, 0, W, H_C);
-    ctx.fillStyle = '#f0f4f8';
+    ctx.fillStyle = THEME['canvas-bg'];
     ctx.fillRect(0, 0, W, H_C);
+    const blue = THEME['c-viscosity'], red = THEME['c-pressure'];
 
     // Progress boxes at bottom: 20 small boxes showing completed steps
     const boxH = 8, boxGap = 2;
@@ -823,13 +860,13 @@ function visibleLoop(elementId, loopFn) {
     const boxStartX = (W - totalBoxW) / 2;
     const boxY = H_C - boxH - 4;
     for (let s = 0; s < TOTAL_STEPS; s++) {
-      ctx.fillStyle = s < completedSteps ? '#3b82f6' : '#d1d5db';
+      ctx.fillStyle = s < completedSteps ? blue : THEME['border'];
       ctx.fillRect(boxStartX + s * (boxH + boxGap), boxY, boxH, boxH);
     }
 
     // Floor line (above progress boxes)
     const floorY = boxY - 8;
-    ctx.strokeStyle = '#94a3b8';
+    ctx.strokeStyle = THEME['wall'];
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, floorY); ctx.lineTo(W, floorY); ctx.stroke();
 
@@ -842,7 +879,7 @@ function visibleLoop(elementId, loopFn) {
         ctx.lineTo(p.trail[t].x, p.trail[t].y);
       }
       ctx.lineTo(p.x, p.y);
-      ctx.strokeStyle = 'rgba(59,130,246,0.15)';
+      ctx.strokeStyle = blue; ctx.globalAlpha = 0.15;
       ctx.lineWidth = 2;
       ctx.stroke();
 
@@ -850,9 +887,10 @@ function visibleLoop(elementId, loopFn) {
         const alpha = 0.05 + (t / p.trail.length) * 0.15;
         ctx.beginPath();
         ctx.arc(pt.x, pt.y, PR * 0.6, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(59,130,246,${alpha})`;
+        ctx.fillStyle = blue; ctx.globalAlpha = alpha;
         ctx.fill();
       });
+      ctx.globalAlpha = 1;
     });
 
     // Draw particles
@@ -861,10 +899,10 @@ function visibleLoop(elementId, loopFn) {
       const isActive = hasActive && activeSet.has(i);
       ctx.beginPath();
       ctx.arc(p.x, p.y, PR, 0, Math.PI * 2);
-      ctx.fillStyle = isActive ? '#dc2626' : '#3b82f6';
+      ctx.fillStyle = isActive ? red : blue;
       ctx.globalAlpha = isActive ? 1 : 0.8;
       ctx.fill();
-      ctx.strokeStyle = '#fff';
+      ctx.strokeStyle = THEME['canvas-bg'];
       ctx.lineWidth = 1.5;
       ctx.stroke();
       ctx.globalAlpha = 1;
@@ -876,7 +914,7 @@ function visibleLoop(elementId, loopFn) {
         ctx.beginPath();
         ctx.moveTo(p.x, p.y);
         ctx.lineTo(p.x + p.vx * vs, p.y + p.vy * vs);
-        ctx.strokeStyle = isActive ? '#dc2626' : 'rgba(190,24,93,0.6)';
+        ctx.strokeStyle = isActive ? red : THEME['c-velocity'];
         ctx.lineWidth = isActive ? 2.5 : 1.5;
         ctx.stroke();
       }
@@ -885,7 +923,7 @@ function visibleLoop(elementId, loopFn) {
       if (isActive) {
         ctx.beginPath();
         ctx.arc(p.x, p.y, PR + 4, 0, Math.PI * 2);
-        ctx.strokeStyle = '#dc2626';
+        ctx.strokeStyle = red;
         ctx.lineWidth = 2;
         ctx.setLineDash([3, 3]);
         ctx.stroke();
@@ -1001,53 +1039,53 @@ function visibleLoop(elementId, loopFn) {
   updateCaption();
   renderBoth();
 
-  // Auto-start when figure scrolls into view
-  let autoStarted = false;
+  // Start when the figure scrolls into view, and stop the timers when it leaves.
+  // With prefers-reduced-motion it waits for the Play button.
+  let autoStarted = false, pausedByScroll = false;
   const seqParEl = document.getElementById("fig-seq-par");
   const seqParObs = new IntersectionObserver(([entry]) => {
-    if (entry.isIntersecting && !autoStarted && !playing) {
-      autoStarted = true;
-      start();
-    }
-  }, { threshold: 0.3 });
+    if (entry.isIntersecting) {
+      if ((!autoStarted && !REDUCED && !playing) || pausedByScroll) { autoStarted = true; pausedByScroll = false; start(); }
+    } else if (playing) { pause(); pausedByScroll = true; }
+  }, { threshold: 0.2 });
   seqParObs.observe(seqParEl);
 })();
 
 
 // ============================================================
 // Figure 4: Pipeline diagram (vertical array-operation, stepped)
+// Drawn at native pixel size (no viewBox scaling) so labels stay 13px;
+// a narrow screen gets fewer particle columns instead of smaller text.
 // ============================================================
 (function() {
-  const N_COLS = 20;
-  const boxSize = 8, boxGap = 2;
-  const rowW = N_COLS * (boxSize + boxGap) - boxGap;
-  const labelW = 95;
-  const leftPad = labelW + 12;
+  const boxSize = 10, boxGap = 3;
+  const labelW = 92;
+  const leftPad = labelW + 8;
   const arrowH = 16;
   const rowH = boxSize;
-  const passSpacing = 28;
-  const passPadTop = 18; // space for pass label above arrays
+  const passSpacing = 26;
+  const passPadTop = 24; // space for pass label above arrays
+  const opH = 22;
 
-  const colors = {
-    position: '#0891b2', density: '#7c3aed', pressure: '#dc2626',
-    velocity: '#be185d', force: '#dc2626', kernel: '#059669'
-  };
+  const cvar = { position: 'var(--c-position)', density: 'var(--c-density)', pressure: 'var(--c-pressure)',
+    velocity: 'var(--c-velocity)', force: 'var(--c-pressure)', kernel: 'var(--c-kernel)' };
+  const span = (c, t) => `<span style="color:${cvar[c]}">${t}</span>`;
 
   const passes = [
     {
       label: 'Pass 1: Density',
       inputs: [{ name: 'pos[i]', color: 'position' }],
-      op: 'density[i] = sum( W(dist, h) )',
+      op: 'density = Σ W(dist, h)',
       outputs: [{ name: 'density[i]', color: 'density' }],
-      example: `<span style="color:#7c3aed">density</span>[3] = <span style="color:#059669">W</span>(dist(3,0)) + <span style="color:#059669">W</span>(dist(3,1)) + <span style="color:#059669">W</span>(dist(3,2)) + ...<br><br>All 20 particles compute this <em>simultaneously</em>.<br>Each reads from <span style="color:#0891b2">pos[]</span> (previous timestep) and writes to <span style="color:#7c3aed">density[]</span> (new buffer).`,
-      note: 'Reads pos[] from previous timestep'
+      example: `${span('density','density')}[3] = ${span('kernel','W')}(dist(3,0)) + ${span('kernel','W')}(dist(3,1)) + ${span('kernel','W')}(dist(3,2)) + ...<br><br>Every particle computes its own sum at the same time. Each reads ${span('position','pos[]')} and writes only its own slot of ${span('density','density[]')}.`,
+      note: 'Reads pos[] from the previous timestep'
     },
     {
       label: 'Pass 2: Pressure',
       inputs: [{ name: 'density[i]', color: 'density' }],
-      op: 'pressure[i] = k * (density[i] - rest)',
+      op: 'pressure = k·(density − rest)',
       outputs: [{ name: 'pressure[i]', color: 'pressure' }],
-      example: `<span style="color:#dc2626">pressure</span>[3] = 10000 * (<span style="color:#7c3aed">density</span>[3] - 1.5)<br><br>A simple per-particle calculation. No neighbor lookup needed.<br>Reads from <span style="color:#7c3aed">density[]</span> computed in Pass 1.`,
+      example: `${span('pressure','pressure')}[3] = 10000 * (${span('density','density')}[3] - 1.5)<br><br>A per-particle calculation with no neighbor lookup, clamped at zero.`,
       note: 'Reads density[] from Pass 1'
     },
     {
@@ -1058,10 +1096,10 @@ function visibleLoop(elementId, loopFn) {
         { name: 'pressure[i]', color: 'pressure' },
         { name: 'vel[i]', color: 'velocity' }
       ],
-      op: 'force[i] = pressure + viscosity',
+      op: 'force = pressure + viscosity',
       outputs: [{ name: 'force[i]', color: 'force' }],
-      example: `<span style="color:#dc2626">force</span>[3] = <br>&nbsp;&nbsp;-sum( (<span style="color:#dc2626">P</span>[3]+<span style="color:#dc2626">P</span>[j]) / <span style="color:#7c3aed">density</span>[j] * <span style="color:#059669">gradW</span> )<br>&nbsp;&nbsp;+ mu * sum( (<span style="color:#be185d">vel</span>[j]-<span style="color:#be185d">vel</span>[3]) * <span style="color:#059669">lapW</span> )<br><br>Reads 4 arrays from the current timestep.<br>Writes to a new <span style="color:#dc2626">force[]</span> buffer.`,
-      note: 'Reads pos[], vel[] from previous timestep + density[], pressure[] from this timestep'
+      example: `${span('force','force')}[3] = <br>&nbsp;&nbsp;-sum( (${span('pressure','P')}[3]+${span('pressure','P')}[j]) / (2*${span('density','density')}[j]) * ${span('kernel','gradW')} )<br>&nbsp;&nbsp;+ mu * sum( (${span('velocity','vel')}[j]-${span('velocity','vel')}[3]) / ${span('density','density')}[j] * ${span('kernel','lapW')} )<br><br>The second neighbor loop. It reads four arrays and writes ${span('force','force[]')}.`,
+      note: 'Reads pos[], vel[] from the previous timestep and density[], pressure[] from this one'
     },
     {
       label: 'Pass 4: Integrate',
@@ -1069,152 +1107,120 @@ function visibleLoop(elementId, loopFn) {
         { name: 'force[i]', color: 'force' },
         { name: 'density[i]', color: 'density' }
       ],
-      op: 'vel_new[i] = vel[i] + force/density * dt',
+      op: 'vel += force/density·dt',
       outputs: [
-        { name: 'vel_new[i]', color: 'velocity' },
-        { name: 'pos_new[i]', color: 'position' }
+        { name: 'vel[i]', color: 'velocity' },
+        { name: 'pos[i]', color: 'position' }
       ],
-      example: `<span style="color:#be185d">vel_new</span>[3] = <span style="color:#be185d">vel</span>[3] + <span style="color:#dc2626">force</span>[3] / <span style="color:#7c3aed">density</span>[3] * dt<br><span style="color:#0891b2">pos_new</span>[3] = <span style="color:#0891b2">pos</span>[3] + <span style="color:#be185d">vel_new</span>[3] * dt<br><br>Writes to <em>new</em> buffers. After this pass,<br>swap: pos_new becomes pos for the next timestep.`,
-      note: 'Writes to NEW buffers, then swap old/new'
+      example: `${span('velocity','vel')}[3] += ${span('force','force')}[3] / ${span('density','density')}[3] * dt<br>${span('position','pos')}[3] += ${span('velocity','vel')}[3] * dt<br><br>Each particle reads and writes only its own slot, so nothing another thread needs can change under it and the update can happen in place.`,
+      note: 'The new pos[] and vel[] are what Pass 1 reads on the next timestep'
     }
   ];
 
   function passHeight(p) {
     const ir = p.inputs.length, or = p.outputs.length;
-    return passPadTop + ir * (rowH + boxGap) - boxGap + arrowH + 18 + arrowH + or * (rowH + boxGap) - boxGap + 6;
+    return passPadTop + ir * (rowH + boxGap) - boxGap + arrowH + opH + arrowH + or * (rowH + boxGap) - boxGap + 8;
   }
   let totalH = 0;
   const passYs = [];
   passes.forEach((p, i) => { passYs.push(totalH); totalH += passHeight(p); if (i < passes.length - 1) totalH += passSpacing; });
-  totalH += 10;
+  totalH += 8;
 
-  const svgPad = 8; // padding inside SVG for borders
-  const svgW = leftPad + rowW + 20 + svgPad * 2;
+  const svgPad = 8;
   const container = d3.select("#pipeline-viz");
-  const svg = container.append("svg")
-    .attr("viewBox", `0 0 ${svgW} ${totalH + svgPad * 2}`)
-    .style("width", "100%").style("max-width", svgW + "px");
-
-  const allBoxes = [];
-  const passGroups = [];
-
-  passes.forEach((pass, pi) => {
-    const y0 = passYs[pi];
-    const g = svg.append("g").attr("transform", `translate(${svgPad},${y0 + svgPad})`);
-    passGroups.push(g);
-
-    // Background rect for active border
-    const ph = passHeight(pass);
-    g.append("rect").attr("class", "pass-bg")
-      .attr("x", -6).attr("y", -8)
-      .attr("width", svgW - svgPad * 2 + 8).attr("height", ph + 12)
-      .attr("rx", 4).attr("fill", "none")
-      .attr("stroke", "transparent").attr("stroke-width", 2);
-
-    // Pass label
-    g.append("text").attr("x", 0).attr("y", 10)
-      .attr("font-size", "11px").attr("font-weight", 700)
-      .attr("fill", "var(--text)").attr("font-family", "var(--heading-font)")
-      .text(pass.label);
-
-    let cy = passPadTop;
-
-    // Input rows
-    pass.inputs.forEach((inp, ri) => {
-      const rowY = cy + ri * (rowH + boxGap);
-      g.append("text").attr("x", leftPad - 6).attr("y", rowY + boxSize - 1)
-        .attr("text-anchor", "end").attr("font-size", "10px")
-        .attr("fill", colors[inp.color]).attr("font-family", "var(--mono-font)")
-        .text(inp.name);
-      for (let c = 0; c < N_COLS; c++) {
-        const rect = g.append("rect")
-          .attr("x", leftPad + c * (boxSize + boxGap)).attr("y", rowY)
-          .attr("width", boxSize).attr("height", boxSize)
-          .attr("fill", colors[inp.color]).attr("opacity", 0.5).attr("rx", 1);
-        allBoxes.push({ el: rect, pass: pi, section: 'input' });
-      }
-    });
-
-    const inputEndY = cy + pass.inputs.length * (rowH + boxGap) - boxGap;
-    const a1Y = inputEndY + 3;
-    for (let c = 0; c < N_COLS; c++) {
-      const ax = leftPad + c * (boxSize + boxGap) + boxSize / 2;
-      g.append("line").attr("x1", ax).attr("y1", a1Y).attr("x2", ax).attr("y2", a1Y + arrowH - 4)
-        .attr("stroke", "#b0b8c4").attr("stroke-width", 0.6);
-      g.append("path").attr("d", `M${ax-2},${a1Y+arrowH-6}L${ax},${a1Y+arrowH-2}L${ax+2},${a1Y+arrowH-6}`)
-        .attr("fill", "#b0b8c4");
-    }
-
-    const opY = a1Y + arrowH + 2;
-    g.append("text").attr("x", leftPad + rowW / 2).attr("y", opY + 10)
-      .attr("text-anchor", "middle").attr("font-size", "11px").attr("font-weight", 600)
-      .attr("fill", colors.kernel).attr("font-family", "var(--mono-font)")
-      .text(pass.op);
-
-    const a2Y = opY + 16;
-    for (let c = 0; c < N_COLS; c++) {
-      const ax = leftPad + c * (boxSize + boxGap) + boxSize / 2;
-      g.append("line").attr("x1", ax).attr("y1", a2Y).attr("x2", ax).attr("y2", a2Y + arrowH - 4)
-        .attr("stroke", "#b0b8c4").attr("stroke-width", 0.6);
-      g.append("path").attr("d", `M${ax-2},${a2Y+arrowH-6}L${ax},${a2Y+arrowH-2}L${ax+2},${a2Y+arrowH-6}`)
-        .attr("fill", "#b0b8c4");
-    }
-
-    const outY = a2Y + arrowH;
-    pass.outputs.forEach((outp, ri) => {
-      const rowY = outY + ri * (rowH + boxGap);
-      g.append("text").attr("x", leftPad - 6).attr("y", rowY + boxSize - 1)
-        .attr("text-anchor", "end").attr("font-size", "10px")
-        .attr("fill", colors[outp.color]).attr("font-family", "var(--mono-font)")
-        .text(outp.name);
-      for (let c = 0; c < N_COLS; c++) {
-        const rect = g.append("rect")
-          .attr("x", leftPad + c * (boxSize + boxGap)).attr("y", rowY)
-          .attr("width", boxSize).attr("height", boxSize)
-          .attr("fill", colors[outp.color]).attr("opacity", 0.5).attr("rx", 1);
-        allBoxes.push({ el: rect, pass: pi, section: 'output' });
-      }
-    });
-
-    // Separator
-    if (pi < passes.length - 1) {
-      const sepY = y0 + svgPad + passHeight(pass) + passSpacing / 2;
-      svg.append("line").attr("x1", svgPad).attr("y1", sepY)
-        .attr("x2", svgW - svgPad).attr("y2", sepY)
-        .attr("stroke", "var(--border)").attr("stroke-width", 0.5).attr("stroke-dasharray", "4,3");
-    }
-  });
-
-  // Step control: highlight active pass, show example
+  let allBoxes = [], passGroups = [], nCols = 0;
   let activePass = 0;
 
-  function highlightPass(pi) {
-    allBoxes.forEach(b => {
-      const active = b.pass === pi;
-      b.el.attr("opacity", active ? 0.9 : b.pass < pi ? 0.65 : 0.25);
-    });
-    passGroups.forEach((g, i) => {
-      g.selectAll("text").attr("opacity", i === pi ? 1 : i < pi ? 0.55 : 0.3);
-      g.selectAll("line:not(.pass-bg)").attr("opacity", i === pi ? 1 : 0.25);
-      g.selectAll("path").attr("opacity", i === pi ? 1 : 0.25);
-      // Active border
-      g.select(".pass-bg").attr("stroke", i === pi ? "var(--accent)" : "transparent")
-        .attr("fill", i === pi ? "rgba(37,99,235,0.03)" : "none");
-    });
+  function build(cols) {
+    nCols = cols;
+    const rowW = cols * (boxSize + boxGap) - boxGap;
+    const svgW = leftPad + rowW + 12 + svgPad * 2;
+    container.selectAll("*").remove();
+    const svg = container.append("svg").attr("width", svgW).attr("height", totalH + svgPad * 2).style("display", "block")
+      .attr("role", "img").attr("aria-label", "Four stacked blocks, one per GPU pass: density, pressure, forces, integrate. Each block shows its input arrays above and its output arrays below, with one small box per particle and an arrow down every column.");
+    allBoxes = []; passGroups = [];
 
+    passes.forEach((pass, pi) => {
+      const y0 = passYs[pi];
+      const g = svg.append("g").attr("class", "pass").attr("transform", `translate(${svgPad},${y0 + svgPad})`)
+        .on("click", () => { activePass = pi; highlightPass(pi); });
+      passGroups.push(g);
+
+      g.append("rect").attr("class", "pass-bg")
+        .attr("x", -6).attr("y", -6)
+        .attr("width", svgW - svgPad * 2 + 12).attr("height", passHeight(pass) + 8)
+        .attr("rx", 4).attr("fill", "transparent")
+        .attr("stroke", "transparent").attr("stroke-width", 2);
+
+      g.append("text").attr("x", 0).attr("y", 12)
+        .attr("font-size", "13px").attr("font-weight", 700)
+        .attr("fill", "var(--text)").text(pass.label);
+
+      const row = (name, color, rowY, section) => {
+        g.append("text").attr("x", leftPad - 6).attr("y", rowY + boxSize)
+          .attr("text-anchor", "end").attr("font-size", "13px")
+          .attr("fill", cvar[color]).style("font-family", "var(--mono-font)").text(name);
+        for (let c = 0; c < cols; c++) {
+          const rect = g.append("rect")
+            .attr("x", leftPad + c * (boxSize + boxGap)).attr("y", rowY)
+            .attr("width", boxSize).attr("height", boxSize)
+            .attr("fill", cvar[color]).attr("rx", 1.5);
+          allBoxes.push({ el: rect, pass: pi, section });
+        }
+      };
+      const arrows = (y) => {
+        for (let c = 0; c < cols; c++) {
+          const ax = leftPad + c * (boxSize + boxGap) + boxSize / 2;
+          g.append("path").attr("class", "arrow")
+            .attr("d", `M${ax},${y}V${y + arrowH - 5}M${ax - 2.5},${y + arrowH - 7}L${ax},${y + arrowH - 3}L${ax + 2.5},${y + arrowH - 7}`)
+            .attr("fill", "none").attr("stroke", "var(--text-2)").attr("stroke-width", 0.8);
+        }
+      };
+
+      // inputs spaced one text line apart so 13px labels don't collide
+      const lineStep = Math.max(rowH + boxGap, 15);
+      pass.inputs.forEach((inp, ri) => row(inp.name, inp.color, passPadTop + ri * lineStep, 'input'));
+      const a1Y = passPadTop + (pass.inputs.length - 1) * lineStep + rowH + 3;
+      arrows(a1Y);
+      const opY = a1Y + arrowH;
+      g.append("text").attr("x", cols >= 16 ? leftPad : 0).attr("y", opY + 14)
+        .attr("font-size", "13px").attr("font-weight", 600)
+        .attr("fill", cvar.kernel).style("font-family", "var(--mono-font)").text(pass.op);
+      const a2Y = opY + opH;
+      arrows(a2Y);
+      const outY = a2Y + arrowH;
+      pass.outputs.forEach((outp, ri) => row(outp.name, outp.color, outY + ri * lineStep, 'output'));
+    });
+    highlightPass(activePass);
+  }
+
+  function highlightPass(pi) {
+    allBoxes.forEach(b => b.el.attr("opacity", b.pass === pi ? 0.95 : b.pass < pi ? 0.55 : 0.25));
+    passGroups.forEach((g, i) => {
+      g.selectAll("text").attr("opacity", i === pi ? 1 : 0.6);
+      g.selectAll(".arrow").attr("opacity", i === pi ? 1 : 0.25);
+      g.select(".pass-bg").attr("stroke", i === pi ? "var(--accent)" : "transparent");
+    });
     const p = passes[pi];
-    d3.select("#pipe-phase-label").text(`${p.label}`);
+    d3.select("#pipe-phase-label").text(p.label);
     d3.select("#pipeline-example").html(
-      `<div style="font-family:var(--heading-font);font-weight:700;font-size:0.85rem;color:var(--text);margin-bottom:0.5rem;">Example: particle 3</div>` +
-      `<div style="line-height:1.8;">${p.example}</div>` +
-      `<div style="margin-top:0.75rem;font-size:0.75rem;color:var(--text-2);font-family:var(--heading-font);font-style:italic;">${p.note}</div>`
+      `<div style="font-family:var(--heading-font);font-weight:700;font-size:0.875rem;color:var(--text);margin-bottom:0.5rem;">${p.label}, for particle 3</div>` +
+      `<div>${p.example}</div>` +
+      `<div style="margin-top:0.75rem;font-size:0.8125rem;color:var(--text-2);font-family:var(--heading-font);font-style:italic;">${p.note}</div>`
     );
   }
 
   d3.select("#pipe-prev").on("click", () => { activePass = Math.max(0, activePass - 1); highlightPass(activePass); });
   d3.select("#pipe-next").on("click", () => { activePass = Math.min(passes.length - 1, activePass + 1); highlightPass(activePass); });
 
-  highlightPass(0);
+  // As many particle columns as fit, between 8 and 20
+  function fit() {
+    const avail = document.getElementById("fig-pipeline").clientWidth - 2 * parseFloat(getComputedStyle(document.getElementById("fig-pipeline")).paddingLeft);
+    const cols = Math.max(8, Math.min(20, Math.floor((avail - leftPad - 12 - svgPad * 2 + boxGap) / (boxSize + boxGap))));
+    if (cols !== nCols) build(cols);
+  }
+  new ResizeObserver(fit).observe(document.getElementById("fig-pipeline"));
+  fit();
 })();
 
 
@@ -1229,7 +1235,7 @@ function visibleLoop(elementId, loopFn) {
 
   function resizeCanvas() {
     const rect = canvas.parentElement.getBoundingClientRect();
-    simW = Math.floor(rect.width - 48);
+    simW = canvasWidth(canvas);
     simH = 360;
     canvas.width = simW * dpr;
     canvas.height = simH * dpr;
@@ -1245,10 +1251,11 @@ function visibleLoop(elementId, loopFn) {
   const emitInt = 2, emitN = 3;
 
   // Container
-  const containerW = 340, wallH = 120, wallT = 5;
-  let containerX, containerY;
+  const wallH = 120, wallT = 5;
+  let containerW = 340, containerX, containerY;
   function updateContainerPos() {
-    containerX = simW / 2 - containerW / 2;
+    containerW = Math.min(340, simW - 70); // leave room for the spout on a phone
+    containerX = simW / 2 - containerW / 2 + 10;
     containerY = simH - wallH - 10;
   }
   updateContainerPos();
@@ -1390,7 +1397,9 @@ function visibleLoop(elementId, loopFn) {
     try {
       adapter = await navigator.gpu.requestAdapter();
       if (!adapter) return null;
-      device = await adapter.requestDevice({ requiredLimits: { maxStorageBufferBindingSize: 256 * 1024 * 1024 } });
+      // Default limits are plenty (the largest buffer here is under 1 MB). Asking
+      // for more would make requestDevice fail on phones that can run this fine.
+      device = await adapter.requestDevice();
     } catch(e) { return null; }
 
     // Constants matching CPU side
@@ -1549,9 +1558,10 @@ fn densityPass(@builtin(global_invocation_id) id: vec3u) {
   pressure[i] = params.stiffness * max(0.0, rho - params.restD);
 }
 
-// Pass 3: Forces (pressure + viscosity) + Integration
+// Pass 3: Forces (pressure + viscosity + pointer push). Reads pos and vel of
+// neighbors, writes only force[i].
 @compute @workgroup_size(${WORKGROUP_SIZE})
-fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
+fn forcePass(@builtin(global_invocation_id) id: vec3u) {
   let i = id.x;
   let n = u32(params.n);
   if (i >= n) { return; }
@@ -1613,8 +1623,26 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
     }
   }
 
-  // Integration
-  let rho = max(pi_density, 0.01);
+  force[i * 2u] = fx;
+  force[i * 2u + 1u] = fy;
+}
+
+// Pass 4: Integration. Each thread reads and writes only its own particle,
+// so updating pos and vel in place is safe.
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn integratePass(@builtin(global_invocation_id) id: vec3u) {
+  let i = id.x;
+  let n = u32(params.n);
+  if (i >= n) { return; }
+  let px = pos[i * 2u];
+  let py = pos[i * 2u + 1u];
+  let vx = vel[i * 2u];
+  let vy = vel[i * 2u + 1u];
+  let fx = force[i * 2u];
+  let fy = force[i * 2u + 1u];
+
+  // Integration (symplectic Euler: velocity first, then position)
+  let rho = max(density[i], 0.01);
   var nvx = vx + (fx / rho) * params.dt;
   var nvy = vy + (fy / rho) * params.dt;
   let sp = sqrt(nvx * nvx + nvy * nvy);
@@ -1667,7 +1695,8 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
     const clearPipeline = device.createComputePipeline({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'clearGrid' } });
     const insertPipeline = device.createComputePipeline({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'insertParticles' } });
     const densityPipeline = device.createComputePipeline({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'densityPass' } });
-    const forcePipeline = device.createComputePipeline({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'forceAndIntegrate' } });
+    const forcePipeline = device.createComputePipeline({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'forcePass' } });
+    const integratePipeline = device.createComputePipeline({ layout: pipelineLayout, compute: { module: shaderModule, entryPoint: 'integratePass' } });
 
     const bindGroup = device.createBindGroup({
       layout: bindGroupLayout,
@@ -1687,6 +1716,7 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
     let velReadback = new Float32Array(MAX_PARTICLES * 2);
     // Readback state: only copy to readback buffers when they're not mapped
     let readbackReady = true;
+    let generation = 0; // bumped on reset
 
     function updateParams() {
       updateContainerPos();
@@ -1730,12 +1760,18 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
       const p1 = encoder.beginComputePass(); p1.setPipeline(insertPipeline); p1.setBindGroup(0, bindGroup); p1.dispatchWorkgroups(particleGroups); p1.end();
       // Density + Pressure
       const p2 = encoder.beginComputePass(); p2.setPipeline(densityPipeline); p2.setBindGroup(0, bindGroup); p2.dispatchWorkgroups(particleGroups); p2.end();
-      // Forces + Integrate
+      // Forces
       const p3 = encoder.beginComputePass(); p3.setPipeline(forcePipeline); p3.setBindGroup(0, bindGroup); p3.dispatchWorkgroups(particleGroups); p3.end();
+      // Integrate
+      const p4 = encoder.beginComputePass(); p4.setPipeline(integratePipeline); p4.setBindGroup(0, bindGroup); p4.dispatchWorkgroups(particleGroups); p4.end();
 
       // Only copy to readback buffers if they're not being mapped
       if (readbackReady) {
+        // Fix the byte count now: the particle count can grow (the spout keeps
+        // emitting) before the map resolves, and mapping a different range than
+        // was copied throws and leaves the buffer mapped for good.
         const byteCount = gpuParticleCount * 2 * 4;
+        const gen = generation;
         encoder.copyBufferToBuffer(posBuffer, 0, readbackBuffer, 0, byteCount);
         encoder.copyBufferToBuffer(velBuffer, 0, velReadbackBuffer, 0, byteCount);
         readbackReady = false;
@@ -1743,13 +1779,13 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
         // Fire-and-forget async map
         (async () => {
           try {
-            await readbackBuffer.mapAsync(GPUMapMode.READ, 0, gpuParticleCount * 2 * 4);
-            posReadback.set(new Float32Array(readbackBuffer.getMappedRange(0, gpuParticleCount * 2 * 4)));
-            readbackBuffer.unmap();
-            await velReadbackBuffer.mapAsync(GPUMapMode.READ, 0, gpuParticleCount * 2 * 4);
-            velReadback.set(new Float32Array(velReadbackBuffer.getMappedRange(0, gpuParticleCount * 2 * 4)));
-            velReadbackBuffer.unmap();
-          } catch(e) { /* buffer busy, skip */ }
+            await Promise.all([readbackBuffer.mapAsync(GPUMapMode.READ, 0, byteCount), velReadbackBuffer.mapAsync(GPUMapMode.READ, 0, byteCount)]);
+            if (gen === generation) { // ignore a readback that predates a reset
+              posReadback.set(new Float32Array(readbackBuffer.getMappedRange(0, byteCount)));
+              velReadback.set(new Float32Array(velReadbackBuffer.getMappedRange(0, byteCount)));
+            }
+          } catch(e) { /* device lost or tab hidden: keep the last positions */ }
+          try { readbackBuffer.unmap(); velReadbackBuffer.unmap(); } catch(e) {}
           readbackReady = true;
         })();
       } else {
@@ -1780,9 +1816,8 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
       },
       reset() {
         gpuParticleCount = 0;
-        posReadback = new Float32Array(MAX_PARTICLES * 2);
-        velReadback = new Float32Array(MAX_PARTICLES * 2);
-        readbackReady = true;
+        generation++;
+        posReadback.fill(0); velReadback.fill(0);
       },
       addParticles(arr) {
         // arr is [{x, y, vx, vy}, ...]
@@ -1831,24 +1866,23 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
   // ---- Rendering ----
   function render() {
     ctx.clearRect(0, 0, simW, simH);
-    ctx.fillStyle = '#f0f4f8'; ctx.fillRect(0, 0, simW, simH);
+    ctx.fillStyle = THEME['canvas-bg']; ctx.fillRect(0, 0, simW, simH);
 
     updateContainerPos();
-    ctx.fillStyle = '#94a3b8';
+    ctx.fillStyle = THEME['wall'];
     ctx.fillRect(containerX, containerY, wallT, wallH + 10);
     ctx.fillRect(containerX + containerW - wallT, containerY, wallT, wallH + 10);
     ctx.fillRect(containerX, simH - 10 - wallT, containerW, wallT);
 
     // Hose nozzle
     const hx = containerX - 15, hy = containerY - 58;
-    ctx.fillStyle = '#64748b';
+    ctx.fillStyle = THEME['wall-2'];
     ctx.fillRect(hx, hy, 14, 20);
-    ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = THEME['wall-2']; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(hx + 14, hy + 10); ctx.lineTo(hx + 24, hy + 12); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(hx + 21, hy + 9); ctx.lineTo(hx + 24, hy + 12); ctx.lineTo(hx + 21, hy + 15); ctx.stroke();
 
-    // Color by speed: slow = dark blue, fast = lighter blue
-    const cs = d3.scaleSequential(t => d3.interpolateBlues(0.85 - t * 0.45)).domain([0, 200]);
+    // Color by speed: slow = dark blue, fast = lighter blue (same in every chapter)
     const positions = backend.getPositions();
     const velocities = backend.getVelocities();
     ctx.globalAlpha = 0.8;
@@ -1857,7 +1891,7 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
       const [vx, vy] = velocities[i];
       const sp = Math.sqrt(vx * vx + vy * vy);
       ctx.beginPath(); ctx.arc(px, py, pR, 0, Math.PI * 2);
-      ctx.fillStyle = cs(Math.min(sp, 200)); ctx.fill();
+      ctx.fillStyle = speedColor(sp); ctx.fill();
     }
     ctx.globalAlpha = 1.0;
 
@@ -1884,15 +1918,20 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
     const gpuBackend = await createWebGPUBackend();
     if (gpuBackend) {
       backend = gpuBackend;
-      d3.select("#sim-backend-label").text("WebGPU").style("color", "var(--c-kernel)");
+      d3.select("#sim-backend-label").text("Running on WebGPU");
     } else {
       backend = createCPUBackend();
-      d3.select("#sim-backend-label").text("CPU fallback").style("color", "var(--c-pressure)");
-      maxP = 1200; // limit CPU
+      d3.select("#sim-backend-label").text("Running on the CPU (no WebGPU here)");
+      maxP = 700; // what one JavaScript thread can step 16 times a frame
     }
     initialized = true;
+    seed();
+  }
 
-    // Seed 1024 particles tightly packed from the bottom of the container
+  function seed() {
+    const seedCount = backend.type === 'webgpu' ? 1024 : 420;
+
+    // Seed particles tightly packed from the bottom of the container
     updateContainerPos();
     const seedArr = [];
     const spacing = H * 0.38; // tight packing near equilibrium
@@ -1900,7 +1939,7 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
     const cols = Math.floor(innerW / spacing);
     const startX = containerX + wallT + 1 + (innerW - cols * spacing) / 2;
     const bottom = simH - 10 - wallT - 1;
-    for (let i = 0; i < 1024; i++) {
+    for (let i = 0; i < seedCount; i++) {
       const c = i % cols;
       const r = Math.floor(i / cols);
       const px = startX + c * spacing + spacing / 2;
@@ -1919,7 +1958,7 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
     if (backend.type === 'webgpu') {
       backend.step(); // dispatch includes readback when buffer is available
     } else {
-      for (let s = 0; s < substeps; s++) backend.step();
+      budgetSteps(substeps, backend.step, 12);
     }
     render();
   }
@@ -1952,7 +1991,7 @@ fn forceAndIntegrate(@builtin(global_invocation_id) id: vec3u) {
   d3.select("#sim-restd-slider").on("input", function() { restD = +this.value; d3.select("#sim-restd-val").text(restD); });
   d3.select("#sim-substeps-slider").on("input", function() { substeps = +this.value; d3.select("#sim-substeps-val").text(substeps); });
   d3.select("#sim-dt-slider").on("input", function() { dt = +this.value; d3.select("#sim-dt-val").text(dt); });
-  d3.select("#sim-reset").on("click", () => { if (backend) backend.reset(); });
+  d3.select("#sim-reset").on("click", () => { if (backend) { backend.reset(); seed(); } });
 
   new ResizeObserver(() => { resizeCanvas(); }).observe(canvas.parentElement);
 

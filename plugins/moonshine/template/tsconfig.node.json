@@ -15,6 +15,7 @@
     "vite.config.ts",
     "velite.config.ts",
     "vite-plugin-moonshine-edit.ts",
-    "vite-plugin-moonshine-feedback.ts"
+    "vite-plugin-moonshine-feedback.ts",
+    "vite-plugin-moonshine-icons.ts"
   ]
 }

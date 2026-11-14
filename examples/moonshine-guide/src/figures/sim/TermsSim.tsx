@@ -4,16 +4,18 @@ import { useFigureHighlight } from '../../store'
 // NOTE: the shared sim gesture helper is not needed here. Terms are inline
 // buttons, so their gesture is already a plain hover/click.
 
-// A pure, local-state simulation of moonshine's term → figure highlighting.
+// Term → figure highlighting, shown on a small figure with three parts.
 //
 // The real feature: `:term[word]{to=figure-id.part}` turns a phrase into a
-// quiet inline button. HOVER softly highlights the linked part (a glance);
-// CLICK pins a strong highlight and scrolls the figure into view (a commit).
-// Here everything is already on screen, so we simulate the "scroll into
-// view" commit with a brief ring pulse around the pinned part.
-//
-// State mirrors the real two-tier model exactly: a transient `hovered` and a
-// persistent `pinned`. No EditContext, no store, no network — local state.
+// quiet inline button. Hover (or focus) softly highlights the linked part;
+// click pins a strong highlight and scrolls the figure into view; clicking
+// again or Escape releases it. Unlike the other figures here, terms are a
+// reader feature and work in a static build, so this one is half real: the
+// chips in its own sentence are local state (a transient `hovered` and a
+// persistent `pinned`, the store's two tiers), and the figure also reads
+// the real store, so a :term in the article body lights the same parts.
+// Everything is already on screen, so a brief ring stands in for the
+// scroll into view.
 
 type PartId = 'surface' | 'arrow' | 'step'
 
@@ -24,10 +26,12 @@ type Term = {
   md: string
 }
 
-const TERMS: Term[] = [
-  { id: 'surface', label: 'the surface', md: ':term[the surface]{to=descent.surface}' },
-  { id: 'arrow', label: 'the gradient', md: ':term[the gradient]{to=descent.arrow}' },
-  { id: 'step', label: 'the step', md: ':term[the step]{to=descent.step}' },
+// The directives are written against this figure's real id, so each line
+// is one that would work in this article's markdown.
+const termsFor = (figureId: string): Term[] => [
+  { id: 'surface', label: 'the surface', md: `:term[the surface]{to=${figureId}.surface}` },
+  { id: 'arrow', label: 'the gradient', md: `:term[the gradient]{to=${figureId}.arrow}` },
+  { id: 'step', label: 'the step', md: `:term[the step]{to=${figureId}.step}` },
 ]
 
 // Loss valley: high on the arms (small y), minimum at the bottom (large y).
@@ -61,6 +65,7 @@ function surfacePath(): string {
 type PartState = 'pinned' | 'hovered' | null
 
 export default function TermsSim({ figureId }: FigureProps) {
+  const TERMS = termsFor(figureId)
   const [hovered, setHovered] = useState<PartId | null>(null)
   const [pinned, setPinned] = useState<PartId | null>(null)
   // Bumped on every pin so the ring pulse re-triggers its CSS animation.
@@ -112,7 +117,7 @@ export default function TermsSim({ figureId }: FigureProps) {
   const sStep = partState('step')
 
   return (
-    <div style={{ fontFamily: 'var(--body-font)', color: 'var(--text)' }}>
+    <div className="mn-sim" style={{ fontFamily: 'var(--body-font)', color: 'var(--text)' }}>
       {/* Scoped keyframes for the on-pin "scrolled into view" ring pulse. */}
       <style>{`
         @keyframes terms-sim-pulse {
@@ -131,7 +136,7 @@ export default function TermsSim({ figureId }: FigureProps) {
       `}</style>
 
       <p className="figure-hint" style={{ margin: '0 0 0.85rem' }}>
-        Hover a term to glance, click to pin{pinned ? ' (Esc to release)' : ''}.
+        hover a term to glance, click to pin{pinned ? ' · Esc or a second click releases it' : ''}
       </p>
 
       <div
@@ -160,7 +165,7 @@ export default function TermsSim({ figureId }: FigureProps) {
               borderRadius: '6px',
               padding: '0.6rem 0.75rem',
               fontFamily: 'var(--mono-font)',
-              fontSize: '0.72rem',
+              fontSize: '0.8125rem',
               lineHeight: 1.7,
             }}
           >
@@ -176,9 +181,7 @@ export default function TermsSim({ figureId }: FigureProps) {
                     padding: '0 0.25rem',
                     opacity: active || !activeId ? 1 : 0.55,
                     transition: 'background 0.15s, color 0.15s, opacity 0.15s',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
+                    overflowWrap: 'anywhere',
                   }}
                 >
                   {t.md}
@@ -194,7 +197,7 @@ export default function TermsSim({ figureId }: FigureProps) {
             viewBox="0 0 360 220"
             width="100%"
             role="img"
-            aria-label="A loss surface with a gradient arrow and a descent step"
+            aria-label="A valley-shaped loss curve. An arrow at a point on its left slope shows the downhill direction, and a dashed line leads from that point to where one step lands."
             style={{ display: 'block', maxWidth: '360px', margin: '0 auto' }}
           >
             <defs>
@@ -220,7 +223,7 @@ export default function TermsSim({ figureId }: FigureProps) {
                 strokeWidth={strokeW(sSurface, 1.5)}
                 style={{ transition: 'fill-opacity 0.15s, stroke 0.15s' }}
               />
-              <text x="232" y="98" fontSize="11" fill="var(--text-2)">
+              <text x="214" y="70" fontSize="18" fill="var(--text-2)" style={{ fontFamily: 'var(--heading-font)' }}>
                 surface
               </text>
             </g>
@@ -237,7 +240,7 @@ export default function TermsSim({ figureId }: FigureProps) {
                 markerEnd="url(#terms-sim-arrow)"
                 style={{ transition: 'stroke 0.15s, stroke-width 0.15s' }}
               />
-              <text x={CUR_X - 4} y={CUR_Y - 8} fontSize="11" fill="var(--text-2)">
+              <text x={CUR_X - 8} y={CUR_Y - 12} fontSize="18" textAnchor="end" fill="var(--text-2)" style={{ fontFamily: 'var(--heading-font)' }}>
                 gradient
               </text>
             </g>
@@ -262,7 +265,7 @@ export default function TermsSim({ figureId }: FigureProps) {
                 fill={strokeFor(sStep, 'var(--accent)')}
                 style={{ transition: 'r 0.15s, fill 0.15s' }}
               />
-              <text x={NEXT_X + 6} y={NEXT_Y + 4} fontSize="11" fill="var(--text-2)">
+              <text x={NEXT_X + 2} y={NEXT_Y + 26} fontSize="18" fill="var(--text-2)" style={{ fontFamily: 'var(--heading-font)' }}>
                 step
               </text>
             </g>

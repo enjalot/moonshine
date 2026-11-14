@@ -2,6 +2,7 @@ import { Children, isValidElement, useEffect, useRef, type ReactNode } from 'rea
 import * as d3 from 'd3'
 import {
   drawHaloText,
+  type LabelBox,
   makeCanvas,
   px,
   py,
@@ -183,6 +184,7 @@ export default function ScrollyTour({ children }: { children?: ReactNode }) {
         ctx.fill()
       }
       ctx.globalAlpha = 1
+      const placed: LabelBox[] = []
       if (spec.continents && alpha > 0.5) {
         CONTINENTS.forEach((c) =>
           drawHaloText(ctx, c.label, px(c.x, view, w, h), py(c.y, view, w, h), {
@@ -190,6 +192,7 @@ export default function ScrollyTour({ children }: { children?: ReactNode }) {
             weight: 700,
             color: theme.text,
             halo: theme.halo,
+            avoid: placed,
           }),
         )
       }
@@ -202,6 +205,7 @@ export default function ScrollyTour({ children }: { children?: ReactNode }) {
               weight: 700,
               color: theme.text2,
               halo: theme.halo,
+              avoid: placed,
             })
         })
         ;(spec.labels || []).forEach((l) => {
@@ -218,7 +222,7 @@ export default function ScrollyTour({ children }: { children?: ReactNode }) {
             ctx.beginPath()
             ctx.moveTo(x + Math.sign(l.dx) * (r + 3), y + Math.sign(l.dy) * (r + 3) * (l.dx === 0 ? 1 : 0.4))
             ctx.lineTo(x + l.dx * 0.8, y + l.dy * 0.8)
-            ctx.strokeStyle = '#9a9aae'
+            ctx.strokeStyle = theme.text2
             ctx.lineWidth = 1
             ctx.stroke()
           }
@@ -227,6 +231,7 @@ export default function ScrollyTour({ children }: { children?: ReactNode }) {
             weight: 600,
             color: theme.text,
             halo: theme.halo,
+            avoid: placed,
             align: l.anchor === 'end' ? 'right' : l.anchor === 'start' ? 'left' : 'center',
           })
         })

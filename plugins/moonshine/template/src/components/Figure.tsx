@@ -9,6 +9,7 @@ import {
 import { figures } from '../figures/registry'
 import { builtinFigure } from '../figures/builtin'
 import { blockIndexAt } from '../lib/blocks'
+import SuggestionCards from './SuggestionCards'
 import { useArticleStore, useFigureHighlight } from '../store'
 import { EDIT_ENABLED, fnv1a, useEdit } from '../lib/EditContext'
 import { FigureEditContext, type FigureEdit } from '../lib/FigureEditContext'
@@ -340,6 +341,9 @@ export default function Figure({ id, caption, children, node, ...rest }: Props) 
         <figcaption className="figure-caption">
           {caption ?? captionContent}
         </figcaption>
+      )}
+      {EDIT_ENABLED && typeof start === 'number' && typeof end === 'number' && (
+        <SuggestionCards start={start} end={end} />
       )}
     </figure>
   )

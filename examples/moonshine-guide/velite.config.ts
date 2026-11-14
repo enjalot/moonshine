@@ -40,7 +40,16 @@ const arrangement = {
 }
 const specSchema = s.object({
   direction: s.enum(['RIGHT', 'DOWN']).optional(),
-  groups: s.array(s.object({ id: s.string(), label: s.string() })).optional(),
+  groups: s
+    .array(
+      s.object({
+        id: s.string(),
+        label: s.string(),
+        style: s.enum(['box', 'corners', 'tint', 'dashed']).optional(),
+        tone: s.string().optional(),
+      }),
+    )
+    .optional(),
   nodes: s.array(
     s.object({
       id: s.string(),
@@ -48,6 +57,11 @@ const specSchema = s.object({
       kind: s.enum(['process', 'data', 'store', 'external', 'decision', 'accent', 'note']).optional(),
       group: s.string().optional(),
       detail: s.string().optional(),
+      icon: s.string().optional(),
+      labelSide: s.enum(['below', 'above', 'left', 'right']).optional(),
+      tone: s.string().optional(),
+      badge: s.string().optional(),
+      dashed: s.boolean().optional(),
     }),
   ),
   edges: s.array(
@@ -58,6 +72,8 @@ const specSchema = s.object({
       label: s.string().optional(),
       dashed: s.boolean().optional(),
       animated: s.boolean().optional(),
+      family: s.string().optional(),
+      arrows: s.enum(['end', 'start', 'both', 'none']).optional(),
     }),
   ),
 })

@@ -1,13 +1,16 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { FigureProps } from '../registry'
-import { isSimActivate, SIM_GESTURE_LABEL } from './gesture'
+import { isSimActivate } from './gesture'
+import './sims.css'
 
-// A pure, local-state simulation of moonshine's in-place prose editor:
-// click a block to swap it for a <textarea> showing its RAW markdown
-// source, edit, and commit to re-render. (The real editor uses the same
-// flow behind Cmd/Ctrl+click; the sim drops the modifier so it's freely
-// pokeable.) No EditContext, no network — everything here is local state.
+// A local-state simulation of the in-place prose editor (SourceEditor.tsx):
+// click a block to swap it for a textarea holding its raw markdown, edit,
+// and save to render it again. The real editor opens on Cmd/Ctrl+click;
+// the sim takes a plain click so a reader can try it. The rail is the real
+// one, in the real order: save, comment, move up and down, the key hints.
+// Save and the arrows work on the two blocks here; 💬 needs the dev server
+// (the feedback figure further down plays that part).
 
 type Block = { id: string; source: string }
 
@@ -66,7 +69,10 @@ export default function ProseEditSim(_props: FigureProps) {
 
   // Focus the textarea when an edit opens.
   useEffect(() => {
-    if (editingId) taRef.current?.focus()
+    const el = taRef.current
+    if (!editingId || !el) return
+    el.focus()
+    el.setSelectionRange(el.value.length, el.value.length)
   }, [editingId])
 
   useLayoutEffect(() => {
@@ -113,14 +119,14 @@ export default function ProseEditSim(_props: FigureProps) {
 
   return (
     <div
-      className="prose-edit-sim"
+      className="mn-sim prose-edit-sim"
       style={{ fontFamily: 'var(--body-font)', color: 'var(--text)' }}
     >
       <p
         className="figure-hint"
         style={{ margin: '0 0 0.75rem' }}
       >
-        {SIM_GESTURE_LABEL} a line to edit its markdown
+        click a paragraph to edit its markdown · in the harness, hold Cmd/Ctrl and click
       </p>
 
       <div
@@ -133,13 +139,14 @@ export default function ProseEditSim(_props: FigureProps) {
       >
         {blocks.map((block, idx) => {
           if (editingId === block.id) {
-            const dirty = draft !== block.source
             return (
               <div className="mn-edit" key={block.id}>
                 <textarea
                   ref={taRef}
                   className="mn-edit-textarea"
                   value={draft}
+                  spellCheck={false}
+                  aria-label="Markdown source of this paragraph"
                   rows={Math.max(2, draft.split('\n').length)}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => {
@@ -156,11 +163,13 @@ export default function ProseEditSim(_props: FigureProps) {
                   <button
                     className="mn-edit-done"
                     onClick={commit}
-                    disabled={!dirty}
                     aria-label="Save changes"
                     title="Save changes (⌘/Ctrl+Enter)"
                   >
                     <span aria-hidden>✓</span>
+                  </button>
+                  <button type="button" className="mn-edit-comment" disabled aria-label="Comment to the agent" title="Comment to the agent (dev only)">
+                    💬
                   </button>
                   <div className="mn-edit-move mn-edit-move-text">
                     <button
@@ -212,8 +221,8 @@ export default function ProseEditSim(_props: FigureProps) {
       </div>
 
       <p className="figure-hint" style={{ marginTop: '0.6rem' }}>
-        The <code style={{ fontFamily: 'var(--mono-font)' }}>:term[…]{'{…}'}</code> directive
-        renders as a chip, but the textarea shows the raw source you actually edit.
+        the second paragraph holds a <code style={{ fontFamily: 'var(--mono-font)' }}>:term[…]{'{…}'}</code>{' '}
+        directive: open it to see the link as it is written in the file
       </p>
     </div>
   )

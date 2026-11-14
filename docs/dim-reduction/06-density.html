@@ -9,44 +9,123 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
+  color-scheme: light dark;
   --article-width: 740px;
   --body-font: 'Source Serif 4', Georgia, serif;
   --heading-font: 'Source Sans 3', system-ui, sans-serif;
   --mono-font: 'Source Code Pro', monospace;
-  --body-size: 1.125rem; --line-height: 1.6;
-  --text: #1a1a2e; --text-2: #4a4a6a; --text-3: #8a8a9e;
-  --accent: #2563eb; --accent-light: #dbeafe;
-  --warm: #ea580c; --warm-light: #ffedd5;
-  --green: #059669; --purple: #7c3aed;
-  --bg: #fafafa; --fig-bg: #ffffff;
-  --border: #e2e2e8; --border-2: #c5c5d1; --muted: #e8e8ee;
-  --c0: #2563eb; --c1: #ea580c; --c2: #059669; --c3: #7c3aed;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --text-3: #6b6b82;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --on-accent: #ffffff;
+  --warm: #c2410c;
+  --warm-light: #ffedd5;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+  --border-2: #c5c5d1;
+  --muted: #e8e8ee;
+  /* categorical colours, in the same order in every figure of the series */
+  --c0: #2563eb;
+  --c1: #c2410c;
+  --c2: #047857;
+  --c3: #7c3aed;
+  --c4: #be185d;
 }
-body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e6dd;
+    --text-2: #b9b9cb;
+    --text-3: #9a9ab0;
+    --accent: #60a5fa;
+    --accent-light: #1e3a5f;
+    --on-accent: #10102a;
+    --warm: #fb923c;
+    --warm-light: #4a2a12;
+    --bg: #1a1a2e;
+    --fig-bg: #22223a;
+    --border: #3a3a52;
+    --border-2: #5a5a74;
+    --muted: #2e2e48;
+    --c0: #60a5fa;
+    --c1: #fb923c;
+    --c2: #34d399;
+    --c3: #a78bfa;
+    --c4: #f472b6;
+  }
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
 .article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
-h1, h2 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
 h1 { font-size: 2.4rem; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
 h2 { font-size: 1.4rem; margin: 3rem 0 1rem; }
-h3 { font-family: var(--heading-font); font-size: 1.1rem; font-weight: 700; margin: 2rem 0 0.75rem; }
+h3 { font-size: 1.1rem; margin: 2rem 0 0.75rem; }
 p { margin: 0 0 1rem; }
 a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-em { font-style: italic; } strong { font-weight: 600; }
-.subtitle { font-family: var(--heading-font); font-size: 1.1rem; color: var(--text-2); line-height: 1.45; margin-bottom: 1rem; font-weight: 400; }
-.series-tag { font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+em { font-style: italic; }
+strong { font-weight: 600; }
+.mono { font-family: var(--mono-font); font-size: 0.92em; }
+
+.subtitle { font-family: var(--heading-font); font-size: 1.1rem; color: var(--text-2); line-height: 1.45; margin-bottom: 1.5rem; font-weight: 400; }
+.series-tag { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.5; }
+.figure svg { display: block; width: 100%; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.5; }
 .figure-label { font-weight: 600; color: var(--text); }
-.controls { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
-.controls input[type="range"] { width: 160px; accent-color: var(--accent); vertical-align: middle; }
-.controls label { display: inline-flex; align-items: center; gap: 0.5rem; }
+
+.controls { display: flex; align-items: center; gap: 0.6rem 1.25rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); }
+.controls input[type="range"] { width: 150px; max-width: 100%; accent-color: var(--accent); vertical-align: middle; }
+.controls label { display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .controls .value { font-family: var(--mono-font); color: var(--text); min-width: 2ch; display: inline-block; }
-svg text { font-family: var(--heading-font); }
-svg .axis text { font-size: 11px; fill: var(--text-2); }
+.controls button, .toggle-group button { font-family: var(--heading-font); font-size: 0.875rem; padding: 0.4rem 0.75rem; background: var(--fig-bg); color: var(--text-2); cursor: pointer; }
+.controls > button, .controls label > button { border: 1px solid var(--border-2); border-radius: 4px; }
+.controls button:hover { background: var(--muted); }
+.toggle-group { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--border-2); border-radius: 4px; overflow: hidden; }
+.toggle-group button { border: none; border-right: 1px solid var(--border-2); }
+.toggle-group button:last-child { border-right: none; }
+.toggle-group button.active, .toggle-group button.active:hover { background: var(--accent); color: var(--on-accent); }
+button:focus-visible, input:focus-visible, svg [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.readout { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.5rem; min-height: 1.4em; }
+.readout b { color: var(--text); font-weight: 600; }
+
+svg text { font-family: var(--heading-font); font-size: 13px; fill: var(--text-2); }
+svg .axis text { font-size: 13px; fill: var(--text-2); }
 svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crispEdges; }
+svg .pane-title { font-weight: 700; fill: var(--text); }
+svg .pane-bg { fill: var(--bg); stroke: var(--border); }
+
 .margin-note { font-size: 0.875rem; color: var(--text-2); line-height: 1.5; border-left: 2px solid var(--border-2); padding-left: 0.9rem; margin: 1.25rem 0; }
-@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure { padding: 1rem; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+
+footer { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); }
+footer a { color: var(--text-2); }
+footer a.next { color: var(--accent); }
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .figure { padding: 1rem; }
+  .controls input[type="range"] { width: 120px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }
+}
 </style>
 </head>
 <body>
@@ -56,112 +135,178 @@ svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crisp
   <div class="series-tag">Part 6 of 10 · Preserves how tightly packed regions are</div>
   <h1>Preserving Density</h1>
   <p class="subtitle">
-    Most dimensionality reduction methods quietly throw away information about how densely packed regions of the data are. Two methods that keep it, densMAP and PHATE, change what the scatter plot can tell you.
+    Most dimensionality reduction methods discard how densely packed each region of the data is. Two methods that keep some of it, densMAP and PHATE, change what the scatter plot can tell you.
   </p>
 </header>
 
 <p>
-  Look at a UMAP plot of three clusters. They appear as three clouds, roughly the same size, separated by empty space. The visual message is "here are three groups." But suppose one of those groups was ten times as dense in the original high-dimensional space as the others: a tightly concentrated population alongside two loosely scattered ones. The UMAP plot will flatten that difference. All three clouds will look roughly equally dense on screen because the optimization is driven by neighborhood preservation, and preserving neighborhoods does not require preserving how close those neighbors really were.
+  Picture a UMAP plot of three clusters: three clouds, roughly the same size, separated by empty space. Now suppose one of those groups was ten times as tightly packed in the original space as the others. The plot would look much the same. All three clouds come out about equally dense on screen, because the layout is driven by who each point's neighbors are and not by how far away they were.
 </p>
 
 <p>
-  This is a design choice. For many tasks, equalizing cluster sizes in the plot makes them easier to read. But when density itself is the signal, this choice destroys it. A rare cell type that concentrates because it is performing a specific function, a well-practiced region of a policy's state space, a mode of a mixture model with a particular width: all of these look identical in a standard embedding to clusters that are merely noisy.
+  This is a design choice, and for many tasks it is a helpful one, since clusters of similar size are easy to read. But when density is the signal, the choice removes it. A rare cell type that is tightly concentrated because it performs one specific function, a well-practiced region of a policy's state space, a narrow mode of a mixture model: in a standard embedding each of these looks the same as a diffuse, noisy cluster.
 </p>
 
 <p>
-  Two methods put density back into the picture. densMAP, a UMAP variant, preserves local density as an additional constraint. PHATE, designed for single-cell trajectories, uses a diffusion-based distance that naturally captures continuous variation rather than isolated clusters. This article is about what each of them buys you and when.
+  Two methods put density back. densMAP is UMAP with an extra term that preserves local density. PHATE, designed for single-cell trajectories, embeds a diffusion-based distance that keeps continuous variation continuous. This article covers what each one does and when it helps.
 </p>
 
 <h2>Why the neighbor-based family flattens density</h2>
 
 <p>
-  A t-SNE or UMAP embedding tries to lay out points so that each one is close to the same neighbors it had in the original space. The objective does not reward reproducing <em>how close</em> those neighbors were in absolute terms, only the ranking. Two nearest neighbors ten units apart and two nearest neighbors one unit apart both count the same: they are nearest neighbors.
+  The flattening happens before the layout starts. As we saw in article 4, UMAP gives every point its own distance scale, chosen so that its neighbors' memberships add up to the same total, and t-SNE tunes a separate Gaussian width for every point to hit the same perplexity. After that rescaling, a point whose ten nearest neighbors are one unit away and a point whose ten nearest neighbors are ten units away have the same neighbor weights. The absolute distances are gone.
 </p>
 
 <p>
-  After optimization, the repulsive forces between non-neighbors take over and push things apart until each cluster occupies some roughly standard amount of space on the screen. The final plot tells you about cluster membership, not about cluster tightness. If you remember only one thing from article 4, it should be that cluster sizes in a t-SNE or UMAP plot are not meaningful. This article is what you do when you actually want them to be.
+  During the layout, repulsion between non-neighbors then spreads each cluster out until its points are about evenly spaced. The final plot tells you about cluster membership and not about cluster tightness, which is why article 4 warned against reading cluster sizes in a t-SNE or UMAP plot. This article is about what to do when you want them to mean something.
 </p>
 
 <div class="figure" id="fig-density">
-  <svg id="density-svg" width="100%" height="360" viewBox="0 0 680 360" preserveAspectRatio="xMidYMid meet"></svg>
+  <svg id="density-svg" role="img" aria-label="Three scatter plots of the same three clusters. In the PCA view of the data the blue cluster is a tight dot, the orange cluster is medium and the green cluster is spread wide. In the UMAP layout all three clusters are about the same size. In the densMAP layout the blue cluster is small, the orange one medium and the green one large again."></svg>
   <div class="figure-caption">
     <span class="figure-label">Figure 1.</span>
-    Three clusters with very different densities in the original space. A UMAP-style layout pushes them apart until they all look roughly the same size on screen. A densMAP-style layout rescales local spacing so that dense clusters remain visually tight and sparse clusters remain visually spread out. Same data; different answers to "how tightly packed is this group?"
+    Three clusters in 10 dimensions whose spreads differ by a factor of eight. Left: a PCA view, where the difference is plain. Middle: UMAP draws all three at about the same size. Right: densMAP, from the same graph and the same starting layout, keeps the tight cluster small and the diffuse one large. The number under each panel is the correlation between each point's local radius (the mean squared distance to its 10 nearest neighbors, on a log scale) in the original space and in the layout.
   </div>
 </div>
 
 <h2>densMAP: UMAP with a density term</h2>
 
 <p>
-  densMAP, introduced by Narayan, Berger, and Cho in 2021 as a drop-in replacement for UMAP, adds one extra term to the optimization. Along with the usual attract-and-repel objective, it computes the local density around each point in the original space (basically, the average distance to nearest neighbors) and encourages the local density around the same point in the embedding to match.
+  densMAP, introduced by Narayan, Berger, and Cho in 2021, adds one term to UMAP's objective. For each point it computes a <em>local radius</em>: the average squared distance to the point's graph neighbors, weighted by the edge weights. It computes the same quantity in the layout, and the added term rewards correlation between the logarithms of the two across all points. The density term is switched on only for the last part of the optimization, after ordinary UMAP has arranged the clusters.
 </p>
 
 <p>
-  The effect is subtle but often useful. A dense cluster in the original space stays dense in the embedding; a sparse one stays sparse. The relative spacing between clusters is still not fully meaningful, because the repulsive forces still dominate between clusters, but <em>within</em> each cluster the density becomes informative. If you are looking at biological data, cells that are tightly related will cluster tightly; cells that form a loose continuum will show up as a loose continuum rather than being force-compressed into a tight blob.
+  A dense cluster in the original space then stays compact in the embedding and a sparse one stays spread out. The spacing between clusters is still not meaningful, because repulsion still decides it, but <em>within</em> the plot relative density becomes readable. In biological data, cells that are tightly related cluster tightly, and cells that form a loose continuum show up as a loose continuum instead of being compressed into a blob.
 </p>
 
 <p>
-  One nice property of densMAP is that it is a modification of UMAP, not a wholly new method. It inherits UMAP's speed, API, and ecosystem. In most implementations you set a single flag and get density-aware output. This is exactly the kind of low-overhead improvement that tends to spread quickly.
+  densMAP is a modification of UMAP and not a new method, so it inherits UMAP's speed, interface, and ecosystem. In umap-learn it is a single flag. The densMAP in Figure 1 is a port of that implementation's gradient.
 </p>
 
 <div class="margin-note">
-  The density-preservation knob in densMAP is a blend: at 0, the output is identical to UMAP; as the weight increases, density becomes more faithfully preserved, at some cost to neighborhood preservation. Like most hyperparameters in this family, the right value depends on what you are trying to see.
+  The weight on the density term is a blend: at 0 the output is ordinary UMAP, and as it increases density is preserved more faithfully at some cost to neighborhood preservation. In Figure 1, with the library's default weight of 2, trustworthiness drops slightly while the density correlation rises from near zero to near one.
 </div>
 
 <h2>PHATE: potential distances for continuous structure</h2>
 
 <p>
-  PHATE (Potential of Heat-diffusion for Affinity-based Trajectory Embedding), from Moon and colleagues in 2019, comes at the problem from a different direction. It was designed with single-cell developmental biology in mind, where the data is not really a set of discrete clusters; it is a continuum of states that cells pass through as they differentiate. A UMAP plot of such data will usually carve the continuum into clusters, because the attract-repel objective does not know how to preserve continuous structure.
+  PHATE (Potential of Heat-diffusion for Affinity-based Transition Embedding), from Moon and colleagues in 2019, was designed for single-cell developmental biology, where the data is less a set of discrete clusters than a continuum of states that cells pass through as they differentiate. A UMAP plot of such data can carve the continuum into pieces and bend its branches arbitrarily, because its objective only asks that neighbors stay neighbors.
 </p>
 
 <p>
-  PHATE's key idea is the <em>potential distance</em>. Start with diffusion on the kNN graph, similar to the diffusion maps we saw in article 3: a random walker at one point has some probability of being at every other point after <em>t</em> steps. The distribution flattens as <em>t</em> grows; after many steps, the probability distribution reflects the long-run connectivity structure of the graph. PHATE takes those diffused distributions, applies a log transform (this is the "potential" step), and uses the resulting transformed distributions as the basis for a distance. Then it runs MDS on this distance matrix to produce the final embedding.
+  PHATE is built on the <em>potential distance</em>. It starts with diffusion on the neighbor graph, as in the diffusion maps of article 3: a random walker starting at one point has some probability of being at each other point after <em>t</em> steps. PHATE takes the logarithm of those probabilities (the "potential"), measures the distance between two points as the distance between their log-probability profiles, and embeds that distance matrix with MDS.
 </p>
 
 <p>
-  The log step is what separates PHATE from ordinary diffusion maps. It compresses the dynamic range of the probabilities, so that tiny probabilities (points that are far through the graph) and moderate probabilities (points that are somewhat connected) contribute comparably to the distance. The upshot is that PHATE is sensitive to both local and global structure, and it produces embeddings where branching trajectories look like branches rather than like separated clusters.
+  The log is what separates PHATE from diffusion maps. Without it, the distance between two points is dominated by the few destinations where their walkers are most likely to be. With it, a destination that one walker reaches with probability 0.001 and the other with probability 0.00001 counts as a large difference, so far-away parts of the graph contribute to the distance too. PHATE embeddings therefore reflect both local and global structure, and branching trajectories come out as branches.
 </p>
 
 <div class="figure" id="fig-phate">
-  <svg id="phate-svg" width="100%" height="360" viewBox="0 0 680 360" preserveAspectRatio="xMidYMid meet"></svg>
+  <svg id="phate-svg" role="img" aria-label="Three scatter plots of points along three branches that meet at a common origin and fan out, getting more diffuse toward their tips. The data: a symmetric three-armed shape. UMAP: the branches are drawn as separate thin fragments that do not meet. A simplified PHATE: three thin arms of about equal length meeting at the origin."></svg>
   <div class="figure-caption">
     <span class="figure-label">Figure 2.</span>
-    A branching trajectory: points progress from a common origin along three diverging paths, with density gradually decreasing outward. A neighbor-based layout tends to cluster the branches into three lumps with the origin hidden inside. PHATE preserves the branching geometry, making the common origin and the continuous divergence visible.
+    A branching trajectory: three paths leave a common origin (pale points), and the points scatter more widely toward the tips (dark points). Left: the data. Middle: UMAP at n_neighbors = 10 pulls the branches apart and breaks some into fragments, and nothing in the layout shows that they share an origin. Right: a simplified PHATE keeps the three arms joined at the origin and about equal in length. The number under each panel is the rank correlation between layout distance and distance along the branches. Neither layout keeps the widening toward the tips; PHATE's diffusion smooths it away. This PHATE uses a fixed 16 diffusion steps and a plain adaptive kernel, where the library picks the number of steps from the data and uses a faster approximation.
   </div>
 </div>
 
 <h2>When density matters</h2>
 
 <p>
-  Density preservation matters most when the data is itself a continuum or when relative density is the biological or physical signal. The paradigmatic examples are in single-cell biology: developmental trajectories where cells flow from stem to specialized states, immune responses where T-cell populations expand and contract, disease progression where patients trace paths through state space. In all of these, "how many cells are concentrated here" carries meaning, and flattening it makes diagnosis harder.
+  Density preservation matters most when the data is a continuum or when relative density is the biological or physical signal. The standard examples are in single-cell biology: developmental trajectories where cells move from stem to specialized states, immune responses where T-cell populations expand and contract, disease progression where patients trace paths through a state space. In each, how many cells are concentrated in a region carries meaning.
 </p>
 
 <p>
-  In ML, density preservation is less often the dominant concern, but it shows up in specific places. When comparing two embeddings (before and after training, for instance), you often want to know whether the feature space is becoming more or less concentrated in certain directions. A density-preserving visualization lets you see that change; a density-flattening one hides it. Similarly, when studying the internal representations of models with many classes or sub-types, the relative concentration of samples per class can be an interesting diagnostic.
+  In ML, density is less often the main concern, but it comes up. When comparing two embeddings (before and after training, say), we may want to know whether the feature space is becoming more or less concentrated in some regions, and a density-preserving view shows that change where a flattening one hides it. When studying the representations of a model with many classes, the relative concentration of samples per class can be a useful diagnostic.
 </p>
 
 <h2>What density methods give up</h2>
 
 <p>
-  Density-preserving methods pay for their faithfulness with lower separation between clusters. Because they do not let repulsive forces push clusters to uniform visual size, genuinely dissimilar groups sometimes end up looking merged or overlapping in places. You gain information about intra-cluster structure at some cost to inter-cluster clarity.
+  Density-preserving methods pay for it with less separation between clusters. A diffuse cluster drawn at its true relative size takes up room and can overlap its neighbors, so dissimilar groups sometimes look merged. We gain information about each cluster's internal structure at some cost to the clarity of the boundaries between clusters.
 </p>
 
 <p>
-  A sensible workflow is to run both a standard neighborhood method and a density-preserving one, and read them together. The neighborhood method tells you where the clusters are; the density method tells you how tight each one is. Neither on its own is a complete picture, but together they give a richer read than either in isolation.
+  A sensible workflow is to run both a standard neighborhood method and a density-preserving one and read them together: the first shows where the clusters are, and the second shows how tight each one is.
 </p>
 
 <p>
-  So far we have seen methods that produce scatter plots of floating points, in various flavors. The next article is about a family that refuses to float the points at all: Self-Organizing Maps place every data point into a fixed low-dimensional grid. The move from free layout to constrained layout is the topic of article 7.
+  Every method so far produces a scatter plot in which each point is free to land anywhere. The next article is about a family that fixes the output positions in advance: a self-organizing map assigns every data point to a cell of a grid.
 </p>
 
-<footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
-  <p>Part of <a href="index.html" style="color: var(--text-2);">What Dimensionality Reduction Preserves</a>. Previous: <a href="05-topology.html" style="color: var(--accent);">Preserving Topology</a>. Next: <a href="07-discrete-grids.html" style="color: var(--accent);">Self-Organizing Maps</a>.</p>
-  <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+<footer>
+  <p>Part of <a href="index.html">What Dimensionality Reduction Preserves</a>. Previous: <a class="next" href="05-topology.html">Preserving Topology</a>. Next: <a class="next" href="07-discrete-grids.html">Self-Organizing Maps</a>.</p>
+  <p>Built with <a href="https://github.com/enjalot/moonshine">moonshine</a>.</p>
 </footer>
 
 </div>
 
 <script>
+const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const DUR = REDUCED ? 0 : 250;
+
+// Every figure is drawn at the pixel width its container actually has, and redrawn when that
+// width changes, so labels stay the same size on a phone as on a desktop. draw(svg, W) lays the
+// figure out for width W and returns { height } (plus an optional stop() to cancel animation).
+function figure(id, draw) {
+  const node = document.getElementById(id), svg = d3.select(node);
+  let lastW = 0, stop = null;
+  function go() {
+    const W = Math.floor(node.getBoundingClientRect().width);
+    if (!W || W === lastW) return;
+    lastW = W;
+    if (stop) stop();
+    svg.selectAll("*").remove();
+    const res = draw(svg, W);
+    svg.attr("viewBox", `0 0 ${W} ${res.height}`).attr("height", res.height);
+    stop = res.stop || null;
+  }
+  new ResizeObserver(go).observe(node.parentNode);
+  go();
+}
+
+// Run start() the first time the element scrolls into view, so animations play when they can be seen.
+function whenVisible(node, start) {
+  if (!("IntersectionObserver" in window)) { start(); return () => {}; }
+  const io = new IntersectionObserver(entries => {
+    if (entries.some(e => e.isIntersecting)) { io.disconnect(); start(); }
+  }, { threshold: 0.35 });
+  io.observe(node);
+  return () => io.disconnect();
+}
+
+// Mutually exclusive buttons. Calls onChange(value) and marks the pressed button.
+function toggle(groupId, onChange) {
+  const buttons = document.querySelectorAll(`#${groupId} button`);
+  buttons.forEach(btn => {
+    btn.setAttribute("aria-pressed", btn.classList.contains("active"));
+    btn.onclick = () => {
+      buttons.forEach(b => { b.classList.toggle("active", b === btn); b.setAttribute("aria-pressed", b === btn); });
+      onChange(btn.dataset.value);
+    };
+  });
+  return () => document.querySelector(`#${groupId} button.active`).dataset.value;
+}
+
+// A titled panel: returns a <g> whose origin is the panel's top-left drawing corner.
+function pane(svg, x, y, w, h, title, note) {
+  const g = svg.append("g").attr("transform", `translate(${x},${y})`);
+  g.append("text").attr("class", "pane-title").attr("x", 0).attr("y", 13).text(title);
+  if (note) g.append("text").attr("x", 0).attr("y", 30).text(note);
+  const top = note ? 40 : 22;
+  g.append("rect").attr("class", "pane-bg").attr("x", 0).attr("y", top).attr("width", w).attr("height", h - top).attr("rx", 4);
+  const inner = g.append("g").attr("transform", `translate(0,${top})`);
+  inner.w = w; inner.h = h - top;
+  return inner;
+}
+
+// Scales that fit a 2D point set into a w x h box with equal units on both axes.
+function fitScales(pts, w, h, pad = 12) {
+  const xe = d3.extent(pts, p => p[0]), ye = d3.extent(pts, p => p[1]);
+  const s = Math.min((w - 2 * pad) / ((xe[1] - xe[0]) || 1), (h - 2 * pad) / ((ye[1] - ye[0]) || 1));
+  const cx = (xe[0] + xe[1]) / 2, cy = (ye[0] + ye[1]) / 2;
+  return { x: v => w / 2 + (v - cx) * s, y: v => h / 2 - (v - cy) * s, s };
+}
+
 function mulberry32(seed) {
   return function() {
     let t = seed += 0x6D2B79F5;
@@ -175,308 +320,336 @@ function gaussian(rng) {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 
-// --------- Figure 1: density preservation comparison ---------
-(function() {
-  const svg = d3.select("#density-svg");
-  const W = 680, H = 360;
-
-  // Three clusters in 10D with very different spreads
-  const rng = mulberry32(7);
-  const dim = 10;
-  const clusterSpread = [0.3, 1.0, 2.5]; // tight, medium, sparse
-  const clusterSize = [60, 40, 50];
-  const centers = [
-    new Array(dim).fill(0).map((_, i) => i === 0 ? -6 : 0),
-    new Array(dim).fill(0).map((_, i) => i === 0 ? 0 : 0),
-    new Array(dim).fill(0).map((_, i) => i === 0 ? 6 : 0),
-  ];
-  const pts = [];
-  for (let c = 0; c < 3; c++) {
-    for (let i = 0; i < clusterSize[c]; i++) {
-      const p = new Array(dim);
-      for (let d = 0; d < dim; d++) p[d] = centers[c][d] + gaussian(rng) * clusterSpread[c];
-      pts.push({ v: p, c, id: pts.length });
-    }
+// Pairwise Euclidean distances between the rows of X.
+function distMatrix(X) {
+  const n = X.length, D = Array.from({ length: n }, () => new Float64Array(n));
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    let s = 0;
+    for (let a = 0; a < X[i].length; a++) { const d = X[i][a] - X[j][a]; s += d * d; }
+    D[i][j] = D[j][i] = Math.sqrt(s);
   }
-  const N = pts.length;
-  const colors = ["var(--c0)", "var(--c1)", "var(--c2)"];
-
-  // Compute kNN
-  function kNN(k) {
-    const adj = [];
-    for (let i = 0; i < N; i++) {
-      const arr = [];
-      for (let j = 0; j < N; j++) {
-        if (i === j) continue;
-        let d = 0;
-        for (let a = 0; a < dim; a++) d += (pts[i].v[a] - pts[j].v[a]) ** 2;
-        arr.push({ j, d: Math.sqrt(d) });
-      }
-      arr.sort((a, b) => a.d - b.d);
-      adj.push(arr.slice(0, k));
-    }
-    return adj;
-  }
-
-  const adj = kNN(10);
-  // density proxy: average distance to 10 nearest neighbors in original space
-  const dens = pts.map((_, i) => d3.mean(adj[i], e => e.d));
-
-  // Run UMAP-like force simulation (uniform)
-  function runForce(distanceFn) {
-    const data = pts.map((p, i) => ({ id: i, x: gaussian(rng) * 10, y: gaussian(rng) * 10, c: p.c }));
-    const links = [];
-    for (let i = 0; i < N; i++) {
-      for (const e of adj[i].slice(0, 6)) {
-        if (i < e.j) links.push({ source: i, target: e.j, dist: distanceFn(i, e.j, e.d) });
-      }
-    }
-    const sim = d3.forceSimulation(data)
-      .force("link", d3.forceLink(links).id(d => d.id).distance(d => d.dist).strength(0.5))
-      .force("charge", d3.forceManyBody().strength(-25))
-      .force("center", d3.forceCenter(0, 0).strength(0.02))
-      .force("collide", d3.forceCollide(2.5))
-      .alpha(1).alphaDecay(0.02).stop();
-    for (let s = 0; s < 400; s++) sim.tick();
-    return data.map(d => [d.x, d.y]);
-  }
-
-  // UMAP-like: uniform target distance
-  const umapEmb = runForce(() => 8);
-  // densMAP-like: target distance scales with local density (sparser clusters → larger distances)
-  const densEmb = runForce((i, j, origD) => {
-    const s = (dens[i] + dens[j]) / 2;
-    return 2 + s * 4;
+  return D;
+}
+// For each point, the indices of the other points sorted by distance (nearest first).
+function neighborOrder(D) {
+  return D.map((row, i) => {
+    const idx = [];
+    for (let j = 0; j < row.length; j++) if (j !== i) idx.push(j);
+    return idx.sort((a, b) => row[a] - row[b]);
   });
+}
 
-  // "Input" panel: reduce to 2D via top 2 PCs for display (approximate)
-  // Use centered X then pick first two PCs via power iteration
-  function pca2(X) {
-    const n = X.length, d = X[0].length;
-    const mean = new Array(d).fill(0);
-    for (let i = 0; i < n; i++) for (let a = 0; a < d; a++) mean[a] += X[i][a] / n;
-    const Xc = X.map(row => row.map((v, a) => v - mean[a]));
-    // Compute covariance
-    const C = Array.from({ length: d }, () => new Array(d).fill(0));
-    for (let i = 0; i < n; i++) for (let a = 0; a < d; a++) for (let b = 0; b < d; b++) C[a][b] += Xc[i][a] * Xc[i][b] / n;
-    // Power iteration for top 2 eigenvectors
-    function powerIter(M, iters = 100) {
-      const dd = M.length;
-      let v = new Array(dd).fill(0).map(() => Math.random());
-      for (let t = 0; t < iters; t++) {
-        const Mv = new Array(dd).fill(0);
-        for (let a = 0; a < dd; a++) for (let b = 0; b < dd; b++) Mv[a] += M[a][b] * v[b];
-        const n = Math.sqrt(Mv.reduce((s, x) => s + x * x, 0));
-        v = Mv.map(x => x / n);
-      }
-      return v;
+// Leading eigenvectors of a symmetric matrix by power iteration with deflation.
+function topEig(M, dim, seed = 1) {
+  const n = M.length, rng = mulberry32(seed), vecs = [], vals = [];
+  for (let c = 0; c < dim; c++) {
+    let v = Array.from({ length: n }, () => rng() - 0.5), lam = 0;
+    for (let it = 0; it < 300; it++) {
+      const w = new Array(n).fill(0);
+      for (let i = 0; i < n; i++) { let s = 0; const Mi = M[i]; for (let j = 0; j < n; j++) s += Mi[j] * v[j]; w[i] = s; }
+      for (const u of vecs) { let p = 0; for (let i = 0; i < n; i++) p += w[i] * u[i]; for (let i = 0; i < n; i++) w[i] -= p * u[i]; }
+      let nrm = 0; for (let i = 0; i < n; i++) nrm += w[i] * w[i];
+      nrm = Math.sqrt(nrm) || 1;
+      let diff = 0;
+      for (let i = 0; i < n; i++) { const x = w[i] / nrm; diff += Math.abs(x - v[i]); v[i] = x; }
+      lam = nrm;
+      if (diff < 1e-10) break;
     }
-    const v1 = powerIter(C);
-    // deflate
-    const C2 = C.map(row => row.slice());
-    const lam1 = (function() {
-      const Mv = new Array(d).fill(0);
-      for (let a = 0; a < d; a++) for (let b = 0; b < d; b++) Mv[a] += C[a][b] * v1[b];
-      let s = 0; for (let a = 0; a < d; a++) s += v1[a] * Mv[a]; return s;
-    })();
-    for (let a = 0; a < d; a++) for (let b = 0; b < d; b++) C2[a][b] -= lam1 * v1[a] * v1[b];
-    const v2 = powerIter(C2);
-    // project
-    return Xc.map(row => {
-      let a = 0, b = 0;
-      for (let i = 0; i < d; i++) { a += row[i] * v1[i]; b += row[i] * v2[i]; }
-      return [a, b];
-    });
+    vecs.push(v); vals.push(lam);
   }
+  return { vecs, vals };
+}
 
-  const inputEmb = pca2(pts.map(p => p.v));
+// PCA: centre the data, eigendecompose the covariance matrix, project onto the leading components.
+function pca(X, dim = 2) {
+  const n = X.length, d = X[0].length, mean = new Array(d).fill(0);
+  for (const x of X) for (let a = 0; a < d; a++) mean[a] += x[a] / n;
+  const C = Array.from({ length: d }, () => new Array(d).fill(0));
+  for (const x of X) for (let a = 0; a < d; a++) for (let b = 0; b < d; b++) C[a][b] += (x[a] - mean[a]) * (x[b] - mean[b]) / (n - 1);
+  const { vecs, vals } = topEig(C, Math.min(dim, d), 3);
+  let total = 0; for (let a = 0; a < d; a++) total += C[a][a];
+  const Y = X.map(x => vecs.map(v => { let s = 0; for (let a = 0; a < d; a++) s += (x[a] - mean[a]) * v[a]; return s; }));
+  return { Y, components: vecs, mean, explained: vals.map(l => l / total) };
+}
 
-  const panes = [
-    { title: "original (PCA view)", note: "densities are real", emb: inputEmb },
-    { title: "UMAP-like", note: "densities are lost", emb: umapEmb },
-    { title: "densMAP-like", note: "densities preserved", emb: densEmb },
-  ];
+// Classical (Torgerson) MDS: double-centre the squared distances and take the leading eigenvectors.
+function classicalMDS(D, dim = 2) {
+  const n = D.length, B = Array.from({ length: n }, () => new Float64Array(n));
+  const rowMean = new Float64Array(n); let grand = 0;
+  for (let i = 0; i < n; i++) { for (let j = 0; j < n; j++) rowMean[i] += D[i][j] * D[i][j] / n; grand += rowMean[i] / n; }
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) B[i][j] = -0.5 * (D[i][j] * D[i][j] - rowMean[i] - rowMean[j] + grand);
+  const { vecs, vals } = topEig(B, dim, 5);
+  return Array.from({ length: n }, (_, i) => vecs.map((v, c) => v[i] * Math.sqrt(Math.max(vals[c], 0))));
+}
 
-  const paneW = W / 3;
-  panes.forEach((pane, k) => {
-    const g = svg.append("g").attr("transform", `translate(${k * paneW}, 0)`);
-    g.append("text").attr("x", paneW / 2).attr("y", 16).attr("text-anchor", "middle")
-      .style("font-size", "12px").style("font-weight", 700).attr("fill", "var(--text)").text(pane.title);
-    g.append("text").attr("x", paneW / 2).attr("y", 32).attr("text-anchor", "middle")
-      .style("font-size", "10px").attr("fill", "var(--text-3)").text(pane.note);
+// Metric MDS by gradient descent on stress = sum_ij w_ij (d_ij - D_ij)^2, with backtracking steps.
+// weight(D_ij) = 1 gives raw stress; weight = 1 / D_ij gives Sammon's stress.
+function stressMDS(D, { weight = () => 1, init, iters = 300 } = {}) {
+  const n = D.length;
+  let X = init.map(p => p.slice());
+  const Wt = D.map(r => Array.from(r, v => v > 0 ? weight(v) : 0));
+  function stress(X) {
+    let s = 0;
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const d = Math.hypot(X[i][0] - X[j][0], X[i][1] - X[j][1]); s += Wt[i][j] * (d - D[i][j]) ** 2; }
+    return s;
+  }
+  let cur = stress(X), step = 0.5 / n;
+  for (let it = 0; it < iters; it++) {
+    const g = X.map(() => [0, 0]);
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+      if (i === j) continue;
+      const dx = X[i][0] - X[j][0], dy = X[i][1] - X[j][1], d = Math.hypot(dx, dy) + 1e-12;
+      const c = 2 * Wt[i][j] * (d - D[i][j]) / d;
+      g[i][0] += c * dx; g[i][1] += c * dy;
+    }
+    for (let tries = 0; tries < 30; tries++) {
+      const Xn = X.map((p, i) => [p[0] - step * g[i][0], p[1] - step * g[i][1]]);
+      const s = stress(Xn);
+      if (s < cur) { X = Xn; cur = s; step *= 1.3; break; }
+      step *= 0.5;
+    }
+  }
+  return X;
+}
 
-    const ex = d3.extent(pane.emb, d => d[0]);
-    const ey = d3.extent(pane.emb, d => d[1]);
-    const epx = Math.max(0.1, (ex[1] - ex[0]) * 0.1);
-    const epy = Math.max(0.1, (ey[1] - ey[0]) * 0.1);
-    const innerX = d3.scaleLinear().domain([ex[0] - epx, ex[1] + epx]).range([16, paneW - 16]);
-    const innerY = d3.scaleLinear().domain([ey[0] - epy, ey[1] + epy]).range([H - 20, 44]);
+// UMAP's graph (McInnes, Healy & Melville 2018). For each point: rho = distance to its nearest
+// neighbour, sigma = the scale at which the memberships exp(-(d - rho) / sigma) of its k neighbours
+// sum to log2(k). The two directions of each edge are combined with the fuzzy union a + b - ab.
+function umapGraph(D, k) {
+  const n = D.length, order = neighborOrder(D), M = Array.from({ length: n }, () => new Map());
+  const target = Math.log2(k);
+  for (let i = 0; i < n; i++) {
+    const nb = order[i].slice(0, k), rho = D[i][nb[0]];
+    let lo = 0, hi = Infinity, sigma = 1;
+    for (let t = 0; t < 64; t++) {
+      let s = 0;
+      for (const j of nb) s += Math.exp(-Math.max(0, D[i][j] - rho) / sigma);
+      if (Math.abs(s - target) < 1e-5) break;
+      if (s > target) { hi = sigma; sigma = (lo + hi) / 2; }
+      else { lo = sigma; sigma = hi === Infinity ? sigma * 2 : (lo + hi) / 2; }
+    }
+    for (const j of nb) M[i].set(j, Math.exp(-Math.max(0, D[i][j] - rho) / sigma));
+  }
+  const edges = [];
+  for (let i = 0; i < n; i++) for (const [j, a] of M[i]) {
+    const b = M[j].get(i) || 0;
+    if (b > 0 && j < i) continue; // a mutual edge is added once, from its lower index
+    edges.push({ i, j, w: a + b - a * b });
+  }
+  return edges;
+}
+// UMAP's layout: stochastic gradient descent on the fuzzy cross-entropy. Each edge is sampled in
+// proportion to its weight and pulls its two ends together; each sampled edge also pushes its head
+// away from `negRate` random points. a and b are umap-learn's curve fit for min_dist = 0.1.
+// With dens = { lambda, frac }, the last `frac` of the epochs add densMAP's term (Narayan, Berger &
+// Cho 2021), ported from umap-learn: it rewards correlation between each point's log local radius
+// in the input and in the embedding.
+function umapLayout(D, edges, { epochs = 400, init, seed = 1, negRate = 5, a = 1.577, b = 0.8951, dens = null, onEpoch = null } = {}) {
+  const n = D.length, rng = mulberry32(seed);
+  let lo = Infinity, hi = -Infinity;
+  for (const p of init) for (const v of p) { if (v < lo) lo = v; if (v > hi) hi = v; }
+  const Y = init.map(p => [10 * (p[0] - lo) / (hi - lo) + gaussian(rng) * 1e-4, 10 * (p[1] - lo) / (hi - lo) + gaussian(rng) * 1e-4]);
+  // both directions of every edge, as in umap-learn's symmetric graph
+  const E = [];
+  for (const e of edges) { E.push({ i: e.i, j: e.j, w: e.w }); E.push({ i: e.j, j: e.i, w: e.w }); }
+  const wMax = Math.max(...E.map(e => e.w));
+  for (const e of E) { e.per = wMax / e.w; e.next = e.per; e.perNeg = e.per / negRate; e.nextNeg = e.perNeg; }
+  const clip = v => v > 4 ? 4 : v < -4 ? -4 : v;
+  // densMAP bookkeeping
+  let R = null, muSum = null, muTot = 0;
+  const reSum = new Float64Array(n), phiSum = new Float64Array(n);
+  if (dens) {
+    const ro = new Float64Array(n); muSum = new Float64Array(n);
+    for (const e of E) { ro[e.i] += e.w * D[e.i][e.j] ** 2; muSum[e.i] += e.w; }
+    let m = 0, v = 0;
+    for (let i = 0; i < n; i++) { ro[i] = Math.log(1e-8 + ro[i] / muSum[i]); m += ro[i] / n; muTot += muSum[i]; }
+    for (let i = 0; i < n; i++) v += (ro[i] - m) ** 2 / n;
+    R = Array.from(ro, x => (x - m) / Math.sqrt(v));
+  }
+  for (let ep = 1; ep <= epochs; ep++) {
+    const alpha = 1 - (ep - 1) / epochs;
+    const densOn = dens && ep / epochs > 1 - dens.frac;
+    let reStd = 0, reMean = 0, reCov = 0;
+    if (densOn) {
+      reSum.fill(0); phiSum.fill(0);
+      for (const e of E) {
+        const d2 = (Y[e.i][0] - Y[e.j][0]) ** 2 + (Y[e.i][1] - Y[e.j][1]) ** 2, phi = 1 / (1 + a * Math.pow(d2, b));
+        reSum[e.i] += phi * d2; phiSum[e.i] += phi;
+      }
+      for (let i = 0; i < n; i++) { reSum[i] = Math.log(1e-8 + reSum[i] / phiSum[i]); reMean += reSum[i] / n; }
+      let v = 0;
+      for (let i = 0; i < n; i++) { v += (reSum[i] - reMean) ** 2 / n; reCov += reSum[i] * R[i] / (n - 1); }
+      reStd = Math.sqrt(v + 0.1);
+    }
+    for (const e of E) {
+      if (e.next > ep) continue;
+      const yi = Y[e.i], yj = Y[e.j];
+      let dx = yi[0] - yj[0], dy = yi[1] - yj[1], d2 = dx * dx + dy * dy;
+      let coef = d2 > 0 ? -2 * a * b * Math.pow(d2, b - 1) / (a * Math.pow(d2, b) + 1) : 0;
+      let gx = clip(coef * dx), gy = clip(coef * dy);
+      if (densOn && d2 > 0) {
+        const phi = 1 / (1 + a * Math.pow(d2, b)), dphi = a * b * Math.pow(d2, b - 1) / (1 + a * Math.pow(d2, b));
+        const drj = phi / phiSum[e.j] * ((1 - b * (1 - phi)) / Math.exp(reSum[e.j]) + dphi);
+        const dri = phi / phiSum[e.i] * ((1 - b * (1 - phi)) / Math.exp(reSum[e.i]) + dphi);
+        const wj = R[e.j] - reCov * (reSum[e.j] - reMean) / (reStd * reStd);
+        const wi = R[e.i] - reCov * (reSum[e.i] - reMean) / (reStd * reStd);
+        const cor = dens.lambda * muTot * (wj * drj + wi * dri) / (e.w * reStd) / n;
+        gx += clip(2 * cor * dx); gy += clip(2 * cor * dy);
+      }
+      yi[0] += alpha * gx; yi[1] += alpha * gy; yj[0] -= alpha * gx; yj[1] -= alpha * gy;
+      e.next += e.per;
+      const nNeg = Math.floor((ep - e.nextNeg) / e.perNeg);
+      for (let s = 0; s < nNeg; s++) {
+        const k = Math.floor(rng() * n);
+        if (k === e.i) continue;
+        dx = yi[0] - Y[k][0]; dy = yi[1] - Y[k][1]; d2 = dx * dx + dy * dy;
+        if (d2 === 0) continue;
+        coef = 2 * b / ((0.001 + d2) * (a * Math.pow(d2, b) + 1));
+        yi[0] += alpha * clip(coef * dx); yi[1] += alpha * clip(coef * dy);
+      }
+      e.nextNeg += nNeg * e.perNeg;
+    }
+    if (onEpoch) onEpoch(ep, Y);
+  }
+  return Y;
+}
+function umap(D, { k = 15, ...opts } = {}) { return umapLayout(D, umapGraph(D, k), opts); }
 
-    g.append("rect").attr("x", 12).attr("y", 40).attr("width", paneW - 24).attr("height", H - 60)
-      .attr("fill", "var(--bg)").attr("stroke", "var(--border)").attr("rx", 4);
+// Trustworthiness and continuity (Venna & Kaski 2001) at neighbourhood size k.
+// Trustworthiness falls when the embedding invents neighbours; continuity falls when it loses them.
+function trustCont(Dhi, Dlo, k) {
+  const n = Dhi.length, oh = neighborOrder(Dhi), ol = neighborOrder(Dlo);
+  const rank = o => o.map(list => { const r = new Int32Array(n); list.forEach((j, pos) => { r[j] = pos + 1; }); return r; });
+  const rh = rank(oh), rl = rank(ol);
+  let t = 0, c = 0;
+  for (let i = 0; i < n; i++) {
+    for (const j of ol[i].slice(0, k)) if (rh[i][j] > k) t += rh[i][j] - k;
+    for (const j of oh[i].slice(0, k)) if (rl[i][j] > k) c += rl[i][j] - k;
+  }
+  const norm = 2 / (n * k * (2 * n - 3 * k - 1));
+  return { trust: 1 - norm * t, cont: 1 - norm * c };
+}
+function pearson(x, y) {
+  const n = x.length; let mx = 0, my = 0;
+  for (let i = 0; i < n; i++) { mx += x[i] / n; my += y[i] / n; }
+  let sxy = 0, sxx = 0, syy = 0;
+  for (let i = 0; i < n; i++) { sxy += (x[i] - mx) * (y[i] - my); sxx += (x[i] - mx) ** 2; syy += (y[i] - my) ** 2; }
+  return sxy / Math.sqrt(sxx * syy);
+}
+function ranks(x) {
+  const idx = Array.from(x, (_, i) => i).sort((a, b) => x[a] - x[b]), r = new Float64Array(x.length);
+  idx.forEach((i, pos) => { r[i] = pos; });
+  return r;
+}
+// Spearman rank correlation between all pairwise distances before and after.
+function distanceCorr(Dhi, Dlo) {
+  const a = [], b = [];
+  for (let i = 0; i < Dhi.length; i++) for (let j = i + 1; j < Dhi.length; j++) { a.push(Dhi[i][j]); b.push(Dlo[i][j]); }
+  return pearson(ranks(a), ranks(b));
+}
+// Local radius of each point: mean squared distance to its k nearest neighbours, each space using
+// its own neighbours. densityCorr is the Pearson correlation of the log radii before and after.
+function localRadius(D, k) {
+  const order = neighborOrder(D);
+  return order.map((list, i) => { let s = 0; for (const j of list.slice(0, k)) s += D[i][j] ** 2; return Math.log(s / k + 1e-12); });
+}
+function densityCorr(Dhi, Dlo, k) { return pearson(localRadius(Dhi, k), localRadius(Dlo, k)); }
 
-    g.selectAll("circle").data(pane.emb).join("circle")
-      .attr("cx", d => innerX(d[0])).attr("cy", d => innerY(d[1]))
-      .attr("r", 2.8).attr("fill", (_, i) => colors[pts[i].c]).attr("opacity", 0.8);
+const CLUSTER_COLORS = ["var(--c0)", "var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)"];
+
+// Draw a row of scatter panels with one line of text under each.
+function scatterRow(svg, W, panes, colorOf, opacityOf) {
+  const cols = W < 500 ? 1 : panes.length, gap = 14, pw = (W - gap * (cols - 1)) / cols, ph = W < 500 ? 240 : 270, foot = 26;
+  panes.forEach((p, k) => {
+    const x0 = (k % cols) * (pw + gap), y0 = Math.floor(k / cols) * (ph + foot + 12);
+    const g = pane(svg, x0, y0, pw, ph, p.title, p.note);
+    const sc = fitScales(p.Y, g.w, g.h);
+    g.selectAll("circle").data(p.Y).join("circle").attr("cx", d => sc.x(d[0])).attr("cy", d => sc.y(d[1])).attr("r", 2.6)
+      .attr("fill", (_, i) => colorOf(i)).attr("opacity", (_, i) => opacityOf ? opacityOf(i) : 0.85);
+    const t = svg.append("text").attr("x", x0).attr("y", y0 + ph + 18);
+    t.append("tspan").text(p.scoreName + " ");
+    t.append("tspan").attr("fill", "var(--text)").style("font-family", "var(--mono-font)").style("font-weight", 500).text(p.score);
+  });
+  return { height: Math.ceil(panes.length / cols) * (ph + foot + 12) - 12 };
+}
+
+// ---------- Figure 1: UMAP vs densMAP on clusters of different density ----------
+(function() {
+  // three clusters in 10 dimensions: tight, medium, diffuse
+  const rng = mulberry32(7), spread = [0.3, 1.0, 2.5], size = [60, 40, 50], X = [], label = [];
+  for (let c = 0; c < 3; c++) for (let i = 0; i < size[c]; i++) {
+    X.push(Array.from({ length: 10 }, (_, d) => (d === 0 ? (c - 1) * 6 : 0) + gaussian(rng) * spread[c]));
+    label.push(c);
+  }
+  const D = distMatrix(X);
+  let panes = null;
+  function compute() {
+    const P = pca(X, 2).Y, graph = umapGraph(D, 15);
+    const U = umapLayout(D, graph, { init: P, epochs: 500, seed: 2 });
+    // umap-learn's densMAP defaults: weight 2, on for the last 30% of the epochs, 200 extra epochs
+    const M = umapLayout(D, graph, { init: P, epochs: 700, seed: 2, dens: { lambda: 2, frac: 0.3 } });
+    const score = Y => densityCorr(D, distMatrix(Y), 10).toFixed(2);
+    return [
+      { title: "the data", note: "PCA view", Y: P, scoreName: "density correlation", score: score(P) },
+      { title: "UMAP", note: "n_neighbors = 15", Y: U, scoreName: "density correlation", score: score(U) },
+      { title: "densMAP", note: "same graph, density term added", Y: M, scoreName: "density correlation", score: score(M) },
+    ];
+  }
+  figure("density-svg", (svg, W) => {
+    if (!panes) panes = compute();
+    return scatterRow(svg, W, panes, i => CLUSTER_COLORS[label[i]]);
   });
 })();
 
-// --------- Figure 2: PHATE on branching trajectory ---------
+// ---------- Figure 2: PHATE on a branching trajectory ----------
 (function() {
-  const svg = d3.select("#phate-svg");
-  const W = 680, H = 360;
-
-  // Generate branching trajectory in 3D
-  const rng = mulberry32(123);
-  const pts = [];
-  const N_PER = 55;
-  // Stem from origin to (0,0,0)
-  for (let i = 0; i < N_PER; i++) {
-    const t = i / (N_PER - 1);
-    pts.push({
-      x: -4 + 4 * t + gaussian(rng) * 0.08,
-      y: 0 + gaussian(rng) * 0.08,
-      z: gaussian(rng) * 0.08,
-      c: 0, id: pts.length
-    });
-  }
-  // Three branches from origin
-  const angles = [Math.PI / 3, -Math.PI / 3, Math.PI];
-  const branchColors = [1, 2, 3];
+  // three branches from a common origin in 3D; scatter grows toward the tips
+  const rng = mulberry32(123), PER = 55, X = [], branch = [], prog = [];
   for (let b = 0; b < 3; b++) {
-    for (let i = 0; i < N_PER; i++) {
-      const t = i / (N_PER - 1);
-      const noise = 0.05 + 0.25 * t; // spread grows down the branch
-      pts.push({
-        x: Math.cos(angles[b]) * 4 * t + gaussian(rng) * noise,
-        y: Math.sin(angles[b]) * 4 * t + gaussian(rng) * noise,
-        z: gaussian(rng) * noise,
-        c: branchColors[b], id: pts.length
-      });
+    const a = Math.PI / 2 + b * 2 * Math.PI / 3;
+    for (let i = 0; i < PER; i++) {
+      const t = (i + 0.5) / PER, noise = 0.05 + 0.25 * t;
+      X.push([Math.cos(a) * 4 * t + gaussian(rng) * noise, Math.sin(a) * 4 * t + gaussian(rng) * noise, gaussian(rng) * noise]);
+      branch.push(b); prog.push(t);
     }
   }
-  const N = pts.length;
-  const colors = ["var(--text-3)", "var(--c0)", "var(--c1)", "var(--c2)"];
+  const N = X.length, D = distMatrix(X);
+  // distance along the branches: within a branch, or down to the origin and back out
+  const along = X.map((_, i) => X.map((_, j) => branch[i] === branch[j] ? 4 * Math.abs(prog[i] - prog[j]) : 4 * (prog[i] + prog[j])));
+  let panes = null;
 
-  // kNN and diffusion distance
-  const K = 10;
-  const adj = [];
-  for (let i = 0; i < N; i++) {
-    const arr = [];
-    for (let j = 0; j < N; j++) {
-      if (i === j) continue;
-      const d = Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y, pts[i].z - pts[j].z);
-      arr.push({ j, d });
-    }
-    arr.sort((a, b) => a.d - b.d);
-    adj.push(arr.slice(0, K));
-  }
-
-  // Transition matrix
-  const P = Array.from({ length: N }, () => new Array(N).fill(0));
-  for (let i = 0; i < N; i++) {
-    const row = new Array(N).fill(0);
-    for (const e of adj[i]) row[e.j] = Math.exp(-e.d * e.d / 0.5);
-    const s = d3.sum(row);
-    for (let j = 0; j < N; j++) P[i][j] = row[j] / (s || 1);
-  }
-
-  // Raise P to power t
-  function matPower(M, t) {
-    let R = M.map(row => row.slice());
-    for (let step = 1; step < t; step++) {
-      const next = Array.from({ length: N }, () => new Array(N).fill(0));
-      for (let i = 0; i < N; i++)
-        for (let j = 0; j < N; j++) {
-          let s = 0;
-          for (let k = 0; k < N; k++) s += R[i][k] * M[k][j];
-          next[i][j] = s;
-        }
-      R = next;
-    }
-    return R;
-  }
-
-  const Pt = matPower(P, 4);
-  // PHATE-like "potential" distance: log transform, then MDS
-  const Dpot = Array.from({ length: N }, () => new Array(N).fill(0));
-  const EPS = 1e-8;
-  for (let i = 0; i < N; i++) {
-    for (let j = 0; j < N; j++) {
+  // A reduced PHATE (Moon et al. 2019): adaptive Gaussian kernel -> random-walk matrix -> t steps
+  // of diffusion -> minus log -> Euclidean distance between rows -> metric MDS.
+  function phate(K = 8, T = 16) {
+    const order = neighborOrder(D), A = Array.from({ length: N }, () => new Float64Array(N));
+    for (let i = 0; i < N; i++) { const sigma = D[i][order[i][K - 1]]; for (let j = 0; j < N; j++) A[i][j] = Math.exp(-((D[i][j] / sigma) ** 2)); }
+    let P = Array.from({ length: N }, () => new Float64Array(N));
+    for (let i = 0; i < N; i++) {
       let s = 0;
-      for (let k = 0; k < N; k++) {
-        const diff = -Math.log(Pt[i][k] + EPS) - (-Math.log(Pt[j][k] + EPS));
-        s += diff * diff;
-      }
-      Dpot[i][j] = Math.sqrt(s);
+      for (let j = 0; j < N; j++) { P[i][j] = (A[i][j] + A[j][i]) / 2; s += P[i][j]; }
+      for (let j = 0; j < N; j++) P[i][j] /= s;
     }
-  }
-
-  function mds(D, iters = 250, seed = 5) {
-    const rng = mulberry32(seed);
-    const X = Array.from({ length: N }, () => [gaussian(rng), gaussian(rng)]);
-    const lr = 0.01;
-    for (let it = 0; it < iters; it++) {
-      const grad = Array.from({ length: N }, () => [0, 0]);
-      for (let i = 0; i < N; i++) {
-        for (let j = 0; j < N; j++) {
-          if (i === j) continue;
-          let d = Math.hypot(X[i][0] - X[j][0], X[i][1] - X[j][1]) + 1e-9;
-          const t = D[i][j];
-          const coef = (d - t) / d;
-          grad[i][0] += coef * (X[i][0] - X[j][0]);
-          grad[i][1] += coef * (X[i][1] - X[j][1]);
-        }
-      }
-      for (let i = 0; i < N; i++) { X[i][0] -= lr * grad[i][0]; X[i][1] -= lr * grad[i][1]; }
+    for (let t = 1; t < T; t *= 2) { // repeated squaring: P, P^2, P^4, ...
+      const Q = Array.from({ length: N }, () => new Float64Array(N));
+      for (let i = 0; i < N; i++) for (let k = 0; k < N; k++) { const a = P[i][k]; if (a > 0) for (let j = 0; j < N; j++) Q[i][j] += a * P[k][j]; }
+      P = Q;
     }
-    return X;
+    const pot = distMatrix(P.map(row => Array.from(row, v => -Math.log(v + 1e-7))));
+    return stressMDS(pot, { init: classicalMDS(pot, 2), iters: 200 });
   }
-
-  const phateEmb = mds(Dpot, 200, 13);
-
-  // UMAP-like: force layout
-  const data = pts.map((p, i) => ({ id: i, x: gaussian(rng) * 10, y: gaussian(rng) * 10, c: p.c }));
-  const links = [];
-  for (let i = 0; i < N; i++) for (const e of adj[i].slice(0, 6)) if (i < e.j) links.push({ source: i, target: e.j });
-  const sim = d3.forceSimulation(data)
-    .force("link", d3.forceLink(links).id(d => d.id).distance(6).strength(0.7))
-    .force("charge", d3.forceManyBody().strength(-40))
-    .force("center", d3.forceCenter(0, 0).strength(0.02))
-    .force("collide", d3.forceCollide(2.5))
-    .alpha(1).alphaDecay(0.02).stop();
-  for (let s = 0; s < 400; s++) sim.tick();
-  const umapEmb = data.map(d => [d.x, d.y]);
-
-  // Input view: project to xy
-  const inputEmb = pts.map(p => [p.x, p.y]);
-
-  const panes = [
-    { title: "true structure (xy view)", note: "branching trajectory", emb: inputEmb },
-    { title: "neighbor-based", note: "breaks branches into clumps", emb: umapEmb },
-    { title: "PHATE-like", note: "preserves branching continuum", emb: phateEmb },
-  ];
-  const paneW = W / 3;
-  panes.forEach((pane, k) => {
-    const g = svg.append("g").attr("transform", `translate(${k * paneW}, 0)`);
-    g.append("text").attr("x", paneW / 2).attr("y", 16).attr("text-anchor", "middle")
-      .style("font-size", "12px").style("font-weight", 700).attr("fill", "var(--text)").text(pane.title);
-    g.append("text").attr("x", paneW / 2).attr("y", 32).attr("text-anchor", "middle")
-      .style("font-size", "10px").attr("fill", "var(--text-3)").text(pane.note);
-
-    const ex = d3.extent(pane.emb, d => d[0]);
-    const ey = d3.extent(pane.emb, d => d[1]);
-    const epx = Math.max(0.1, (ex[1] - ex[0]) * 0.1);
-    const epy = Math.max(0.1, (ey[1] - ey[0]) * 0.1);
-    const innerX = d3.scaleLinear().domain([ex[0] - epx, ex[1] + epx]).range([16, paneW - 16]);
-    const innerY = d3.scaleLinear().domain([ey[0] - epy, ey[1] + epy]).range([H - 20, 44]);
-
-    g.append("rect").attr("x", 12).attr("y", 40).attr("width", paneW - 24).attr("height", H - 60)
-      .attr("fill", "var(--bg)").attr("stroke", "var(--border)").attr("rx", 4);
-
-    g.selectAll("circle").data(pane.emb).join("circle")
-      .attr("cx", d => innerX(d[0])).attr("cy", d => innerY(d[1]))
-      .attr("r", 2.4).attr("fill", (_, i) => colors[pts[i].c]).attr("opacity", 0.85);
+  function compute() {
+    const P2 = pca(X, 2).Y;
+    const U = umap(D, { k: 10, init: P2, epochs: 500 });
+    const score = Y => distanceCorr(along, distMatrix(Y)).toFixed(2), PH = phate();
+    return [
+      { title: "the data", note: "first two coordinates", Y: X.map(p => [p[0], p[1]]), scoreName: "branch distances", score: score(X.map(p => [p[0], p[1]])) },
+      { title: "UMAP", note: "n_neighbors = 10", Y: U, scoreName: "branch distances", score: score(U) },
+      { title: "PHATE", note: "simplified, 16 diffusion steps", Y: PH, scoreName: "branch distances", score: score(PH) },
+    ];
+  }
+  figure("phate-svg", (svg, W) => {
+    if (!panes) panes = compute();
+    return scatterRow(svg, W, panes, i => CLUSTER_COLORS[branch[i]], i => 0.35 + 0.6 * prog[i]);
   });
 })();
 </script>

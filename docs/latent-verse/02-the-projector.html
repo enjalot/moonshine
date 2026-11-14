@@ -3,59 +3,129 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Projector — Latent Verse</title>
+<title>Projecting embeddings to 2D with UMAP | Latent Verse</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
+  color-scheme: light dark;
   --article-width: 740px;
   --body-font: 'Source Serif 4', Georgia, serif;
   --heading-font: 'Source Sans 3', system-ui, sans-serif;
   --mono-font: 'Source Code Pro', monospace;
-  --body-size: 1.125rem; --line-height: 1.6;
-  --text: #1a1a2e; --text-2: #4a4a6a;
-  --accent: #2563eb; --accent-light: #dbeafe;
-  --bg: #fafafa; --fig-bg: #ffffff; --border: #e2e2e8;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --accent: #2563eb;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+  --rule: #ececf2;
+  --track: #ececf2;
+  --code-bg: #f0f0f5;
+  /* figure colours, the same in every chapter */
+  --pos: #d9722a;        /* positive embedding values */
+  --neg: #3f7fbf;        /* negative embedding values */
+  --diff: #8a5fb5;       /* difference between two embeddings */
+  --axis: #b9b9c8;
+  --dot: #4a6fa5;        /* a joke on a map */
+  --dot-muted: #c4c4d2;  /* noise, unselected, background */
+  --context: #d8d8e2;    /* basemap training texts */
+  --hl: #e8791d;         /* neighbours and featured jokes */
+  --mark: #d62839;       /* the selected joke */
+  --specific: #d1495b;   /* SAE feature that fires on few jokes */
+  --broad: #a9a9bd;      /* SAE feature that fires on many */
 }
-body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e6e6ef; --text-2: #a9a9c0; --accent: #7aa5f8;
+    --bg: #14141c; --fig-bg: #1c1c27; --border: #34344a;
+    --rule: #2a2a3a; --track: #2a2a3a; --code-bg: #2a2a3a;
+    --pos: #f0934f; --neg: #6aa5e0; --diff: #b592dd; --axis: #5a5a72;
+    --dot: #7ea6dc; --dot-muted: #4a4a60; --context: #33334a;
+    --hl: #ffa04d; --mark: #ff5d6c; --specific: #f0707f; --broad: #6c6c86;
+  }
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
 .article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
 h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.2; }
 h1 { font-size: 2.5rem; margin: 0 0 0.5rem; }
 h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
+h3 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
 p { margin: 0 0 1rem; }
 a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-code { font-family: var(--mono-font); font-size: 0.9em; background: #f0f0f5; padding: 0.15em 0.35em; border-radius: 3px; }
+code { font-family: var(--mono-font); font-size: 0.9em; background: var(--code-bg); padding: 0.15em 0.35em; border-radius: 3px; }
+.kicker { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.25rem; }
+.kicker a { color: var(--text-2); text-decoration: none; }
+.subtitle { font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2); }
+.byline { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem; }
+
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .figure-wide { margin-left: -2rem; margin-right: -2rem; }
 .figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; }
 .figure-label { font-weight: 600; color: var(--text); }
-.insight { background: var(--accent-light); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
-.insight p { margin: 0; }
-.margin-note { font-size: 0.8125rem; color: var(--text-2); line-height: 1.4; border-left: 2px solid var(--border); padding-left: 0.75rem; margin: 1rem 0; }
-.controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
-.controls input[type="range"] { width: 160px; accent-color: var(--accent); }
-svg text { font-family: var(--heading-font); }
-.tip { position: fixed; pointer-events: none; background: rgba(26,26,46,0.92); color: #fff; font-family: var(--heading-font); font-size: 0.8rem; padding: 0.5rem 0.75rem; border-radius: 4px; max-width: 320px; line-height: 1.4; z-index: 100; }
-@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+.fig-status { font-family: var(--heading-font); font-size: 0.9rem; color: var(--text-2); padding: 1.25rem 0; margin: 0; }
+.fig-status.error { color: var(--text); border-left: 3px solid var(--pos); padding: 0.5rem 0 0.5rem 0.75rem; }
+.fig-status[hidden], .fig-body[hidden] { display: none; }
+.field-label { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.3rem; display: block; }
+.joke-picker {
+  font-family: var(--body-font); font-size: 1rem; padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg);
+  color: var(--text); cursor: pointer; width: 100%; min-width: 0;
+}
+.controls { display: flex; align-items: center; gap: 0.4rem 1.25rem; flex-wrap: wrap; margin-bottom: 0.75rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.btn-group { display: inline-flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
+.btn {
+  font-family: var(--heading-font); font-size: 0.85rem; padding: 0.3rem 0.65rem; min-height: 2rem;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text); cursor: pointer;
+}
+.btn:hover { border-color: var(--accent); }
+.btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--fig-bg); }
+.map-box { width: 100%; height: 460px; position: relative; }
+.map-box canvas { display: block; touch-action: pan-y; }
+.map-box canvas:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.readout { font-family: var(--heading-font); font-size: 0.9rem; color: var(--text-2); margin-top: 0.6rem; min-height: 4.4em; }
+.readout .picked { font-family: var(--body-font); font-style: italic; color: var(--text); font-size: 0.95rem; display: block; overflow-wrap: anywhere; }
+.swatch { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; margin-right: 0.25rem; vertical-align: -1px; }
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .figure { padding: 1rem; }
+  .figure-wide { margin-left: 0; margin-right: 0; }
+  .map-box { height: 320px; }
+  .btn-group { display: flex; width: 100%; }
+  .btn-group .lbl { flex-basis: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
 </style>
 </head>
 <body>
 <div class="article">
   <header>
-    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.25rem;">
-      <a href="index.html" style="color: var(--text-2); text-decoration: none;">Latent Verse</a> / Part 2
+    <p class="kicker"><a href="index.html">Latent Verse</a> / Part 2: the projector</p>
+    <h1>Projecting embeddings to 2D with UMAP</h1>
+    <p class="subtitle">
+      UMAP flattens high-dimensional embeddings into two dimensions so you can see a whole collection at once.
     </p>
-    <h1>The Projector</h1>
-    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
-      UMAP flattens high-dimensional embeddings into two dimensions so you can see the whole landscape at once.
-    </p>
-    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">By Ian Johnson</p>
+    <p class="byline">By Ian Johnson</p>
   </header>
 
-  <h2>Seeing the whole space</h2>
+  <h2>Why project to two dimensions?</h2>
 
   <p>
     In the <a href="01-the-lens.html">previous article</a>, we looked at embeddings one at a time
@@ -72,35 +142,50 @@ svg text { font-family: var(--heading-font); }
 
   <p>
     The algorithm we use is called <strong>UMAP</strong> (Uniform Manifold Approximation and Projection).
-    Here are 1,000 dad jokes, projected from 384 dimensions down to two:
+    Here are 1,000 dad jokes, projected from 384 dimensions down to two. One joke is ringed, and
+    the ten jokes most similar to it by cosine similarity, measured in the full 384 dimensions,
+    are orange:
   </p>
 
   <div class="figure figure-wide" id="fig-scatter">
-    <div id="scatter-container" style="width: 100%; height: 500px; position: relative;"></div>
+    <p class="fig-status" role="status">Loading the projections…</p>
+    <div class="fig-body" hidden>
+      <div id="scatter-container" class="map-box"></div>
+      <div class="readout" id="scatter-readout" aria-live="polite"></div>
+      <div class="controls" style="margin: 0.5rem 0 0;">
+        <button class="btn" id="scatter-next" type="button">Pick another joke</button>
+        <span><i class="swatch" style="background: var(--mark)"></i>selected joke</span>
+        <span><i class="swatch" style="background: var(--hl)"></i>its 10 nearest in 384 dimensions</span>
+      </div>
+    </div>
     <div class="figure-caption">
       <span class="figure-label">Figure 1.</span>
-      1,000 dad jokes projected to 2D by UMAP. Each dot is a joke. Hover to read them. Jokes about similar topics cluster together, even though no one told the algorithm what the jokes are about.
+      1,000 dad jokes projected to 2D by UMAP; each dot is a joke. Most of the orange dots sit
+      next to the ringed joke, and a few land elsewhere on the map. Hover or tap a dot to select
+      it, or use the button.
     </div>
   </div>
 
   <p>
-    Hover over the dots. You'll find that nearby jokes tend to be about similar things. There may be
-    a clump of animal jokes here, food puns there, science humor in another corner. The model's
-    understanding of meaning creates this structure, and UMAP makes it visible.
+    Try a few jokes. With only 1,000 of them the map has no obvious islands, but a joke's
+    nearest neighbors mostly land in its own part of the map, and they tend to be about the same
+    thing. The model's sense of meaning creates this structure, and UMAP makes it visible.
   </p>
 
   <h2>What UMAP preserves and what it doesn't</h2>
 
   <p>
-    UMAP is good at preserving <strong>local neighborhoods</strong>. If two jokes are close in the
-    original 384-dimensional space, they'll usually be close on the 2D map. This is why you see
-    coherent clusters of related jokes.
+    UMAP tries to preserve <strong>local neighborhoods</strong>. If two jokes are close in the
+    original 384-dimensional space, they'll tend to land in the same part of the 2D map. It can't
+    keep all of them: there isn't room in two dimensions for every joke to sit next to all of its
+    neighbors. On this map, on average 2 of a joke's 10 nearest neighbors in 384 dimensions are
+    also among the 10 dots closest to it. Picking 10 dots at random would get 0.1.
   </p>
 
   <p>
-    But it distorts <strong>global distances</strong>. The distance between two far-apart clusters
+    UMAP also distorts <strong>global distances</strong>. The distance between two far-apart groups
     on the map doesn't tell you much about how different those topics actually are. UMAP can place
-    unrelated clusters near each other or related clusters far apart, depending on how the algorithm
+    unrelated groups near each other or related groups far apart, depending on how the algorithm
     resolves the compression from 384 dimensions to 2.
   </p>
 
@@ -109,7 +194,7 @@ svg text { font-family: var(--heading-font); }
     If they are far apart, you can't conclude much.
   </p>
 
-  <h2>Parameters shape what you see</h2>
+  <h2>Changing n_neighbors and min_dist</h2>
 
   <p>
     UMAP has two key parameters that change the character of the projection:
@@ -127,36 +212,34 @@ svg text { font-family: var(--heading-font); }
   </p>
 
   <p>
-    Use the controls below to see how these parameters change the same 1,000 jokes:
+    Figure 2 has five projections of the same 1,000 jokes, computed ahead of time: three values of
+    n_neighbors, and three values of min_dist at the largest n_neighbors. The joke selected in
+    Figure 1 and its neighbors stay marked, so you can follow them from one layout to the next.
   </p>
 
   <div class="figure figure-wide" id="fig-params">
-    <div class="controls">
-      <label>n_neighbors: <select id="nn-select" style="font-family: var(--mono-font); padding: 0.2rem 0.4rem;">
-        <option value="0">5</option>
-        <option value="1" selected>15</option>
-        <option value="2">30</option>
-      </select></label>
-      <label>min_dist: <select id="md-select" style="font-family: var(--mono-font); padding: 0.2rem 0.4rem;">
-        <option value="0" selected>0.1</option>
-        <option value="1">0.01</option>
-        <option value="2">0.5</option>
-      </select></label>
+    <p class="fig-status" role="status">Loading the projections…</p>
+    <div class="fig-body" hidden>
+      <div class="controls" id="param-controls" role="group" aria-label="UMAP parameters"></div>
+      <div id="params-container" class="map-box"></div>
+      <div class="readout" id="params-readout" aria-live="polite" style="min-height: 1.5em;"></div>
     </div>
-    <div id="params-container" style="width: 100%; height: 500px; position: relative;"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 2.</span>
-      The same data projected with different UMAP parameters. Low n_neighbors creates tight islands. High min_dist spreads them into continents. Every setting shows real structure in the data, just different aspects of it.
+      The same jokes under five UMAP settings. Every dot moves when the setting changes, and
+      the orange neighbors mostly travel with the ringed joke. With n_neighbors at 5 the dots
+      gather into many small clumps; with min_dist at 0.5 they spread into an even disc.
     </div>
   </div>
 
   <p>
     There is no single "correct" projection. Each parameter setting reveals different aspects of
     the data's structure. Tight clusters are useful for finding distinct groups. Spread-out projections
-    show gradients and transitions between topics.
+    show gradients and transitions between topics. They also keep fewer neighbors: at min_dist 0.5
+    the average falls to about 1 in 10, against 2 in 10 for the other four settings.
   </p>
 
-  <h2>The full landscape</h2>
+  <h2>All 53,133 jokes</h2>
 
   <p>
     So far we've looked at 1,000 jokes. Here is the full dataset: 53,133 dad jokes, all projected
@@ -164,295 +247,359 @@ svg text { font-family: var(--heading-font); }
   </p>
 
   <div class="figure figure-wide" id="fig-full">
-    <div id="full-container" style="width: 100%; height: 550px; position: relative;"></div>
+    <p class="fig-status" role="status">Loading 53,133 points (0.6 MB)…</p>
+    <div class="fig-body" hidden>
+      <div class="controls" role="group" aria-label="Zoom">
+        <span class="btn-group">
+          <button class="btn" id="zoom-in" type="button" aria-label="Zoom in">+</button>
+          <button class="btn" id="zoom-out" type="button" aria-label="Zoom out">−</button>
+          <button class="btn" id="zoom-reset" type="button">Reset</button>
+        </span>
+        <span>or drag to pan, pinch or ctrl-scroll to zoom</span>
+      </div>
+      <div id="full-container" class="map-box" style="height: 520px;"></div>
+    </div>
     <div class="figure-caption">
       <span class="figure-label">Figure 3.</span>
-      All 53,133 dad jokes projected to 2D. Zoom in (scroll wheel) and pan (drag) to explore. Dense regions contain many similar jokes. Sparse regions contain unusual ones.
+      All 53,133 dad jokes projected to 2D. Dense regions contain many similar jokes, and the
+      small islands around the edge are tight groups set apart from the rest. The view starts
+      on the central mass; about 2% of the jokes lie outside it, and zooming out shows them.
     </div>
   </div>
 
-  <h2>A local map</h2>
+  <h2>Why the map changes when the data changes</h2>
 
   <p>
     UMAP is computed fresh for each dataset.
     If you add new jokes and re-run UMAP, the whole map reshuffles. The neighborhoods stay
-    mostly intact, but the overall layout changes. Your map of 1,000 jokes looks nothing like
-    your map of 53,000, even though the same jokes appear in both.
+    mostly intact, but the overall layout changes, as it did between the settings in Figure 2.
+    Your map of 1,000 jokes looks nothing like your map of 53,000, even though the same jokes
+    appear in both.
   </p>
 
   <p>
     This makes UMAP a <strong>local</strong> tool. It gives you a map of <em>this</em> dataset,
-    not a map of language in general. Every time you project, you get a new map. In
-    <a href="05-the-atlas.html">Article 5</a>, we'll see how to build a permanent map that gives
-    every text a consistent address. But first, let's find structure in the landscape we can see.
+    not a map of language in general. In
+    <a href="05-the-atlas.html">Part 5</a>, we'll see how to build a permanent map that gives
+    every text a consistent address. But first, let's find structure in the map we have.
   </p>
 
   <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
-    <p>Part of <a href="index.html" style="color: var(--text-2);">Latent Verse</a>. Previous: <a href="01-the-lens.html" style="color: var(--accent);">The Lens</a>. Next: <a href="03-finding-structure.html" style="color: var(--accent);">Finding Structure</a>.</p>
+    <p>Part of <a href="index.html" style="color: var(--text-2);">Latent Verse</a>. Previous: <a href="01-the-lens.html">Embeddings</a>. Next: <a href="03-finding-structure.html">Clustering and labeling a map</a>.</p>
     <p style="margin-top: 0.5rem;">Dad jokes from <a href="https://www.reddit.com/r/dadjokes/" style="color: var(--text-2);">r/dadjokes</a>. UMAP by <a href="https://umap-learn.readthedocs.io/" style="color: var(--text-2);">umap-learn</a>.</p>
   </footer>
 </div>
 
 <script>
-// Decode base64 float32
-function decodeF32(b64, n) {
+// ---- shared helpers (the same block is inlined in every chapter) -------
+const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+const short = (t, n) => { t = t.replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n).trimEnd() + '…' : t; };
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Data lives in data/ next to this page. A failed or blocked request becomes
+// a readable message inside the figure that needed it.
+async function loadJSON(path) {
+  let res;
+  try { res = await fetch(path); }
+  catch (e) {
+    throw new Error(location.protocol === 'file:'
+      ? `This figure reads ${path}, and browsers block that when the page is opened straight from disk. Serve the folder (for example python3 -m http.server) and open it over http.`
+      : `Could not load ${path}. Check the connection and reload the page.`);
+  }
+  if (!res.ok) throw new Error(`Could not load ${path} (HTTP ${res.status}).`);
+  try { return await res.json(); }
+  catch (e) { throw new Error(`${path} arrived but could not be read as JSON.`); }
+}
+function figReady(figId) {
+  const fig = document.getElementById(figId);
+  fig.querySelector('.fig-status').hidden = true;
+  fig.querySelector('.fig-body').hidden = false;
+}
+function figError(figId, err) {
+  const fig = document.getElementById(figId);
+  const s = fig.querySelector('.fig-status');
+  s.hidden = false; s.classList.add('error'); s.textContent = err.message;
+  if (!/^(This figure reads|Could not load)/.test(err.message)) console.error(err);
+  fig.querySelector('.fig-body').hidden = true;
+}
+
+// Redraw canvases when the window is resized or the colour scheme flips.
+const redraws = [];
+function redrawAll() { redraws.forEach(f => f()); }
+{
+  let timer;
+  window.addEventListener('resize', () => { clearTimeout(timer); timer = setTimeout(redrawAll, 150); });
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redrawAll);
+}
+
+// A canvas sized to its container, in CSS pixels.
+function fitCanvas(el, canvas) {
+  const rect = el.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  const dpr = window.devicePixelRatio || 1;
+  if (el !== canvas) { canvas.style.width = W + 'px'; canvas.style.height = H + 'px'; }
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, W, H };
+}
+
+// Scales that fit [x0,x1] x [y0,y1] into a W x H box, keeping the aspect ratio.
+function fitScales(xExt, yExt, W, H, margin = 12) {
+  const xR = (xExt[1] - xExt[0]) || 1, yR = (yExt[1] - yExt[0]) || 1;
+  const pad = 0.04;
+  const pX = xR * (1 + pad * 2), pY = yR * (1 + pad * 2);
+  const aW = W - margin * 2, aH = H - margin * 2;
+  const s = Math.min(aW / pX, aH / pY);
+  const ox = margin + (aW - pX * s) / 2, oy = margin + (aH - pY * s) / 2;
+  return {
+    x: v => ox + (v - xExt[0] + xR * pad) * s,
+    y: v => oy + pY * s - (v - yExt[0] + yR * pad) * s,
+  };
+}
+// Extent that ignores the most extreme 0.5% at each end, so a few far-flung
+// points don't shrink the map.
+function robustExtent(vals, q = 0.005) {
+  const v = Float64Array.from(vals).sort();
+  return [d3.quantileSorted(v, q), d3.quantileSorted(v, 1 - q)];
+}
+function dot(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+function ring(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke(); }
+function decodeF32(b64) {
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return new Float32Array(bytes.buffer);
 }
 
-// Tooltip
-const tip = d3.select("body").append("div").attr("class", "tip").style("opacity", 0);
-
-function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-
-// Draw scatter plot in a container
-function drawScatter(container, x, y, texts, opts = {}) {
-  const el = document.getElementById(container);
-  el.innerHTML = '';
-  const rect = el.getBoundingClientRect();
-  const W = rect.width, H = opts.height || rect.height;
-  const margin = { top: 10, right: 10, bottom: 10, left: 10 };
-  const w = W - margin.left - margin.right;
-  const h = H - margin.top - margin.bottom;
-
-  const canvas = document.createElement('canvas');
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
-  canvas.style.position = 'absolute';
-  canvas.style.top = '0';
-  canvas.style.left = '0';
-  el.appendChild(canvas);
-
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  const xExt = d3.extent(x);
-  const yExt = d3.extent(y);
-  const pad = 0.05;
-  const xRange = (xExt[1] - xExt[0]) || 1;
-  const yRange = (yExt[1] - yExt[0]) || 1;
-  const paddedX = xRange * (1 + pad * 2);
-  const paddedY = yRange * (1 + pad * 2);
-
-  // Preserve aspect ratio by letterboxing the data into the canvas
-  const availW = W - margin.left - margin.right;
-  const availH = H - margin.top - margin.bottom;
-  const scale = Math.min(availW / paddedX, availH / paddedY);
-  const dataW = paddedX * scale;
-  const dataH = paddedY * scale;
-  const offX = margin.left + (availW - dataW) / 2;
-  const offY = margin.top + (availH - dataH) / 2;
-
-  let xScale = d3.scaleLinear()
-    .domain([xExt[0] - xRange * pad, xExt[1] + xRange * pad])
-    .range([offX, offX + dataW]);
-  let yScale = d3.scaleLinear()
-    .domain([yExt[0] - yRange * pad, yExt[1] + yRange * pad])
-    .range([offY + dataH, offY]);
-
-  const n = x.length;
-  const pointR = n > 10000 ? 1.5 : n > 1000 ? 2.5 : 3.5;
-  const color = opts.color || '#4a6fa5';
-  const alpha = n > 10000 ? 0.3 : n > 1000 ? 0.5 : 0.7;
-
-  function render(transform) {
-    const tx = transform || d3.zoomIdentity;
-    const xs = tx.rescaleX(xScale);
-    const ys = tx.rescaleY(yScale);
-
-    ctx.clearRect(0, 0, W, H);
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = color;
-    for (let i = 0; i < n; i++) {
-      const px = xs(x[i]);
-      const py = ys(y[i]);
-      if (px < -5 || px > W + 5 || py < -5 || py > H + 5) continue;
-      ctx.beginPath();
-      ctx.arc(px, py, pointR, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    return { xs, ys };
-  }
-
-  let currentTransform = d3.zoomIdentity;
-  let currentScales = render();
-
-  // Zoom
-  if (opts.zoomable !== false) {
-    const zoom = d3.zoom()
-      .scaleExtent([0.5, 20])
-      .on('zoom', (event) => {
-        currentTransform = event.transform;
-        currentScales = render(currentTransform);
-      });
-    d3.select(canvas).call(zoom);
-  }
-
-  // Hover
-  if (texts) {
-    // Build quadtree for hover detection
-    canvas.addEventListener('pointermove', (event) => {
-      const rect = canvas.getBoundingClientRect();
-      const mx = event.clientX - rect.left;
-      const my = event.clientY - rect.top;
-      const { xs, ys } = currentScales;
-
-      let bestI = -1, bestD = Infinity;
-      for (let i = 0; i < n; i++) {
-        const px = xs(x[i]), py = ys(y[i]);
-        const d = (px - mx) ** 2 + (py - my) ** 2;
-        if (d < bestD) { bestD = d; bestI = i; }
-      }
-
-      if (bestD < 400 && bestI >= 0) {
-        tip.html(escapeHtml(texts[bestI]))
-          .style('opacity', 1);
-        const tw = tip.node().offsetWidth;
-        const tx = Math.min(event.clientX + 12, window.innerWidth - tw - 8);
-        const ty = Math.max(event.clientY - 40, 8);
-        tip.style('left', tx + 'px').style('top', ty + 'px');
-      } else {
-        tip.style('opacity', 0);
-      }
+// State shared by Figures 1 and 2: which joke is selected and which ten
+// jokes are nearest to it in the 384-dimensional embedding.
+const state = { selected: 41, neighbors: [], texts: null, embs: null, listeners: [] };
+function setSelected(i) {
+  state.selected = i;
+  state.neighbors = [];
+  if (state.embs) {
+    const q = state.embs[i];
+    const sims = state.embs.map((e, j) => {
+      let d = 0; for (let k = 0; k < q.length; k++) d += q[k] * e[k];
+      return [j, d];
     });
-    canvas.addEventListener('pointerleave', () => tip.style('opacity', 0));
+    sims.sort((a, b) => b[1] - a[1]);
+    state.neighbors = sims.filter(s => s[0] !== i).slice(0, 10).map(s => s[0]);
   }
-
-  return { render, xScale, yScale };
+  state.listeners.forEach(f => f());
 }
 
-// Animate transition between projections
-function animateScatter(container, fromX, fromY, toX, toY, texts, opts = {}) {
-  const el = document.getElementById(container);
-  el.innerHTML = '';
-  const rect = el.getBoundingClientRect();
-  const W = rect.width, H = opts.height || rect.height;
-  const margin = { top: 10, right: 10, bottom: 10, left: 10 };
-
+// A scatter of the 1,000 jokes with the selection drawn on top.
+// Positions are pixel pairs; setProjection animates from the old layout.
+function neighborMap(containerId, proj, { selectable }) {
+  const el = document.getElementById(containerId);
   const canvas = document.createElement('canvas');
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
   el.appendChild(canvas);
+  const n = proj.x.length;
+  let W, H, ctx, pos, anim = null;
 
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  const n = fromX.length;
-  const pointR = 3;
-
-  // Normalize each projection to its own aspect-preserved canvas rect
-  function layout(xArr, yArr) {
-    const xExt = d3.extent(xArr), yExt = d3.extent(yArr);
-    const xR = (xExt[1] - xExt[0]) || 1, yR = (yExt[1] - yExt[0]) || 1;
-    const availW = W - margin.left - margin.right;
-    const availH = H - margin.top - margin.bottom;
-    const scale = Math.min(availW / xR, availH / yR);
-    const dataW = xR * scale, dataH = yR * scale;
-    const offX = margin.left + (availW - dataW) / 2;
-    const offY = margin.top + (availH - dataH) / 2;
-    return xArr.map((v, i) => [
-      offX + (v - xExt[0]) / xR * dataW,
-      offY + (1 - (yArr[i] - yExt[0]) / yR) * dataH
-    ]);
+  function layout(p) {
+    const s = fitScales(d3.extent(p.x), d3.extent(p.y), W, H);
+    return p.x.map((v, i) => [s.x(v), s.y(p.y[i])]);
   }
-  const fromPos = layout(fromX, fromY);
-  const toPos = layout(toX, toY);
-
-  const duration = 800;
-  let start = null;
-
-  function frame(timestamp) {
-    if (!start) start = timestamp;
-    const t = Math.min((timestamp - start) / duration, 1);
-    const ease = d3.easeCubicInOut(t);
-
+  function draw(pts) {
     ctx.clearRect(0, 0, W, H);
-    ctx.globalAlpha = 0.6;
-    ctx.fillStyle = '#4a6fa5';
-    for (let i = 0; i < n; i++) {
-      const px = fromPos[i][0] + (toPos[i][0] - fromPos[i][0]) * ease;
-      const py = fromPos[i][1] + (toPos[i][1] - fromPos[i][1]) * ease;
-      ctx.beginPath();
-      ctx.arc(px, py, pointR, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    const r = W < 500 ? 2 : 3;
+    ctx.fillStyle = cssVar('--dot');
+    ctx.globalAlpha = state.neighbors.length ? 0.3 : 0.55;
+    for (let i = 0; i < n; i++) dot(ctx, pts[i][0], pts[i][1], r);
     ctx.globalAlpha = 1;
-
-    if (t < 1) requestAnimationFrame(frame);
+    ctx.fillStyle = cssVar('--hl');
+    for (const i of state.neighbors) dot(ctx, pts[i][0], pts[i][1], r + 1.5);
+    const s = pts[state.selected];
+    ctx.fillStyle = ctx.strokeStyle = cssVar('--mark');
+    dot(ctx, s[0], s[1], r + 2);
+    ctx.lineWidth = 1.5; ring(ctx, s[0], s[1], r + 8);
   }
-  requestAnimationFrame(frame);
+  function resize() { ({ ctx, W, H } = fitCanvas(el, canvas)); pos = layout(proj); draw(pos); }
+  resize();
+  redraws.push(() => { if (anim) cancelAnimationFrame(anim); resize(); });
+  state.listeners.push(() => { if (!anim) draw(pos); });
 
-  // After animation, set up interactive version with final positions
-  setTimeout(() => {
-    drawScatter(container, toX, toY, texts, { ...opts, zoomable: false });
-  }, duration + 50);
+  if (selectable) {
+    const pick = event => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = event.clientX - rect.left, my = event.clientY - rect.top;
+      let best = -1, bestD = 400;
+      for (let i = 0; i < n; i++) {
+        const d = (pos[i][0] - mx) ** 2 + (pos[i][1] - my) ** 2;
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      if (best >= 0 && best !== state.selected) setSelected(best);
+    };
+    canvas.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') pick(e); });
+    canvas.addEventListener('click', pick);
+    canvas.style.cursor = 'crosshair';
+  }
+
+  return {
+    // how many of the ten high-dimensional neighbours are among the ten
+    // closest dots to the selected joke in this layout
+    kept() {
+      if (!state.neighbors.length) return null;
+      const s = pos[state.selected];
+      const d = pos.map((p, i) => [i, (p[0] - s[0]) ** 2 + (p[1] - s[1]) ** 2]).filter(v => v[0] !== state.selected);
+      d.sort((a, b) => a[1] - b[1]);
+      const close = new Set(d.slice(0, 10).map(v => v[0]));
+      return state.neighbors.filter(i => close.has(i)).length;
+    },
+    setProjection(next, done) {
+      const from = pos; proj = next; pos = layout(next);
+      if (anim) cancelAnimationFrame(anim);
+      if (reducedMotion()) { draw(pos); done && done(); return; }
+      const duration = 1800; let start = null;
+      const frame = t => {
+        if (start === null) start = t;
+        const k = d3.easeCubicInOut(Math.min((t - start) / duration, 1));
+        draw(from.map((p, i) => [p[0] + (pos[i][0] - p[0]) * k, p[1] + (pos[i][1] - p[1]) * k]));
+        if (k < 1) anim = requestAnimationFrame(frame); else { anim = null; done && done(); }
+      };
+      anim = requestAnimationFrame(frame);
+    },
+  };
 }
 
-// Load data and initialize
-async function init() {
-  const [projData, fullData, jokesData] = await Promise.all([
-    fetch('data/umap-projections.json').then(r => r.json()),
-    fetch('data/umap-full.json').then(r => r.json()),
-    fetch('data/jokes-1k.json').then(r => r.json()),
-  ]);
+function initMaps(projData) {
+  const byKey = {};
+  projData.projections.forEach(p => { byKey[`${p.n_neighbors}/${p.min_dist}`] = p; });
 
-  const texts = jokesData.texts;
-
-  // Figure 1: Default scatter (n_neighbors=15, min_dist=0.1)
-  const defaultProj = projData.projections[1]; // nn=15, md=0.1
-  drawScatter('scatter-container', defaultProj.x, defaultProj.y, texts, { color: '#4a6fa5' });
-
-  // Figure 2: Parameter exploration
-  // Build lookup: "nn-md" -> projection
-  const projMap = {};
-  const nnValues = [5, 15, 30];
-  const mdValues = [0.1, 0.01, 0.5];
-
-  projData.projections.forEach(p => {
-    projMap[`${p.n_neighbors}-${p.min_dist}`] = p;
-  });
-
-  let currentProj = defaultProj;
-
-  function getSelectedProj() {
-    const nnIdx = +document.getElementById('nn-select').value;
-    const mdIdx = +document.getElementById('md-select').value;
-    const nn = nnValues[nnIdx];
-    const md = mdValues[mdIdx];
-    const key = `${nn}-${md}`;
-    return projMap[key] || null;
-  }
-
-  function updateParams() {
-    const newProj = getSelectedProj();
-    if (!newProj) {
-      // This combination doesn't exist, show closest
-      document.getElementById('params-container').innerHTML =
-        '<div style="text-align:center; padding:2rem; font-family:var(--heading-font); color:var(--text-2);">This parameter combination was not pre-computed. Try another.</div>';
+  // Figure 1: n_neighbors 15, min_dist 0.1
+  figReady('fig-scatter');
+  const map1 = neighborMap('scatter-container', byKey['15/0.1'], { selectable: true });
+  document.getElementById('scatter-container').querySelector('canvas').setAttribute('role', 'img');
+  const readout1 = document.getElementById('scatter-readout');
+  function updateReadout1() {
+    const canvas = document.getElementById('scatter-container').querySelector('canvas');
+    if (!state.texts) {
+      canvas.setAttribute('aria-label', 'Scatter plot of 1,000 jokes projected to two dimensions by UMAP, forming one roughly round cloud.');
       return;
     }
-    animateScatter('params-container', currentProj.x, currentProj.y, newProj.x, newProj.y, texts);
-    currentProj = newProj;
+    const kept = map1.kept();
+    readout1.innerHTML = `<span class="picked">"${escapeHtml(short(state.texts[state.selected], 200))}"</span>
+      ${kept} of its 10 nearest neighbors in 384 dimensions are among the 10 dots closest to it on this map.`;
+    canvas.setAttribute('aria-label', `Scatter plot of 1,000 jokes projected to two dimensions by UMAP. Selected: ${short(state.texts[state.selected], 120)} ${kept} of its 10 nearest neighbors in 384 dimensions are among the 10 closest dots.`);
   }
+  state.listeners.push(updateReadout1);
+  document.getElementById('scatter-next').addEventListener('click', () => {
+    // step through jokes in a fixed scrambled order
+    setSelected((state.selected * 7 + 131) % 1000);
+  });
 
-  drawScatter('params-container', defaultProj.x, defaultProj.y, texts, { zoomable: false });
+  // Figure 2: the five precomputed settings
+  figReady('fig-params');
+  const settings = [
+    { group: 'n_neighbors, with min_dist 0.1', items: [['5', '5/0.1'], ['15', '15/0.1'], ['30', '30/0.1']] },
+    { group: 'min_dist, with n_neighbors 30', items: [['0.01', '30/0.01'], ['0.1', '30/0.1'], ['0.5', '30/0.5']] },
+  ];
+  let current = '5/0.1';
+  const map2 = neighborMap('params-container', byKey[current], { selectable: false });
+  const canvas2 = document.getElementById('params-container').querySelector('canvas');
+  canvas2.setAttribute('role', 'img');
+  const readout2 = document.getElementById('params-readout');
+  const controls = document.getElementById('param-controls');
+  const buttons = [];
+  function updateReadout2() {
+    const p = byKey[current];
+    const kept = map2.kept();
+    readout2.textContent = `n_neighbors ${p.n_neighbors}, min_dist ${p.min_dist}.` +
+      (kept === null ? '' : ` ${kept} of the selected joke's 10 nearest neighbors are among the 10 dots closest to it.`);
+    canvas2.setAttribute('aria-label', `The same 1,000 jokes projected by UMAP with n_neighbors ${p.n_neighbors} and min_dist ${p.min_dist}.`);
+    buttons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.key === current)));
+  }
+  for (const { group, items } of settings) {
+    const span = document.createElement('span');
+    span.className = 'btn-group';
+    const lbl = document.createElement('span');
+    lbl.className = 'lbl'; lbl.textContent = group + ':';
+    span.appendChild(lbl);
+    for (const [label, key] of items) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn'; b.textContent = label; b.dataset.key = key;
+      b.addEventListener('click', () => {
+        if (key === current) return;
+        current = key;
+        readout2.textContent = `Moving to n_neighbors ${byKey[key].n_neighbors}, min_dist ${byKey[key].min_dist}…`;
+        buttons.forEach(x => x.setAttribute('aria-pressed', String(x.dataset.key === current)));
+        map2.setProjection(byKey[key], updateReadout2);
+      });
+      buttons.push(b); span.appendChild(b);
+    }
+    controls.appendChild(span);
+  }
+  state.listeners.push(updateReadout2);
+  updateReadout1(); updateReadout2();
+}
 
-  document.getElementById('nn-select').addEventListener('change', updateParams);
-  document.getElementById('md-select').addEventListener('change', updateParams);
+// Figure 3: all 53,133 jokes, zoomable
+function initFull(fullData) {
+  figReady('fig-full');
+  const el = document.getElementById('full-container');
+  const canvas = document.createElement('canvas');
+  canvas.setAttribute('role', 'img');
+  canvas.setAttribute('aria-label', 'Scatter plot of all 53,133 jokes projected by UMAP: one large dense mass with a darker core, ringed by small separate islands.');
+  el.appendChild(canvas);
+  const x = decodeF32(fullData.x_b64), y = decodeF32(fullData.y_b64);
+  // Fit the view to the central 99% in each direction.
+  const xe = robustExtent(x), ye = robustExtent(y);
+  let ctx, W, H, s, transform = d3.zoomIdentity;
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = cssVar('--dot');
+    const k = transform.k;
+    ctx.globalAlpha = Math.min(0.8, 0.22 * Math.sqrt(k));
+    const size = Math.min(4, 1.3 * Math.sqrt(k));
+    for (let i = 0; i < x.length; i++) {
+      const px = transform.applyX(s.x(x[i])), py = transform.applyY(s.y(y[i]));
+      if (px < -2 || px > W + 2 || py < -2 || py > H + 2) continue;
+      ctx.fillRect(px - size / 2, py - size / 2, size, size);
+    }
+    ctx.globalAlpha = 1;
+  }
+  function resize() { ({ ctx, W, H } = fitCanvas(el, canvas)); s = fitScales(xe, ye, W, H); draw(); }
+  resize();
+  redraws.push(resize);
 
-  // Figure 3: Full 53k scatter
-  const fullX = decodeF32(fullData.x_b64, fullData.count);
-  const fullY = decodeF32(fullData.y_b64, fullData.count);
-  drawScatter('full-container', fullX, fullY, null, { color: '#4a6fa5', zoomable: true });
+  // One finger scrolls the page; two fingers, a mouse drag or ctrl-scroll move the map.
+  const zoom = d3.zoom().scaleExtent([0.4, 20])
+    .filter(e => e.type === 'wheel' ? (e.ctrlKey || e.metaKey)
+      : e.type.startsWith('touch') ? e.touches.length > 1 : !e.button)
+    .on('zoom', e => { transform = e.transform; draw(); });
+  const sel = d3.select(canvas).call(zoom);
+  canvas.style.cursor = 'grab';
+  const dur = () => reducedMotion() ? 0 : 400;
+  document.getElementById('zoom-in').addEventListener('click', () => sel.transition().duration(dur()).call(zoom.scaleBy, 2));
+  document.getElementById('zoom-out').addEventListener('click', () => sel.transition().duration(dur()).call(zoom.scaleBy, 0.5));
+  document.getElementById('zoom-reset').addEventListener('click', () => sel.transition().duration(dur()).call(zoom.transform, d3.zoomIdentity));
+}
+
+async function init() {
+  // Three independent requests: the small projections file draws Figures 1
+  // and 2 at once; texts and embeddings (2.2 MB) add the selection later.
+  const corpusPromise = loadJSON('data/jokes-1k.json');
+  corpusPromise.catch(() => {}); // reported in Figure 1's readout below
+  loadJSON('data/umap-full.json').then(initFull).catch(err => figError('fig-full', err));
+
+  try { initMaps(await loadJSON('data/umap-projections.json')); }
+  catch (err) { figError('fig-scatter', err); figError('fig-params', err); corpusPromise.catch(() => {}); return; }
+
+  const readout1 = document.getElementById('scatter-readout');
+  readout1.textContent = 'Loading the joke texts and embeddings (2 MB)…';
+  try {
+    const corpus = await corpusPromise;
+    state.texts = corpus.texts;
+    const flat = decodeF32(corpus.embeddings_b64);
+    state.embs = corpus.texts.map((_, i) => flat.subarray(i * corpus.dimensions, (i + 1) * corpus.dimensions));
+    setSelected(state.selected);
+  } catch (err) {
+    readout1.textContent = err.message + ' The map above still shows the projection, without joke texts or neighbors.';
+  }
 }
 
 init();

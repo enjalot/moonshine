@@ -62,21 +62,21 @@ export type FigureEntry = {
 }
 
 export const figures: Record<string, FigureEntry> = {
-  'prose-edit': { component: ProseEditSim, height: 320 },
+  'prose-edit': { component: ProseEditSim, height: 380 },
   // Registering DEFAULTS/PARAM_HINTS makes the REAL knob panel work on
   // this figure during dev (Cmd/Ctrl+click it): the panel the sim
   // depicts opens on the sim itself, with the same slider bounds.
   knobs: {
     component: KnobsSim,
-    height: 360,
+    height: 520,
     defaults: knobsDefaults,
     paramHints: knobsHints,
   },
-  reorder: { component: ReorderSim, height: 300 },
+  reorder: { component: ReorderSim, height: 420 },
   terms: { component: TermsSim, height: 300 },
   'still-pipeline': { component: StillPipelineDiagram, height: 320, wide: true },
-  'baked-diagram': { component: BakedDiagramSim, height: 380, wide: true },
-  'dual-surface': { component: DualSurfaceSim, height: 440, wide: true },
+  'baked-diagram': { component: BakedDiagramSim, height: 640, wide: true },
+  'dual-surface': { component: DualSurfaceSim, height: 330, wide: true },
   feedback: { component: FeedbackSim, height: 420, wide: true },
 }
 

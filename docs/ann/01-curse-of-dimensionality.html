@@ -3,12 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Curse of Dimensionality — Approximate Nearest Neighbors</title>
+<title>The Curse of Dimensionality | Approximate Nearest Neighbors</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -26,13 +24,40 @@
   --bg: #fafafa;
   --fig-bg: #ffffff;
   --border: #e2e2e8;
+  --plot-bg: #fafafa;
+  --grid: #ececf1;
+  --muted: #cbd5e1;
+  --on-color: #ffffff;
 
+  /* ANN series palette: one color per role, the same in every chapter */
   --c-query: #db2777;
   --c-db: #64748b;
-  --c-neighbor: #f59e0b;
+  --c-neighbor: #d97706;
   --c-partition: #0d9488;
   --c-compress: #7c3aed;
   --c-hardware: #ea580c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e6dd;
+    --text-2: #a9a9bd;
+    --accent: #7fb2ff;
+    --accent-light: #1e2a44;
+    --bg: #16161f;
+    --fig-bg: #1f1f2c;
+    --border: #3a3a52;
+    --plot-bg: #191924;
+    --grid: #2b2b3d;
+    --muted: #4a4f63;
+    --on-color: #16161f;
+    --c-query: #f472b6;
+    --c-db: #94a3b8;
+    --c-neighbor: #fbbf24;
+    --c-partition: #2dd4bf;
+    --c-compress: #a78bfa;
+    --c-hardware: #fb923c;
+  }
 }
 
 body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
@@ -44,26 +69,51 @@ h2 { font-size: 1.5rem; margin: 3rem 0 1rem; }
 h3 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
 p { margin: 0 0 1rem; }
 a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+code { font-family: var(--mono-font); font-size: 0.9em; }
+.subtitle { font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2); }
+.part-of { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem; }
+.note { font-size: 0.95rem; color: var(--text-2); border-left: 2px solid var(--border); padding-left: 0.9rem; margin: 1.25rem 0; }
 
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .figure-wide { margin-left: -2rem; margin-right: -2rem; }
 .figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.45; }
 .figure-label { font-weight: 600; color: var(--text); }
+.plot { width: 100%; min-width: 0; }
+.plot svg { display: block; border-radius: 4px; max-width: 100%; }
+.plot svg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; align-items: start; }
 
-.controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
-.controls input[type="range"] { width: 160px; accent-color: var(--accent); }
-.controls label { display: flex; align-items: center; gap: 0.5rem; }
-.controls .val { font-family: var(--mono-font); color: var(--text); min-width: 2.5em; display: inline-block; text-align: right; }
-.controls button { font-family: var(--heading-font); font-size: 0.8rem; padding: 0.25rem 0.7rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text-2); cursor: pointer; }
-.controls button:hover { background: var(--bg); color: var(--text); }
+.controls { display: flex; align-items: center; gap: 0.6rem 1rem; flex-wrap: wrap; margin-bottom: 0.9rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+.controls input[type="range"] { width: 150px; max-width: 42vw; accent-color: var(--accent); }
+.controls label { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.controls .val { font-family: var(--mono-font); color: var(--text); min-width: 2.5em; display: inline-block; }
+.controls button, .controls select { font-family: var(--heading-font); font-size: 0.85rem; padding: 0.3rem 0.7rem; border: 1px solid var(--border); border-radius: 4px; background: var(--fig-bg); color: var(--text); cursor: pointer; }
+.controls button:hover { background: var(--bg); }
+.controls button[aria-pressed="true"] { background: var(--text); color: var(--fig-bg); border-color: var(--text); }
+.hint { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin: 0 0 0.6rem; }
 
-svg text { font-family: var(--heading-font); }
+.readout { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.6rem; min-height: 2.6em; line-height: 1.45; }
+.readout b { font-family: var(--mono-font); font-weight: 500; color: var(--text); }
+
+/* inherited, so a fill or font-size attribute on an individual element still wins */
+.plot svg { font-family: var(--heading-font); font-size: 13px; fill: var(--text-2); color: var(--text-2); }
 
 .t-query { color: var(--c-query); font-weight: 600; }
 .t-db { color: var(--c-db); font-weight: 600; }
 .t-neighbor { color: var(--c-neighbor); font-weight: 600; }
+.t-partition { color: var(--c-partition); font-weight: 600; }
+.t-compress { color: var(--c-compress); font-weight: 600; }
+.t-hardware { color: var(--c-hardware); font-weight: 600; }
 
-@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure-wide { margin-left: 0; margin-right: 0; } }
+footer { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
+footer a { color: var(--text-2); }
+footer a.next { color: var(--accent); }
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .figure { padding: 0.9rem; }
+  .figure-wide { margin-left: 0; margin-right: 0; }
+}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
 </style>
 </head>
@@ -71,229 +121,246 @@ svg text { font-family: var(--heading-font); }
 <div class="article">
   <header>
     <h1>The Curse of Dimensionality</h1>
-    <p style="font-family: var(--heading-font); font-size: 1.15rem; color: var(--text-2);">
-      Why exact nearest-neighbor search breaks in high dimensions, and why approximation
-      is the only way forward.
+    <p class="subtitle">
+      Why exact nearest-neighbor search stops paying off in high dimensions, and why
+      practical systems settle for approximate answers.
     </p>
-    <p style="font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">
-      Part 1 of <a href="index.html">Approximate Nearest Neighbors</a>
-    </p>
+    <p class="part-of">Part 1 of <a href="index.html">Approximate Nearest Neighbors</a></p>
   </header>
 
-  <h2>Nearest Neighbors in Two Dimensions</h2>
+  <h2>Nearest neighbors in two dimensions</h2>
   <p>
-    Nearest-neighbor search is one of the simplest problems you can state. You have a set
-    of points. A query arrives. Return the closest point. The definition of "closest" is
-    usually Euclidean distance, and in two dimensions you can check the whole thing visually.
+    Nearest-neighbor search starts from a set of points and a query, and returns the points
+    closest to the query. "Closest" usually means Euclidean distance, and in two dimensions
+    we can check the answer by eye.
   </p>
   <p>
-    Move your cursor over the figure below. A <span class="t-query">query point</span>
-    tracks your position, and the <span class="t-neighbor">k nearest points</span> light up
-    in amber. Use the slider to change how many neighbors you want.
+    In the figure below the <span class="t-query">query point</span> follows the cursor and
+    its <span class="t-neighbor">k nearest points</span> are highlighted. The dashed circle
+    passes through the k-th nearest point, so everything inside it is a neighbor.
   </p>
 
   <div class="figure figure-wide" id="fig-2d-nn">
     <div class="controls">
       <label>k = <input type="range" id="k-slider" min="1" max="15" value="5" step="1"><span class="val" id="k-val">5</span></label>
-      <label><input type="checkbox" id="show-distances" checked> show distances</label>
+      <label><input type="checkbox" id="show-distances" checked> draw lines to neighbors</label>
     </div>
-    <svg id="nn-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <p class="hint">Move the cursor over the plot, tap it, or focus it and use the arrow keys.</p>
+    <div class="plot"><svg id="nn-svg"></svg></div>
+    <div class="readout" id="nn-readout"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 1.</span>
-      Move the cursor to place the <span class="t-query">query</span>. The
-      <span class="t-neighbor">k closest points</span> are connected by thin lines.
-      In two dimensions this problem is easy: the answer is visible, and you can compute
-      it by checking every point in the set.
+      The <span class="t-neighbor">k closest points</span> to the
+      <span class="t-query">query</span>, found by measuring the distance to all 120 points
+      and keeping the k smallest. Notice that the circle grows where the points are sparse
+      and shrinks where they are dense: the neighborhood has a fixed count, not a fixed size.
     </div>
   </div>
 
   <p>
-    The naive algorithm is direct: compute the distance from the query to every point,
-    sort, and return the k smallest. This is called <em>exact search</em>, and it
-    costs O(N) per query. For a few thousand points, it runs in a blink. It is also the
-    only way to be sure you have the true nearest neighbors.
+    The figure computes its answer the direct way: measure the distance from the query to
+    every point, sort, and return the k smallest. This is <em>exact search</em>. It is the
+    only way to be sure we have the true nearest neighbors without any other structure, and
+    it costs one distance computation per point, so the work grows linearly with the size of
+    the set.
   </p>
 
-  <h2>Clever Partitioning: The kd-Tree</h2>
+  <h2>Skipping most of the points with a kd-tree</h2>
   <p>
-    With a little cleverness you can do much better than O(N). A <strong>kd-tree</strong>
-    recursively splits the space along alternating axes, building a tree whose leaves
-    are small regions containing a handful of points. To answer a query, you descend to the
-    leaf containing the query, then only check other branches if they might contain a closer
-    point than the ones you have already seen.
+    We can do better than checking every point. A <strong>kd-tree</strong> recursively splits
+    the space along alternating axes, at the median point each time, until each leaf region
+    holds a handful of points. To answer a query we descend to the leaf containing it, scan
+    that leaf, and then check another branch only if it could contain a point closer than
+    the best one found so far.
   </p>
 
   <div class="figure figure-wide" id="fig-kdtree">
     <div class="controls">
-      <label>depth <input type="range" id="kd-depth" min="1" max="6" value="4" step="1"><span class="val" id="kd-depth-val">4</span></label>
-      <label><input type="checkbox" id="kd-prune" checked> highlight pruning</label>
+      <label>tree depth <input type="range" id="kd-depth" min="1" max="6" value="4" step="1"><span class="val" id="kd-depth-val">4</span></label>
+      <label><input type="checkbox" id="kd-prune" checked> shade visited leaves</label>
       <button id="kd-regen">new dataset</button>
     </div>
-    <svg id="kd-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <p class="hint">Move the cursor over the plot, tap it, or focus it and use the arrow keys.</p>
+    <div class="plot"><svg id="kd-svg"></svg></div>
+    <div class="readout" id="kd-readout"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 2.</span>
-      A 2D kd-tree. Move the cursor to place the <span class="t-query">query</span>.
-      <strong>Green regions</strong> are visited during the search. <strong>Gray regions</strong>
-      are pruned — the search decided they can't contain a point closer than the current best.
-      In two dimensions, pruning is dramatic: most of the space is skipped.
+      A kd-tree over 80 points. The <span class="t-partition">teal leaves</span> are the ones
+      the search opened for this <span class="t-query">query</span>; the unshaded leaves were
+      skipped because the splitting line between them and the query is farther away than the
+      <span class="t-neighbor">nearest point</span> already found. Move the query next to a
+      split line and a second leaf has to be opened. Deepen the tree and the visited share
+      drops, because each leaf holds fewer points.
     </div>
   </div>
 
   <p>
-    The pruning step is where the savings come from. Once the search has a candidate point
-    at distance r, any branch whose bounding region is farther than r can be skipped entirely.
-    In two dimensions, with a reasonable dataset, a kd-tree query runs in something close to
-    O(log N). This is a strictly better deal than scanning everything, and until the late
-    1990s it was the standard answer.
+    The savings come from that skipping step, called pruning. Once the search holds a
+    candidate at distance r, any branch whose region is farther than r from the query cannot
+    improve the answer. The result is still exact. With N points in two dimensions a query
+    visits a few leaves out of N / (leaf size), so the cost grows roughly with log N instead
+    of N. For low-dimensional data such as map coordinates, kd-trees are still a standard
+    tool.
   </p>
 
-  <h2>Things Get Strange in High Dimensions</h2>
+  <h2>What changes in high dimensions?</h2>
   <p>
-    Modern machine learning rarely lives in two dimensions. A sentence embedding from a
-    current language model sits in a 768- or 1536-dimensional space. An image embedding
-    might be 2048-dimensional. The "points" we actually want to search through are these
-    long, opaque vectors of floats. So the question is: does kd-tree-style cleverness
-    carry over?
+    The vectors we want to search in machine learning are much longer than two numbers. A
+    sentence embedding typically has 384, 768 or 1536 dimensions, and an image embedding can
+    have 2048. Does the kd-tree's pruning carry over?
   </p>
   <p>
-    The short answer is no, and the reason has to do with the geometry of high-dimensional
-    space itself. Two related effects show up as the dimension grows: volume collapses into
-    corners, and distances collapse onto each other. Both of them break the assumptions
-    that make kd-trees work.
+    Mostly it does not, because of two related effects in the geometry of high-dimensional
+    space. As the dimension grows, volume moves away from the center of a region toward its
+    corners, and the distances between random points become nearly equal. We look at each in
+    turn, and then run a kd-tree in higher dimensions to measure what they do to it.
   </p>
 
-  <h3>Volume Concentration</h3>
+  <h3>Volume moves to the corners</h3>
   <p>
-    Start with a cube of side 2 in d dimensions, and inscribe a ball of radius 1 inside it.
-    In two dimensions, the ball fills about 78% of the square. In three dimensions, a sphere
-    fills about 52% of the cube. In ten dimensions, the ball fills about a quarter of one
-    percent of the cube. Most of the volume is in the corners.
+    Take a cube of side 2 in d dimensions and inscribe a ball of radius 1 in it. In two
+    dimensions the ball (a disc) fills π/4, about 79%, of the square. In three dimensions it
+    fills about 52% of the cube. In ten dimensions it fills a quarter of one percent. The
+    ball still touches every face of the cube, yet nearly all of the volume lies outside it,
+    in the corners.
   </p>
 
   <div class="figure figure-wide" id="fig-volume">
     <div class="controls">
-      <label>dimension d <input type="range" id="vol-d" min="1" max="20" value="2" step="1"><span class="val" id="vol-d-val">2</span></label>
+      <label>dimension d <input type="range" id="vol-d" min="1" max="20" value="10" step="1"><span class="val" id="vol-d-val">10</span></label>
     </div>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: center;">
-      <div id="vol-schematic"></div>
-      <div id="vol-chart"></div>
+    <div class="panels">
+      <div class="plot"><svg id="vol-schematic"></svg></div>
+      <div class="plot"><svg id="vol-chart"></svg></div>
     </div>
+    <div class="readout" id="vol-readout"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 3.</span>
-      On the left, a schematic of the ball-in-cube ratio (the circle shrinks as d grows
-      to represent the fraction of volume it occupies). On the right, the actual fraction
-      <span style="font-family: var(--mono-font);">V_ball / V_cube</span> plotted against
-      d. By d = 10 the ball is less than 1% of the cube. By d = 20 it is one part in
-      forty million.
+      Left: the square stands for the cube's whole volume and the
+      <span class="t-query">pink disc's area</span> is the share of it inside the inscribed
+      ball. At d = 2 this is the literal picture; above that it is an area chart, since we
+      cannot draw the shape. Right: the same share on a log scale, computed from
+      V<sub>ball</sub> / V<sub>cube</sub> = π<sup>d/2</sup> / (Γ(d/2 + 1) · 2<sup>d</sup>).
+      Each added dimension costs more than the one before; by d = 20 the ball holds about
+      one part in forty million.
     </div>
   </div>
 
   <p>
-    This has a practical consequence. If you sample points uniformly
-    inside a high-dimensional cube, almost none of them land near the center. They all pile
-    up near the boundary. This is why high-dimensional data is often described as
-    <em>living on a thin shell</em>.
+    If we sample points uniformly inside a high-dimensional cube, almost none of them land
+    near the center, because almost none of the volume is there. This is why high-dimensional
+    data is often described as living on a thin shell.
   </p>
 
-  <h3>Distance Concentration</h3>
+  <h3>Distances concentrate</h3>
   <p>
-    Volume concentration has a direct consequence for nearest-neighbor search. If you
-    generate N random points in d dimensions and look at the histogram of all pairwise
-    distances, the histogram narrows as d grows. Distances
-    concentrate around a single value. The nearest point and the farthest point become
-    almost the same distance away.
+    The effect that matters most for search is on distances. Generate random points in d
+    dimensions and collect the distance between every pair. In two dimensions those distances
+    vary a lot: some pairs nearly touch and some sit in opposite corners. As d grows, each
+    distance becomes a sum over many independent coordinates, the sum averages out, and the
+    distances bunch up around their mean.
   </p>
 
   <div class="figure figure-wide" id="fig-dist">
     <div class="controls">
-      <label>dimension d <input type="range" id="dist-d" min="1" max="100" value="2" step="1"><span class="val" id="dist-d-val">2</span></label>
-      <label>points n <input type="range" id="dist-n" min="50" max="500" value="200" step="10"><span class="val" id="dist-n-val">200</span></label>
+      <label>dimension d <input type="range" id="dist-d" min="0" max="9" value="6" step="1"><span class="val" id="dist-d-val">100</span></label>
     </div>
-    <svg id="dist-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="plot"><svg id="dist-svg"></svg></div>
+    <div class="readout" id="dist-readout"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 4.</span>
-      Histogram of pairwise distances between n random points uniformly sampled in the
-      unit cube. At d = 2 the histogram is wide. As d grows, it narrows and shifts right.
-      The ratio (d_max − d_min) / d_mean, shown above the chart, falls toward zero.
-      When all distances are nearly equal, "nearest" stops being a useful concept.
+      All 44,850 pairwise distances between 300 points drawn uniformly from the unit cube,
+      divided by their mean so that different dimensions share an axis.
+      <span class="t-db">Gray</span> is d = 2; <span class="t-query">pink</span> is the
+      dimension on the slider. Each histogram is scaled to its own peak. The dashed lines
+      mark the closest and farthest pair at the current d: slide d up and they close in on
+      the mean from both sides.
     </div>
   </div>
 
   <p>
-    There is some nuance here worth flagging. Real embedding spaces are not uniformly
-    random. Sentence embeddings cluster by topic, image embeddings cluster by content.
-    That <em>local structure</em> is exactly what makes high-dimensional nearest-neighbor
-    search possible at all. But the ambient geometry is still hostile, and any algorithm
-    that tries to be fully exact in high dimensions pays a heavy price.
+    A nearest-neighbor search depends on the nearest point being much closer than a typical
+    point. When the closest and farthest pairs differ by a small factor, a bound like "this
+    region is at least r away" stops ruling much out.
+  </p>
+  <p class="note">
+    Uniform random points are the hard case. Real embeddings cluster by topic or content, so
+    a query's true neighbors are usually much closer than a random point is, and that local
+    structure is what the methods in the rest of this series exploit. The ambient geometry
+    is still the one shown here.
   </p>
 
-  <h3>Why kd-Trees Fail</h3>
+  <h3>Why kd-tree pruning stops working</h3>
   <p>
-    The kd-tree's speed came from pruning. A branch gets pruned when its bounding region
-    is farther than the current best candidate. In high dimensions, two things conspire to
-    kill this: the candidate distance is roughly the same everywhere (distance concentration),
-    and the bounding regions along any one axis cover only a small slice of the geometry
-    (volume concentration). The pruning test almost always says "could contain a closer
-    point, please check." The tree degenerates into a linear scan, with extra overhead.
+    The kd-tree skipped a branch when the query was farther from that branch's region than
+    from its current best candidate. Two things undo this in high dimensions. The best
+    candidate is not much closer than everything else, which is the distance concentration
+    above. And the tree runs out of splits: 2,000 points with 8 to a leaf make a tree about
+    8 levels deep, so in 16 dimensions half of the axes are never split at all. Every region
+    spans the full width of the cube along those axes, and the few axes that were split
+    rarely put a region farther away than the candidate.
+  </p>
+  <p>
+    Figure 5 measures this. It builds a kd-tree over 2,000 uniform random points in each
+    dimension, runs 30 exact queries, and records how many points the search had to examine.
   </p>
 
   <div class="figure" id="fig-kd-fail">
-    <svg id="kd-fail-svg" style="width:100%; display:block; border-radius:4px;"></svg>
+    <div class="plot"><svg id="kd-fail-svg"></svg></div>
+    <div class="readout" id="kd-fail-readout"></div>
     <div class="figure-caption">
       <span class="figure-label">Figure 5.</span>
-      Fraction of the dataset a kd-tree actually examines when answering a query, plotted
-      against dimension. At low d it examines a small fraction and runs fast. By d ≈ 15
-      it examines nearly everything, and the tree structure adds overhead without saving
-      work.
-    </div>
-  </div>
-
-  <h2>Approximation Is the Only Way Forward</h2>
-  <p>
-    The choices at this point are narrow. You can accept linear scans, which become
-    impractical past a few million vectors. You can give up on exact answers and start
-    returning <em>approximate</em> nearest neighbors. Almost all modern vector search
-    systems take the second path, and they do it well enough that the gap between
-    exact and approximate is usually imperceptible to the application sitting on top.
-  </p>
-  <p>
-    Modern ANN is three ideas stacked on top of each other, each addressing a different
-    aspect of the problem:
-  </p>
-
-  <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0; font-family: var(--heading-font);">
-    <div style="padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-partition);">
-      <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 0.4rem;">Next</div>
-      <div style="font-size: 1rem; font-weight: 700; color: var(--c-partition);"><a href="02-partition-the-space.html" style="color: var(--c-partition); text-decoration: none;">Partition</a></div>
-      <div style="font-size: 0.85rem; color: var(--text-2); line-height: 1.45;">Cut the space into regions and only search the ones near the query.</div>
-    </div>
-    <div style="padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-compress);">
-      <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 0.4rem;">Then</div>
-      <div style="font-size: 1rem; font-weight: 700; color: var(--c-compress);"><a href="03-compress-the-vectors.html" style="color: var(--c-compress); text-decoration: none;">Compress</a></div>
-      <div style="font-size: 0.85rem; color: var(--text-2); line-height: 1.45;">Replace full vectors with small codes that are cheap to compare.</div>
-    </div>
-    <div style="padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: 6px; background: var(--fig-bg); border-top: 3px solid var(--c-hardware);">
-      <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 0.4rem;">Finally</div>
-      <div style="font-size: 1rem; font-weight: 700; color: var(--c-hardware);"><a href="04-hardware-aware-design.html" style="color: var(--c-hardware); text-decoration: none;">Hardware</a></div>
-      <div style="font-size: 0.85rem; color: var(--text-2); line-height: 1.45;">Design for where the data lives: RAM, SSD, or GPU.</div>
+      Share of the dataset an exact kd-tree search examines, measured in this page for
+      2,000 uniform random points (leaves of 8, mean over 30 random queries). At low d the
+      tree skips nearly everything. Somewhere between 10 and 20 dimensions it ends up
+      reading almost every point, which is a linear scan with the cost of walking the tree
+      added on top.
     </div>
   </div>
 
   <p>
-    The next article introduces the first of these: partitioning. We will see that the
-    same trick kd-trees tried to pull off can work in high dimensions, if you are willing
-    to accept that the answer will be <em>usually</em> right instead of <em>always</em>
-    right.
+    The crossover depends on the data: more points push it to the right, and clustered data
+    prunes better than uniform data. It does not move far enough to reach the hundreds of
+    dimensions an embedding has.
   </p>
 
-  <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
-    <p>Part of <a href="index.html" style="color: var(--text-2);">Approximate Nearest Neighbors</a>. Next: <a href="02-partition-the-space.html" style="color: var(--accent);">Partition the Space</a>.</p>
-    <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+  <h2>Giving up exactness</h2>
+  <p>
+    That leaves two options. We can accept linear scans, whose cost grows in step with the
+    collection: a million 768-dimensional vectors means 768 million multiply-adds per query.
+    Or we can stop insisting on the exact answer and return <em>approximate</em> nearest
+    neighbors, which means some true neighbors will occasionally be missed. Most vector
+    search systems take the second path, and measure what they lose as <em>recall</em>: the
+    fraction of the true k nearest neighbors that the search returned.
+  </p>
+  <p>
+    The rest of this series covers three ideas that such systems combine.
+    <a href="02-partition-the-space.html">Partitioning</a> cuts the space into regions and
+    searches only the ones near the query.
+    <a href="03-compress-the-vectors.html">Compression</a> replaces full vectors with small
+    codes that are cheap to compare.
+    <a href="04-hardware-aware-design.html">Hardware-aware design</a> lays the index out
+    for the device it lives on, whether RAM, SSD or GPU.
+  </p>
+  <p>
+    The next article starts with partitioning, which is the kd-tree's idea again with one
+    change: the regions follow the data instead of the axes, and the search is allowed to be
+    right most of the time instead of every time.
+  </p>
+
+  <footer>
+    <p>Part of <a href="index.html">Approximate Nearest Neighbors</a>. Next: <a class="next" href="02-partition-the-space.html">Partition the Space</a>.</p>
+    <p>Built with <a href="https://github.com/enjalot/moonshine">moonshine</a>.</p>
   </footer>
 </div>
 
 <script>
-// Seeded RNG for reproducibility
+// ============================================================
+// Shared helpers (the same block is inlined in every chapter)
+// ============================================================
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// Seeded RNG so every reader sees the same data
 function mulberry32(seed) {
   return function() {
     let t = seed += 0x6D2B79F5;
@@ -302,669 +369,373 @@ function mulberry32(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+function gauss(rng) {
+  let u = 0; while (u === 0) u = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng());
+}
+// squared Euclidean distance, any dimension
+function d2(a, b) { let s = 0; for (let i = 0; i < a.length; i++) { const t = a[i] - b[i]; s += t * t; } return s; }
+
+// Size an <svg> to its wrapper and redraw when the wrapper's width changes.
+// heightFor(W) picks the height; draw(W, H) renders. Returns a function that redraws.
+function responsive(svgEl, heightFor, draw) {
+  const box = svgEl.parentElement;
+  let lastW = -1;
+  function run() {
+    const W = Math.floor(box.clientWidth);
+    if (W <= 0) return;
+    lastW = W;
+    const H = heightFor(W);
+    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svgEl.setAttribute("width", W);
+    svgEl.setAttribute("height", H);
+    draw(W, H);
+  }
+  new ResizeObserver(() => { if (Math.floor(box.clientWidth) !== lastW) run(); }).observe(box);
+  run();
+  return run;
+}
+
+// Let the reader place a query point in a plot: hover with a mouse, tap on touch
+// (a swipe still scrolls the page), arrow keys when the plot has focus.
+// toUnit(px, py) maps pixels to [0,1]^2; get/set read and write the query.
+function placeQuery(svgEl, toUnit, get, set) {
+  const at = e => { const r = svgEl.getBoundingClientRect(); set(toUnit(e.clientX - r.left, e.clientY - r.top)); };
+  svgEl.addEventListener("pointermove", e => { if (e.pointerType === "mouse") at(e); });
+  svgEl.addEventListener("pointerdown", at);
+  svgEl.setAttribute("tabindex", "0");
+  svgEl.addEventListener("keydown", e => {
+    const step = e.shiftKey ? 0.1 : 0.02;
+    const move = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+    if (!move) return;
+    e.preventDefault();
+    const q = get();
+    set([Math.max(0, Math.min(1, q[0] + move[0])), Math.max(0, Math.min(1, q[1] + move[1]))]);
+  });
+}
+const clamp01 = v => Math.max(0, Math.min(1, v));
+// Text alternative for a figure: role=img plus a description that tracks the current state
+function describe(svgEl, text) { svgEl.setAttribute("role", "img"); svgEl.setAttribute("aria-label", text); }
 
 // ============================================================
-// Figure 1: 2D nearest neighbor with cursor-following query
+// Figure 1: 2D nearest neighbors, query follows the cursor
 // ============================================================
 (function() {
   const svgEl = document.getElementById("nn-svg");
-  const container = svgEl.parentElement;
-
-  let W = 0, H = 280;
+  const svg = d3.select(svgEl);
   const rng = mulberry32(17);
   const N = 120;
-  const rawPts = Array.from({length: N}, () => [rng(), rng()]);
-
-  let k = 5;
-  let showDist = true;
-  let query = [0.5, 0.5];
-
-  const svg = d3.select(svgEl);
-  let g;
-
-  function layout() {
-    W = container.clientWidth - 48; // account for padding
-    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svgEl.setAttribute("width", W);
-    svgEl.setAttribute("height", H);
-  }
-
-  function toX(p) { return 20 + p[0] * (W - 40); }
-  function toY(p) { return 20 + p[1] * (H - 40); }
+  const pts = Array.from({ length: N }, () => [rng(), rng()]);
+  let k = 5, showLines = true, query = [0.42, 0.5];
+  const pad = 16;
+  let W = 0, H = 0;
+  const side = () => Math.min(W, H) - 2 * pad;          // square data area, so the circle is a circle
+  const ox = () => (W - side()) / 2, oy = () => (H - side()) / 2;
+  const toX = p => ox() + p[0] * side(), toY = p => oy() + p[1] * side();
 
   function draw() {
     svg.selectAll("*").remove();
-    // Background
-    svg.append("rect").attr("x", 10).attr("y", 10)
-      .attr("width", W - 20).attr("height", H - 20)
-      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
-
-    // Compute k nearest
-    const dists = rawPts.map((p, i) => ({
-      i, p, d: Math.hypot(p[0] - query[0], p[1] - query[1])
-    }));
-    dists.sort((a, b) => a.d - b.d);
-    const neighbors = new Set(dists.slice(0, k).map(d => d.i));
-    const kthDist = dists[k - 1].d;
-
-    // Neighborhood ring
-    const radiusPx = kthDist * Math.min(W - 40, H - 40);
-    svg.append("circle")
-      .attr("cx", toX(query)).attr("cy", toY(query))
-      .attr("r", radiusPx)
-      .attr("fill", "none").attr("stroke", "var(--c-query)")
-      .attr("stroke-width", 1).attr("stroke-dasharray", "3 3").attr("opacity", 0.4);
-
-    // Connection lines
-    if (showDist) {
-      svg.selectAll(".link").data([...neighbors]).join("line")
-        .attr("class", "link")
-        .attr("x1", toX(query)).attr("y1", toY(query))
-        .attr("x2", i => toX(rawPts[i])).attr("y2", i => toY(rawPts[i]))
-        .attr("stroke", "var(--c-neighbor)").attr("stroke-width", 0.8).attr("opacity", 0.6);
+    svg.append("rect").attr("x", ox() - 8).attr("y", oy() - 8).attr("width", side() + 16).attr("height", side() + 16)
+      .attr("fill", "var(--plot-bg)").attr("stroke", "var(--border)").attr("rx", 4);
+    const dists = pts.map((p, i) => ({ i, d: Math.hypot(p[0] - query[0], p[1] - query[1]) })).sort((a, b) => a.d - b.d);
+    const nbrs = new Set(dists.slice(0, k).map(o => o.i));
+    const kth = dists[k - 1].d;
+    svg.append("circle").attr("cx", toX(query)).attr("cy", toY(query)).attr("r", kth * side())
+      .attr("fill", "none").attr("stroke", "var(--c-query)").attr("stroke-dasharray", "3 3").attr("opacity", 0.6);
+    if (showLines) {
+      svg.selectAll(".link").data([...nbrs]).join("line").attr("class", "link")
+        .attr("x1", toX(query)).attr("y1", toY(query)).attr("x2", i => toX(pts[i])).attr("y2", i => toY(pts[i]))
+        .attr("stroke", "var(--c-neighbor)").attr("opacity", 0.7);
     }
-
-    // DB points
-    svg.selectAll(".pt").data(rawPts).join("circle")
-      .attr("class", "pt")
-      .attr("cx", p => toX(p)).attr("cy", p => toY(p))
-      .attr("r", (p, i) => neighbors.has(i) ? 4 : 3)
-      .attr("fill", (p, i) => neighbors.has(i) ? "var(--c-neighbor)" : "var(--c-db)")
-      .attr("opacity", (p, i) => neighbors.has(i) ? 1 : 0.55);
-
-    // Query point
-    svg.append("circle")
-      .attr("cx", toX(query)).attr("cy", toY(query)).attr("r", 6)
-      .attr("fill", "var(--c-query)").attr("stroke", "white").attr("stroke-width", 1.5);
+    svg.selectAll(".pt").data(pts).join("circle").attr("class", "pt")
+      .attr("cx", toX).attr("cy", toY)
+      .attr("r", (p, i) => nbrs.has(i) ? 4.5 : 3)
+      .attr("fill", (p, i) => nbrs.has(i) ? "var(--c-neighbor)" : "var(--c-db)")
+      .attr("opacity", (p, i) => nbrs.has(i) ? 1 : 0.55);
+    svg.append("circle").attr("cx", toX(query)).attr("cy", toY(query)).attr("r", 6)
+      .attr("fill", "var(--c-query)").attr("stroke", "var(--plot-bg)").attr("stroke-width", 1.5);
+    const msg = `${N} distances computed. The ${k === 1 ? "nearest point" : k + " nearest points"} lie within ${kth.toFixed(3)} of the query (the plot is 1 unit wide).`;
+    document.getElementById("nn-readout").innerHTML = `<b>${N}</b> distances computed. The ${k === 1 ? "nearest point lies" : `<b>${k}</b> nearest points lie`} within <b>${kth.toFixed(3)}</b> of the query (the plot is 1 unit wide).`;
+    describe(svgEl, "Scatter of 120 points with a query point. " + msg);
   }
-
-  function setQueryFromEvent(event) {
-    const pt = svgEl.getBoundingClientRect();
-    const mx = (event.clientX - pt.left) * (W / pt.width);
-    const my = (event.clientY - pt.top) * (H / pt.height);
-    query = [
-      Math.max(0, Math.min(1, (mx - 20) / (W - 40))),
-      Math.max(0, Math.min(1, (my - 20) / (H - 40))),
-    ];
-    draw();
-  }
-
-  svgEl.addEventListener("pointermove", setQueryFromEvent);
-  svgEl.addEventListener("pointerdown", setQueryFromEvent);
-
-  document.getElementById("k-slider").addEventListener("input", e => {
-    k = +e.target.value;
-    document.getElementById("k-val").textContent = k;
-    draw();
-  });
-  document.getElementById("show-distances").addEventListener("change", e => {
-    showDist = e.target.checked;
-    draw();
-  });
-
-  const ro = new ResizeObserver(() => { layout(); draw(); });
-  ro.observe(container);
-  layout();
-  draw();
+  const redraw = responsive(svgEl, w => Math.min(w, 380), (w, h) => { W = w; H = h; draw(); });
+  placeQuery(svgEl, (x, y) => [clamp01((x - ox()) / side()), clamp01((y - oy()) / side())], () => query, q => { query = q; draw(); });
+  document.getElementById("k-slider").addEventListener("input", e => { k = +e.target.value; document.getElementById("k-val").textContent = k; draw(); });
+  document.getElementById("show-distances").addEventListener("change", e => { showLines = e.target.checked; draw(); });
 })();
 
 // ============================================================
-// Figure 2: kd-tree with spatial partition and pruning
+// Figure 2: 2D kd-tree, exact search with pruning
 // ============================================================
 (function() {
   const svgEl = document.getElementById("kd-svg");
-  const container = svgEl.parentElement;
-  let W = 0, H = 360;
+  const svg = d3.select(svgEl);
+  const N = 80;
+  let seed = 7, depthLimit = 4, shade = true, query = [0.3, 0.55], points = [];
+  let W = 0, H = 0;
+  const pad = 14;
+  const toX = v => pad + v * (W - 2 * pad), toY = v => pad + v * (H - 2 * pad);
 
-  let seed = 7;
-  let depthLimit = 4;
-  let showPrune = true;
-  let query = [0.45, 0.45];
-  let points = [];
+  function regen() { const rng = mulberry32(seed); points = Array.from({ length: N }, () => [rng(), rng()]); }
 
-  function regen() {
-    const rng = mulberry32(seed);
-    const N = 80;
-    points = Array.from({length: N}, () => [rng(), rng()]);
-  }
-
-  function buildKd(pts, depth, bbox) {
-    if (pts.length === 0) return null;
-    if (depth >= depthLimit || pts.length === 1) {
-      return { leaf: true, pts, bbox };
-    }
+  function build(pts, depth, bb) {
+    if (depth >= depthLimit || pts.length <= 1) return { leaf: true, pts, bb };
     const axis = depth % 2;
     pts.sort((a, b) => a[axis] - b[axis]);
-    const mid = Math.floor(pts.length / 2);
-    const splitVal = pts[mid][axis];
-    const leftBB = axis === 0
-      ? { x0: bbox.x0, y0: bbox.y0, x1: splitVal, y1: bbox.y1 }
-      : { x0: bbox.x0, y0: bbox.y0, x1: bbox.x1, y1: splitVal };
-    const rightBB = axis === 0
-      ? { x0: splitVal, y0: bbox.y0, x1: bbox.x1, y1: bbox.y1 }
-      : { x0: bbox.x0, y0: splitVal, x1: bbox.x1, y1: bbox.y1 };
-    return {
-      axis, splitVal, bbox,
-      left: buildKd(pts.slice(0, mid), depth + 1, leftBB),
-      right: buildKd(pts.slice(mid), depth + 1, rightBB),
-    };
+    const mid = pts.length >> 1, split = pts[mid][axis];
+    const lo = axis === 0 ? { ...bb, x1: split } : { ...bb, y1: split };
+    const hi = axis === 0 ? { ...bb, x0: split } : { ...bb, y0: split };
+    return { axis, split, bb, left: build(pts.slice(0, mid), depth + 1, lo), right: build(pts.slice(mid), depth + 1, hi) };
   }
-
-  function collectLeaves(node, out=[]) {
-    if (!node) return out;
-    if (node.leaf) { out.push(node); return out; }
-    collectLeaves(node.left, out);
-    collectLeaves(node.right, out);
-    return out;
-  }
-
-  function collectSplits(node, out=[]) {
-    if (!node || node.leaf) return out;
-    out.push(node);
-    collectSplits(node.left, out);
-    collectSplits(node.right, out);
-    return out;
-  }
-
-  // Return set of visited leaf ids, current best dist
-  function queryKd(node, q, best) {
-    if (!node) return;
-    if (node.leaf) {
-      node._visited = true;
-      for (const p of node.pts) {
-        const d = Math.hypot(p[0] - q[0], p[1] - q[1]);
-        if (d < best.d) { best.d = d; best.p = p; }
-      }
+  function leaves(n, out = []) { if (n.leaf) out.push(n); else { leaves(n.left, out); leaves(n.right, out); } return out; }
+  function splits(n, out = []) { if (!n.leaf) { out.push(n); splits(n.left, out); splits(n.right, out); } return out; }
+  // exact 1-NN: descend to the query's leaf first, open the other side only if the split is closer than the best so far
+  function search(n, q, best) {
+    if (n.leaf) {
+      n.visited = true;
+      for (const p of n.pts) { const d = Math.hypot(p[0] - q[0], p[1] - q[1]); if (d < best.d) { best.d = d; best.p = p; } }
       return;
     }
-    const ax = node.axis;
-    const goLeftFirst = q[ax] < node.splitVal;
-    const first = goLeftFirst ? node.left : node.right;
-    const second = goLeftFirst ? node.right : node.left;
-    queryKd(first, q, best);
-    // Prune check: can second subtree be closer?
-    const gap = Math.abs(q[ax] - node.splitVal);
-    if (gap < best.d) {
-      queryKd(second, q, best);
-    } else {
-      // mark second subtree as pruned
-      markPruned(second);
-    }
-  }
-  function markPruned(node) {
-    if (!node) return;
-    if (node.leaf) { node._pruned = true; return; }
-    markPruned(node.left); markPruned(node.right);
-  }
-
-  function toX(p) { return 20 + p[0] * (W - 40); }
-  function toY(p) { return 20 + p[1] * (H - 40); }
-
-  const svg = d3.select(svgEl);
-
-  function layout() {
-    W = container.clientWidth - 48;
-    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svgEl.setAttribute("width", W);
-    svgEl.setAttribute("height", H);
+    const near = q[n.axis] < n.split ? n.left : n.right, far = near === n.left ? n.right : n.left;
+    search(near, q, best);
+    if (Math.abs(q[n.axis] - n.split) < best.d) search(far, q, best);
   }
 
   function draw() {
     svg.selectAll("*").remove();
-    // Background
-    svg.append("rect").attr("x", 10).attr("y", 10)
-      .attr("width", W - 20).attr("height", H - 20)
-      .attr("fill", "#fafafa").attr("stroke", "var(--border)").attr("rx", 4);
-
-    // Build tree
-    const tree = buildKd([...points], 0, { x0: 0, y0: 0, x1: 1, y1: 1 });
-    // Reset visit flags
-    collectLeaves(tree).forEach(l => { l._visited = false; l._pruned = false; });
-    // Run query
+    svg.append("rect").attr("x", pad - 6).attr("y", pad - 6).attr("width", W - 2 * pad + 12).attr("height", H - 2 * pad + 12)
+      .attr("fill", "var(--plot-bg)").attr("stroke", "var(--border)").attr("rx", 4);
+    const tree = build([...points], 0, { x0: 0, y0: 0, x1: 1, y1: 1 });
     const best = { d: Infinity, p: null };
-    queryKd(tree, query, best);
-
-    // Draw leaf regions colored
-    const leaves = collectLeaves(tree);
-    svg.selectAll(".leaf-region").data(leaves).join("rect")
-      .attr("class", "leaf-region")
-      .attr("x", d => toX([d.bbox.x0, 0]))
-      .attr("y", d => toY([0, d.bbox.y0]))
-      .attr("width", d => toX([d.bbox.x1, 0]) - toX([d.bbox.x0, 0]))
-      .attr("height", d => toY([0, d.bbox.y1]) - toY([0, d.bbox.y0]))
-      .attr("fill", d => {
-        if (!showPrune) return "none";
-        if (d._visited) return "rgba(13, 148, 136, 0.12)";
-        if (d._pruned) return "rgba(100, 116, 139, 0.08)";
-        return "none";
-      })
-      .attr("stroke", "none");
-
-    // Draw splits
-    const splits = collectSplits(tree);
-    svg.selectAll(".split").data(splits).join("line")
-      .attr("class", "split")
-      .attr("x1", d => d.axis === 0 ? toX([d.splitVal, 0]) : toX([d.bbox.x0, 0]))
-      .attr("y1", d => d.axis === 0 ? toY([0, d.bbox.y0]) : toY([0, d.splitVal]))
-      .attr("x2", d => d.axis === 0 ? toX([d.splitVal, 0]) : toX([d.bbox.x1, 0]))
-      .attr("y2", d => d.axis === 0 ? toY([0, d.bbox.y1]) : toY([0, d.splitVal]))
-      .attr("stroke", "var(--border)").attr("stroke-width", 1);
-
-    // Frame around leaves that were visited
-    if (showPrune) {
-      svg.selectAll(".leaf-frame").data(leaves.filter(l => l._visited)).join("rect")
-        .attr("class", "leaf-frame")
-        .attr("x", d => toX([d.bbox.x0, 0]))
-        .attr("y", d => toY([0, d.bbox.y0]))
-        .attr("width", d => toX([d.bbox.x1, 0]) - toX([d.bbox.x0, 0]))
-        .attr("height", d => toY([0, d.bbox.y1]) - toY([0, d.bbox.y0]))
-        .attr("fill", "none")
+    search(tree, query, best);
+    const ls = leaves(tree), vis = ls.filter(l => l.visited);
+    if (shade) {
+      svg.selectAll(".leaf").data(vis).join("rect").attr("class", "leaf")
+        .attr("x", d => toX(d.bb.x0)).attr("y", d => toY(d.bb.y0))
+        .attr("width", d => toX(d.bb.x1) - toX(d.bb.x0)).attr("height", d => toY(d.bb.y1) - toY(d.bb.y0))
+        .attr("fill", "var(--c-partition)").attr("fill-opacity", 0.16)
         .attr("stroke", "var(--c-partition)").attr("stroke-width", 1.3);
     }
-
-    // Points
-    svg.selectAll(".pt").data(points).join("circle")
-      .attr("class", "pt")
-      .attr("cx", p => toX(p)).attr("cy", p => toY(p))
+    svg.selectAll(".split").data(splits(tree)).join("line").attr("class", "split")
+      .attr("x1", d => d.axis === 0 ? toX(d.split) : toX(d.bb.x0)).attr("x2", d => d.axis === 0 ? toX(d.split) : toX(d.bb.x1))
+      .attr("y1", d => d.axis === 0 ? toY(d.bb.y0) : toY(d.split)).attr("y2", d => d.axis === 0 ? toY(d.bb.y1) : toY(d.split))
+      .attr("stroke", "var(--text-2)").attr("opacity", 0.35);
+    svg.append("line").attr("x1", toX(query[0])).attr("y1", toY(query[1])).attr("x2", toX(best.p[0])).attr("y2", toY(best.p[1]))
+      .attr("stroke", "var(--c-neighbor)").attr("opacity", 0.8);
+    svg.selectAll(".pt").data(points).join("circle").attr("class", "pt")
+      .attr("cx", p => toX(p[0])).attr("cy", p => toY(p[1]))
       .attr("r", p => p === best.p ? 5 : 3)
       .attr("fill", p => p === best.p ? "var(--c-neighbor)" : "var(--c-db)")
-      .attr("opacity", p => p === best.p ? 1 : 0.55);
-
-    // Query + best line
-    if (best.p) {
-      svg.append("line")
-        .attr("x1", toX(query)).attr("y1", toY(query))
-        .attr("x2", toX(best.p)).attr("y2", toY(best.p))
-        .attr("stroke", "var(--c-neighbor)").attr("stroke-width", 1).attr("opacity", 0.6);
-    }
-
-    svg.append("circle")
-      .attr("cx", toX(query)).attr("cy", toY(query)).attr("r", 6)
-      .attr("fill", "var(--c-query)").attr("stroke", "white").attr("stroke-width", 1.5);
-
-    // Stats
-    const visited = leaves.filter(l => l._visited);
-    const visitedPts = visited.reduce((sum, l) => sum + l.pts.length, 0);
-    svg.append("text")
-      .attr("x", 14).attr("y", 24)
-      .attr("font-size", 11).attr("fill", "var(--text-2)")
-      .text(`visited ${visitedPts}/${points.length} points (${Math.round(100*visitedPts/points.length)}%)`);
+      .attr("opacity", p => p === best.p ? 1 : 0.6);
+    svg.append("circle").attr("cx", toX(query[0])).attr("cy", toY(query[1])).attr("r", 6)
+      .attr("fill", "var(--c-query)").attr("stroke", "var(--plot-bg)").attr("stroke-width", 1.5);
+    const seen = vis.reduce((s, l) => s + l.pts.length, 0);
+    const pct = Math.round(100 * seen / N);
+    document.getElementById("kd-readout").innerHTML =
+      `Opened <b>${vis.length}</b> of <b>${ls.length}</b> leaves and measured <b>${seen}</b> of <b>${N}</b> points (<b>${pct}%</b>). The answer is the same one a full scan would give.`;
+    describe(svgEl, `kd-tree over ${N} points split into ${ls.length} leaves. The search for this query opened ${vis.length} leaves and measured ${seen} points, ${pct} percent of the set.`);
   }
-
-  function setQueryFromEvent(event) {
-    const pt = svgEl.getBoundingClientRect();
-    const mx = (event.clientX - pt.left) * (W / pt.width);
-    const my = (event.clientY - pt.top) * (H / pt.height);
-    query = [
-      Math.max(0, Math.min(1, (mx - 20) / (W - 40))),
-      Math.max(0, Math.min(1, (my - 20) / (H - 40))),
-    ];
-    draw();
-  }
-
-  svgEl.addEventListener("pointermove", setQueryFromEvent);
-  svgEl.addEventListener("pointerdown", setQueryFromEvent);
-
-  document.getElementById("kd-depth").addEventListener("input", e => {
-    depthLimit = +e.target.value;
-    document.getElementById("kd-depth-val").textContent = depthLimit;
-    draw();
-  });
-  document.getElementById("kd-prune").addEventListener("change", e => {
-    showPrune = e.target.checked;
-    draw();
-  });
-  document.getElementById("kd-regen").addEventListener("click", () => {
-    seed = Math.floor(Math.random() * 1000);
-    regen();
-    draw();
-  });
-
   regen();
-  const ro = new ResizeObserver(() => { layout(); draw(); });
-  ro.observe(container);
-  layout();
-  draw();
+  responsive(svgEl, w => Math.round(Math.min(380, Math.max(260, w * 0.62))), (w, h) => { W = w; H = h; draw(); });
+  placeQuery(svgEl, (x, y) => [clamp01((x - pad) / (W - 2 * pad)), clamp01((y - pad) / (H - 2 * pad))], () => query, q => { query = q; draw(); });
+  document.getElementById("kd-depth").addEventListener("input", e => { depthLimit = +e.target.value; document.getElementById("kd-depth-val").textContent = depthLimit; draw(); });
+  document.getElementById("kd-prune").addEventListener("change", e => { shade = e.target.checked; draw(); });
+  document.getElementById("kd-regen").addEventListener("click", () => { seed = (seed * 31 + 11) % 1000; regen(); draw(); });
 })();
 
 // ============================================================
-// Figure 3: Volume concentration — schematic + chart
+// Figure 3: share of a cube's volume inside its inscribed ball
 // ============================================================
 (function() {
-  const schematicEl = document.getElementById("vol-schematic");
-  const chartEl = document.getElementById("vol-chart");
-
-  // Gamma function approximation (Stirling)
+  const schEl = document.getElementById("vol-schematic"), chEl = document.getElementById("vol-chart");
+  // log Gamma (Lanczos), so the ratio is computed, not tabulated
   function lgamma(x) {
-    const c = [76.18009172947146, -86.50532032941677, 24.01409824083091,
-               -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
-    let y = x, t = x + 5.5;
-    t -= (x + 0.5) * Math.log(t);
+    const c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+    let y = x, t = x + 5.5; t -= (x + 0.5) * Math.log(t);
     let ser = 1.000000000190015;
     for (let j = 0; j < 6; j++) ser += c[j] / ++y;
     return -t + Math.log(2.5066282746310005 * ser / x);
   }
-  // V_ball(radius=1) / V_cube(side=2) in d-dim
-  // V_ball = pi^(d/2) / Gamma(d/2 + 1)
-  // V_cube = 2^d
-  function volRatio(d) {
-    const logVball = (d/2) * Math.log(Math.PI) - lgamma(d/2 + 1);
-    const logVcube = d * Math.log(2);
-    return Math.exp(logVball - logVcube);
+  const ratio = d => Math.exp((d / 2) * Math.log(Math.PI) - lgamma(d / 2 + 1) - d * Math.log(2));
+  let d = 10;
+  const share = r => r >= 0.01 ? `${(100 * r).toFixed(1)}%` : r >= 1e-4 ? `${(100 * r).toFixed(3)}%` : `1 part in ${d3.format(",.0f")(+(1 / r).toPrecision(2))}`;
+
+  function drawSch(W, H) {
+    const svg = d3.select(schEl); svg.selectAll("*").remove();
+    const s = Math.min(W, H) - 12, x0 = (W - s) / 2, y0 = (H - s) / 2;
+    svg.append("rect").attr("x", x0).attr("y", y0).attr("width", s).attr("height", s)
+      .attr("fill", "var(--plot-bg)").attr("stroke", "var(--c-db)").attr("stroke-width", 1.5);
+    // disc area / square area = ratio
+    const r = s * Math.sqrt(ratio(d) / Math.PI);
+    svg.append("circle").attr("cx", W / 2).attr("cy", H / 2).attr("r", Math.max(r, 0.6))
+      .attr("fill", "var(--c-query)").attr("fill-opacity", 0.3).attr("stroke", "var(--c-query)").attr("stroke-width", 1.5);
+    describe(schEl, `Square with a disc whose area is ${share(ratio(d))} of the square, the share of a ${d}-dimensional cube inside its inscribed ball.`);
   }
-
-  // Schematic
-  const sW = 180, sH = 180;
-  const schSvg = d3.select(schematicEl).append("svg")
-    .attr("viewBox", `0 0 ${sW} ${sH}`).attr("width", "100%").style("max-width", "220px").style("display", "block");
-
-  // Chart
-  const cW = 320, cH = 200;
-  const chSvg = d3.select(chartEl).append("svg")
-    .attr("viewBox", `0 0 ${cW} ${cH}`).attr("width", "100%").style("display", "block");
-
-  // Chart setup
-  const margin = { top: 14, right: 12, bottom: 32, left: 48 };
-  const iw = cW - margin.left - margin.right;
-  const ih = cH - margin.top - margin.bottom;
-  const xS = d3.scaleLinear().domain([1, 20]).range([0, iw]);
-  const yS = d3.scaleLog().domain([1e-10, 1]).range([ih, 0]);
-
-  const chartG = chSvg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
-
-  // Axes
-  chartG.append("g")
-    .attr("transform", `translate(0,${ih})`)
-    .call(d3.axisBottom(xS).ticks(6).tickSize(-ih).tickFormat(d => d))
-    .call(g => g.selectAll(".tick line").attr("stroke", "#eee"))
-    .call(g => g.selectAll(".tick text").attr("fill", "var(--text-2)").attr("font-size", 10));
-  chartG.append("g")
-    .call(d3.axisLeft(yS).ticks(5).tickSize(-iw).tickFormat(d3.format(".0e")))
-    .call(g => g.selectAll(".tick line").attr("stroke", "#eee"))
-    .call(g => g.selectAll(".tick text").attr("fill", "var(--text-2)").attr("font-size", 10))
-    .call(g => g.selectAll(".domain").attr("stroke", "var(--border)"));
-  chartG.append("text")
-    .attr("x", iw / 2).attr("y", ih + 26).attr("text-anchor", "middle")
-    .attr("font-size", 11).attr("fill", "var(--text-2)").text("dimension d");
-  chartG.append("text")
-    .attr("transform", `translate(-36,${ih/2}) rotate(-90)`).attr("text-anchor", "middle")
-    .attr("font-size", 11).attr("fill", "var(--text-2)").text("V_ball / V_cube");
-
-  // Curve
-  const ds = d3.range(1, 21);
-  const line = d3.line().x(d => xS(d)).y(d => yS(volRatio(d)));
-  chartG.append("path").attr("fill", "none").attr("stroke", "var(--c-query)")
-    .attr("stroke-width", 2).attr("d", line(ds));
-
-  // Dots
-  chartG.selectAll(".dot").data(ds).join("circle")
-    .attr("cx", d => xS(d)).attr("cy", d => yS(volRatio(d)))
-    .attr("r", 2).attr("fill", "var(--c-query)").attr("opacity", 0.6);
-
-  // Marker for current d
-  const marker = chartG.append("circle").attr("r", 5).attr("fill", "var(--c-query)")
-    .attr("stroke", "white").attr("stroke-width", 2);
-
-  function update(d) {
-    // Schematic
-    schSvg.selectAll("*").remove();
-    const cx = sW/2, cy = sH/2, boxSide = 130;
-    const ratio = volRatio(d);
-    // Cube (square)
-    schSvg.append("rect")
-      .attr("x", cx - boxSide/2).attr("y", cy - boxSide/2)
-      .attr("width", boxSide).attr("height", boxSide)
-      .attr("fill", "#f8fafc").attr("stroke", "#94a3b8").attr("stroke-width", 1.5);
-    // Ball radius: max = boxSide/2 (d=2). Scale as sqrt(ratio / ratio_at_d_2)
-    const baseR = boxSide / 2;
-    const ratio2 = volRatio(2);
-    const rPx = baseR * Math.sqrt(Math.max(ratio, 1e-12) / ratio2);
-    schSvg.append("circle")
-      .attr("cx", cx).attr("cy", cy).attr("r", rPx)
-      .attr("fill", "rgba(219, 39, 119, 0.18)")
-      .attr("stroke", "var(--c-query)").attr("stroke-width", 1.5);
-    // Label
-    schSvg.append("text")
-      .attr("x", cx).attr("y", sH - 8).attr("text-anchor", "middle")
-      .attr("font-size", 12).attr("fill", "var(--text-2)")
-      .text(`d = ${d}, ratio ≈ ${ratio.toExponential(2)}`);
-
-    // Chart marker
-    marker.attr("cx", xS(d)).attr("cy", yS(volRatio(d)));
+  function drawChart(W, H) {
+    const svg = d3.select(chEl); svg.selectAll("*").remove();
+    const m = { top: 12, right: 14, bottom: 40, left: 58 }, iw = W - m.left - m.right, ih = H - m.top - m.bottom;
+    const g = svg.append("g").attr("transform", `translate(${m.left},${m.top})`);
+    const x = d3.scaleLinear().domain([1, 20]).range([0, iw]);
+    const y = d3.scaleLog().domain([1e-8, 1]).range([ih, 0]);
+    g.append("g").attr("transform", `translate(0,${ih})`).call(d3.axisBottom(x).tickValues([1, 5, 10, 15, 20]).tickSize(-ih))
+      .call(a => a.selectAll("line").attr("stroke", "var(--grid)")).call(a => a.select(".domain").attr("stroke", "var(--border)"));
+    const labels = { 1: "100%", 0.01: "1%", 0.0001: "0.01%", 0.000001: "1 in 1M", 0.00000001: "1 in 100M" };
+    g.append("g").call(d3.axisLeft(y).tickValues([1, 1e-2, 1e-4, 1e-6, 1e-8]).tickFormat(v => labels[v]).tickSize(-iw))
+      .call(a => a.selectAll("line").attr("stroke", "var(--grid)")).call(a => a.select(".domain").attr("stroke", "var(--border)"));
+    g.selectAll(".tick text").attr("font-size", 13).attr("fill", "var(--text-2)");
+    g.append("text").attr("x", iw / 2).attr("y", ih + 34).attr("text-anchor", "middle").text("dimension d");
+    const ds = d3.range(1, 21);
+    g.append("path").attr("fill", "none").attr("stroke", "var(--c-query)").attr("stroke-width", 2)
+      .attr("d", d3.line().x(v => x(v)).y(v => y(ratio(v)))(ds));
+    g.selectAll(".dot").data(ds).join("circle").attr("cx", v => x(v)).attr("cy", v => y(ratio(v))).attr("r", 2.5).attr("fill", "var(--c-query)");
+    g.append("circle").attr("cx", x(d)).attr("cy", y(ratio(d))).attr("r", 6).attr("fill", "var(--c-query)").attr("stroke", "var(--fig-bg)").attr("stroke-width", 2);
+    describe(chEl, "Line chart, log scale: share of the cube inside the ball falls from 100% at d = 1 to " + share(ratio(20)) + " at d = 20.");
   }
-
-  document.getElementById("vol-d").addEventListener("input", e => {
-    const d = +e.target.value;
+  const r1 = responsive(schEl, w => Math.min(w, 230), drawSch);
+  const r2 = responsive(chEl, () => 230, drawChart);
+  function update() {
     document.getElementById("vol-d-val").textContent = d;
-    update(d);
-  });
-  update(2);
+    document.getElementById("vol-readout").innerHTML = `At d = <b>${d}</b> the inscribed ball holds <b>${share(ratio(d))}</b> of the cube's volume.`;
+    r1(); r2();
+  }
+  document.getElementById("vol-d").addEventListener("input", e => { d = +e.target.value; update(); });
+  update();
 })();
 
 // ============================================================
-// Figure 4: Distance concentration histogram
+// Figure 4: pairwise distances concentrate as d grows
 // ============================================================
 (function() {
   const svgEl = document.getElementById("dist-svg");
-  const container = svgEl.parentElement;
-  let W = 0, H = 280;
-
-  let d = 2, n = 200;
-
-  function sample(d_, n_) {
-    const rng = mulberry32(19);
-    const pts = [];
-    for (let i = 0; i < n_; i++) {
-      const v = new Float32Array(d_);
-      for (let j = 0; j < d_; j++) v[j] = rng();
-      pts.push(v);
-    }
-    // Pairwise distances (sample up to 5000 pairs to bound cost)
-    const dists = [];
-    const maxPairs = 5000;
-    let pairCount = 0;
-    outer: for (let i = 0; i < n_; i++) {
-      for (let j = i + 1; j < n_; j++) {
-        let s = 0;
-        for (let k = 0; k < d_; k++) {
-          const diff = pts[i][k] - pts[j][k];
-          s += diff * diff;
-        }
-        dists.push(Math.sqrt(s));
-        if (++pairCount >= maxPairs) break outer;
-      }
-    }
-    return dists;
-  }
-
   const svg = d3.select(svgEl);
-
-  function layout() {
-    W = container.clientWidth - 48;
-    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svgEl.setAttribute("width", W);
-    svgEl.setAttribute("height", H);
+  const DIMS = [2, 3, 5, 10, 20, 50, 100, 200, 500, 1000], N = 300, XMAX = 2.8, BINS = 70;
+  let di = 6;
+  const cache = new Map();
+  // all N(N-1)/2 pairwise distances between N uniform points in [0,1]^d
+  function stats(d) {
+    if (cache.has(d)) return cache.get(d);
+    const rng = mulberry32(19 + d);
+    const pts = Array.from({ length: N }, () => Float64Array.from({ length: d }, () => rng()));
+    const ds = [];
+    for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) ds.push(Math.sqrt(d2(pts[i], pts[j])));
+    const mean = d3.mean(ds), min = d3.min(ds), max = d3.max(ds);
+    const counts = new Array(BINS).fill(0);
+    for (const v of ds) { const b = Math.min(BINS - 1, Math.floor(v / mean / XMAX * BINS)); counts[b]++; }
+    const peak = d3.max(counts);
+    const s = { d, mean, min, max, hist: counts.map(c => c / peak) };
+    cache.set(d, s); return s;
   }
-
-  function draw() {
+  function draw(W, H) {
     svg.selectAll("*").remove();
-    const dists = sample(d, n);
-    const min = d3.min(dists), max = d3.max(dists), mean = d3.mean(dists);
-    const ratio = (max - min) / mean;
-
-    const margin = { top: 48, right: 24, bottom: 36, left: 48 };
-    const iw = W - margin.left - margin.right;
-    const ih = H - margin.top - margin.bottom;
-    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
-
-    // X-scale: always [0, sqrt(d)] so you can see the shift
-    const xMax = Math.sqrt(d);
-    const xS = d3.scaleLinear().domain([0, xMax]).range([0, iw]);
-    const bins = d3.bin().domain([0, xMax]).thresholds(40)(dists);
-    const yMax = d3.max(bins, b => b.length);
-    const yS = d3.scaleLinear().domain([0, yMax]).range([ih, 0]);
-
-    // Axes
-    g.append("g").attr("transform", `translate(0,${ih})`)
-      .call(d3.axisBottom(xS).ticks(6))
-      .call(g => g.selectAll(".tick text").attr("fill", "var(--text-2)").attr("font-size", 10))
-      .call(g => g.selectAll(".domain").attr("stroke", "var(--border)"));
-    g.append("text").attr("x", iw/2).attr("y", ih + 28).attr("text-anchor", "middle")
-      .attr("font-size", 11).attr("fill", "var(--text-2)").text("pairwise distance");
-
-    // Bars
-    g.selectAll(".bar").data(bins).join("rect")
-      .attr("x", b => xS(b.x0))
-      .attr("y", b => yS(b.length))
-      .attr("width", b => Math.max(0, xS(b.x1) - xS(b.x0) - 1))
-      .attr("height", b => ih - yS(b.length))
-      .attr("fill", "var(--c-query)").attr("opacity", 0.75);
-
-    // Min/max ticks
-    [{ v: min, label: "min", col: "var(--c-neighbor)" },
-     { v: max, label: "max", col: "var(--c-db)" }].forEach(o => {
-      g.append("line")
-        .attr("x1", xS(o.v)).attr("x2", xS(o.v))
-        .attr("y1", 0).attr("y2", ih)
-        .attr("stroke", o.col).attr("stroke-width", 1).attr("stroke-dasharray", "3 3");
-      g.append("text")
-        .attr("x", xS(o.v)).attr("y", -4)
-        .attr("text-anchor", "middle").attr("font-size", 10).attr("fill", o.col)
-        .text(o.label);
+    const d = DIMS[di], cur = stats(d), ref = stats(2);
+    const m = { top: 24, right: 12, bottom: 42, left: 12 }, iw = W - m.left - m.right, ih = H - m.top - m.bottom;
+    const g = svg.append("g").attr("transform", `translate(${m.left},${m.top})`);
+    const x = d3.scaleLinear().domain([0, XMAX]).range([0, iw]);
+    const y = d3.scaleLinear().domain([0, 1]).range([ih, 0]);
+    g.append("rect").attr("width", iw).attr("height", ih).attr("fill", "var(--plot-bg)");
+    g.append("g").attr("transform", `translate(0,${ih})`).call(d3.axisBottom(x).tickValues([0, 0.5, 1, 1.5, 2, 2.5]).tickFormat(v => v === 1 ? "mean" : v + "×"))
+      .call(a => a.select(".domain").attr("stroke", "var(--border)")).call(a => a.selectAll("line").attr("stroke", "var(--border)"))
+      .selectAll("text").attr("font-size", 13).attr("fill", "var(--text-2)");
+    g.append("text").attr("x", iw / 2).attr("y", ih + 36).attr("text-anchor", "middle").text("pairwise distance, relative to the mean");
+    const bw = iw / BINS;
+    const bars = (s, color, op) => g.append("g").selectAll("rect").data(s.hist).join("rect")
+      .attr("x", (v, i) => i * bw).attr("width", Math.max(1, bw - 0.5)).attr("y", v => y(v)).attr("height", v => ih - y(v))
+      .attr("fill", color).attr("opacity", op);
+    bars(ref, "var(--c-db)", 0.35);
+    if (d !== 2) bars(cur, "var(--c-query)", 0.8);
+    [["closest", cur.min / cur.mean, "end"], ["farthest", cur.max / cur.mean, "start"]].forEach(([label, v, anchor]) => {
+      g.append("line").attr("x1", x(v)).attr("x2", x(v)).attr("y1", -6).attr("y2", ih).attr("stroke", "var(--text)").attr("stroke-dasharray", "4 3");
+      g.append("text").attr("x", x(v) + (anchor === "end" ? -5 : 5)).attr("y", -8).attr("text-anchor", anchor).attr("fill", "var(--text)").text(label);
     });
-
-    // Ratio text
-    svg.append("text")
-      .attr("x", margin.left).attr("y", 20)
-      .attr("font-size", 13).attr("font-weight", 600).attr("fill", "var(--text)")
-      .text(`(d_max − d_min) / d_mean = ${ratio.toFixed(3)}`);
-    svg.append("text")
-      .attr("x", margin.left).attr("y", 36)
-      .attr("font-size", 11).attr("fill", "var(--text-2)")
-      .text(d > 20 ? "nearest and farthest have nearly the same distance" :
-            d > 5 ? "distances are tightening around the mean" :
-            "distances are spread widely");
-  }
-
-  document.getElementById("dist-d").addEventListener("input", e => {
-    d = +e.target.value;
+    const pct = s => Math.round(100 * s.min / s.max);
     document.getElementById("dist-d-val").textContent = d;
-    draw();
-  });
-  document.getElementById("dist-n").addEventListener("input", e => {
-    n = +e.target.value;
-    document.getElementById("dist-n-val").textContent = n;
-    draw();
-  });
-
-  const ro = new ResizeObserver(() => { layout(); draw(); });
-  ro.observe(container);
-  layout();
-  draw();
+    document.getElementById("dist-readout").innerHTML =
+      `d = <b>${d}</b>: distances run from <b>${cur.min.toFixed(2)}</b> to <b>${cur.max.toFixed(2)}</b> around a mean of <b>${cur.mean.toFixed(2)}</b>. ` +
+      `The closest pair is <b>${pct(cur)}%</b> as far apart as the farthest pair` + (d === 2 ? "." : `; at d = 2 it is <b>${pct(ref) < 1 ? "under 1" : pct(ref)}%</b>.`);
+    describe(svgEl, `Histograms of pairwise distance relative to the mean. At d = 2 distances spread from near zero to ${ (ref.max / ref.mean).toFixed(1)} times the mean. At d = ${d} they run from ${(cur.min / cur.mean).toFixed(2)} to ${(cur.max / cur.mean).toFixed(2)} times the mean.`);
+  }
+  const redraw = responsive(svgEl, w => w < 480 ? 250 : 290, draw);
+  document.getElementById("dist-d").addEventListener("input", e => { di = +e.target.value; redraw(); });
 })();
 
 // ============================================================
-// Figure 5: kd-tree pruning effectiveness vs dimension
+// Figure 5: how much of the data an exact kd-tree search examines, by dimension (measured here)
 // ============================================================
 (function() {
   const svgEl = document.getElementById("kd-fail-svg");
-  const container = svgEl.parentElement;
-  let W = 0, H = 240;
-
   const svg = d3.select(svgEl);
+  const N = 2000, LEAF = 8, NQ = 30, DIMS = [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 24, 32];
 
-  function layout() {
-    W = container.clientWidth - 48;
-    svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svgEl.setAttribute("width", W);
-    svgEl.setAttribute("height", H);
+  function build(pts, idx, depth) {
+    if (idx.length <= LEAF) return { leaf: true, idx };
+    const ax = depth % pts[0].length;
+    idx.sort((a, b) => pts[a][ax] - pts[b][ax]);
+    const mid = idx.length >> 1;
+    return { ax, split: pts[idx[mid]][ax], left: build(pts, idx.slice(0, mid), depth + 1), right: build(pts, idx.slice(mid), depth + 1) };
   }
-
-  // Empirical-ish curve for fraction of points examined by kd-tree
-  // Monotonic: ~1/log(N) at d=2, approaches 1 by d~=20
-  function fracExamined(d, N = 10000) {
-    if (d <= 1) return 0.002;
-    const t = (d - 1) / 20;
-    const asymptote = 1;
-    return 0.005 + (asymptote - 0.005) * (1 - Math.exp(-3.2 * t));
+  // Exact 1-NN. rd is the squared distance from the query to the current region,
+  // accumulated over every axis that has been split on the way down (the standard kd-tree bound).
+  function examined(root, pts, q) {
+    let best = Infinity, count = 0;
+    const off = new Float64Array(q.length);
+    (function rec(node, rd) {
+      if (node.leaf) { for (const i of node.idx) { count++; const d = d2(pts[i], q); if (d < best) best = d; } return; }
+      const diff = q[node.ax] - node.split;
+      const near = diff < 0 ? node.left : node.right, far = diff < 0 ? node.right : node.left;
+      rec(near, rd);
+      const old = off[node.ax], nrd = rd - old * old + diff * diff;
+      if (nrd < best) { off[node.ax] = diff; rec(far, nrd); off[node.ax] = old; }
+    })(root, 0);
+    return count;
   }
-
-  function draw() {
-    svg.selectAll("*").remove();
-    const margin = { top: 20, right: 160, bottom: 40, left: 60 };
-    const iw = W - margin.left - margin.right;
-    const ih = H - margin.top - margin.bottom;
-    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
-
-    const ds = d3.range(1, 51);
-    const xS = d3.scaleLinear().domain([1, 50]).range([0, iw]);
-    const yS = d3.scaleLinear().domain([0, 1]).range([ih, 0]);
-
-    // Axes
-    g.append("g").attr("transform", `translate(0,${ih})`)
-      .call(d3.axisBottom(xS).ticks(6))
-      .call(g => g.selectAll(".tick text").attr("fill", "var(--text-2)").attr("font-size", 10))
-      .call(g => g.selectAll(".domain").attr("stroke", "var(--border)"));
-    g.append("g")
-      .call(d3.axisLeft(yS).ticks(5).tickFormat(d3.format(".0%")))
-      .call(g => g.selectAll(".tick text").attr("fill", "var(--text-2)").attr("font-size", 10))
-      .call(g => g.selectAll(".domain").attr("stroke", "var(--border)"));
-    g.append("text").attr("x", iw/2).attr("y", ih + 30).attr("text-anchor", "middle")
-      .attr("font-size", 11).attr("fill", "var(--text-2)").text("dimension d");
-    g.append("text")
-      .attr("transform", `translate(-46,${ih/2}) rotate(-90)`).attr("text-anchor", "middle")
-      .attr("font-size", 11).attr("fill", "var(--text-2)").text("fraction of data examined");
-
-    // Area fill (danger zone)
-    const area = d3.area().x(d => xS(d))
-      .y0(yS(0)).y1(d => yS(fracExamined(d)));
-    g.append("path").datum(ds)
-      .attr("fill", "var(--c-query)").attr("opacity", 0.1).attr("d", area);
-
-    // Line
-    const line = d3.line().x(d => xS(d)).y(d => yS(fracExamined(d)));
-    g.append("path").datum(ds).attr("fill", "none").attr("stroke", "var(--c-query)")
-      .attr("stroke-width", 2).attr("d", line);
-
-    // Threshold: linear scan
-    g.append("line").attr("x1", 0).attr("x2", iw).attr("y1", yS(1)).attr("y2", yS(1))
-      .attr("stroke", "var(--c-db)").attr("stroke-dasharray", "4 3").attr("stroke-width", 1);
-    g.append("text").attr("x", iw - 4).attr("y", yS(1) - 4).attr("text-anchor", "end")
-      .attr("font-size", 10).attr("fill", "var(--c-db)").text("linear scan");
-
-    // Annotations
-    const annSpot = (dVal, text, off) => {
-      const px = xS(dVal), py = yS(fracExamined(dVal));
-      g.append("circle").attr("cx", px).attr("cy", py).attr("r", 3).attr("fill", "var(--c-query)");
-      g.append("text").attr("x", px + off[0]).attr("y", py + off[1])
-        .attr("font-size", 11).attr("fill", "var(--text-2)").text(text);
-    };
-    annSpot(2, "2D: ~0.5% examined", [6, -8]);
-    annSpot(15, "d=15: already 95%", [8, -6]);
-
-    // Side note
-    const side = svg.append("g").attr("transform", `translate(${margin.left + iw + 14},${margin.top + 20})`);
-    side.append("text").attr("font-size", 11).attr("font-weight", 600)
-      .attr("fill", "var(--text)").text("Pruning test:");
-    const lines = [
-      "if |q[axis] − split| > r,",
-      "skip the subtree.",
-      "",
-      "In high d, r is nearly",
-      "fixed and split gaps are",
-      "small. Almost nothing",
-      "meets the test."
-    ];
-    lines.forEach((t, i) => {
-      side.append("text").attr("y", 18 + i * 15).attr("font-size", 11)
-        .attr("fill", "var(--text-2)").text(t);
+  function measure() {
+    return DIMS.map(D => {
+      const rng = mulberry32(5 + D);
+      const pts = Array.from({ length: N }, () => Float64Array.from({ length: D }, () => rng()));
+      const root = build(pts, pts.map((_, i) => i), 0);
+      let sum = 0;
+      for (let t = 0; t < NQ; t++) sum += examined(root, pts, Float64Array.from({ length: D }, () => rng())) / N;
+      return { D, frac: sum / NQ };
     });
   }
-
-  const ro = new ResizeObserver(() => { layout(); draw(); });
-  ro.observe(container);
-  layout();
-  draw();
+  let data = null;
+  function draw(W, H) {
+    svg.selectAll("*").remove();
+    const m = { top: 16, right: 16, bottom: 42, left: 48 }, iw = W - m.left - m.right, ih = H - m.top - m.bottom;
+    const g = svg.append("g").attr("transform", `translate(${m.left},${m.top})`);
+    const x = d3.scaleLinear().domain([1, 32]).range([0, iw]);
+    const y = d3.scaleLinear().domain([0, 1]).range([ih, 0]);
+    g.append("g").attr("transform", `translate(0,${ih})`).call(d3.axisBottom(x).tickValues([1, 4, 8, 12, 16, 20, 24, 32]))
+      .call(a => a.select(".domain").attr("stroke", "var(--border)")).call(a => a.selectAll("line").attr("stroke", "var(--border)"));
+    g.append("g").call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0%")).tickSize(-iw))
+      .call(a => a.select(".domain").remove()).call(a => a.selectAll("line").attr("stroke", "var(--grid)"));
+    g.selectAll(".tick text").attr("font-size", 13).attr("fill", "var(--text-2)");
+    g.append("text").attr("x", iw / 2).attr("y", ih + 36).attr("text-anchor", "middle").text("dimension d");
+    g.append("text").attr("x", iw).attr("y", y(1) + 16).attr("text-anchor", "end").text("100% = a full scan");
+    if (!data) { g.append("text").attr("x", iw / 2).attr("y", ih / 2).attr("text-anchor", "middle").text("measuring…"); return; }
+    g.append("path").datum(data).attr("fill", "var(--c-query)").attr("opacity", 0.12)
+      .attr("d", d3.area().x(o => x(o.D)).y0(y(0)).y1(o => y(o.frac)));
+    g.append("path").datum(data).attr("fill", "none").attr("stroke", "var(--c-query)").attr("stroke-width", 2)
+      .attr("d", d3.line().x(o => x(o.D)).y(o => y(o.frac)));
+    g.selectAll(".dot").data(data).join("circle").attr("cx", o => x(o.D)).attr("cy", o => y(o.frac)).attr("r", 3.5).attr("fill", "var(--c-query)");
+    // label three measured points
+    [2, 10, 16].forEach(D => {
+      const o = data.find(v => v.D === D);
+      g.append("text").attr("x", x(D) + (D === 2 ? 4 : -8)).attr("y", y(o.frac) - 9).attr("text-anchor", D === 2 ? "start" : "end")
+        .attr("fill", "var(--text)").text(`d=${D}: ${o.frac < 0.1 ? (100 * o.frac).toFixed(1) : Math.round(100 * o.frac)}%`);
+    });
+  }
+  const redraw = responsive(svgEl, w => w < 480 ? 260 : 280, draw);
+  // measure after first paint so the page does not wait on it
+  setTimeout(() => {
+    data = measure();
+    redraw();
+    const f = D => { const v = data.find(o => o.D === D).frac; return v < 0.1 ? (100 * v).toFixed(1) + "%" : Math.round(100 * v) + "%"; };
+    const half = data.find(o => o.frac > 0.5).D;
+    document.getElementById("kd-fail-readout").innerHTML =
+      `Measured: <b>${f(2)}</b> of the points examined at d = 2, <b>${f(8)}</b> at d = 8, <b>${f(16)}</b> at d = 16, <b>${f(32)}</b> at d = 32. The search passes half of the data at d = <b>${half}</b>.`;
+    describe(svgEl, "Line chart of the share of points a kd-tree search examines by dimension: " + data.map(o => `d ${o.D}: ${Math.round(100 * o.frac)}%`).join(", ") + ".");
+  }, 30);
 })();
 </script>
 </body>

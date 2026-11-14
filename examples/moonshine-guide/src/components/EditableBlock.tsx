@@ -3,6 +3,7 @@ import { fnv1a, useEdit } from '../lib/EditContext'
 import { useFeedback } from '../lib/FeedbackContext'
 import { anchorOffset, type Comment } from '../lib/feedback'
 import SourceEditor from './SourceEditor'
+import SuggestionCards from './SuggestionCards'
 
 // react-markdown hands every component a hast `node`. For block elements
 // that node carries `position` offsets pointing back into the source body
@@ -96,7 +97,14 @@ export default function EditableBlock({ node, children, className, ...rest }: Pr
   // Unaddressed comments anchored inside this block surface as a badge in the
   // right margin. Only top-level blocks carry the badge, so a comment on a
   // paragraph inside a blockquote doesn't render twice (once on each level).
-  const isTopLevel = blocks.some((b) => b.start === start && b.end === end)
+  // (A block whose range starts with a hidden node, such as an HTML comment,
+  // begins after its block's start; the prefix test covers that.)
+  const isTopLevel = blocks.some(
+    (b) =>
+      b.end === end &&
+      (b.start === start ||
+        (b.start < (start as number) && /^\s*[<[]/.test(body.slice(b.start, start as number)))),
+  )
   const open =
     isTopLevel && caps.enabled
       ? comments.filter((c) => {
@@ -107,7 +115,7 @@ export default function EditableBlock({ node, children, className, ...rest }: Pr
         })
       : []
 
-  return createElement(
+  const element = createElement(
     tag,
     {
       ...rest,
@@ -125,6 +133,15 @@ export default function EditableBlock({ node, children, className, ...rest }: Pr
     },
     children,
     open.length > 0 && <CommentBadge key="mn-comments" open={open} onOpen={() => setHudOpen(true)} />,
+  )
+  if (!isTopLevel) return element
+  // Suggestion cards sit after the block as a chrome sibling (the reorder and
+  // insert layers skip `.mn-chrome` children when mapping DOM to blocks).
+  return (
+    <>
+      {element}
+      <SuggestionCards start={start as number} end={end as number} />
+    </>
   )
 }
 

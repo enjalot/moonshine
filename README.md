@@ -34,10 +34,11 @@ While `npm run dev` runs, the rendered article is itself the editing surface, fo
 - **Edit prose in place.** Cmd/Ctrl+click any block to edit its raw markdown in the page; saves splice back into the `.md` by source offset.
 - **Tune figures with knobs.** Cmd/Ctrl+click a figure to open a panel generated from its `DEFAULTS`; "Save to markdown" writes the tweaked values into the directive's attributes.
 - **Reorder sections.** Cmd/Ctrl+drag any block (or use ↑/↓ in the editor) to move it: the block lifts and the others slide apart to show where it lands, and the markdown is rewritten.
-- **Arrange diagrams.** The agent declares a diagram as a small spec (nodes, edges, groups); the author arranges it, and can change its boxes and arrows, in a dev-only direct-manipulation editor (labels edited in place, drag-to-connect, draggable arrow ends, alignment guides, auto-layout, notes, a reader frame, a separate narrow arrangement for phones), and readers get a live SVG diagram whose labels never render below 13px. The editor's gestures are declarative drags: an arrow's end re-routes live to the nearest side of any box, boxes join a group by being dropped in it, labels slide along their arrows, and undo animates. Regenerating the spec never clobbers the arrangement.
+- **Arrange diagrams.** The agent declares a diagram as a small spec (nodes, edges, groups); the author arranges it, and can change its boxes and arrows, in a dev-only direct-manipulation editor (labels edited in place, drag-to-connect, draggable arrow ends, alignment guides, auto-layout, notes, a reader frame, a separate narrow arrangement for phones), and readers get a live SVG diagram whose node labels never render below 13px. A node can be a labelled box or an icon tile (a built-in glyph, any Tabler icon, or an emoji) with its name beside it; links take a colour family and arrowheads at either end or both, and their labels carry direction marks; groups can be outlined, tinted, dashed or marked at the corners. `/moonshine:diagram` holds the design rules, and the template's Diagrams page shows the range. The editor's gestures are declarative drags: an arrow's end re-routes live to the nearest side of any box, boxes join a group by being dropped in it, labels slide along their arrows, and undo animates. Regenerating the spec never clobbers the arrangement.
 - **Draggable figures.** Figures that readers drag are built with [declarative dragging](https://declarative-dragging.github.io) (Dragology): a figure says which states dragging an element can reach, and the library works out the motion. Readers can drag outputs (a point on a computed path) and watch the inputs follow; the example article shows how.
 - **Add content with "+".** Hover between blocks to insert text, a diagram (built in the same editor), or an uploaded image straight into the markdown; 💬 on it asks the agent to adjust it.
 - **Git as shared memory.** Every browser save auto-commits with a `moonshine-edit:` prefix, so the agent can see exactly what the author changed and build around their words.
+- **Suggestions from the agent.** The agent (an editing pass, `/moonshine:critique`) can leave proposed changes on the article instead of making them. Each shows under its passage as a word-level diff with **Accept**, **Edit** and **Reject**; a remark with no replacement can be sent back to the agent as a comment. The HUD toggles them and can accept or reject all.
 - **Comments back to the agent.** The 💬 affordance sends feedback ("this is too hand-wavy") into `.feedback/` files that the agent picks up at turn boundaries (Stop hook) or via the idle listener (`/moonshine:moonshine-listen`).
 
 All of it is dev-only: `vite build` produces a plain, read-only static page with none of the editing machinery in the bundle.
@@ -67,6 +68,7 @@ ln -s /tmp/moonshine/plugins/moonshine/skills/shine            ~/.codex/skills/s
 ln -s /tmp/moonshine/plugins/moonshine/skills/still            ~/.codex/skills/still
 ln -s /tmp/moonshine/plugins/moonshine/skills/moonshine-listen ~/.codex/skills/moonshine-listen
 ln -s /tmp/moonshine/plugins/moonshine/skills/critique         ~/.codex/skills/critique
+ln -s /tmp/moonshine/plugins/moonshine/skills/diagram          ~/.codex/skills/diagram
 # (use `cp -rL` instead of `ln -s` if you don't want to keep the clone around)
 ```
 
@@ -83,6 +85,7 @@ To develop against your checkout instead, see [DEVELOPING.md](DEVELOPING.md) (sy
 /moonshine:still fourier transforms # start with a topic
 /moonshine:shine fourier transforms # single-file flavor
 /moonshine:critique                 # adversarially review an article (still or shine)
+/moonshine:diagram                  # design a system or process diagram for a still article
 /moonshine:moonshine-listen         # feedback listener (best under /loop)
 ```
 

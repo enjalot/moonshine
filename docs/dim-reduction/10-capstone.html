@@ -9,38 +9,129 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
+  color-scheme: light dark;
   --article-width: 740px;
   --body-font: 'Source Serif 4', Georgia, serif;
   --heading-font: 'Source Sans 3', system-ui, sans-serif;
   --mono-font: 'Source Code Pro', monospace;
-  --body-size: 1.125rem; --line-height: 1.6;
-  --text: #1a1a2e; --text-2: #4a4a6a; --text-3: #8a8a9e;
-  --accent: #2563eb; --accent-light: #dbeafe;
-  --warm: #ea580c; --warm-light: #ffedd5;
-  --green: #059669; --purple: #7c3aed;
-  --bg: #fafafa; --fig-bg: #ffffff;
-  --border: #e2e2e8; --border-2: #c5c5d1; --muted: #e8e8ee;
-  --c0: #2563eb; --c1: #ea580c; --c2: #059669; --c3: #7c3aed;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --text-3: #6b6b82;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --on-accent: #ffffff;
+  --warm: #c2410c;
+  --warm-light: #ffedd5;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+  --border-2: #c5c5d1;
+  --muted: #e8e8ee;
+  /* categorical colours, in the same order in every figure of the series */
+  --c0: #2563eb;
+  --c1: #c2410c;
+  --c2: #047857;
+  --c3: #7c3aed;
+  --c4: #be185d;
 }
-body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e6dd;
+    --text-2: #b9b9cb;
+    --text-3: #9a9ab0;
+    --accent: #60a5fa;
+    --accent-light: #1e3a5f;
+    --on-accent: #10102a;
+    --warm: #fb923c;
+    --warm-light: #4a2a12;
+    --bg: #1a1a2e;
+    --fig-bg: #22223a;
+    --border: #3a3a52;
+    --border-2: #5a5a74;
+    --muted: #2e2e48;
+    --c0: #60a5fa;
+    --c1: #fb923c;
+    --c2: #34d399;
+    --c3: #a78bfa;
+    --c4: #f472b6;
+  }
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
 .article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
-h1, h2 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
 h1 { font-size: 2.4rem; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
 h2 { font-size: 1.4rem; margin: 3rem 0 1rem; }
-h3 { font-family: var(--heading-font); font-size: 1.1rem; font-weight: 700; margin: 2rem 0 0.75rem; }
+h3 { font-size: 1.1rem; margin: 2rem 0 0.75rem; }
 p { margin: 0 0 1rem; }
 a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-em { font-style: italic; } strong { font-weight: 600; }
-.subtitle { font-family: var(--heading-font); font-size: 1.1rem; color: var(--text-2); line-height: 1.45; margin-bottom: 1rem; font-weight: 400; }
-.series-tag { font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+em { font-style: italic; }
+strong { font-weight: 600; }
+.mono { font-family: var(--mono-font); font-size: 0.92em; }
+
+.subtitle { font-family: var(--heading-font); font-size: 1.1rem; color: var(--text-2); line-height: 1.45; margin-bottom: 1.5rem; font-weight: 400; }
+.series-tag { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.5; }
+.figure svg { display: block; width: 100%; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.5; }
 .figure-label { font-weight: 600; color: var(--text); }
+
+.controls { display: flex; align-items: center; gap: 0.6rem 1.25rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); }
+.controls input[type="range"] { width: 150px; max-width: 100%; accent-color: var(--accent); vertical-align: middle; }
+.controls label { display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.controls .value { font-family: var(--mono-font); color: var(--text); min-width: 2ch; display: inline-block; }
+.controls button, .toggle-group button { font-family: var(--heading-font); font-size: 0.875rem; padding: 0.4rem 0.75rem; background: var(--fig-bg); color: var(--text-2); cursor: pointer; }
+.controls > button, .controls label > button { border: 1px solid var(--border-2); border-radius: 4px; }
+.controls button:hover { background: var(--muted); }
+.toggle-group { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--border-2); border-radius: 4px; overflow: hidden; }
+.toggle-group button { border: none; border-right: 1px solid var(--border-2); }
+.toggle-group button:last-child { border-right: none; }
+.toggle-group button.active, .toggle-group button.active:hover { background: var(--accent); color: var(--on-accent); }
+button:focus-visible, input:focus-visible, svg [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.readout { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.5rem; min-height: 1.4em; }
+.readout b { color: var(--text); font-weight: 600; }
+
+svg text { font-family: var(--heading-font); font-size: 13px; fill: var(--text-2); }
+svg .axis text { font-size: 13px; fill: var(--text-2); }
+svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crispEdges; }
+svg .pane-title { font-weight: 700; fill: var(--text); }
+svg .pane-bg { fill: var(--bg); stroke: var(--border); }
+
 .margin-note { font-size: 0.875rem; color: var(--text-2); line-height: 1.5; border-left: 2px solid var(--border-2); padding-left: 0.9rem; margin: 1.25rem 0; }
-svg text { font-family: var(--heading-font); }
-@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure { padding: 1rem; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+
+footer { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); }
+footer a { color: var(--text-2); }
+footer a.next { color: var(--accent); }
+.score-table { width: 100%; border-collapse: collapse; font-family: var(--heading-font); font-size: 0.875rem; margin-top: 1rem; }
+.score-table th { text-align: right; font-weight: 600; color: var(--text-2); padding: 0.3rem 0 0.3rem 0.5rem; vertical-align: bottom; line-height: 1.25; }
+.score-table th:first-child, .score-table td:first-child { text-align: left; padding-left: 0; color: var(--text); font-weight: 600; }
+.score-table td { text-align: right; padding: 0.3rem 0 0.3rem 0.5rem; border-top: 1px solid var(--border); font-family: var(--mono-font); color: var(--text-2); }
+.score-table td:first-child { font-family: var(--heading-font); }
+.score-table td.best { color: var(--text); font-weight: 500; background: var(--accent-light); }
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .figure { padding: 1rem; }
+  .controls input[type="range"] { width: 120px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }
+}
 </style>
 </head>
 <body>
@@ -50,273 +141,638 @@ svg text { font-family: var(--heading-font); }
   <div class="series-tag">Part 10 of 10 · The capstone</div>
   <h1>Opportunities &amp; Open Problems</h1>
   <p class="subtitle">
-    The families we have met each answer a piece of the question "what should a projection preserve?" None of them answers all of it, and the gaps between them are where the useful work still lives.
+    Each family in this series answers part of the question "what should a projection preserve?" None answers all of it. This article puts several of them side by side on one dataset and then looks at what none of them does yet.
   </p>
 </header>
 
 <p>
-  Nine articles of methods, covering about forty years of dimensionality reduction research. Looking back on them as a single landscape, a few patterns stand out. Methods cluster tightly within families; families are defined by what they preserve; and no single family covers everything. Every method has a blind spot, and that blind spot is the start of the next method.
+  The nine articles before this one cover more than a century of methods, most of them from the last forty years. Seen together, the methods group into families by what they preserve, and no family covers everything. Often what one method loses is what the next was built to keep.
 </p>
 
 <p>
-  What follows is not a roadmap for research but a set of observations about where the current methods fall short, especially for the use case that motivated this series: understanding the latent spaces of large machine learning models. The goal here is not to claim novelty; most of these directions have been explored somewhere. The goal is to be honest about what current practice gets you and where it runs out.
+  This article collects observations about where current methods fall short, especially for the use that motivated the series: understanding the latent spaces of large machine learning models. Most of the directions below have been explored somewhere, so we make no claim that they are new. We are trying to say plainly what current practice gets you and where it runs out.
 </p>
 
-<h2>The design space, seen at once</h2>
+<h2>Five methods, one dataset, four measurements</h2>
 
-<div class="figure" id="fig-matrix">
-  <svg id="matrix-svg" width="100%" height="480" viewBox="0 0 680 480" preserveAspectRatio="xMidYMid meet"></svg>
+<p>
+  Article 1 introduced measurements for whether a projection kept what it was supposed to. Figure 1 applies them. The data is six Gaussian clusters in 12 dimensions with very different spreads, the situation of article 6 with more clusters. Each method from the earlier articles embeds it, and each embedding gets four scores.
+</p>
+
+<div class="figure" id="fig-scores">
+  <svg id="scores-svg" role="img" aria-label="Five scatter plots of the same six clusters, embedded by PCA, Isomap, t-SNE, UMAP and densMAP. PCA shows overlapping clusters of visibly different sizes. Isomap shows clusters collapsed into small clumps. t-SNE and UMAP show six separate clusters of similar size. densMAP shows six separate clusters whose sizes differ again. A table below gives four scores for each method."></svg>
+  <div id="scores-table" aria-live="polite"></div>
   <div class="figure-caption">
     <span class="figure-label">Figure 1.</span>
-    A rough sketch of which properties each family prioritizes (filled), handles but does not emphasize (half), or tends to destroy (empty). No method fills every cell. Workflows that need multiple cells filled have to compose several methods or tolerate losses.
+    Six clusters in 12 dimensions, tightest to most diffuse, under five methods run in your browser. Trustworthiness (trust) and continuity (cont.) are computed at 10 neighbors; distances (dist.) is the rank correlation of all pairwise distances; density is the correlation of log local radius, as in article 6. The best score in each column is highlighted, and no row holds all four. PCA keeps distances and most of the density, and overlaps the clusters. t-SNE and UMAP separate every cluster and flatten their sizes. densMAP gets the sizes back at a small cost in trustworthiness. Isomap does badly here for a specific reason: the clusters are far enough apart that its neighbor graph is disconnected, so it has no path lengths between them.
   </div>
 </div>
 
 <p>
-  The matrix makes the tradeoffs concrete. PCA is strong on global linear variance and interpretable components, weak on anything else. t-SNE and UMAP are strong on local neighborhoods, weak on distances and density. Mapper preserves topology well but produces graphs, not scatter plots. Poincaré embeddings are strong on hierarchy, weak on most other things. Learned representations are strong on the objective they are trained on, which is whatever you make it, and weak on the rest.
+  The scores make the trade concrete. A method that wins one column does so by spending the two dimensions of the page on that property, and the others pay for it. On a different dataset the numbers would move, and Isomap in particular would recover on connected data like the swiss roll of article 3, but which column each method does best in would mostly stay the same.
+</p>
+
+<h2>The wider design space</h2>
+
+<p>
+  Figure 2 extends the comparison to all nine families and to properties we did not measure, such as whether new points can be placed without refitting. These ratings are our judgment from the earlier articles and are not computed.
+</p>
+
+<div class="figure" id="fig-matrix">
+  <svg id="matrix-svg" role="img" aria-label="A grid rating nine method families on eight properties as preserved well, partly, or not. Linear methods: global distances, readable axes, new points and scalability rated well. Global-distance methods: distances well. Diffusion methods: neighborhoods well. Neighbor-graph methods: neighborhoods and scalability well. Topology: topology well. Density: neighborhoods, density and scalability well. Grids: readable axes and new points well. Hyperbolic: hierarchy well. Learned: new points and scalability well. No family is rated well on every property."></svg>
+  <div class="figure-caption">
+    <span class="figure-label">Figure 2.</span>
+    Our rating of what each family prioritizes (filled), handles without emphasizing (half), or tends to lose (empty). No row is filled all the way across, so a workflow that needs several properties has to combine methods or accept losses.
+  </div>
+</div>
+
+<p>
+  PCA is strong on global linear variance and readable components and weak on most other things. t-SNE and UMAP are strong on local neighborhoods and weak on distances and density. Mapper preserves topology and produces a graph instead of a scatter plot. Poincaré embeddings are strong on hierarchy. Learned representations are strong on whatever they were trained for.
 </p>
 
 <p>
-  Different tools suit different jobs. It becomes a problem when practitioners treat one method as a default and forget that its defaults are choices. The single most common failure mode, across every ML domain, is reading a UMAP plot as if its global layout were a map. The second most common is running only one method and not cross-checking.
+  Different tools suit different jobs, and trouble starts when one method is treated as a default and its built-in choices are forgotten. The most common failure across ML domains is reading the global layout of a UMAP plot as a map. The second is running one method and never cross-checking it against another.
 </p>
 
 <h2>Evaluation is not solved</h2>
 
 <p>
-  We use trustworthiness, continuity, stress, and Shepard diagrams to tell whether an embedding "preserves structure." Each of these is defined with respect to a particular notion of structure, and none of them captures whether the embedding actually helps a human understand the data. That is a much harder thing to evaluate, and the field is only beginning to think about it seriously.
+  Trustworthiness, continuity, stress, and Shepard diagrams each measure preservation of one kind of structure. None of them measures whether the embedding helps a person understand the data, which is much harder to evaluate and has had far less attention.
 </p>
 
 <p>
-  For understanding ML latent spaces, the evaluation problem is sharper. What does it mean for a projection to "explain" a language model's embedding space? Preservation metrics are necessary but not sufficient. The end user is trying to form mental models: which concepts cluster, which attributes are directions, where the failure modes live. A projection that scores well on trustworthiness can still be useless for these purposes if, for example, it puts meaningful axes at random orientations.
+  For ML latent spaces the gap is wider. It is not obvious what it would mean for a projection to "explain" a language model's embedding space. The person looking at it is trying to form a mental model: which concepts cluster, which attributes are directions, where the failures are. A projection can score well on trustworthiness and still be of little use for that, for example by placing a meaningful axis at an arbitrary angle.
 </p>
 
 <p>
-  Better evaluation likely requires task-specific benchmarks: projections scored by their ability to support specific downstream analyses (concept discovery, anomaly detection, counterfactual reasoning). This is harder than publishing a metric on MNIST. It is also where the most useful progress is likely to come from.
+  Better evaluation probably needs task-specific benchmarks: projections scored by how well they support a particular analysis, such as concept discovery, anomaly detection, or counterfactual reasoning. That is harder to build than a metric reported on MNIST.
 </p>
 
 <h2>Composition is underdeveloped</h2>
 
 <p>
-  In practice, sophisticated workflows chain methods. PCA first, then UMAP. UMAP for visualization, Mapper for topological validation. Autoencoder for compression, then t-SNE on the latent. These compositions are not accidents; they are attempts to fill in each other's gaps. But the composition is almost always ad hoc. There are no principled frameworks for combining methods with different preservation objectives into a single view, and the compositions we do have are chosen by practitioner intuition rather than designed.
+  In practice, workflows chain methods: PCA and then UMAP, UMAP for the picture and Mapper as a check on its topology, an autoencoder for compression and t-SNE on its latent space. Each chain patches one method's gap with another. But the chains are assembled by habit. We know of no principled framework for combining methods with different preservation objectives into one view.
 </p>
 
 <p>
-  A concrete opportunity: a method that jointly optimizes for neighborhood preservation <em>and</em> density preservation <em>and</em> global distance preservation, with user-adjustable weights on each. densMAP is a partial step in this direction (neighborhood + density); PaCMAP is another (neighborhood + global). A full three- or four-property version, with weights that the user can slide, would make the tradeoffs explicit in the UI rather than hidden in the algorithm's defaults.
+  One opportunity is a method that jointly optimizes neighborhood, density, <em>and</em> global distance preservation with weights the user can adjust. densMAP is a step in that direction (neighborhood plus density), and PaCMAP is another (neighborhood plus global structure). A version with three or four terms and sliders for their weights would put the trade-offs of Figure 1 in the interface, where today they are fixed inside each algorithm's defaults.
 </p>
 
 <p>
-  Another concrete opportunity: a method that produces multiple linked views simultaneously, each with a different objective, with the guarantee that points are consistent across views. The Grand Tour from the 1980s is the closest classical analog; a modern reinvention using neural encoders and contrastive objectives is overdue.
+  Another is a method that produces several linked views at once, each with a different objective, with points kept consistent across views. The Grand Tour of the 1980s is the closest classical analog, and we have not seen a modern version built on neural encoders.
 </p>
 
 <h2>Domain-specific priors are underused</h2>
 
 <p>
-  The learned-representation family taught us that matching the likelihood to the data helps a lot. scVI's zero-inflated negative binomial is not glamorous, but it is the difference between a useful embedding and a broken one for count data. Yet outside of biology, domain-specific priors are rare. We run generic UMAP on language model embeddings, on code embeddings, on image embeddings, as if they all had the same structure.
+  The learned-representation family showed that matching the likelihood to the data helps. scVI's zero-inflated negative binomial is what makes its embeddings of count data usable. Outside biology, domain-specific priors are rare. We run the same generic UMAP on language model embeddings, code embeddings, and image embeddings, as if they had the same structure.
 </p>
 
 <p>
-  Language model hidden states have structure we know about: superposition, polysemanticity, token-level features interacting with concept-level features, residual stream direction reuse across layers. A projection method that explicitly modeled this structure (e.g., a learned encoder whose loss rewarded disentangling superposed features) would, in principle, produce better latent visualizations for interpretability research than a generic UMAP. This has not been built. Related ideas from the sparse autoencoder literature gesture at it but stop short of offering a DR workflow around them.
+  Language model hidden states have structure we know something about: superposition, polysemanticity, token-level features interacting with concept-level ones, directions reused across layers. A projection method that modeled this, for example an encoder whose loss rewarded separating superposed features, might produce better views for interpretability research than a generic UMAP. As far as we know nobody has built one. Sparse autoencoders address the separation and have not yet been turned into a dimensionality reduction workflow.
 </p>
 
-<h2>Interactive projections are stuck at 2D scatter plots</h2>
+<h2>Interactive projections are mostly 2D scatter plots</h2>
 
 <p>
-  Most of the methods in this series produce a 2D scatter plot and stop. Interaction, when it exists, is usually "hover to see the label" or "brush to filter." For exploring a latent space, that is a very limited interface. We have seen what Mapper looks like (a graph), what SOMs look like (a grid), what Poincaré embeddings look like (a disk). But the synthesis is missing: we do not routinely build interfaces that let you switch between scatter, graph, grid, and hyperbolic views of the same embedding, linked and updated live.
+  Most methods in this series produce a 2D scatter plot and stop. Interaction, where there is any, is usually hovering for a label or brushing to filter. We have seen what a Mapper graph, a SOM grid, and a Poincaré disk look like, but we do not routinely build interfaces that switch between scatter, graph, grid, and hyperbolic views of the same embedding with the views linked.
 </p>
 
 <p>
-  Tools like latent-scope, Atlas, and the Embedding Projector are early moves in this direction, but they almost all fall back to UMAP or t-SNE for the main view. A more ambitious tool would treat the projection method itself as a first-class object the user can manipulate: pick the preserve-this-not-that priorities, see the projection update, compare views side by side, annotate regions with labels that persist across projections.
+  Tools like latent-scope, Atlas, and the Embedding Projector move in this direction, and most of them rely on UMAP or t-SNE for the main view. A more ambitious tool would let the user manipulate the projection method itself: choose what to preserve, watch the projection update, compare views side by side, and keep annotations attached to points across projections.
 </p>
 
 <div class="margin-note">
-  This is an area where a series of papers has been published at IEEE VIS and TVCG for the last decade, collectively known as the "visual analytics of DR" literature. The ideas are there; the adoption in mainstream ML tools has been slow.
+  The visual analytics literature on dimensionality reduction, published at IEEE VIS and in TVCG over the last decade, has many of these ideas. Adoption in mainstream ML tools has been slow.
 </div>
 
-<h2>Specifically for LLMs and large models</h2>
+<h2>Opportunities specific to large models</h2>
 
 <p>
-  The need is acute for large models. Hidden state dimensions reach into the tens of thousands; training runs produce terabytes of activations; features span superposed, polysemantic directions that do not show up cleanly in any single projection. Generic methods struggle here because the structure we care about is not the structure they preserve.
+  The need is sharpest for large models. Hidden states have thousands of dimensions, training runs produce terabytes of activations, and features are superposed and polysemantic in ways that do not show up cleanly in a single projection. Generic methods struggle because the structure we care about is not the structure they preserve. Four directions seem worth pursuing.
 </p>
 
 <p>
-  Specific opportunities worth considering:
+  <strong>Projections that respect the model's own geometry.</strong> In a transformer's residual stream, <em>directions</em> matter to downstream layers. A projection that treated directions as the objects being projected, in addition to points, would fit how practitioners already think about these spaces. That is closer to ICA than to UMAP, and it is little explored for modern architectures.
 </p>
 
 <p>
-  <strong>Projections that respect the model's own geometry.</strong> A transformer's residual stream has a natural notion of "direction" that matters for downstream layers. A projection that treated directions as first-class objects (projecting directions, not just points) would align better with how practitioners already think about these spaces. This is closer to the ICA side of the world than the UMAP side, and it is underexplored for modern architectures.
+  <strong>Projections across layers.</strong> We rarely look at how one prompt's hidden state changes from layer to layer, partly because few projection methods are designed for sequences of spaces. A method that treated each layer as a time step and produced a consistent 2D trajectory would be useful for interpretability research.
 </p>
 
 <p>
-  <strong>Temporal projections.</strong> We rarely look at how a single prompt's hidden state evolves across layers, because no DR method is designed for that kind of temporal data. A projection that treated each layer as a timestep and produced a consistent 2D trajectory across layers would be immediately useful for interpretability research.
+  <strong>Projections within a subspace.</strong> Large latent spaces have subspaces: some directions encode sentiment, others topic, others syntax. A projection that let the user pick a subspace and project within it, holding the rest fixed, would let researchers examine one feature family without the global structure drowning it out.
 </p>
 
 <p>
-  <strong>Compositional projections.</strong> Large latent spaces have subspaces (certain directions encode sentiment, others encode topic, others syntax). Projections that let you choose a subspace of interest and project within it, with the rest held constant, would let researchers interrogate specific features without drowning in global structure.
+  <strong>Projections integrated with probing.</strong> Today a researcher runs a probe, reads the result, and separately runs UMAP for a picture. A projection that conditioned on probe directions, or was optimized to keep probe-readable structure visible, would join the two steps.
+</p>
+
+<h2>Combinations the families suggest</h2>
+
+<p>
+  Taking each family's main idea and asking what it has not been combined with gives a list of plausible directions.
 </p>
 
 <p>
-  <strong>Projections integrated with probing.</strong> The current interpretability workflow runs a probe, gets a result, and then runs UMAP separately for visualization. Integrating the two — projections that condition on probe directions, or that optimize for preserving probe-readable structure — would tighten the loop.
-</p>
-
-<h2>What the families suggest but have not yet done</h2>
-
-<p>
-  If we take each family's headline idea and ask what it has not yet been combined with, a list of plausible directions falls out.
+  Hyperbolic layouts for neighbor-graph methods exist at small scale, and a mature hyperbolic UMAP tuned for large-model activations could be useful wherever concept hierarchies matter. Topological regularization, beyond the existing topological autoencoders, could be added to the training of sparse autoencoders. Density-aware methods could move from single-cell biology into tools for comparing model checkpoints, where a change in the density of the activation space says something about training.
 </p>
 
 <p>
-  Hyperbolic space for neighborhood-preserving methods has been done at small scale; a mature hyperbolic UMAP tuned for large model activations would be valuable wherever concept hierarchies matter (which is almost everywhere in LLMs). Topological regularization of learned representations (beyond the existing topological autoencoders) could be built into the training of sparse autoencoders to preserve interpretable feature structure. Density-aware methods could be extended from single-cell biology into dashboard tools for comparing model checkpoints, where relative density of the activation space carries training-dynamics signal.
+  Each of these recombines ideas already in this series. What is usually missing is the engineering: building the method, scaling it, building an interface around it, and getting it to the people whose work it could help.
+</p>
+
+<h2>Rules of thumb for practitioners</h2>
+
+<p>
+  For someone using dimensionality reduction on ML data, a few habits follow from the series.
 </p>
 
 <p>
-  Each of these recombines ideas already in this series. What is usually missing is the engineering: building the method, scaling it, building UI around it, and getting it into the hands of people doing the work it could help with.
-</p>
-
-<h2>Practical takeaways</h2>
-
-<p>
-  If you are a practitioner using DR on ML data, a few rules of thumb that fall out of this series:
+  Start with PCA. It is cheap and repeatable, and it tells you whether the interesting structure is linear. If PCA already shows what you care about, you may not need anything else.
 </p>
 
 <p>
-  Always start with PCA. It is cheap, deterministic, and tells you whether the interesting structure is linear. If PCA already reveals what you care about, you do not need anything fancier.
+  Run two methods. UMAP with PCA is a reasonable minimum, and UMAP with Mapper or with densMAP is better. Features that both show are more trustworthy, and where they disagree, look closer.
 </p>
 
 <p>
-  Run two methods, not one. UMAP plus PCA is a reasonable minimum; UMAP plus Mapper or UMAP plus densMAP is better. Features that both methods show are more trustworthy; where they disagree, look closer.
+  Vary the hyperparameters. Stability across n_neighbors, perplexity, and random seed is how you tell signal from artifact, as Figure 2 of article 4 showed with n_neighbors.
 </p>
 
 <p>
-  Vary the hyperparameters. Stability across n_neighbors, perplexity, and random seed is how you tell signal from artifact. Structure that shows up only at one parameter value should be treated skeptically.
+  Remember what each method preserves. Cluster sizes in a t-SNE plot, distances between clusters in a UMAP plot, and node positions in a Mapper graph are not meaningful. Each visualization supports fewer conclusions than it appears to.
 </p>
 
 <p>
-  Remember what each method preserves. Cluster sizes in a t-SNE plot are not meaningful. Distances in a UMAP plot are not meaningful. Positions in a Mapper graph are not meaningful. The meaningful content of each visualization is narrower than it looks, and reading it accurately is itself a skill.
+  Ask whether your data has structure that a specific family was designed for. Tree-shaped data suits hyperbolic embeddings, count data suits scVI or something like it, and data with meaningful density differences suits densMAP or PHATE.
 </p>
 
 <p>
-  Consider whether your data has structure that a specific family is designed for. Tree-shaped data wants hyperbolic embeddings. Count data wants scVI or similar. Data with meaningful density gradients wants densMAP or PHATE. The generic default is not always the right default.
+  The paper summaries this series draws on are collected at <a href="https://github.com/enjalot/latent-labs/tree/main/research">latent-labs/research</a>.
 </p>
 
-<h2>Where this series goes next</h2>
-
-<p>
-  This series was built as a survey, grounded in the literature and organized around a single organizing question. The grounding material is the set of paper summaries in <a href="https://github.com/enjalot/latent-labs/tree/main/research">latent-labs/research</a>, linked from the index.
-</p>
-
-<p>
-  If you are an ML researcher, the most interesting opportunities are probably in compositions and domain-specific priors, especially for large-model interpretability. If you are a tool builder, the interactive-view opportunity is wide open. If you are a practitioner, the rules of thumb above will carry you further than adopting a new method.
-</p>
-
-
-<footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
-  <p>Part of <a href="index.html" style="color: var(--text-2);">What Dimensionality Reduction Preserves</a>. Previous: <a href="09-learned.html" style="color: var(--accent);">Learned Representations</a>.</p>
-  <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+<footer>
+  <p>Part of <a href="index.html">What Dimensionality Reduction Preserves</a>. Previous: <a class="next" href="09-learned.html">Learned Representations</a>.</p>
+  <p>Built with <a href="https://github.com/enjalot/moonshine">moonshine</a>.</p>
 </footer>
 
 </div>
 
 <script>
-// ---------- Figure 1: design space matrix ----------
-(function() {
-  const svg = d3.select("#matrix-svg");
-  const W = 680, H = 480;
+const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const DUR = REDUCED ? 0 : 250;
 
-  const families = [
-    "Linear (PCA, ICA, NMF)",
-    "Global distances (MDS, Isomap)",
-    "Diffusion (diffusion maps, PHATE)",
-    "Neighbor graphs (t-SNE, UMAP)",
-    "Topology (Mapper)",
-    "Density (densMAP)",
-    "Discrete grids (SOM)",
-    "Hyperbolic (Poincaré)",
-    "Learned (AE, VAE, param UMAP, scVI)",
-  ];
+// Every figure is drawn at the pixel width its container actually has, and redrawn when that
+// width changes, so labels stay the same size on a phone as on a desktop. draw(svg, W) lays the
+// figure out for width W and returns { height } (plus an optional stop() to cancel animation).
+function figure(id, draw) {
+  const node = document.getElementById(id), svg = d3.select(node);
+  let lastW = 0, stop = null;
+  function go() {
+    const W = Math.floor(node.getBoundingClientRect().width);
+    if (!W || W === lastW) return;
+    lastW = W;
+    if (stop) stop();
+    svg.selectAll("*").remove();
+    const res = draw(svg, W);
+    svg.attr("viewBox", `0 0 ${W} ${res.height}`).attr("height", res.height);
+    stop = res.stop || null;
+  }
+  new ResizeObserver(go).observe(node.parentNode);
+  go();
+}
 
-  const props = [
-    "global distances",
-    "neighborhoods",
-    "topology",
-    "density",
-    "hierarchy",
-    "interpretability",
-    "out-of-sample",
-    "scalability",
-  ];
+// Run start() the first time the element scrolls into view, so animations play when they can be seen.
+function whenVisible(node, start) {
+  if (!("IntersectionObserver" in window)) { start(); return () => {}; }
+  const io = new IntersectionObserver(entries => {
+    if (entries.some(e => e.isIntersecting)) { io.disconnect(); start(); }
+  }, { threshold: 0.35 });
+  io.observe(node);
+  return () => io.disconnect();
+}
 
-  // Rating: 0 = empty, 1 = half, 2 = full
-  // Indexing [family][prop]
-  const R = [
-    //  dist nbh topo dens hier interp outofs scale
-    [   2,    0,   0,   0,   0,   2,    2,     2 ], // Linear
-    [   2,    1,   1,   0,   0,   1,    1,     0 ], // Global distances
-    [   1,    2,   1,   1,   1,   0,    0,     1 ], // Diffusion
-    [   0,    2,   0,   0,   0,   0,    0,     2 ], // Neighbor
-    [   0,    1,   2,   0,   1,   1,    0,     1 ], // Topology
-    [   0,    2,   0,   2,   0,   0,    0,     2 ], // Density
-    [   0,    1,   1,   1,   0,   2,    2,     1 ], // SOM
-    [   1,    1,   1,   0,   2,   0,    1,     0 ], // Hyperbolic
-    [   1,    1,   1,   1,   1,   0,    2,     2 ], // Learned
-  ];
-
-  const leftPad = 230, topPad = 80;
-  const cellW = 44, cellH = 38;
-  const rowH = 40;
-
-  // Column headers
-  props.forEach((p, j) => {
-    const x = leftPad + j * cellW + cellW / 2;
-    svg.append("text")
-      .attr("transform", `translate(${x}, ${topPad - 14}) rotate(-38)`)
-      .attr("text-anchor", "start")
-      .style("font-size", "11px").attr("fill", "var(--text-2)").text(p);
+// Mutually exclusive buttons. Calls onChange(value) and marks the pressed button.
+function toggle(groupId, onChange) {
+  const buttons = document.querySelectorAll(`#${groupId} button`);
+  buttons.forEach(btn => {
+    btn.setAttribute("aria-pressed", btn.classList.contains("active"));
+    btn.onclick = () => {
+      buttons.forEach(b => { b.classList.toggle("active", b === btn); b.setAttribute("aria-pressed", b === btn); });
+      onChange(btn.dataset.value);
+    };
   });
+  return () => document.querySelector(`#${groupId} button.active`).dataset.value;
+}
 
-  // Rows
-  families.forEach((f, i) => {
-    const y = topPad + i * rowH + rowH / 2;
-    svg.append("text").attr("x", leftPad - 12).attr("y", y).attr("dy", "0.35em")
-      .attr("text-anchor", "end").style("font-size", "11px").style("font-weight", 600)
-      .attr("fill", "var(--text)").text(f);
+// A titled panel: returns a <g> whose origin is the panel's top-left drawing corner.
+function pane(svg, x, y, w, h, title, note) {
+  const g = svg.append("g").attr("transform", `translate(${x},${y})`);
+  g.append("text").attr("class", "pane-title").attr("x", 0).attr("y", 13).text(title);
+  if (note) g.append("text").attr("x", 0).attr("y", 30).text(note);
+  const top = note ? 40 : 22;
+  g.append("rect").attr("class", "pane-bg").attr("x", 0).attr("y", top).attr("width", w).attr("height", h - top).attr("rx", 4);
+  const inner = g.append("g").attr("transform", `translate(0,${top})`);
+  inner.w = w; inner.h = h - top;
+  return inner;
+}
 
-    props.forEach((_, j) => {
-      const cx = leftPad + j * cellW + cellW / 2;
-      const r = R[i][j];
-      const fill = r === 2 ? "var(--accent)" : r === 1 ? "var(--accent-light)" : "var(--muted)";
-      svg.append("rect").attr("x", leftPad + j * cellW + 2).attr("y", y - cellH / 2 + 3)
-        .attr("width", cellW - 4).attr("height", cellH - 6)
-        .attr("fill", fill).attr("stroke", "var(--border)").attr("rx", 3);
-      if (r === 2) {
-        svg.append("text").attr("x", cx).attr("y", y).attr("dy", "0.35em")
-          .attr("text-anchor", "middle").style("font-size", "12px")
-          .attr("fill", "white").style("font-weight", 700).text("●");
-      } else if (r === 1) {
-        svg.append("text").attr("x", cx).attr("y", y).attr("dy", "0.35em")
-          .attr("text-anchor", "middle").style("font-size", "12px")
-          .attr("fill", "var(--accent)").text("◐");
-      }
-    });
+// Scales that fit a 2D point set into a w x h box with equal units on both axes.
+function fitScales(pts, w, h, pad = 12) {
+  const xe = d3.extent(pts, p => p[0]), ye = d3.extent(pts, p => p[1]);
+  const s = Math.min((w - 2 * pad) / ((xe[1] - xe[0]) || 1), (h - 2 * pad) / ((ye[1] - ye[0]) || 1));
+  const cx = (xe[0] + xe[1]) / 2, cy = (ye[0] + ye[1]) / 2;
+  return { x: v => w / 2 + (v - cx) * s, y: v => h / 2 - (v - cy) * s, s };
+}
+
+function mulberry32(seed) {
+  return function() {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function gaussian(rng) {
+  const u = 1 - rng(), v = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// Pairwise Euclidean distances between the rows of X.
+function distMatrix(X) {
+  const n = X.length, D = Array.from({ length: n }, () => new Float64Array(n));
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    let s = 0;
+    for (let a = 0; a < X[i].length; a++) { const d = X[i][a] - X[j][a]; s += d * d; }
+    D[i][j] = D[j][i] = Math.sqrt(s);
+  }
+  return D;
+}
+// For each point, the indices of the other points sorted by distance (nearest first).
+function neighborOrder(D) {
+  return D.map((row, i) => {
+    const idx = [];
+    for (let j = 0; j < row.length; j++) if (j !== i) idx.push(j);
+    return idx.sort((a, b) => row[a] - row[b]);
   });
+}
 
-  // Legend
-  const legendY = H - 36;
-  const legendX = 12;
-  const items = [
-    { label: "preserves well", fill: "var(--accent)", marker: "●", markerFill: "white" },
-    { label: "partial", fill: "var(--accent-light)", marker: "◐", markerFill: "var(--accent)" },
-    { label: "does not preserve", fill: "var(--muted)", marker: "", markerFill: "var(--text-3)" },
-  ];
-  items.forEach((it, i) => {
-    const x = legendX + i * 180;
-    svg.append("rect").attr("x", x).attr("y", legendY).attr("width", 22).attr("height", 20)
-      .attr("fill", it.fill).attr("stroke", "var(--border)").attr("rx", 3);
-    if (it.marker) {
-      svg.append("text").attr("x", x + 11).attr("y", legendY + 14).attr("text-anchor", "middle")
-        .style("font-size", "12px").attr("fill", it.markerFill).text(it.marker);
+// Leading eigenvectors of a symmetric matrix by power iteration with deflation.
+function topEig(M, dim, seed = 1) {
+  const n = M.length, rng = mulberry32(seed), vecs = [], vals = [];
+  for (let c = 0; c < dim; c++) {
+    let v = Array.from({ length: n }, () => rng() - 0.5), lam = 0;
+    for (let it = 0; it < 300; it++) {
+      const w = new Array(n).fill(0);
+      for (let i = 0; i < n; i++) { let s = 0; const Mi = M[i]; for (let j = 0; j < n; j++) s += Mi[j] * v[j]; w[i] = s; }
+      for (const u of vecs) { let p = 0; for (let i = 0; i < n; i++) p += w[i] * u[i]; for (let i = 0; i < n; i++) w[i] -= p * u[i]; }
+      let nrm = 0; for (let i = 0; i < n; i++) nrm += w[i] * w[i];
+      nrm = Math.sqrt(nrm) || 1;
+      let diff = 0;
+      for (let i = 0; i < n; i++) { const x = w[i] / nrm; diff += Math.abs(x - v[i]); v[i] = x; }
+      lam = nrm;
+      if (diff < 1e-10) break;
     }
-    svg.append("text").attr("x", x + 32).attr("y", legendY + 14).style("font-size", "11px")
-      .attr("fill", "var(--text-2)").text(it.label);
+    vecs.push(v); vals.push(lam);
+  }
+  return { vecs, vals };
+}
+
+// PCA: centre the data, eigendecompose the covariance matrix, project onto the leading components.
+function pca(X, dim = 2) {
+  const n = X.length, d = X[0].length, mean = new Array(d).fill(0);
+  for (const x of X) for (let a = 0; a < d; a++) mean[a] += x[a] / n;
+  const C = Array.from({ length: d }, () => new Array(d).fill(0));
+  for (const x of X) for (let a = 0; a < d; a++) for (let b = 0; b < d; b++) C[a][b] += (x[a] - mean[a]) * (x[b] - mean[b]) / (n - 1);
+  const { vecs, vals } = topEig(C, Math.min(dim, d), 3);
+  let total = 0; for (let a = 0; a < d; a++) total += C[a][a];
+  const Y = X.map(x => vecs.map(v => { let s = 0; for (let a = 0; a < d; a++) s += (x[a] - mean[a]) * v[a]; return s; }));
+  return { Y, components: vecs, mean, explained: vals.map(l => l / total) };
+}
+
+// Classical (Torgerson) MDS: double-centre the squared distances and take the leading eigenvectors.
+function classicalMDS(D, dim = 2) {
+  const n = D.length, B = Array.from({ length: n }, () => new Float64Array(n));
+  const rowMean = new Float64Array(n); let grand = 0;
+  for (let i = 0; i < n; i++) { for (let j = 0; j < n; j++) rowMean[i] += D[i][j] * D[i][j] / n; grand += rowMean[i] / n; }
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) B[i][j] = -0.5 * (D[i][j] * D[i][j] - rowMean[i] - rowMean[j] + grand);
+  const { vecs, vals } = topEig(B, dim, 5);
+  return Array.from({ length: n }, (_, i) => vecs.map((v, c) => v[i] * Math.sqrt(Math.max(vals[c], 0))));
+}
+
+// Graph geodesics: connect each point to its k nearest neighbours (edges kept in both directions),
+// then take all-pairs shortest paths (Floyd-Warshall). Unreachable pairs stay Infinity.
+function graphGeodesics(D, k) {
+  const n = D.length, order = neighborOrder(D);
+  const G = Array.from({ length: n }, () => new Float64Array(n).fill(Infinity));
+  const edges = [];
+  for (let i = 0; i < n; i++) {
+    G[i][i] = 0;
+    for (const j of order[i].slice(0, k)) {
+      if (G[i][j] === Infinity) edges.push([i, j]);
+      G[i][j] = G[j][i] = D[i][j];
+    }
+  }
+  const W = G.map(r => Float64Array.from(r));
+  for (let m = 0; m < n; m++) { const Gm = G[m]; for (let i = 0; i < n; i++) { const gim = G[i][m]; if (gim === Infinity) continue; const Gi = G[i]; for (let j = 0; j < n; j++) { const s = gim + Gm[j]; if (s < Gi[j]) Gi[j] = s; } } }
+  return { G, W, edges };
+}
+// Isomap: classical MDS on the graph geodesics.
+function isomap(D, k, dim = 2) {
+  const { G } = graphGeodesics(D, k);
+  let max = 0;
+  for (const r of G) for (const v of r) if (v !== Infinity && v > max) max = v;
+  for (const r of G) for (let j = 0; j < r.length; j++) if (r[j] === Infinity) r[j] = max * 1.5; // disconnected pieces: park them far apart
+  return classicalMDS(G, dim);
+}
+
+// Exact t-SNE (van der Maaten & Hinton 2008): Gaussian conditional probabilities calibrated to a
+// perplexity, symmetrised; Student-t similarities in 2D; gradient descent on KL(P || Q) with
+// momentum, per-coordinate gains and early exaggeration. O(n^2) per step, fine for a few hundred points.
+function tsne(D, { perplexity = 30, iters = 500, init, seed = 1 } = {}) {
+  const n = D.length, P = Array.from({ length: n }, () => new Float64Array(n));
+  const target = Math.log(perplexity);
+  for (let i = 0; i < n; i++) {
+    let lo = 0, hi = Infinity, beta = 1;
+    const row = new Float64Array(n);
+    for (let t = 0; t < 60; t++) {
+      let sum = 0, h = 0;
+      for (let j = 0; j < n; j++) { row[j] = j === i ? 0 : Math.exp(-beta * D[i][j] * D[i][j]); sum += row[j]; }
+      sum = sum || 1e-300;
+      for (let j = 0; j < n; j++) { const p = row[j] / sum; if (p > 1e-12) h -= p * Math.log(p); row[j] = p; }
+      if (Math.abs(h - target) < 1e-5) break;
+      if (h > target) { lo = beta; beta = hi === Infinity ? beta * 2 : (beta + hi) / 2; }
+      else { hi = beta; beta = (beta + lo) / 2; }
+    }
+    for (let j = 0; j < n; j++) P[i][j] = row[j];
+  }
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const p = Math.max((P[i][j] + P[j][i]) / (2 * n), 1e-12); P[i][j] = P[j][i] = p; }
+  const rng = mulberry32(seed);
+  let sd = 0; if (init) { for (const p of init) sd += p[0] * p[0]; sd = Math.sqrt(sd / n) || 1; }
+  const Y = Array.from({ length: n }, (_, i) => init ? [init[i][0] / sd * 1e-4, init[i][1] / sd * 1e-4] : [gaussian(rng) * 1e-4, gaussian(rng) * 1e-4]);
+  const V = Y.map(() => [0, 0]), gains = Y.map(() => [1, 1]), Q = Array.from({ length: n }, () => new Float64Array(n));
+  const lr = Math.max(n / 12, 50), exagIters = Math.min(250, Math.floor(iters / 4));
+  for (let it = 0; it < iters; it++) {
+    const exag = it < exagIters ? 12 : 1, mom = it < exagIters ? 0.5 : 0.8;
+    let Z = 0;
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const dx = Y[i][0] - Y[j][0], dy = Y[i][1] - Y[j][1]; const q = 1 / (1 + dx * dx + dy * dy); Q[i][j] = Q[j][i] = q; Z += 2 * q; }
+    for (let i = 0; i < n; i++) {
+      let gx = 0, gy = 0;
+      for (let j = 0; j < n; j++) { if (j === i) continue; const q = Q[i][j], m = 4 * (exag * P[i][j] - q / Z) * q; gx += m * (Y[i][0] - Y[j][0]); gy += m * (Y[i][1] - Y[j][1]); }
+      const g = [gx, gy];
+      for (let c = 0; c < 2; c++) {
+        gains[i][c] = Math.max(0.01, Math.sign(g[c]) !== Math.sign(V[i][c]) ? gains[i][c] + 0.2 : gains[i][c] * 0.8);
+        V[i][c] = mom * V[i][c] - lr * gains[i][c] * g[c];
+      }
+    }
+    for (let i = 0; i < n; i++) { Y[i][0] += V[i][0]; Y[i][1] += V[i][1]; }
+  }
+  return Y;
+}
+
+// UMAP's graph (McInnes, Healy & Melville 2018). For each point: rho = distance to its nearest
+// neighbour, sigma = the scale at which the memberships exp(-(d - rho) / sigma) of its k neighbours
+// sum to log2(k). The two directions of each edge are combined with the fuzzy union a + b - ab.
+function umapGraph(D, k) {
+  const n = D.length, order = neighborOrder(D), M = Array.from({ length: n }, () => new Map());
+  const target = Math.log2(k);
+  for (let i = 0; i < n; i++) {
+    const nb = order[i].slice(0, k), rho = D[i][nb[0]];
+    let lo = 0, hi = Infinity, sigma = 1;
+    for (let t = 0; t < 64; t++) {
+      let s = 0;
+      for (const j of nb) s += Math.exp(-Math.max(0, D[i][j] - rho) / sigma);
+      if (Math.abs(s - target) < 1e-5) break;
+      if (s > target) { hi = sigma; sigma = (lo + hi) / 2; }
+      else { lo = sigma; sigma = hi === Infinity ? sigma * 2 : (lo + hi) / 2; }
+    }
+    for (const j of nb) M[i].set(j, Math.exp(-Math.max(0, D[i][j] - rho) / sigma));
+  }
+  const edges = [];
+  for (let i = 0; i < n; i++) for (const [j, a] of M[i]) {
+    const b = M[j].get(i) || 0;
+    if (b > 0 && j < i) continue; // a mutual edge is added once, from its lower index
+    edges.push({ i, j, w: a + b - a * b });
+  }
+  return edges;
+}
+// UMAP's layout: stochastic gradient descent on the fuzzy cross-entropy. Each edge is sampled in
+// proportion to its weight and pulls its two ends together; each sampled edge also pushes its head
+// away from `negRate` random points. a and b are umap-learn's curve fit for min_dist = 0.1.
+// With dens = { lambda, frac }, the last `frac` of the epochs add densMAP's term (Narayan, Berger &
+// Cho 2021), ported from umap-learn: it rewards correlation between each point's log local radius
+// in the input and in the embedding.
+function umapLayout(D, edges, { epochs = 400, init, seed = 1, negRate = 5, a = 1.577, b = 0.8951, dens = null, onEpoch = null } = {}) {
+  const n = D.length, rng = mulberry32(seed);
+  let lo = Infinity, hi = -Infinity;
+  for (const p of init) for (const v of p) { if (v < lo) lo = v; if (v > hi) hi = v; }
+  const Y = init.map(p => [10 * (p[0] - lo) / (hi - lo) + gaussian(rng) * 1e-4, 10 * (p[1] - lo) / (hi - lo) + gaussian(rng) * 1e-4]);
+  // both directions of every edge, as in umap-learn's symmetric graph
+  const E = [];
+  for (const e of edges) { E.push({ i: e.i, j: e.j, w: e.w }); E.push({ i: e.j, j: e.i, w: e.w }); }
+  const wMax = Math.max(...E.map(e => e.w));
+  for (const e of E) { e.per = wMax / e.w; e.next = e.per; e.perNeg = e.per / negRate; e.nextNeg = e.perNeg; }
+  const clip = v => v > 4 ? 4 : v < -4 ? -4 : v;
+  // densMAP bookkeeping
+  let R = null, muSum = null, muTot = 0;
+  const reSum = new Float64Array(n), phiSum = new Float64Array(n);
+  if (dens) {
+    const ro = new Float64Array(n); muSum = new Float64Array(n);
+    for (const e of E) { ro[e.i] += e.w * D[e.i][e.j] ** 2; muSum[e.i] += e.w; }
+    let m = 0, v = 0;
+    for (let i = 0; i < n; i++) { ro[i] = Math.log(1e-8 + ro[i] / muSum[i]); m += ro[i] / n; muTot += muSum[i]; }
+    for (let i = 0; i < n; i++) v += (ro[i] - m) ** 2 / n;
+    R = Array.from(ro, x => (x - m) / Math.sqrt(v));
+  }
+  for (let ep = 1; ep <= epochs; ep++) {
+    const alpha = 1 - (ep - 1) / epochs;
+    const densOn = dens && ep / epochs > 1 - dens.frac;
+    let reStd = 0, reMean = 0, reCov = 0;
+    if (densOn) {
+      reSum.fill(0); phiSum.fill(0);
+      for (const e of E) {
+        const d2 = (Y[e.i][0] - Y[e.j][0]) ** 2 + (Y[e.i][1] - Y[e.j][1]) ** 2, phi = 1 / (1 + a * Math.pow(d2, b));
+        reSum[e.i] += phi * d2; phiSum[e.i] += phi;
+      }
+      for (let i = 0; i < n; i++) { reSum[i] = Math.log(1e-8 + reSum[i] / phiSum[i]); reMean += reSum[i] / n; }
+      let v = 0;
+      for (let i = 0; i < n; i++) { v += (reSum[i] - reMean) ** 2 / n; reCov += reSum[i] * R[i] / (n - 1); }
+      reStd = Math.sqrt(v + 0.1);
+    }
+    for (const e of E) {
+      if (e.next > ep) continue;
+      const yi = Y[e.i], yj = Y[e.j];
+      let dx = yi[0] - yj[0], dy = yi[1] - yj[1], d2 = dx * dx + dy * dy;
+      let coef = d2 > 0 ? -2 * a * b * Math.pow(d2, b - 1) / (a * Math.pow(d2, b) + 1) : 0;
+      let gx = clip(coef * dx), gy = clip(coef * dy);
+      if (densOn && d2 > 0) {
+        const phi = 1 / (1 + a * Math.pow(d2, b)), dphi = a * b * Math.pow(d2, b - 1) / (1 + a * Math.pow(d2, b));
+        const drj = phi / phiSum[e.j] * ((1 - b * (1 - phi)) / Math.exp(reSum[e.j]) + dphi);
+        const dri = phi / phiSum[e.i] * ((1 - b * (1 - phi)) / Math.exp(reSum[e.i]) + dphi);
+        const wj = R[e.j] - reCov * (reSum[e.j] - reMean) / (reStd * reStd);
+        const wi = R[e.i] - reCov * (reSum[e.i] - reMean) / (reStd * reStd);
+        const cor = dens.lambda * muTot * (wj * drj + wi * dri) / (e.w * reStd) / n;
+        gx += clip(2 * cor * dx); gy += clip(2 * cor * dy);
+      }
+      yi[0] += alpha * gx; yi[1] += alpha * gy; yj[0] -= alpha * gx; yj[1] -= alpha * gy;
+      e.next += e.per;
+      const nNeg = Math.floor((ep - e.nextNeg) / e.perNeg);
+      for (let s = 0; s < nNeg; s++) {
+        const k = Math.floor(rng() * n);
+        if (k === e.i) continue;
+        dx = yi[0] - Y[k][0]; dy = yi[1] - Y[k][1]; d2 = dx * dx + dy * dy;
+        if (d2 === 0) continue;
+        coef = 2 * b / ((0.001 + d2) * (a * Math.pow(d2, b) + 1));
+        yi[0] += alpha * clip(coef * dx); yi[1] += alpha * clip(coef * dy);
+      }
+      e.nextNeg += nNeg * e.perNeg;
+    }
+    if (onEpoch) onEpoch(ep, Y);
+  }
+  return Y;
+}
+function umap(D, { k = 15, ...opts } = {}) { return umapLayout(D, umapGraph(D, k), opts); }
+
+// Trustworthiness and continuity (Venna & Kaski 2001) at neighbourhood size k.
+// Trustworthiness falls when the embedding invents neighbours; continuity falls when it loses them.
+function trustCont(Dhi, Dlo, k) {
+  const n = Dhi.length, oh = neighborOrder(Dhi), ol = neighborOrder(Dlo);
+  const rank = o => o.map(list => { const r = new Int32Array(n); list.forEach((j, pos) => { r[j] = pos + 1; }); return r; });
+  const rh = rank(oh), rl = rank(ol);
+  let t = 0, c = 0;
+  for (let i = 0; i < n; i++) {
+    for (const j of ol[i].slice(0, k)) if (rh[i][j] > k) t += rh[i][j] - k;
+    for (const j of oh[i].slice(0, k)) if (rl[i][j] > k) c += rl[i][j] - k;
+  }
+  const norm = 2 / (n * k * (2 * n - 3 * k - 1));
+  return { trust: 1 - norm * t, cont: 1 - norm * c };
+}
+function pearson(x, y) {
+  const n = x.length; let mx = 0, my = 0;
+  for (let i = 0; i < n; i++) { mx += x[i] / n; my += y[i] / n; }
+  let sxy = 0, sxx = 0, syy = 0;
+  for (let i = 0; i < n; i++) { sxy += (x[i] - mx) * (y[i] - my); sxx += (x[i] - mx) ** 2; syy += (y[i] - my) ** 2; }
+  return sxy / Math.sqrt(sxx * syy);
+}
+function ranks(x) {
+  const idx = Array.from(x, (_, i) => i).sort((a, b) => x[a] - x[b]), r = new Float64Array(x.length);
+  idx.forEach((i, pos) => { r[i] = pos; });
+  return r;
+}
+// Spearman rank correlation between all pairwise distances before and after.
+function distanceCorr(Dhi, Dlo) {
+  const a = [], b = [];
+  for (let i = 0; i < Dhi.length; i++) for (let j = i + 1; j < Dhi.length; j++) { a.push(Dhi[i][j]); b.push(Dlo[i][j]); }
+  return pearson(ranks(a), ranks(b));
+}
+// Local radius of each point: mean squared distance to its k nearest neighbours, each space using
+// its own neighbours. densityCorr is the Pearson correlation of the log radii before and after.
+function localRadius(D, k) {
+  const order = neighborOrder(D);
+  return order.map((list, i) => { let s = 0; for (const j of list.slice(0, k)) s += D[i][j] ** 2; return Math.log(s / k + 1e-12); });
+}
+function densityCorr(Dhi, Dlo, k) { return pearson(localRadius(Dhi, k), localRadius(Dlo, k)); }
+
+// ---------- Figure 1: five methods scored on one dataset ----------
+(function() {
+  // six Gaussian clusters of 35 points in 12 dimensions, from tight to diffuse
+  const rng = mulberry32(11), spreads = [0.3, 0.5, 0.8, 1.2, 1.7, 2.3], X = [], label = [];
+  spreads.forEach((s, c) => {
+    const centre = Array.from({ length: 12 }, () => gaussian(rng) * 3.5);
+    for (let i = 0; i < 35; i++) { X.push(centre.map(v => v + gaussian(rng) * s)); label.push(c); }
+  });
+  const colors = ["var(--c0)", "var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)", "var(--text-3)"];
+  const columns = ["trustworthiness", "continuity", "distances", "density"];
+  let results = null;
+
+  function compute() {
+    const D = distMatrix(X), P = pca(X, 2).Y, graph = umapGraph(D, 15);
+    const methods = [
+      { title: "PCA", Y: P },
+      { title: "Isomap", Y: isomap(D, 12) },
+      { title: "t-SNE", Y: tsne(D, { perplexity: 20, iters: 500, init: P }) },
+      { title: "UMAP", Y: umapLayout(D, graph, { init: P, epochs: 500 }) },
+      { title: "densMAP", Y: umapLayout(D, graph, { init: P, epochs: 700, dens: { lambda: 2, frac: 0.3 } }) },
+    ];
+    methods.forEach(m => {
+      const Dl = distMatrix(m.Y), tc = trustCont(D, Dl, 10);
+      m.scores = [tc.trust, tc.cont, distanceCorr(D, Dl), densityCorr(D, Dl, 10)];
+    });
+    return methods;
+  }
+  function table(narrow) {
+    const heads = narrow ? ["trust", "cont.", "dist.", "density"] : columns;
+    const best = columns.map((_, c) => d3.max(results, m => +m.scores[c].toFixed(2)));
+    document.getElementById("scores-table").innerHTML = `<table class="score-table"><thead><tr><th>method</th>${heads.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>` +
+      results.map(m => `<tr><td>${m.title}</td>${m.scores.map((s, c) => `<td class="${+s.toFixed(2) === best[c] ? "best" : ""}">${s.toFixed(2)}</td>`).join("")}</tr>`).join("") + "</tbody></table>";
+  }
+
+  figure("scores-svg", (svg, W) => {
+    const cols = W < 500 ? 2 : 5, gap = 10, pw = (W - gap * (cols - 1)) / cols, ph = pw + 22, rows = Math.ceil(5 / cols);
+    function draw() {
+      svg.selectAll("*").remove();
+      results.forEach((m, k) => {
+        const g = pane(svg, (k % cols) * (pw + gap), Math.floor(k / cols) * (ph + 12), pw, ph, m.title);
+        const sc = fitScales(m.Y, g.w, g.h, 10);
+        g.selectAll("circle").data(m.Y).join("circle").attr("cx", d => sc.x(d[0])).attr("cy", d => sc.y(d[1])).attr("r", 2.2)
+          .attr("fill", (_, i) => colors[label[i]]).attr("opacity", 0.85);
+      });
+      table(W < 500);
+    }
+    let timer = null;
+    if (results) draw();
+    else {
+      // about a second of computation: let the page paint first
+      svg.append("text").attr("x", W / 2).attr("y", ph / 2).attr("text-anchor", "middle").text("computing five embeddings…");
+      timer = setTimeout(() => { results = compute(); draw(); }, 30);
+    }
+    return { height: rows * (ph + 12) - 12, stop: () => clearTimeout(timer) };
+  });
+})();
+
+// ---------- Figure 2: the design-space matrix ----------
+(function() {
+  const families = [
+    ["Linear", "PCA, ICA, NMF"], ["Global distances", "MDS, Isomap"], ["Diffusion", "diffusion maps, PHATE"],
+    ["Neighbor graphs", "t-SNE, UMAP"], ["Topology", "Mapper"], ["Density", "densMAP"],
+    ["Grids", "SOM"], ["Hyperbolic", "Poincaré"], ["Learned", "AE, VAE, parametric UMAP, scVI"],
+  ];
+  const props = ["global distances", "neighborhoods", "topology", "density", "hierarchy", "readable axes", "new points", "scalability"];
+  // our ratings: 2 = prioritizes, 1 = handles, 0 = tends to lose
+  const R = [
+    [2, 0, 0, 0, 0, 2, 2, 2], // linear
+    [2, 1, 1, 0, 0, 1, 1, 0], // global distances
+    [1, 2, 1, 1, 1, 0, 0, 1], // diffusion
+    [0, 2, 0, 0, 0, 0, 1, 2], // neighbor graphs
+    [0, 1, 2, 0, 1, 1, 0, 1], // topology
+    [0, 2, 0, 2, 0, 0, 0, 2], // density
+    [0, 1, 1, 1, 0, 2, 2, 1], // grids
+    [1, 1, 1, 0, 2, 0, 1, 0], // hyperbolic
+    [1, 1, 1, 1, 1, 0, 2, 2], // learned
+  ];
+  figure("matrix-svg", (svg, W) => {
+    const narrow = W < 500, left = narrow ? 116 : 250, top = 112, cw = Math.min(44, (W - left) / props.length), rh = 34;
+    props.forEach((p, j) => svg.append("text").attr("transform", `translate(${left + j * cw + cw / 2 + (narrow ? 1 : -2)},${top - 10}) rotate(${narrow ? -90 : -55})`).text(p));
+    families.forEach(([name, methods], i) => {
+      const y = top + i * rh;
+      const t = svg.append("text").attr("x", 0).attr("y", y + rh / 2 + 4);
+      t.append("tspan").attr("fill", "var(--text)").style("font-weight", 600).text(name);
+      if (!narrow) t.append("tspan").attr("dx", 6).text(methods);
+      R[i].forEach((r, j) => {
+        const x = left + j * cw + 3, s = Math.min(cw, rh) - 8, yy = y + (rh - s) / 2;
+        svg.append("rect").attr("x", x).attr("y", yy).attr("width", s).attr("height", s).attr("rx", 3).attr("fill", "var(--muted)");
+        if (r > 0) svg.append("rect").attr("x", x).attr("y", yy).attr("width", r === 2 ? s : s / 2).attr("height", s).attr("rx", 3).attr("fill", "var(--accent)");
+      });
+    });
+    const ly = top + families.length * rh + 22;
+    [["prioritizes", 2], ["handles", 1], ["tends to lose", 0]].forEach(([text, r], k) => {
+      const x = narrow ? 0 : k * 150, y = narrow ? ly + k * 24 : ly;
+      svg.append("rect").attr("x", x).attr("y", y - 13).attr("width", 16).attr("height", 16).attr("rx", 3).attr("fill", "var(--muted)");
+      if (r > 0) svg.append("rect").attr("x", x).attr("y", y - 13).attr("width", r === 2 ? 16 : 8).attr("height", 16).attr("rx", 3).attr("fill", "var(--accent)");
+      svg.append("text").attr("x", x + 24).attr("y", y).text(text);
+    });
+    return { height: ly + (narrow ? 58 : 10) };
   });
 })();
 </script>

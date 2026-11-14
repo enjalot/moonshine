@@ -4,7 +4,10 @@ The complete Moonshine still source for
 [the published guide](https://enjalot.github.io/moonshine/moonshine-guide/).
 The article explains the still authoring loop through working simulations of
 in-place prose editing, figure knobs, block reordering, linked terms, baked
-diagram layouts, shared git history, and routed feedback.
+diagram layouts, shared git history, and routed feedback. The simulations
+that a reader drags (the wave's crest, the reorderable blocks, the diagram's
+boxes) are built with the template's declarative-dragging toolkit
+(`src/figures/drag/`).
 
 The prose lives in `content/guide.md`; article-specific simulations live under
 `src/figures/sim/`. The surrounding Vite + React + Velite project is a full
@@ -45,9 +48,9 @@ During `npm run dev` the rendered article is an editing surface:
   values into the directive's attributes (only the ones that differ
   from the defaults). Figures without registered defaults explain how
   to opt in.
-- **Cmd/Ctrl+drag a block** to reorder; a drop line shows the target and
-  moved blocks settle into place. The open editor and the knob panel also
-  carry **↑ / ↓** buttons.
+- **Cmd/Ctrl+drag a block** to reorder: the block lifts and follows the
+  pointer while the others slide apart to show where it will land. The
+  open editor and the knob panel also carry **↑ / ↓** buttons.
 - **💬 Comment to the agent** from the editor or knob panel sends
   feedback about that exact passage into `.feedback/`; the authoring
   agent picks it up and replies in the HUD (bottom corner), which also
@@ -86,6 +89,8 @@ src/
     DiagramFigure.tsx     ← generic SVG diagram (Dragology) + arrange/save
     StillPipelineDiagram.tsx ← the guide's live, baked pipeline diagram
     sim/                   ← working simulations of still authoring features
+    drag/                  ← declarative dragging (Dragology): DragFigure, README
+    diagram/               ← diagram spec, layout, drawing, dev-only editor
     lib/params.ts         ← attr→number/bool/string coercers
   lib/                    ← editing, block geometry, reorder animation, feedback
   store.ts                ← Zustand: hover + pinned state

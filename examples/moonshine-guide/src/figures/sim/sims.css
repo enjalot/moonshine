@@ -1,4 +1,225 @@
-/* Guide simulations drawn by Dragology. ReorderSim: section cards. */
+/* Styles for the guide's simulations. Colors come from tokens.css, so
+   every sim follows light and dark. Text is 13px or larger at any width:
+   the harness chrome the sims borrow (.mn-knobs, .mn-diagram-bar,
+   .figure-hint) is set a little smaller for a desktop dev session, and is
+   raised here because readers meet it on phones. */
+
+.mn-sim {
+  font-family: var(--body-font);
+  color: var(--text);
+}
+.mn-sim .figure-hint {
+  font-size: 0.8125rem;
+  opacity: 1;
+  margin: 0 0 0.6rem;
+}
+.mn-sim .mn-knobs,
+.mn-sim .mn-diagram-bar,
+.mn-sim .mn-knob-name,
+.mn-sim .mn-knob input[type='number'],
+.mn-sim .mn-edit-hint {
+  font-size: 0.8125rem;
+}
+.mn-sim .mn-diagram-bar {
+  flex-wrap: wrap;
+}
+.mn-sim button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.mn-sim button:focus-visible,
+.mn-sim [tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Shared pieces: a labelled pane, a code listing, two panes side by side
+   that stack when the column is narrow. */
+.mn-sim-pane-name {
+  font-family: var(--mono-font);
+  font-size: 0.8125rem;
+  color: var(--text-2);
+  margin: 0 0 0.3rem;
+}
+.mn-sim-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+.mn-sim-split > * {
+  min-width: 0;
+}
+.mn-sim .mn-sim-code {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  font-family: var(--mono-font);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.mn-sim-code [data-on~='changed'] {
+  color: var(--accent);
+  background: var(--accent-light);
+}
+.mn-sim-dim {
+  color: var(--text-2);
+}
+.mn-sim .mn-knobs-actions button {
+  font-family: var(--heading-font);
+  font-size: 0.8125rem;
+}
+/* Shown only where the pointer is a finger. */
+.mn-sim-coarse {
+  display: none;
+}
+@media (pointer: coarse) {
+  .mn-sim-coarse {
+    display: inline;
+  }
+}
+
+/* ProseEditSim: on a narrow column the editor's rail has no margin to
+   float in, so it sits under the textarea. */
+@media (max-width: 640px) {
+  .prose-edit-sim .prose-edit-sim-surface {
+    padding: 0.75rem;
+  }
+  .prose-edit-sim .mn-edit-bar {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: auto;
+    margin-top: 0.5rem;
+  }
+  .prose-edit-sim .mn-edit-move-text,
+  .prose-edit-sim .mn-edit-hint {
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+}
+
+/* KnobsSim: the wave and its crest handle. */
+.mn-wave-axis {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.mn-wave-curve {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+.mn-wave-rise {
+  stroke: var(--text-2);
+  stroke-width: 1.25;
+  stroke-dasharray: 3 3;
+  pointer-events: none;
+}
+.mn-wave-crest {
+  cursor: grab;
+}
+.mn-wave-dot {
+  fill: var(--accent);
+  stroke: var(--fig-bg);
+  stroke-width: 2.5;
+}
+/* A larger target for fingers, and the ring a :term lights up. */
+.mn-wave-ring {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 2;
+}
+.mn-wave-crest[data-on~='active'] .mn-wave-ring {
+  stroke: var(--accent);
+  fill: var(--accent-light);
+}
+.mn-wave-crest text {
+  font-family: var(--heading-font);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  fill: var(--accent);
+  paint-order: stroke;
+  stroke: var(--fig-bg);
+  stroke-width: 4px;
+  pointer-events: none;
+}
+.mn-knobs-sim .figure-hint {
+  margin: 0.35rem 0 0;
+}
+.mn-knobs-sim .mn-knobs-title {
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.mn-knobs-sim .mn-knobs-controls {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.mn-knobs-sim .mn-figure-controls button {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+}
+.mn-knobs-sim .mn-knob input[type='range'] {
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .mn-knobs-sim .mn-knob-name {
+    min-width: 4.9rem;
+  }
+  .mn-knobs-sim .mn-knob input[type='number'] {
+    width: 3.6rem;
+  }
+}
+.mn-sim-reopen {
+  margin-top: 0.75rem;
+}
+.mn-sim-file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.75rem;
+  margin-top: 0.75rem;
+}
+.mn-sim-file .mn-sim-pane-name {
+  margin: 0;
+}
+.mn-sim .mn-sim-file code {
+  font-family: var(--mono-font);
+  font-size: 0.8125rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  overflow-wrap: anywhere;
+}
+.mn-sim-file code[data-on~='changed'] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ReorderSim: a page of blocks, and its markdown. */
+.mn-sim-page {
+  position: relative;
+}
+/* Off-screen copies of the blocks, to measure their heights. */
+.mn-sim-measure {
+  position: absolute;
+  inset: 0 0 auto 0;
+  visibility: hidden;
+  pointer-events: none;
+}
 .mn-sim-card {
   cursor: grab;
 }
@@ -10,38 +231,130 @@
 .mn-sim-card[data-on~='lifted'] {
   filter: drop-shadow(0 6px 14px var(--shadow-edge));
 }
-.mn-sim-card[data-on~='lifted'] .mn-sim-card-box {
+.mn-sim-card[data-on~='lifted'] .mn-sim-card-box,
+.mn-sim-card:focus-visible .mn-sim-card-box {
   stroke: var(--accent);
 }
-.mn-sim-card-title {
+.mn-sim-card:focus-visible {
+  outline: none;
+}
+.mn-sim-card:focus-visible .mn-sim-card-box {
+  stroke-width: 2;
+}
+.mn-sim-card foreignObject {
+  pointer-events: none;
+}
+.mn-sim-block {
+  box-sizing: border-box;
+  padding: 0.5rem 0.75rem;
+  color: var(--text);
+  user-select: none;
+}
+.mn-sim-block-heading {
   font-family: var(--heading-font);
   font-weight: 700;
-  font-size: 16px;
-  fill: var(--text);
+  font-size: 1.05rem;
+  line-height: 1.3;
 }
-.mn-sim-card-line {
+.mn-sim-block-text {
   font-family: var(--body-font);
-  font-size: 14px;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+.mn-sim-block-math {
+  font-family: var(--body-font);
+  font-style: italic;
+  font-size: 1rem;
+  text-align: center;
+}
+.mn-sim-block-figure {
+  text-align: center;
+}
+.mn-sim-block-figure svg {
+  display: block;
+  margin: 0 auto;
+}
+.mn-sim-block-caption {
+  font-family: var(--heading-font);
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+.mn-sim-valley {
+  fill: none;
+  stroke: var(--text-2);
+  stroke-width: 1.5;
+}
+.mn-sim-hop {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+.mn-sim-from {
   fill: var(--text-2);
 }
-.mn-sim-card-move {
-  cursor: pointer;
+.mn-sim-to {
+  fill: var(--accent);
 }
-.mn-sim-card-move rect {
-  fill: var(--bg);
-  stroke: var(--border);
+/* The grip exists for fingers. With a mouse the whole block drags, as in
+   the harness. On a touch screen only the grip does, so a swipe over the
+   rest of the figure still scrolls the page. It is an HTML element inside
+   the block's <foreignObject> because Chrome honors touch-action on HTML
+   boxes and on the <svg> itself, but not on shapes inside an svg. */
+.mn-sim-slab {
+  position: relative;
 }
-.mn-sim-card-move:hover rect {
-  stroke: var(--accent);
+.mn-sim-grip {
+  display: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 2.75rem;
+  touch-action: none;
+  cursor: grab;
+  background-image: radial-gradient(circle, var(--text-2) 1.6px, transparent 2px);
+  background-size: 8px 8px;
+  background-position: center;
+  background-repeat: space;
+  /* Two columns of three dots. */
+  -webkit-mask: linear-gradient(#000, #000) center / 16px 24px no-repeat;
+  mask: linear-gradient(#000, #000) center / 16px 24px no-repeat;
 }
-.mn-sim-card-move text {
-  font-family: var(--heading-font);
-  font-size: 14px;
-  fill: var(--text);
+@media (pointer: coarse) {
+  .mn-sim-grip {
+    display: block;
+    pointer-events: auto;
+  }
+  .mn-sim-card > .mn-sim-card-box {
+    pointer-events: none;
+  }
+  .mn-sim-block {
+    padding-right: 2.75rem;
+  }
 }
-.mn-sim-card-move[data-on~='off'] {
-  opacity: 0.35;
-  cursor: default;
+.mn-sim-source {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.2rem 0.7rem;
+}
+.mn-sim .mn-sim-source pre {
+  margin: 0.55rem -0.3rem;
+  padding: 0 0.3rem;
+  background: none;
+  border: none;
+  font-family: var(--mono-font);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border-radius: 3px;
+  transition: background 0.3s;
+}
+.mn-sim .mn-sim-source pre[data-on~='moved'] {
+  color: var(--accent);
+  background: var(--accent-light);
 }
 
 /* BakedDiagramSim: the real diagram drawing in a bordered canvas. */
@@ -49,18 +362,309 @@
   background: var(--fig-bg);
   border: 1px solid var(--border);
   border-radius: 6px;
-  cursor: pointer;
 }
 .mn-sim-baked.is-arranging {
   border-color: var(--accent);
-  cursor: default;
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 16px 16px;
 }
 .mn-sim-baked.is-arranging .mn-dg-node {
   cursor: grab;
 }
 .mn-sim-baked .mn-dg-node[data-on~='unarranged'] .mn-dg-halo {
   opacity: 1;
+  fill: none;
   stroke: var(--error);
   stroke-width: 1.5;
   stroke-dasharray: 5 4;
+}
+.mn-sim-owners {
+  margin-top: 0.9rem;
+}
+.mn-sim-owners .mn-knobs-actions {
+  margin-top: 0.5rem;
+}
+
+/* DualSurfaceSim. Blue is the author everywhere in it: their pane, their
+   commits, the file they just saved. */
+.mn-dual-surfaces {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 0.75rem;
+}
+.mn-dual-surface {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.mn-dual-surface[data-who='author'] {
+  border-top: 3px solid var(--accent);
+}
+.mn-dual-surface[data-who='agent'] {
+  border-top: 3px solid var(--text-2);
+}
+.mn-dual-surface .mn-sim-pane-name {
+  margin: 0;
+}
+.mn-dual-did {
+  flex: 1;
+  margin: 0;
+  font-family: var(--heading-font);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+.mn-dual-term {
+  font-family: var(--mono-font);
+  font-size: 0.8125rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.mn-dual-surface button,
+.mn-fb-sim button {
+  align-self: flex-start;
+  font-family: var(--heading-font);
+  font-size: 0.875rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+}
+.mn-dual-surface[data-who='author'] button {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.mn-dual-repo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 0.75rem 1rem;
+  margin-top: 0.75rem;
+  padding: 0.7rem 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.mn-dual-repo > * {
+  min-width: 0;
+}
+.mn-dual-file {
+  margin-bottom: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  font-family: var(--mono-font);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 4px;
+  transition:
+    border-color 0.3s,
+    background 0.3s;
+}
+.mn-dual-file[data-on~='author'] {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.mn-dual-file[data-on~='agent'] {
+  border-color: var(--text-2);
+}
+.mn-dual-file-name {
+  font-weight: 600;
+}
+.mn-dual-file-body {
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+.mn-dual-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: var(--mono-font);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+.mn-dual-log li {
+  padding: 0.15rem 0 0.15rem 0.6rem;
+  border-left: 3px solid var(--text-2);
+  margin-bottom: 0.3rem;
+  overflow-wrap: anywhere;
+}
+.mn-dual-log li[data-who='author'] {
+  border-left-color: var(--accent);
+}
+.mn-dual-log strong {
+  color: var(--accent);
+  font-weight: 600;
+}
+.mn-dual-hash {
+  color: var(--text-2);
+}
+
+/* FeedbackSim: author and agent on the left, the file on the right;
+   one column on a phone, in the order the comment travels. */
+.mn-fb-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  grid-template-areas:
+    'author file'
+    'agent file';
+  gap: 0.75rem;
+  align-items: start;
+}
+@media (max-width: 700px) {
+  .mn-fb-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'author' 'file' 'agent';
+  }
+}
+.mn-fb-author {
+  grid-area: author;
+}
+.mn-fb-file {
+  grid-area: file;
+}
+.mn-fb-agent {
+  grid-area: agent;
+}
+.mn-fb-pane {
+  min-width: 0;
+  font-family: var(--heading-font);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+.mn-fb-file .mn-sim-code + .mn-sim-pane-name {
+  margin-top: 0.6rem;
+}
+.mn-fb-editor {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+.mn-fb-source {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--mono-font);
+  font-size: 0.8125rem;
+  padding: 0.4rem 0.55rem;
+  background: var(--fig-bg);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+}
+.mn-fb-sim .mn-fb-bubble {
+  padding: 0.25rem 0.45rem;
+}
+.mn-fb-sim .mn-fb-bubble:not(:disabled) {
+  border-color: var(--accent);
+}
+.mn-fb-box,
+.mn-fb-hud {
+  margin-top: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.mn-fb-box {
+  border-color: var(--accent);
+}
+.mn-fb-typed {
+  margin: 0.35rem 0 0.5rem;
+  font-family: var(--body-font);
+  font-size: 0.9rem;
+}
+.mn-fb-box button,
+.mn-fb-sim .mn-fb-address {
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.mn-fb-hud-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-2);
+}
+.mn-fb-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  border: 2px solid var(--text-2);
+}
+.mn-fb-dot[data-on~='queued'] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.mn-fb-badge {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0 0.45rem;
+}
+.mn-fb-sim .mn-fb-address {
+  margin-top: 0.5rem;
+}
+.mn-fb-note {
+  margin: 0.45rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+.mn-fb-item {
+  margin: 0.5rem 0 0.4rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--border);
+}
+.mn-fb-item-head {
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+.mn-fb-item p {
+  margin: 0.2rem 0;
+  font-family: var(--body-font);
+  font-size: 0.9rem;
+}
+.mn-fb-item .mn-fb-reply {
+  color: var(--accent);
+}
+.mn-fb-tag {
+  font-size: 0.8125rem;
+  color: var(--text-2);
+  font-style: italic;
+}
+.mn-fb-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-2);
+}
+.mn-fb-steps li {
+  margin-bottom: 0.4rem;
+  padding-left: 0.6rem;
+  border-left: 3px solid var(--border);
+}
+.mn-fb-steps li[data-on~='now'] {
+  color: var(--text);
+  border-left-color: var(--accent);
+}
+
+/* Inline code inside a sim, at the size of the text around it. */
+.mn-sim .figure-hint code,
+.mn-sim .mn-knobs-title code {
+  font-size: 0.8125rem;
+}
+
+/* An invisible HTML pad over a draggable shape, for touch (KnobsSim.tsx). */
+.mn-sim-touchpad {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
 }

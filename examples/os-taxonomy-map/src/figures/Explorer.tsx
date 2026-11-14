@@ -2,9 +2,12 @@ import { useEffect, useRef } from 'react'
 import * as d3 from 'd3'
 import type { FigureProps } from './registry'
 import { useFigureHighlight } from '../store'
+import { str } from './lib/params'
 import {
   drawHaloText,
+  esc,
   GRAY,
+  MIN_LABEL_PX,
   makeCanvas,
   px,
   py,
@@ -17,36 +20,42 @@ import {
   type View,
 } from './lib/taxonomy'
 
-// Figure 3 — the explorer. Click a topic to trace what it builds on (solid
-// lines back through every ancestor) and what it unlocks (dashed). Hover for
-// descriptions, scroll to zoom, filter by subject chips, age window, or search.
+// Figure 3: the prerequisite graph drawn on the map. One topic is always
+// selected; solid lines run back through every ancestor and dashed lines
+// run forward to what it unlocks. It opens on the article's example
+// (DEFAULTS.topic), the edge that crosses the whole map.
+//
+// Term links in the prose name topics (`to=explorer.unit-fractions`).
+// Hovering one previews that topic's lines without changing the selection;
+// clicking one selects it.
+
+export const DEFAULTS = {
+  // The topic selected before the reader touches anything.
+  topic: 'Egyptian Maths and Engineering',
+}
 
 const TERM_TOPICS: Record<string, string> = {
   'egyptian-maths': 'Egyptian Maths and Engineering',
   'unit-fractions': 'Unit fractions',
   pyramids: 'Pyramids and the Great Sphinx',
   'three-d-shapes': '3-D shapes',
+  pompeii: 'Pompeii & Vesuvius',
 }
 
-export default function Explorer({ figureId }: FigureProps) {
+export default function Explorer({ figureId, ...props }: FigureProps) {
+  const startTopic = str(props.topic, DEFAULTS.topic)
   const data = useTaxonomy()
-  const { activePart } = useFigureHighlight(figureId)
-  const activePartRef = useRef(activePart)
-  const renderRef = useRef<(() => void) | null>(null)
+  const { hoveredPart, pinnedPart } = useFigureHighlight(figureId)
+  const termRef = useRef<((hover: string | undefined, pin: string | undefined) => void) | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const chipsRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
-  const ageBrushRef = useRef<SVGSVGElement>(null)
-  const ageReadoutRef = useRef<HTMLSpanElement>(null)
+  const zoomInRef = useRef<HTMLButtonElement>(null)
+  const zoomOutRef = useRef<HTMLButtonElement>(null)
   const resetRef = useRef<HTMLButtonElement>(null)
   const tipRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    activePartRef.current = activePart
-    renderRef.current?.()
-  }, [activePart])
 
   useEffect(() => {
     const wrap = wrapRef.current
@@ -54,21 +63,21 @@ export default function Explorer({ figureId }: FigureProps) {
     const chipsEl = chipsRef.current
     const search = searchRef.current
     const results = resultsRef.current
-    const ageBrushEl = ageBrushRef.current
-    const ageReadout = ageReadoutRef.current
+    const zoomInBtn = zoomInRef.current
+    const zoomOutBtn = zoomOutRef.current
     const resetBtn = resetRef.current
     const tipEl = tipRef.current
-    if (!data || !wrap || !panel || !chipsEl || !search || !results || !ageBrushEl || !ageReadout || !resetBtn || !tipEl) return
+    if (!data || !wrap || !panel || !chipsEl || !search || !results || !zoomInBtn || !zoomOutBtn || !resetBtn || !tipEl) return
     const { pts, prereqsOf, dependentsOf, clusters, byName } = data
 
-    const cv = makeCanvas(wrap, 0.95)
+    const cv = makeCanvas(wrap, (w) => (w < 480 ? 0.95 : 0.82))
     const baseView: View = { cx: 0, cy: 0, k: 1 }
 
     const state = {
       selected: null as number | null,
       hovered: null as number | null,
-      ageLo: 4,
-      ageHi: 15,
+      // A topic borrowed by a hovered term link in the prose.
+      preview: null as number | null,
       subjectsOn: new Set(SUBJECTS),
       transform: d3.zoomIdentity,
     }
@@ -86,8 +95,7 @@ export default function Explorer({ figureId }: FigureProps) {
     }
     computeBase()
 
-    const passes = (p: (typeof pts)[number]) =>
-      state.subjectsOn.has(p.subject) && p.a0 <= state.ageHi && p.a1 >= state.ageLo
+    const passes = (p: (typeof pts)[number]) => state.subjectsOn.has(p.subject)
 
     function ancestors(i: number) {
       const depth = new Map<number, number>([[i, 0]])
@@ -117,20 +125,21 @@ export default function Explorer({ figureId }: FigureProps) {
       const X = (i: number) => t.applyX(bx[i])
       const Y = (i: number) => t.applyY(by[i])
       const r = Math.max(2, Math.min(w, h) / 270) * Math.sqrt(Math.min(t.k, 5)) * 0.85
-      const termTopic = activePartRef.current ? TERM_TOPICS[activePartRef.current] : undefined
-      const annotated = termTopic ? (byName.get(termTopic)?.i ?? null) : null
+      // The story drawn is the previewed topic's if a term is hovered,
+      // otherwise the selected topic's.
+      const focus = state.preview ?? state.selected
 
       let anc: ReturnType<typeof ancestors> | null = null
       let deps: Edge[] | null = null
-      if (state.selected != null) {
-        anc = ancestors(state.selected)
-        deps = dependentsOf[state.selected]
+      if (focus != null) {
+        anc = ancestors(focus)
+        deps = dependentsOf[focus]
       }
       const inStory = (i: number) => Boolean(anc && (anc.depth.has(i) || deps!.some((e) => e.t === i)))
 
       // A hover previews the same recursive prerequisite ancestry as a
       // selection, but as a muted layer beneath the points.
-      const hoverAnc = state.hovered != null && state.hovered !== state.selected
+      const hoverAnc = state.hovered != null && state.hovered !== focus
         ? ancestors(state.hovered)
         : null
       if (hoverAnc) {
@@ -191,16 +200,12 @@ export default function Explorer({ figureId }: FigureProps) {
         }
         ctx.setLineDash([])
         ctx.globalAlpha = 1
-        const sel = pts[state.selected!]
+        const sel = pts[focus!]
         ctx.beginPath()
         ctx.arc(X(sel.i), Y(sel.i), r + 3, 0, 6.2832)
         ctx.strokeStyle = theme.text
         ctx.lineWidth = 2
         ctx.stroke()
-        ctx.font = "700 12.5px 'Source Sans 3', sans-serif"
-        const tw2 = ctx.measureText(sel.name).width
-        const lx = Math.max(tw2 / 2 + 4, Math.min(w - tw2 / 2 - 4, X(sel.i)))
-        drawHaloText(ctx, sel.name, lx, Y(sel.i) - r - 10, { size: 12.5, weight: 700, color: theme.text, halo: theme.halo })
       }
 
       if (state.hovered != null) {
@@ -212,42 +217,86 @@ export default function Explorer({ figureId }: FigureProps) {
         ctx.stroke()
       }
 
-      if (annotated != null) {
-        const p = pts[annotated]
-        ctx.beginPath()
-        ctx.arc(X(p.i), Y(p.i), r + 1, 0, 6.2832)
-        ctx.fillStyle = SUBJECT_COLOR[p.subject]
-        ctx.globalAlpha = 1
-        ctx.fill()
-        ctx.beginPath()
-        ctx.arc(X(p.i), Y(p.i), r + 5, 0, 6.2832)
-        ctx.strokeStyle = SUBJECT_COLOR[p.subject]
-        ctx.lineWidth = 2.5
-        ctx.stroke()
+      // Labels are placed greedily: the focused topic first, then cluster
+      // names from largest to smallest, skipping any that would collide.
+      const placed: [number, number, number, number][] = []
+      const place = (text: string, x: number, y: number, weight: number, color: string) => {
+        // A label pulled in from far outside the view would point at nothing.
+        if (x < -20 || x > w + 20 || y < -20 || y > h + 20) return
+        ctx.font = `${weight} ${MIN_LABEL_PX}px 'Source Sans 3', sans-serif`
+        const tw = ctx.measureText(text).width
+        if (tw + 8 > w) return
+        const cx = Math.max(tw / 2 + 4, Math.min(w - tw / 2 - 4, x))
+        const cy = Math.max(10, Math.min(h - 10, y))
+        const box: [number, number, number, number] = [cx - tw / 2 - 3, cy - 9, cx + tw / 2 + 3, cy + 9]
+        if (placed.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) return
+        placed.push(box)
+        drawHaloText(ctx, text, cx, cy, { size: MIN_LABEL_PX, weight, color, halo: theme.halo })
       }
-      ctx.globalAlpha = 1
-
+      if (focus != null) {
+        const p = pts[focus]
+        const above = Y(p.i) - r - 12
+        place(p.name, X(p.i), above > 12 ? above : Y(p.i) + r + 12, 700, theme.text)
+        // Name the far ends of its direct prerequisites, so a line that
+        // crosses the map says where it lands.
+        for (const e of prereqsOf[focus].slice(0, 4)) {
+          const q = pts[e.p]
+          ctx.beginPath()
+          ctx.arc(X(q.i), Y(q.i), r + 2.5, 0, 6.2832)
+          ctx.strokeStyle = theme.text
+          ctx.lineWidth = 1.2
+          ctx.stroke()
+          place(q.name, X(q.i), Y(q.i) - r - 12, 600, theme.text)
+        }
+      }
       if (t.k < 3) {
-        const minN = t.k < 1.6 ? 25 : 12
-        for (const c of clusters) {
+        const minN = t.k < 1.6 ? (w < 480 ? 33 : 25) : 12
+        for (const c of [...clusters].sort((a, b) => b.n - a.n)) {
           if (c.n < minN) continue
           const x = t.applyX(px(c.cx, baseView, w, h)), y = t.applyY(py(c.cy, baseView, w, h))
           if (x < 0 || x > w || y < 0 || y > h) continue
-          drawHaloText(ctx, c.label, x, y, { size: 10.5, weight: 600, color: theme.text2, halo: theme.halo })
+          place(c.label, x, y, 600, theme.text2)
         }
       }
     }
-    renderRef.current = render
 
+    // The map shares the page with prose, so it must not swallow page
+    // scrolling: the wheel zooms only with Ctrl/Cmd held, and one finger
+    // pans the map only once it is zoomed in (before that it scrolls the
+    // page). The + and − buttons zoom without either.
     const zoom = d3
       .zoom<HTMLCanvasElement, unknown>()
-      .scaleExtent([0.9, 14])
+      .scaleExtent([1, 14])
+      .filter((ev: Event) => {
+        if (ev.type === 'wheel') return (ev as WheelEvent).ctrlKey || (ev as WheelEvent).metaKey
+        if (ev.type.startsWith('touch')) return state.transform.k > 1.01
+        return !(ev as MouseEvent).button
+      })
       .on('zoom', (ev) => {
         state.transform = ev.transform
+        cv.canvas.style.touchAction = ev.transform.k > 1.01 ? 'none' : 'pan-y'
         render()
       })
     const sel = d3.select(cv.canvas as HTMLCanvasElement)
     sel.call(zoom).on('dblclick.zoom', null)
+    cv.canvas.style.touchAction = 'pan-y'
+    // The buttons zoom around the selected topic when it is in view, so
+    // zooming in keeps the thing being read about on screen.
+    const zoomBy = (f: number) => {
+      const t = state.transform
+      const i = state.selected
+      const at: [number, number] | undefined =
+        i != null && t.applyX(bx[i]) >= 0 && t.applyX(bx[i]) <= cv.w && t.applyY(by[i]) >= 0 && t.applyY(by[i]) <= cv.h
+          ? [t.applyX(bx[i]), t.applyY(by[i])]
+          : undefined
+      sel.transition().duration(reducedMotion ? 0 : 300).call(zoom.scaleBy, f, at)
+    }
+    const onZoomIn = () => zoomBy(1.8)
+    const onZoomOut = () => zoomBy(1 / 1.8)
+    zoomInBtn.addEventListener('click', onZoomIn)
+    zoomOutBtn.addEventListener('click', onZoomOut)
+
+    const startIndex = byName.get(startTopic)?.i ?? byName.get(DEFAULTS.topic)?.i ?? 0
 
     function findAt(ev: PointerEvent | MouseEvent): number | null {
       const [mx, my] = d3.pointer(ev, cv.canvas)
@@ -265,13 +314,13 @@ export default function Explorer({ figureId }: FigureProps) {
           state.hovered = i
           render()
         }
-        if (i != null) {
+        if (i != null && ev.pointerType !== 'touch') {
           const p = pts[i]
           tip
             .html(
-              `<div class="tip-name">${p.name}</div>
-              <div class="tip-sub">${p.subject} · ${p.domain} · ages ${p.a0}–${p.a1}</div>
-              <div class="tip-desc">${p.desc.length > 220 ? p.desc.slice(0, 220) + '…' : p.desc}</div>`,
+              `<div class="tip-name">${esc(p.name)}</div>
+              <div class="tip-sub">${esc(p.subject)} · ${esc(p.domain)} · ages ${p.a0}–${p.a1}</div>
+              <div class="tip-desc">${esc(p.desc.length > 220 ? p.desc.slice(0, 220) + '…' : p.desc)}</div>`,
             )
             .style('opacity', '1')
           const tw = tipEl.offsetWidth, th = tipEl.offsetHeight
@@ -286,7 +335,7 @@ export default function Explorer({ figureId }: FigureProps) {
           cv.canvas.style.cursor = 'pointer'
         } else {
           tip.style('opacity', '0')
-          cv.canvas.style.cursor = 'crosshair'
+          cv.canvas.style.cursor = i != null ? 'pointer' : state.transform.k > 1.01 ? 'grab' : 'default'
         }
       })
       .on('pointerleave', () => {
@@ -302,6 +351,7 @@ export default function Explorer({ figureId }: FigureProps) {
     function select(i: number | null, pan = false) {
       state.selected = i
       renderPanel()
+      describe()
       render()
       if (pan && i != null) {
         const p = pts[i]
@@ -315,21 +365,37 @@ export default function Explorer({ figureId }: FigureProps) {
       }
     }
 
+    function describe() {
+      const base = 'Map of 1,590 curriculum topics colored by subject, with prerequisite lines for one selected topic.'
+      if (state.selected == null) {
+        cv.canvas.setAttribute('aria-label', base + ' No topic is selected.')
+        return
+      }
+      const p = pts[state.selected]
+      const names = (es: Edge[], other: (e: Edge) => number) =>
+        es.map((e) => `${pts[other(e)].name} (${pts[other(e)].subject})`).join(', ') || 'nothing'
+      cv.canvas.setAttribute(
+        'aria-label',
+        `${base} Selected: ${p.name}, ${p.subject}, ages ${p.a0} to ${p.a1}. ` +
+          `It builds on ${names(prereqsOf[p.i], (e) => e.p)} and unlocks ${names(dependentsOf[p.i], (e) => e.t)}. ` +
+          'The same information is in the panel next to the map.',
+      )
+    }
+
     function linkItem(e: Edge, other: number, showReason: boolean) {
       const p = pts[other]
-      return `<div class="link-item" data-i="${other}" style="border-left-color:${SUBJECT_COLOR[p.subject]}">
-        <span class="li-name">${p.name}</span>
-        <span class="li-tag">${e.hard ? 'hard' : 'soft'} · ages ${p.a0}–${p.a1}</span>
-        ${showReason ? `<div class="li-reason">${e.reason}</div>` : ''}
-      </div>`
+      return `<button type="button" class="link-item" data-i="${other}" style="border-left-color:${SUBJECT_COLOR[p.subject]}">
+        <span class="li-name">${esc(p.name)}</span>
+        <span class="li-tag">${esc(p.subject)} · ages ${p.a0}–${p.a1} · ${e.hard ? 'hard' : 'soft'}</span>
+        ${showReason ? `<span class="li-reason">${esc(e.reason)}</span>` : ''}
+      </button>`
     }
 
     function renderPanel() {
       if (state.selected == null) {
-        panel!.innerHTML = `<h4>Click a topic</h4>
-          <div class="sub">or search above</div>
-          <div class="desc">Selecting a topic traces every prerequisite behind it and everything it unlocks.
-          Solid dark lines look backward; dashed blue lines look forward.</div>`
+        panel!.innerHTML = `<h4>No topic selected</h4>
+          <div class="desc">Click a dot or search for a topic. Solid lines run back through
+          everything it builds on, and dashed lines run forward to what it unlocks.</div>`
         return
       }
       const p = pts[state.selected]
@@ -337,124 +403,44 @@ export default function Explorer({ figureId }: FigureProps) {
       const dep = dependentsOf[p.i]
       const anc = ancestors(p.i)
       panel!.innerHTML = `
-        <h4>${p.name}</h4>
+        <h4>${esc(p.name)}</h4>
         <div class="sub"><span style="color:${SUBJECT_COLOR[p.subject]}">●</span>
-          ${p.subject} · ${p.domain} · ages ${p.a0}–${p.a1} · ${p.type.toLowerCase()}</div>
-        <div class="desc">${p.desc}</div>
+          ${esc(p.subject)} · ${esc(p.domain)} · ages ${p.a0}–${p.a1}</div>
+        <div class="desc">${esc(p.desc)}</div>
         <h5>Builds on ${pre.length} topic${pre.length === 1 ? '' : 's'}
           (${anc.depth.size - 1} in the full ancestry)</h5>
-        ${pre.map((e) => linkItem(e, e.p, true)).join('') || '<div class="sub">Nothing. This is bedrock.</div>'}
+        ${pre.map((e) => linkItem(e, e.p, true)).join('') || '<div class="sub">No prerequisites.</div>'}
         <h5>Unlocks ${dep.length} topic${dep.length === 1 ? '' : 's'}</h5>
-        ${dep.map((e) => linkItem(e, e.t, false)).join('') || '<div class="sub">Nothing downstream in v1.</div>'}
+        ${dep.map((e) => linkItem(e, e.t, false)).join('') || '<div class="sub">Nothing downstream in v1 of the taxonomy.</div>'}
       `
       panel!.querySelectorAll('.link-item').forEach((el) =>
         el.addEventListener('click', () => select(+(el as HTMLElement).dataset.i!, true)),
       )
     }
 
-    // subject chips
+    // Subject chips double as the color legend. Clicking one shows that
+    // subject alone; clicking it again brings the others back.
     chipsEl.innerHTML = SUBJECTS.map(
-      (s) => `<span class="chip" data-s="${s}"><span class="dot" style="background:${SUBJECT_COLOR[s]}"></span>${s}</span>`,
+      (s) =>
+        `<button type="button" class="chip" data-s="${esc(s)}" aria-pressed="false"><span class="dot" style="background:${SUBJECT_COLOR[s]}"></span>${esc(s)}</button>`,
     ).join('')
-    chipsEl.querySelectorAll('.chip').forEach((el) =>
+    const syncChips = () => {
+      const solo = state.subjectsOn.size === 1
+      chipsEl.querySelectorAll<HTMLElement>('.chip').forEach((chip) => {
+        const on = state.subjectsOn.has(chip.dataset.s!)
+        chip.classList.toggle('off', !on)
+        chip.setAttribute('aria-pressed', String(solo && on))
+      })
+    }
+    chipsEl.querySelectorAll<HTMLElement>('.chip').forEach((el) =>
       el.addEventListener('click', () => {
-        const s = (el as HTMLElement).dataset.s!
-        state.subjectsOn = new Set([s])
-        chipsEl.querySelectorAll<HTMLElement>('.chip').forEach((chip) =>
-          chip.classList.toggle('off', chip.dataset.s !== s),
-        )
+        const s = el.dataset.s!
+        const already = state.subjectsOn.size === 1 && state.subjectsOn.has(s)
+        state.subjectsOn = new Set(already ? SUBJECTS : [s])
+        syncChips()
         render()
       }),
     )
-
-    // One range brush replaces the two independent sliders. The selection is
-    // snapped to whole ages on release, while the handles remain keyboard
-    // adjustable for the same range without requiring a pointer.
-    const brushSvg = d3.select(ageBrushEl)
-    const brushWidth = Math.max(220, ageBrushEl.clientWidth || 240)
-    const brushHeight = 42
-    ageBrushEl.setAttribute('viewBox', `0 0 ${brushWidth} ${brushHeight}`)
-    const ageScale = d3.scaleLinear().domain([4, 15]).range([12, brushWidth - 12])
-    const brushGroup = brushSvg.append('g').attr('class', 'age-brush-g')
-    brushGroup
-      .append('line')
-      .attr('class', 'age-brush-track')
-      .attr('x1', ageScale(4))
-      .attr('x2', ageScale(15))
-      .attr('y1', 13)
-      .attr('y2', 13)
-    brushGroup
-      .selectAll<SVGLineElement, number>('line.age-brush-tick')
-      .data(d3.range(4, 16))
-      .join('line')
-      .attr('class', 'age-brush-tick')
-      .attr('x1', (a) => ageScale(a))
-      .attr('x2', (a) => ageScale(a))
-      .attr('y1', 9)
-      .attr('y2', 17)
-    brushGroup
-      .selectAll<SVGTextElement, number>('text.age-brush-label')
-      .data([4, 7, 10, 13, 15])
-      .join('text')
-      .attr('class', 'age-brush-label')
-      .attr('x', (a) => ageScale(a))
-      .attr('y', 34)
-      .attr('text-anchor', 'middle')
-      .text((a) => a)
-
-    let syncingBrush = false
-    const clampAge = (a: number) => Math.max(4, Math.min(15, Math.round(a)))
-    const ageBrush = d3
-      .brushX<unknown>()
-      .extent([
-        [ageScale(4), 3],
-        [ageScale(15), 23],
-      ])
-      .handleSize(10)
-      .on('brush end', (ev) => {
-        if (syncingBrush || !ev.selection) return
-        const [x0, x1] = ev.selection as [number, number]
-        state.ageLo = clampAge(ageScale.invert(x0))
-        state.ageHi = clampAge(ageScale.invert(x1))
-        if (state.ageLo > state.ageHi) state.ageLo = state.ageHi
-        updateAgeBrushA11y()
-        render()
-        if (ev.type === 'end') moveAgeBrush(state.ageLo, state.ageHi)
-      })
-    brushGroup.call(ageBrush)
-
-    function updateAgeBrushA11y() {
-      ageReadout!.textContent = `${state.ageLo}–${state.ageHi}`
-      brushGroup
-        .selectAll<SVGRectElement, { type: 'w' | 'e' }>('.handle')
-        .attr('aria-valuemin', 4)
-        .attr('aria-valuemax', 15)
-        .attr('aria-valuenow', (d) => (d.type === 'w' ? state.ageLo : state.ageHi))
-        .attr('aria-label', (d) => (d.type === 'w' ? 'Minimum age' : 'Maximum age'))
-    }
-
-    function moveAgeBrush(lo: number, hi: number) {
-      state.ageLo = clampAge(lo)
-      state.ageHi = clampAge(hi)
-      syncingBrush = true
-      brushGroup.call(ageBrush.move, [ageScale(state.ageLo), ageScale(state.ageHi)])
-      syncingBrush = false
-      updateAgeBrushA11y()
-      render()
-    }
-
-    brushGroup
-      .selectAll<SVGRectElement, { type: 'w' | 'e' }>('.handle')
-      .attr('tabindex', 0)
-      .attr('role', 'slider')
-      .on('keydown', (ev: KeyboardEvent, d) => {
-        if (!['ArrowLeft', 'ArrowRight'].includes(ev.key)) return
-        ev.preventDefault()
-        const delta = ev.key === 'ArrowRight' ? 1 : -1
-        if (d.type === 'w') moveAgeBrush(Math.min(state.ageHi, state.ageLo + delta), state.ageHi)
-        else moveAgeBrush(state.ageLo, Math.max(state.ageLo, state.ageHi + delta))
-      })
-    moveAgeBrush(4, 15)
 
     const onSearch = () => {
       const q = search.value.trim().toLowerCase()
@@ -467,12 +453,12 @@ export default function Explorer({ figureId }: FigureProps) {
         hits
           .map(
             (p) =>
-              `<div data-i="${p.i}"><span style="color:${SUBJECT_COLOR[p.subject]}">●</span> ${p.name}
-         <span class="sr-sub">${p.subject}, ages ${p.a0}–${p.a1}</span></div>`,
+              `<button type="button" data-i="${p.i}"><span style="color:${SUBJECT_COLOR[p.subject]}">●</span> ${esc(p.name)}
+         <span class="sr-sub">${esc(p.subject)}, ages ${p.a0}–${p.a1}</span></button>`,
           )
-          .join('') || '<div class="sr-sub" style="padding:0.4rem 0.6rem">No matches</div>'
+          .join('') || '<div class="sr-sub sr-none">No matches</div>'
       results.style.display = 'block'
-      results.querySelectorAll('div[data-i]').forEach((el) =>
+      results.querySelectorAll('button[data-i]').forEach((el) =>
         el.addEventListener('click', () => {
           results.style.display = 'none'
           search.value = pts[+(el as HTMLElement).dataset.i!].name
@@ -481,18 +467,25 @@ export default function Explorer({ figureId }: FigureProps) {
       )
     }
     search.addEventListener('input', onSearch)
+    const onSearchKey = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') results.style.display = 'none'
+      if (ev.key === 'Enter') results.querySelector<HTMLElement>('button[data-i]')?.click()
+    }
+    search.addEventListener('keydown', onSearchKey)
     const onDocClick = (ev: MouseEvent) => {
       if (!results.contains(ev.target as Node) && ev.target !== search) results.style.display = 'none'
     }
     document.addEventListener('click', onDocClick)
 
     const onReset = () => {
-      moveAgeBrush(4, 15)
       state.subjectsOn = new Set(SUBJECTS)
-      chipsEl.querySelectorAll('.chip').forEach((el) => el.classList.remove('off'))
+      syncChips()
       search.value = ''
-      state.selected = null
+      results.style.display = 'none'
+      // Reset returns to the opening view, which has a topic selected.
+      state.selected = startIndex
       renderPanel()
+      describe()
       sel.transition().duration(reducedMotion ? 0 : 500).call(zoom.transform, d3.zoomIdentity)
     }
     resetBtn.addEventListener('click', onReset)
@@ -505,42 +498,73 @@ export default function Explorer({ figureId }: FigureProps) {
     })
     ro.observe(wrap)
 
-    // default: the cross-map story
-    const dflt = byName.get('Egyptian Maths and Engineering')
-    select(dflt ? dflt.i : 0)
+    // Term links from the prose: hover previews, click selects.
+    const termIndex = (part: string | undefined) =>
+      part ? (byName.get(TERM_TOPICS[part] ?? '')?.i ?? null) : null
+    let lastPin: number | null = null
+    termRef.current = (hover, pin) => {
+      const pinned = termIndex(pin)
+      if (pinned !== lastPin) {
+        lastPin = pinned
+        if (pinned != null) select(pinned)
+      }
+      const preview = termIndex(hover)
+      if (preview !== state.preview) {
+        state.preview = preview
+        render()
+      }
+    }
+
+    select(startIndex)
 
     return () => {
+      termRef.current = null
       search.removeEventListener('input', onSearch)
+      search.removeEventListener('keydown', onSearchKey)
       document.removeEventListener('click', onDocClick)
       resetBtn.removeEventListener('click', onReset)
+      zoomInBtn.removeEventListener('click', onZoomIn)
+      zoomOutBtn.removeEventListener('click', onZoomOut)
       ro.disconnect()
-      brushSvg.selectAll('*').remove()
       sel.on('.zoom', null).on('pointermove', null).on('pointerleave', null).on('click', null)
-      renderRef.current = null
       wrap.removeChild(cv.canvas)
     }
-  }, [data])
+  }, [data, startTopic])
+
+  // Declared after the effect above so the handler exists when this runs.
+  const hoverTopic = typeof hoveredPart === 'string' ? hoveredPart : undefined
+  const pinTopic = typeof pinnedPart === 'string' ? pinnedPart : undefined
+  useEffect(() => {
+    termRef.current?.(hoverTopic, pinTopic)
+  }, [hoverTopic, pinTopic, data])
 
   return (
     <div className="explorer">
-      <div className="controls">
-        <div className="search-wrap">
-          <input ref={searchRef} type="text" placeholder="Search topics…" autoComplete="off" />
-          <div ref={resultsRef} className="search-results" />
-        </div>
-        <div className="age-brush-control">
-          <span>ages</span>
-          <svg ref={ageBrushRef} className="age-brush" aria-label="Filter topics by age range" />
-          <span ref={ageReadoutRef} className="ex-age-readout" />
-        </div>
-        <button ref={resetRef} type="button">
-          Reset
-        </button>
-      </div>
-      <div ref={chipsRef} className="chips" style={{ marginBottom: '0.75rem' }} />
+      <div ref={chipsRef} className="chips" role="group" aria-label="Subjects (click one to show it alone)" />
       <div className="explorer-body">
         <div className="explorer-map">
           <div ref={wrapRef} className="ex-canvas-wrap" />
+          <div className="controls">
+            <div className="search-wrap">
+              <input ref={searchRef} type="text" placeholder="Find a topic…" aria-label="Find a topic by name" autoComplete="off" />
+              <div ref={resultsRef} className="search-results" />
+            </div>
+            <span className="zoom-buttons">
+              <button ref={zoomOutRef} type="button" aria-label="Zoom out">
+                −
+              </button>
+              <button ref={zoomInRef} type="button" aria-label="Zoom in">
+                +
+              </button>
+            </span>
+            <button ref={resetRef} type="button">
+              Reset
+            </button>
+          </div>
+          <p className="figure-hint">
+            Click a dot to select it, or a subject above to show it alone. Zoom with − and + (or Ctrl/Cmd + scroll),
+            then drag to move around.
+          </p>
         </div>
         <div ref={panelRef} className="explorer-panel" />
       </div>

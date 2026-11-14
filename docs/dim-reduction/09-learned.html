@@ -9,197 +9,344 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
+  color-scheme: light dark;
   --article-width: 740px;
   --body-font: 'Source Serif 4', Georgia, serif;
   --heading-font: 'Source Sans 3', system-ui, sans-serif;
   --mono-font: 'Source Code Pro', monospace;
-  --body-size: 1.125rem; --line-height: 1.6;
-  --text: #1a1a2e; --text-2: #4a4a6a; --text-3: #8a8a9e;
-  --accent: #2563eb; --accent-light: #dbeafe;
-  --warm: #ea580c; --warm-light: #ffedd5;
-  --green: #059669; --purple: #7c3aed;
-  --bg: #fafafa; --fig-bg: #ffffff;
-  --border: #e2e2e8; --border-2: #c5c5d1; --muted: #e8e8ee;
-  --c0: #2563eb; --c1: #ea580c; --c2: #059669; --c3: #7c3aed;
+  --body-size: 1.125rem;
+  --line-height: 1.6;
+  --text: #1a1a2e;
+  --text-2: #4a4a6a;
+  --text-3: #6b6b82;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --on-accent: #ffffff;
+  --warm: #c2410c;
+  --warm-light: #ffedd5;
+  --bg: #fafafa;
+  --fig-bg: #ffffff;
+  --border: #e2e2e8;
+  --border-2: #c5c5d1;
+  --muted: #e8e8ee;
+  /* categorical colours, in the same order in every figure of the series */
+  --c0: #2563eb;
+  --c1: #c2410c;
+  --c2: #047857;
+  --c3: #7c3aed;
+  --c4: #be185d;
 }
-body { font-family: var(--body-font); font-size: var(--body-size); line-height: var(--line-height); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e6dd;
+    --text-2: #b9b9cb;
+    --text-3: #9a9ab0;
+    --accent: #60a5fa;
+    --accent-light: #1e3a5f;
+    --on-accent: #10102a;
+    --warm: #fb923c;
+    --warm-light: #4a2a12;
+    --bg: #1a1a2e;
+    --fig-bg: #22223a;
+    --border: #3a3a52;
+    --border-2: #5a5a74;
+    --muted: #2e2e48;
+    --c0: #60a5fa;
+    --c1: #fb923c;
+    --c2: #34d399;
+    --c3: #a78bfa;
+    --c4: #f472b6;
+  }
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
 .article { max-width: var(--article-width); margin: 0 auto; padding: 2rem 1.25rem 6rem; }
-h1, h2 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
+h1, h2, h3 { font-family: var(--heading-font); font-weight: 700; line-height: 1.25; }
 h1 { font-size: 2.4rem; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
 h2 { font-size: 1.4rem; margin: 3rem 0 1rem; }
-h3 { font-family: var(--heading-font); font-size: 1.1rem; font-weight: 700; margin: 2rem 0 0.75rem; }
+h3 { font-size: 1.1rem; margin: 2rem 0 0.75rem; }
 p { margin: 0 0 1rem; }
 a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-em { font-style: italic; } strong { font-weight: 600; }
-.subtitle { font-family: var(--heading-font); font-size: 1.1rem; color: var(--text-2); line-height: 1.45; margin-bottom: 1rem; font-weight: 400; }
-.series-tag { font-family: var(--heading-font); font-size: 0.8rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+em { font-style: italic; }
+strong { font-weight: 600; }
+.mono { font-family: var(--mono-font); font-size: 0.92em; }
+
+.subtitle { font-family: var(--heading-font); font-size: 1.1rem; color: var(--text-2); line-height: 1.45; margin-bottom: 1.5rem; font-weight: 400; }
+.series-tag { font-family: var(--heading-font); font-size: 0.8125rem; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+
 .figure { margin: 2rem 0; padding: 1.5rem; background: var(--fig-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-.figure-caption { font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.5; }
+.figure svg { display: block; width: 100%; }
+.figure-caption { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.75rem; line-height: 1.5; }
 .figure-label { font-weight: 600; color: var(--text); }
-.controls { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2); }
-.controls input[type="range"] { width: 200px; accent-color: var(--accent); vertical-align: middle; }
-.controls label { display: inline-flex; align-items: center; gap: 0.5rem; }
+
+.controls { display: flex; align-items: center; gap: 0.6rem 1.25rem; flex-wrap: wrap; margin-bottom: 1rem; font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); }
+.controls input[type="range"] { width: 150px; max-width: 100%; accent-color: var(--accent); vertical-align: middle; }
+.controls label { display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .controls .value { font-family: var(--mono-font); color: var(--text); min-width: 2ch; display: inline-block; }
-svg text { font-family: var(--heading-font); }
-svg .axis text { font-size: 11px; fill: var(--text-2); }
+.controls button, .toggle-group button { font-family: var(--heading-font); font-size: 0.875rem; padding: 0.4rem 0.75rem; background: var(--fig-bg); color: var(--text-2); cursor: pointer; }
+.controls > button, .controls label > button { border: 1px solid var(--border-2); border-radius: 4px; }
+.controls button:hover { background: var(--muted); }
+.toggle-group { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--border-2); border-radius: 4px; overflow: hidden; }
+.toggle-group button { border: none; border-right: 1px solid var(--border-2); }
+.toggle-group button:last-child { border-right: none; }
+.toggle-group button.active, .toggle-group button.active:hover { background: var(--accent); color: var(--on-accent); }
+button:focus-visible, input:focus-visible, svg [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.readout { font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); margin-top: 0.5rem; min-height: 1.4em; }
+.readout b { color: var(--text); font-weight: 600; }
+
+svg text { font-family: var(--heading-font); font-size: 13px; fill: var(--text-2); }
+svg .axis text { font-size: 13px; fill: var(--text-2); }
 svg .axis line, svg .axis path { stroke: var(--border-2); shape-rendering: crispEdges; }
+svg .pane-title { font-weight: 700; fill: var(--text); }
+svg .pane-bg { fill: var(--bg); stroke: var(--border); }
+
 .margin-note { font-size: 0.875rem; color: var(--text-2); line-height: 1.5; border-left: 2px solid var(--border-2); padding-left: 0.9rem; margin: 1.25rem 0; }
-@media (max-width: 640px) { h1 { font-size: 1.75rem; } .figure { padding: 1rem; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+
+footer { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.875rem; color: var(--text-2); }
+footer a { color: var(--text-2); }
+footer a.next { color: var(--accent); }
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.75rem; }
+  .figure { padding: 1rem; }
+  .controls input[type="range"] { width: 120px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }
+}
 </style>
 </head>
 <body>
 <div class="article">
 
 <header>
-  <div class="series-tag">Part 9 of 10 · Preserves whatever the objective says</div>
+  <div class="series-tag">Part 9 of 10 · Preserves whatever the objective rewards</div>
   <h1>Learned Representations</h1>
   <p class="subtitle">
-    When the dimensionality reduction is itself a neural network, the design space changes. The method no longer has to define what it preserves; it can learn from the objective. That shift makes new things possible and introduces a different set of tradeoffs.
+    When the dimensionality reduction is a neural network, what it preserves is set by the objective it is trained on. That makes the objective a design choice, and it brings the costs of training a model.
   </p>
 </header>
 
 <p>
-  Every method in the earlier articles defines its notion of "good embedding" once, in the algorithm. PCA preserves variance. t-SNE preserves neighborhoods. Mapper preserves connectivity through a filter. In each case, the method's objective is a fixed choice made by the algorithm designer; the user's only knobs are hyperparameters that change how the fixed objective is applied.
+  Each method in the earlier articles fixes its notion of a good embedding in the algorithm. PCA preserves variance. t-SNE preserves neighborhoods. Mapper preserves connectivity through a filter. The objective is chosen by the method's designer, and the user's knobs are hyperparameters that change how it is applied.
 </p>
 
 <p>
-  The learned-representation family breaks this constraint. Instead of running an optimization over the embedding coordinates directly, it trains a neural network to produce the embedding. The network is a function: high-dimensional input in, low-dimensional output out. Whatever you make the network minimize during training becomes, by the end of training, what the embedding preserves. This makes the objective itself a design knob.
+  The learned-representation family trains a neural network to produce the embedding, where the earlier methods optimize the embedding coordinates directly. The network is a function from high-dimensional input to low-dimensional output, and whatever it is trained to minimize becomes what the embedding preserves. The objective is now something the user can choose.
 </p>
 
 <p>
-  Several families of methods fall under this umbrella. Vanilla autoencoders preserve reconstruction. Variational autoencoders preserve reconstruction plus a probabilistic prior. Parametric UMAP preserves UMAP's neighbor objective, but through a trained encoder. Domain-specific methods like scVI preserve reconstruction under a likelihood model tailored to the data. They share a common shape: an encoder that reduces dimensions, a training objective that disciplines the encoder's behavior, and a latent space whose properties reflect what the objective rewarded.
+  Several methods fit this description. Autoencoders preserve what is needed for reconstruction. Variational autoencoders add a prior on the latent space. Parametric UMAP trains an encoder on UMAP's neighbor objective. Domain-specific methods like scVI reconstruct under a likelihood model suited to the data. Each has an encoder that reduces dimension, an objective that shapes what the encoder keeps, and a latent space that reflects that objective.
 </p>
 
-<h2>The autoencoder: the foundational idea</h2>
+<h2>The autoencoder</h2>
 
 <p>
-  The simplest member of the family is the autoencoder. Train a neural network to take an input, compress it through a low-dimensional bottleneck, and reconstruct the input from the bottleneck representation. If the bottleneck is two- or three-dimensional, you get a DR method as a side effect: the encoder maps the input to a low-dimensional latent vector, which is the embedding.
-</p>
-
-<p>
-  The objective is reconstruction error (usually mean squared error or cross-entropy). A point whose latent vector reconstructs its input accurately has been represented well; a point whose reconstruction is poor is being badly represented. The network learns to arrange the latent space in a way that lets the decoder recover as much input information as possible from as few latent dimensions as possible. Unlike PCA, which also minimizes reconstruction error but only over linear encoders, autoencoders can learn nonlinear mappings. This is their main pitch.
+  The simplest member of the family is the autoencoder: a network trained to take an input, squeeze it through a low-dimensional bottleneck, and reconstruct the input from the bottleneck. If the bottleneck has two or three dimensions, the encoder half is a dimensionality reduction method, and the bottleneck value is the embedding.
 </p>
 
 <p>
-  A useful way to picture a trained autoencoder is to look at the <em>decoder</em> as a parameterized curve or surface. The latent space has some fixed dimension; the decoder maps each latent point to a reconstruction in the original (high-dimensional) space. As you move through the latent space, the reconstruction moves along a manifold that the network has learned.
+  The objective is reconstruction error, usually mean squared error or cross-entropy. The network has to arrange the latent space so that the decoder can recover as much of the input as possible from as few numbers as possible. PCA minimizes the same reconstruction error over linear encoders and decoders. An autoencoder can also learn nonlinear ones, and that is the reason to use it.
+</p>
+
+<p>
+  One way to picture a trained autoencoder is through its <em>decoder</em>. The decoder maps each latent value to a point in the original space, so as the latent value varies, the decoder's output traces a curve (or, with more latent dimensions, a surface) through the data.
 </p>
 
 <div class="figure" id="fig-ae">
   <div class="controls">
     <label>
-      latent position z <span class="value" id="ae-z-val">0.50</span>
+      latent value z <span class="value" id="ae-z-val">0.50</span>
       <input type="range" id="ae-z" min="0" max="1" value="0.5" step="0.01">
     </label>
+    <button id="ae-retrain">retrain</button>
   </div>
-  <svg id="ae-svg" width="100%" height="340" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid meet"></svg>
+  <svg id="ae-svg" role="img" aria-label="Two hundred points scattered along an S-shaped curve, colored from purple to yellow by the latent value the encoder assigns them. A dashed straight line through the points is PCA's one-dimensional reconstruction. A solid curve, the autoencoder's decoder output, starts as a short segment and bends during training until it follows the S through the points. A marker on the curve shows the decoder's output for the slider's latent value."></svg>
+  <div class="readout" id="ae-readout" aria-live="polite"></div>
   <div class="figure-caption">
     <span class="figure-label">Figure 1.</span>
-    A 1-dimensional autoencoder trained on a curved 2D manifold. Left: the encoder maps each input point to a latent scalar z in [0, 1]. Right: the decoder maps any z back to a 2D reconstruction (the blue curve). As you drag the slider, the decoder traces out the manifold; the decoder <em>is</em> the learned representation of the data's shape.
+    An autoencoder with a one-number bottleneck, trained in your browser on 200 points along a curve. The solid curve is everything the decoder can produce, and it bends into the data's shape as training runs. Points are colored by the latent value the encoder gives them, and the color runs in order along the curve. The dashed line is PCA's reconstruction from one component, the best any straight line can do. The readout compares the two reconstruction errors: the autoencoder ends about three times lower, close to the noise in the data. Move the slider to send one latent value through the decoder.
   </div>
 </div>
 
 <p>
-  What the autoencoder preserves is shaped entirely by the architecture and the training data. With enough capacity, it can memorize the data exactly. With too little capacity, it fails to reconstruct anything well. In between, it preserves whichever aspects of the data are easiest to reconstruct. For a curved manifold like the figure above, a small autoencoder will tend to find the manifold's intrinsic parameterization. For high-variance noise on top of low-dimensional structure, it will tend to keep the structure and throw away the noise.
+  What an autoencoder preserves depends on its architecture and its training data. With enough capacity it can memorize the data. With too little it reconstructs nothing well. In between it keeps whatever is cheapest to reconstruct: for the curve in Figure 1, a small network finds the position along the curve and discards the scatter around it.
 </p>
 
-<h2>Variational autoencoders: putting a prior on the latent</h2>
+<h2>Variational autoencoders: a prior on the latent space</h2>
 
 <p>
-  Vanilla autoencoders have no constraint on the geometry of their latent space; the encoder can scatter inputs however it wants, as long as the decoder can invert the mapping. This often produces latent spaces with holes, elongated regions, or inconsistent density. Sampling a random point in the latent space and decoding it may give nonsense, because the decoder was only trained to handle the latent points the encoder actually produced.
-</p>
-
-<p>
-  The variational autoencoder, from Kingma and Welling's 2013 paper, fixes this by adding a probabilistic structure. The encoder does not output a single latent point; it outputs a distribution (parameters of a Gaussian). Training encourages this encoder distribution to stay close to a fixed prior (typically a unit Gaussian), using a KL-divergence term added to the reconstruction loss. The result is a latent space that is continuous and has predictable density: you can sample from the prior, decode, and get something that looks like training data.
+  A plain autoencoder puts no constraint on the geometry of its latent space. The encoder can scatter inputs however it likes as long as the decoder can invert the mapping, which often leaves holes, stretched regions, and uneven density. Decoding a random latent point may give nonsense, because the decoder was trained only on the latent points the encoder produced.
 </p>
 
 <p>
-  In terms of what they preserve: a VAE preserves both reconstruction <em>and</em> a smooth probabilistic latent geometry. This is very useful when you want to generate new samples by sampling from the prior and decoding them, when you want to interpolate smoothly between examples, or when you want a latent space suitable for downstream probabilistic models. It is less ideal as a pure visualization tool, because the smoothing can wash out cluster structure that a non-regularized method would keep sharp.
-</p>
-
-<h2>Parametric UMAP: someone else's objective, learned by a network</h2>
-
-<p>
-  A natural question: if neural networks can learn whatever objective we train them with, why not train them on the UMAP or t-SNE objective instead of reconstruction? That is what parametric UMAP (Sainburg et al., 2021) does. Build the UMAP high-dimensional neighborhood graph as usual, but instead of directly optimizing a 2D embedding, train a neural network encoder whose output is scored against the UMAP loss.
+  The variational autoencoder, from Kingma and Welling's 2013 paper, adds probabilistic structure. The encoder outputs a distribution (the parameters of a Gaussian) in place of a single point, and a KL-divergence term in the loss keeps that distribution close to a fixed prior, typically a unit Gaussian. The latent space becomes continuous with predictable density: we can sample from the prior, decode, and get something that resembles the training data.
 </p>
 
 <p>
-  This combines two useful properties. You get UMAP's characteristic preservation of local neighborhoods, plus the benefits of a parametric function: a new unseen data point can be embedded in a single forward pass rather than needing to rerun the optimization; the encoder can be regularized, composed with classifiers, or fine-tuned; the embedding becomes reproducible across runs because the network captures the mapping rather than the optimization's initialization.
+  So a VAE preserves reconstruction <em>and</em> a smooth probabilistic latent geometry. That is useful for generating samples, for interpolating between examples, and for feeding the latent space to downstream probabilistic models. It is less suited to pure visualization, because the pull toward the prior can blur cluster structure that an unregularized method would keep sharp.
+</p>
+
+<h2>Parametric UMAP: a borrowed objective</h2>
+
+<p>
+  If a network learns whatever objective we train it on, we can train it on the UMAP objective in place of reconstruction. Parametric UMAP (Sainburg, McInnes, and Gentner, 2021) does that. It builds UMAP's neighbor graph as usual, and where UMAP would move the 2D coordinates of each point directly, it trains an encoder whose outputs are scored by the same attract-and-repel loss over batches of graph edges. No decoder is needed, though one can be added.
 </p>
 
 <p>
-  The cost is the cost of neural networks in general. You need a GPU (or patience), you need to pick an architecture, and you need to tune learning rates and batch sizes. But for workflows where the same DR model will be reused across many datasets or queried with new data, parametric methods are often worth it. IVIS (Szubert et al., 2019) is a similar idea that uses triplet-based supervision.
+  This combines UMAP's preservation of local neighborhoods with the properties of a parametric function. A new data point is embedded with one forward pass instead of a new optimization. The encoder can be regularized, combined with a classifier, or fine-tuned. And once trained, the mapping is fixed: the same input always lands in the same place, where rerunning UMAP gives a new layout each time.
+</p>
+
+<p>
+  The cost is the cost of training neural networks. You need a GPU or patience, an architecture, and tuned learning rates and batch sizes, and two training runs can still differ. For workflows where the same model will embed new data many times, that is often worth paying. IVIS (Szubert et al., 2019) is a related method that trains its encoder with a triplet loss.
 </p>
 
 <div class="margin-note">
-  Parametric methods turn dimensionality reduction into a trained model with a fixed API. This is exactly what you want when the DR is a production-facing pipeline that needs to embed new examples quickly and reproducibly. Non-parametric methods (the default t-SNE and UMAP) are more like a one-shot analysis.
+  A parametric method turns dimensionality reduction into a trained model that can be saved and called. That suits a pipeline that has to place new examples quickly and consistently. The non-parametric defaults, t-SNE and UMAP, are closer to a one-off analysis of a fixed dataset.
 </div>
 
-<h2>Domain-specific: scVI and the case of count data</h2>
+<h2>scVI: a likelihood made for count data</h2>
 
 <p>
-  The most compelling argument for learned representations is that they let you customize the likelihood model. Consider single-cell RNA sequencing. Each cell produces a vector of gene counts, typically around 20,000 genes, with each count ranging from zero to thousands. The data is sparse (most entries are zero), discrete (counts are integers), and overdispersed (variance much larger than the mean).
+  A learned representation also lets us choose the likelihood model. Consider single-cell RNA sequencing. Each cell gives a vector of counts for roughly 20,000 genes, each count between zero and a few thousand. The data is sparse (most entries are zero), discrete, and overdispersed (the variance is much larger than the mean).
 </p>
 
 <p>
-  Applying PCA or UMAP to raw counts is problematic: they assume Gaussian-ish Euclidean data. The standard workaround is to log-transform, normalize, and then run the DR method, but this is a hack; the log step hides the discrete count structure and the normalization introduces artifacts. What we actually want is a method that takes the count structure seriously.
+  PCA and UMAP on raw counts work poorly, since both treat the data as roughly Gaussian vectors under Euclidean distance. The standard workaround is to normalize, log-transform, and then reduce, which hides the count structure and can introduce artifacts of its own.
 </p>
 
 <p>
-  scVI, from Lopez and colleagues in 2018, is a VAE with a tailored likelihood. Instead of a Gaussian reconstruction loss, it uses a zero-inflated negative binomial distribution, which is appropriate for sparse overdispersed counts. The latent space captures biological variation; the likelihood handles the count-specific noise properly; and batch effects can be modeled explicitly via a conditioning variable. The whole pipeline is a single probabilistic model rather than a sequence of separate preprocessing steps.
+  scVI, from Lopez and colleagues in 2018, is a VAE whose reconstruction term is a zero-inflated negative binomial likelihood, a distribution suited to sparse, overdispersed counts, in place of a Gaussian. The latent space captures biological variation, the likelihood accounts for the count noise, and batch effects are modeled by conditioning on the batch. The pipeline is one probabilistic model where it used to be a sequence of preprocessing steps.
 </p>
 
 <p>
-  The scVI approach is the clearest example of what learned representations buy you: <em>the ability to match the model to the data</em>. When your data has a specific structure (counts, sequences, images, graphs), you can build a likelihood that respects that structure, and the resulting latent space is consequently better. This is not possible with methods from earlier articles, which are generic and domain-agnostic.
+  scVI is the clearest example of what the learned family offers: when the data has a specific structure (counts, sequences, images, graphs), the model can be built to respect it. The general-purpose methods of the earlier articles have no place to put that knowledge beyond the choice of a distance.
 </p>
 
-<h2>A unified view of the family</h2>
+<h2>One architecture, different objectives</h2>
 
 <p>
-  Despite their differences in objective, all the methods in this article share the same architectural shape. An encoder reduces the dimensionality; a training objective disciplines what the encoder preserves; a latent space emerges that reflects the objective.
+  For all their differences, the methods in this article have the same parts: an encoder, a latent space, usually a decoder, and a loss.
 </p>
 
 <div class="figure" id="fig-neural">
-  <svg id="neural-svg" width="100%" height="360" viewBox="0 0 680 360" preserveAspectRatio="xMidYMid meet"></svg>
+  <svg id="neural-svg" role="img" aria-label="Four rows, each a schematic of input, encoder, latent, decoder and output, with the loss written beneath. Autoencoder: reconstruction error. VAE: reconstruction error plus KL divergence to a prior. Parametric UMAP: UMAP's cross-entropy on the neighbor graph, applied to the latent, with the decoder drawn dashed because it is optional. scVI: a zero-inflated negative binomial likelihood of the counts plus KL divergence to a prior."></svg>
   <div class="figure-caption">
     <span class="figure-label">Figure 2.</span>
-    The learned-representation family as variations on one architecture. The encoder and decoder are shared; the training objective is what differs. Autoencoders minimize reconstruction. VAEs add a prior on the latent. Parametric UMAP borrows its loss from a neighbor-graph method. scVI replaces the Gaussian reconstruction with a count-aware likelihood.
+    Four members of the family. The encoder and the latent bottleneck are the same in each; what changes is the loss, written under each row, and where it is applied. Parametric UMAP's loss acts on the latent directly, so its decoder is optional and drawn dashed.
   </div>
 </div>
 
 <p>
-  Because the objective is where the methods differ, you can mix and match. Train a VAE with a topological regularization term (topological autoencoders, which we saw in article 5). Train a parametric UMAP with a hyperbolic decoder. Train an scVI with contrastive pretraining. The learned-representation family is modular in a way that the other families are not.
+  Because the methods differ mainly in the objective, objectives can be combined. A VAE can carry a topological regularizer (the topological autoencoders of article 5). A parametric UMAP can embed into hyperbolic space. This family is modular in a way the others are not.
 </p>
 
-<h2>What you give up</h2>
+<h2>What learned methods cost</h2>
 
 <p>
-  The learned-representation family comes with real costs. Training takes longer and needs more tuning: minutes to hours on a GPU, against a few minutes for UMAP on a CPU at moderate scale. Reproducibility depends on random seeds, initialization, and architecture choices. Hyperparameter sensitivity is higher than for the classical methods. Interpretability is lower: a trained network is an opaque function, and explaining why two points ended up near each other in its latent space is harder than explaining why they did in PCA or t-SNE.
-</p>
-
-<p>
-  For visualization alone, UMAP on the raw data is usually faster, cheaper, and nearly as good. For production use, for domain-specific likelihoods, for out-of-sample queries, or for composition with other neural components, the learned family is worth the cost. The choice between them is workflow-dependent, not performance-dependent.
-</p>
-
-<h2>Why this family matters for understanding ML latent spaces</h2>
-
-<p>
-  If you are studying the internal representations of a large neural model (an LLM, a vision transformer, a protein model), you are already looking at a learned representation. The activations you want to visualize are themselves the output of an encoder trained on some objective; that objective is what determines what those activations preserve.
+  Training takes longer and needs more tuning: minutes to hours on a GPU, against a few minutes for UMAP on a CPU at moderate scale. Results depend on random seeds, initialization, and architecture, and are more sensitive to hyperparameters than the classical methods. Interpretation is harder too, since explaining why two points ended up close in a network's latent space is more difficult than explaining it for PCA.
 </p>
 
 <p>
-  So when you run UMAP on a language model's embeddings, you are actually composing two learned representations: the LM's (trained to predict the next token, say) and UMAP's (trained, implicitly, to preserve neighborhoods). The resulting 2D picture tells you about the intersection of those two objectives, not about either one in isolation. This is a useful lens to carry into the capstone article, where we consider what the current methods are missing and where the community has room to invent.
+  For visualization alone, UMAP on the raw data is usually faster and nearly as good. For embedding new data, for domain-specific likelihoods, or for composing with other neural components, the learned family is worth its cost. The choice depends on the workflow more than on which method scores better.
 </p>
 
-<footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--heading-font); font-size: 0.85rem; color: var(--text-2);">
-  <p>Part of <a href="index.html" style="color: var(--text-2);">What Dimensionality Reduction Preserves</a>. Previous: <a href="08-hierarchy.html" style="color: var(--accent);">Hyperbolic Embeddings</a>. Next: <a href="10-capstone.html" style="color: var(--accent);">Opportunities &amp; Open Problems</a>.</p>
-  <p>Built with <a href="https://github.com/enjalot/moonshine" style="color: var(--text-2);">moonshine</a>.</p>
+<h2>Projecting a model's activations</h2>
+
+<p>
+  If you study the internal representations of a large neural model (an LLM, a vision transformer, a protein model), you are already looking at a learned representation. The activations are the output of an encoder trained on some objective, and that objective determines what they preserve.
+</p>
+
+<p>
+  So running UMAP on a language model's embeddings composes two reductions: the model's, trained to predict the next token, and UMAP's, which keeps neighborhoods. The 2D picture shows what survives both, and it cannot be read as a picture of either one alone. The capstone article starts from there, with what current methods miss on this kind of data.
+</p>
+
+<footer>
+  <p>Part of <a href="index.html">What Dimensionality Reduction Preserves</a>. Previous: <a class="next" href="08-hierarchy.html">Hyperbolic Embeddings</a>. Next: <a class="next" href="10-capstone.html">Opportunities &amp; Open Problems</a>.</p>
+  <p>Built with <a href="https://github.com/enjalot/moonshine">moonshine</a>.</p>
 </footer>
 
 </div>
 
 <script>
+const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const DUR = REDUCED ? 0 : 250;
+
+// Every figure is drawn at the pixel width its container actually has, and redrawn when that
+// width changes, so labels stay the same size on a phone as on a desktop. draw(svg, W) lays the
+// figure out for width W and returns { height } (plus an optional stop() to cancel animation).
+function figure(id, draw) {
+  const node = document.getElementById(id), svg = d3.select(node);
+  let lastW = 0, stop = null;
+  function go() {
+    const W = Math.floor(node.getBoundingClientRect().width);
+    if (!W || W === lastW) return;
+    lastW = W;
+    if (stop) stop();
+    svg.selectAll("*").remove();
+    const res = draw(svg, W);
+    svg.attr("viewBox", `0 0 ${W} ${res.height}`).attr("height", res.height);
+    stop = res.stop || null;
+  }
+  new ResizeObserver(go).observe(node.parentNode);
+  go();
+}
+
+// Run start() the first time the element scrolls into view, so animations play when they can be seen.
+function whenVisible(node, start) {
+  if (!("IntersectionObserver" in window)) { start(); return () => {}; }
+  const io = new IntersectionObserver(entries => {
+    if (entries.some(e => e.isIntersecting)) { io.disconnect(); start(); }
+  }, { threshold: 0.35 });
+  io.observe(node);
+  return () => io.disconnect();
+}
+
+// Mutually exclusive buttons. Calls onChange(value) and marks the pressed button.
+function toggle(groupId, onChange) {
+  const buttons = document.querySelectorAll(`#${groupId} button`);
+  buttons.forEach(btn => {
+    btn.setAttribute("aria-pressed", btn.classList.contains("active"));
+    btn.onclick = () => {
+      buttons.forEach(b => { b.classList.toggle("active", b === btn); b.setAttribute("aria-pressed", b === btn); });
+      onChange(btn.dataset.value);
+    };
+  });
+  return () => document.querySelector(`#${groupId} button.active`).dataset.value;
+}
+
+// A titled panel: returns a <g> whose origin is the panel's top-left drawing corner.
+function pane(svg, x, y, w, h, title, note) {
+  const g = svg.append("g").attr("transform", `translate(${x},${y})`);
+  g.append("text").attr("class", "pane-title").attr("x", 0).attr("y", 13).text(title);
+  if (note) g.append("text").attr("x", 0).attr("y", 30).text(note);
+  const top = note ? 40 : 22;
+  g.append("rect").attr("class", "pane-bg").attr("x", 0).attr("y", top).attr("width", w).attr("height", h - top).attr("rx", 4);
+  const inner = g.append("g").attr("transform", `translate(0,${top})`);
+  inner.w = w; inner.h = h - top;
+  return inner;
+}
+
+// Scales that fit a 2D point set into a w x h box with equal units on both axes.
+function fitScales(pts, w, h, pad = 12) {
+  const xe = d3.extent(pts, p => p[0]), ye = d3.extent(pts, p => p[1]);
+  const s = Math.min((w - 2 * pad) / ((xe[1] - xe[0]) || 1), (h - 2 * pad) / ((ye[1] - ye[0]) || 1));
+  const cx = (xe[0] + xe[1]) / 2, cy = (ye[0] + ye[1]) / 2;
+  return { x: v => w / 2 + (v - cx) * s, y: v => h / 2 - (v - cy) * s, s };
+}
+
 function mulberry32(seed) {
   return function() {
     let t = seed += 0x6D2B79F5;
@@ -213,176 +360,189 @@ function gaussian(rng) {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 
-// ---------- Figure 1: Autoencoder latent traversal ----------
-(function() {
-  const svg = d3.select("#ae-svg");
-  const W = 680, H = 340;
-
-  // Generate data along a curved manifold in 2D
-  const rng = mulberry32(13);
-  const N = 200;
-  const data = [];
-  for (let i = 0; i < N; i++) {
-    const t = rng();
-    const a = (t - 0.5) * 2.4;
-    const x = a;
-    const y = Math.sin(a * 1.8) * 0.8;
-    data.push({ x: x + gaussian(rng) * 0.08, y: y + gaussian(rng) * 0.08, t });
+// Leading eigenvectors of a symmetric matrix by power iteration with deflation.
+function topEig(M, dim, seed = 1) {
+  const n = M.length, rng = mulberry32(seed), vecs = [], vals = [];
+  for (let c = 0; c < dim; c++) {
+    let v = Array.from({ length: n }, () => rng() - 0.5), lam = 0;
+    for (let it = 0; it < 300; it++) {
+      const w = new Array(n).fill(0);
+      for (let i = 0; i < n; i++) { let s = 0; const Mi = M[i]; for (let j = 0; j < n; j++) s += Mi[j] * v[j]; w[i] = s; }
+      for (const u of vecs) { let p = 0; for (let i = 0; i < n; i++) p += w[i] * u[i]; for (let i = 0; i < n; i++) w[i] -= p * u[i]; }
+      let nrm = 0; for (let i = 0; i < n; i++) nrm += w[i] * w[i];
+      nrm = Math.sqrt(nrm) || 1;
+      let diff = 0;
+      for (let i = 0; i < n; i++) { const x = w[i] / nrm; diff += Math.abs(x - v[i]); v[i] = x; }
+      lam = nrm;
+      if (diff < 1e-10) break;
+    }
+    vecs.push(v); vals.push(lam);
   }
+  return { vecs, vals };
+}
 
-  // "Trained decoder": a smooth parameterization of the manifold
-  function decode(z) {
-    const a = (z - 0.5) * 2.4;
-    return [a, Math.sin(a * 1.8) * 0.8];
+// PCA: centre the data, eigendecompose the covariance matrix, project onto the leading components.
+function pca(X, dim = 2) {
+  const n = X.length, d = X[0].length, mean = new Array(d).fill(0);
+  for (const x of X) for (let a = 0; a < d; a++) mean[a] += x[a] / n;
+  const C = Array.from({ length: d }, () => new Array(d).fill(0));
+  for (const x of X) for (let a = 0; a < d; a++) for (let b = 0; b < d; b++) C[a][b] += (x[a] - mean[a]) * (x[b] - mean[b]) / (n - 1);
+  const { vecs, vals } = topEig(C, Math.min(dim, d), 3);
+  let total = 0; for (let a = 0; a < d; a++) total += C[a][a];
+  const Y = X.map(x => vecs.map(v => { let s = 0; for (let a = 0; a < d; a++) s += (x[a] - mean[a]) * v[a]; return s; }));
+  return { Y, components: vecs, mean, explained: vals.map(l => l / total) };
+}
+
+// A small autoencoder, 2 -> H tanh -> 1 -> H tanh -> 2, trained on mean squared reconstruction
+// error by full-batch Adam with hand-written backpropagation. train(n) runs n more steps.
+function makeAutoencoder(X, { hidden = 16, steps = 600, lr = 0.01, seed = 1 } = {}) {
+  const rng = mulberry32(seed), H = hidden, n = X.length;
+  const init = (r, c) => Array.from({ length: r * c }, () => gaussian(rng) * Math.sqrt(1 / c));
+  // parameters, flat: W1 (H x 2), b1 (H), W2 (1 x H), b2 (1), W3 (H x 1), b3 (H), W4 (2 x H), b4 (2)
+  const sizes = [H * 2, H, H, 1, H, H, 2 * H, 2], offs = []; let total = 0;
+  for (const s of sizes) { offs.push(total); total += s; }
+  const p = new Float64Array(total);
+  p.set(init(H, 2), offs[0]); p.set(init(1, H), offs[2]); p.set(init(H, 1), offs[4]); p.set(init(2, H), offs[6]);
+  const m = new Float64Array(total), v = new Float64Array(total), g = new Float64Array(total);
+  const [W1, b1, W2, b2, W3, b3, W4, b4] = offs;
+  const h1 = new Float64Array(H), h2 = new Float64Array(H), dh = new Float64Array(H);
+  function forward(x) {
+    let z = p[b2];
+    for (let i = 0; i < H; i++) { h1[i] = Math.tanh(p[W1 + 2 * i] * x[0] + p[W1 + 2 * i + 1] * x[1] + p[b1 + i]); z += p[W2 + i] * h1[i]; }
+    return z;
   }
-  // "Trained encoder": inverse (approximate): for this demo, use t as the latent
-  function encode(p) {
-    // invert: x = a = (t - 0.5) * 2.4  =>  t = x / 2.4 + 0.5, clamped
-    return Math.max(0, Math.min(1, p.x / 2.4 + 0.5));
+  function decodeInto(z, out) {
+    out[0] = p[b4]; out[1] = p[b4 + 1];
+    for (let i = 0; i < H; i++) { h2[i] = Math.tanh(p[W3 + i] * z + p[b3 + i]); out[0] += p[W4 + i] * h2[i]; out[1] += p[W4 + H + i] * h2[i]; }
+    return out;
   }
-
-  const paneW = W / 2;
-  const leftG = svg.append("g").attr("transform", `translate(10, 16)`);
-  const rightG = svg.append("g").attr("transform", `translate(${paneW + 10}, 16)`);
-
-  leftG.append("text").attr("y", 0).style("font-size", "11px").attr("fill", "var(--text-3)")
-    .style("letter-spacing", "0.04em").text("DATA (2D) + ENCODER COLOR");
-  rightG.append("text").attr("y", 0).style("font-size", "11px").attr("fill", "var(--text-3)")
-    .style("letter-spacing", "0.04em").text("DECODER SAMPLES THE LATENT LINE");
-
-  const lW = paneW - 30, lH = H - 50;
-  const xsc = d3.scaleLinear().domain([-1.5, 1.5]).range([0, lW]);
-  const ysc = d3.scaleLinear().domain([-1.2, 1.2]).range([lH, 0]);
-
-  const mainG = leftG.append("g").attr("transform", "translate(0, 14)");
-  const rightMainG = rightG.append("g").attr("transform", "translate(0, 14)");
-
-  // Background rect
-  mainG.append("rect").attr("x", 0).attr("y", 0).attr("width", lW).attr("height", lH)
-    .attr("fill", "var(--bg)").attr("stroke", "var(--border)").attr("rx", 4);
-  rightMainG.append("rect").attr("x", 0).attr("y", 0).attr("width", lW).attr("height", lH)
-    .attr("fill", "var(--bg)").attr("stroke", "var(--border)").attr("rx", 4);
-
-  // Data colored by encoder output (latent z)
-  const color = d3.scaleSequential(d3.interpolateViridis).domain([0, 1]);
-  mainG.selectAll("circle.data").data(data).join("circle")
-    .attr("class", "data")
-    .attr("cx", d => xsc(d.x)).attr("cy", d => ysc(d.y))
-    .attr("r", 2.8).attr("fill", d => color(encode(d))).attr("opacity", 0.85)
-    .attr("stroke", "white").attr("stroke-width", 0.4);
-
-  // Right: decoder samples along latent line — draw underlying curve
-  const decoderPts = d3.range(0, 1.001, 0.01).map(z => decode(z));
-  const line = d3.line().x(d => xsc(d[0])).y(d => ysc(d[1])).curve(d3.curveMonotoneX);
-  rightMainG.append("path").datum(decoderPts)
-    .attr("d", line).attr("fill", "none").attr("stroke", "var(--accent)").attr("stroke-width", 2.5).attr("opacity", 0.7);
-
-  // Movable decoded point
-  const movingPt = rightMainG.append("circle").attr("r", 8).attr("fill", "var(--warm)").attr("stroke", "white").attr("stroke-width", 2);
-  const zIndicator = mainG.append("line").attr("stroke", "var(--warm)").attr("stroke-width", 2);
-
-  // Show a "latent axis" below both panes
-  const leftLatent = leftG.append("g").attr("transform", `translate(0, ${lH + 28})`);
-  leftLatent.append("line").attr("x1", 0).attr("x2", lW).attr("y1", 0).attr("y2", 0)
-    .attr("stroke", "var(--border-2)").attr("stroke-width", 2);
-  d3.range(0, 1.01, 0.1).forEach(z => {
-    leftLatent.append("circle").attr("cx", z * lW).attr("cy", 0).attr("r", 2).attr("fill", color(z));
-  });
-  leftLatent.append("text").attr("x", 0).attr("y", 14).style("font-size", "10px").attr("fill", "var(--text-3)").text("latent z = 0");
-  leftLatent.append("text").attr("x", lW).attr("y", 14).text-anchor = "end";
-  leftLatent.append("text").attr("x", lW).attr("y", 14).attr("text-anchor", "end").style("font-size", "10px").attr("fill", "var(--text-3)").text("z = 1");
-
-  const zInput = document.getElementById("ae-z");
-  const zVal = document.getElementById("ae-z-val");
-
-  function update() {
-    const z = +zInput.value;
-    zVal.textContent = z.toFixed(2);
-    const p = decode(z);
-    movingPt.attr("cx", xsc(p[0])).attr("cy", ysc(p[1]));
-
-    // also a z-marker on the left panel (highlight the data point closest to z)
-    const closest = data.reduce((best, d) => {
-      const dz = Math.abs(encode(d) - z);
-      if (best === null || dz < Math.abs(encode(best) - z)) return d;
-      return best;
-    }, null);
-    if (closest) {
-      zIndicator
-        .attr("x1", xsc(closest.x)).attr("y1", ysc(closest.y) - 20)
-        .attr("x2", xsc(closest.x)).attr("y2", ysc(closest.y) + 20)
-        .attr("stroke", "var(--warm)");
+  const out = [0, 0];
+  let t = 0;
+  function trainStep() {
+    t++;
+    g.fill(0); let loss = 0;
+    for (const x of X) {
+      const z = forward(x); decodeInto(z, out);
+      const e0 = out[0] - x[0], e1 = out[1] - x[1];
+      loss += (e0 * e0 + e1 * e1) / n;
+      const d0 = 2 * e0 / n, d1 = 2 * e1 / n;
+      g[b4] += d0; g[b4 + 1] += d1;
+      let dz = 0;
+      for (let i = 0; i < H; i++) {
+        g[W4 + i] += d0 * h2[i]; g[W4 + H + i] += d1 * h2[i];
+        const d = (d0 * p[W4 + i] + d1 * p[W4 + H + i]) * (1 - h2[i] * h2[i]);
+        g[W3 + i] += d * z; g[b3 + i] += d; dz += d * p[W3 + i];
+      }
+      g[b2] += dz;
+      for (let i = 0; i < H; i++) {
+        g[W2 + i] += dz * h1[i];
+        const d = dz * p[W2 + i] * (1 - h1[i] * h1[i]);
+        g[W1 + 2 * i] += d * x[0]; g[W1 + 2 * i + 1] += d * x[1]; g[b1 + i] += d;
+      }
+    }
+    const step = lr * (t < steps * 0.7 ? 1 : 0.3);
+    for (let i = 0; i < total; i++) {
+      m[i] = 0.9 * m[i] + 0.1 * g[i]; v[i] = 0.999 * v[i] + 0.001 * g[i] * g[i];
+      p[i] -= step * (m[i] / (1 - Math.pow(0.9, t))) / (Math.sqrt(v[i] / (1 - Math.pow(0.999, t))) + 1e-8);
     }
   }
+  return {
+    train(n) { for (let i = 0; i < n && t < steps; i++) trainStep(); },
+    encode: x => forward(x), decode: z => decodeInto(z, [0, 0]).slice(),
+    get step() { return t; }, get done() { return t >= steps; },
+    // mean squared reconstruction error at the current weights
+    error() { let e = 0; for (const x of X) { const r = decodeInto(forward(x), out); e += ((r[0] - x[0]) ** 2 + (r[1] - x[1]) ** 2) / n; } return e; },
+  };
+}
 
-  zInput.addEventListener("input", update);
-  update();
+// ---------- Figure 1: an autoencoder with a one-number bottleneck ----------
+(function() {
+  // 200 points along an S-shaped curve with a little noise
+  const rng = mulberry32(13), X = [];
+  for (let i = 0; i < 200; i++) {
+    const a = (rng() - 0.5) * 2.4;
+    X.push([a + gaussian(rng) * 0.08, Math.sin(a * 1.8) * 0.8 + gaussian(rng) * 0.08]);
+  }
+  // PCA with one component: project onto the first principal axis and map back
+  const P = pca(X, 1), axis = P.components[0];
+  const pcaError = d3.mean(X, (x, i) => { const z = P.Y[i][0]; return (P.mean[0] + z * axis[0] - x[0]) ** 2 + (P.mean[1] + z * axis[1] - x[1]) ** 2; });
+  const zExtent = d3.extent(P.Y, p => p[0]);
+  const color = d3.scaleSequential(d3.interpolateViridis).domain([0, 1]);
+  const STEPS = 600;
+  const zInput = document.getElementById("ae-z"), zVal = document.getElementById("ae-z-val"), readout = document.getElementById("ae-readout");
+  let seed = 1;
+
+  figure("ae-svg", (svg, W) => {
+    const H = W < 500 ? 280 : 360;
+    const top = 44, sc0 = fitScales(X, W, H - top, 10), sc = { x: sc0.x, y: v => top + sc0.y(v) };
+    svg.append("line").attr("stroke", "var(--text-2)").attr("stroke-width", 1.5).attr("stroke-dasharray", "6 4")
+      .attr("x1", sc.x(P.mean[0] + zExtent[0] * axis[0])).attr("y1", sc.y(P.mean[1] + zExtent[0] * axis[1]))
+      .attr("x2", sc.x(P.mean[0] + zExtent[1] * axis[0])).attr("y2", sc.y(P.mean[1] + zExtent[1] * axis[1]));
+    // legend, in the empty top-left corner
+    svg.append("line").attr("x1", 4).attr("x2", 34).attr("y1", 12).attr("y2", 12).attr("stroke", "var(--accent)").attr("stroke-width", 3);
+    svg.append("text").attr("x", 42).attr("y", 16).text("the autoencoder's decoder output");
+    svg.append("line").attr("x1", 4).attr("x2", 34).attr("y1", 32).attr("y2", 32).attr("stroke", "var(--text-2)").attr("stroke-width", 1.5).attr("stroke-dasharray", "6 4");
+    svg.append("text").attr("x", 42).attr("y", 36).text("PCA with one component");
+    const dots = svg.append("g").selectAll("circle").data(X).join("circle").attr("cx", d => sc.x(d[0])).attr("cy", d => sc.y(d[1])).attr("r", 2.8).attr("opacity", 0.8);
+    const curve = svg.append("path").attr("fill", "none").attr("stroke", "var(--accent)").attr("stroke-width", 3).attr("stroke-linecap", "round");
+    const marker = svg.append("circle").attr("r", 7).attr("fill", "var(--warm)").attr("stroke", "var(--fig-bg)").attr("stroke-width", 2);
+    let ae, frame = null, lo = 0, hi = 1;
+
+    function paint() {
+      const codes = X.map(x => ae.encode(x));
+      [lo, hi] = d3.extent(codes);
+      const span = (hi - lo) || 1;
+      dots.attr("fill", (_, i) => color((codes[i] - lo) / span));
+      const pts = d3.range(0, 1.0001, 0.01).map(u => ae.decode(lo + u * span));
+      curve.attr("d", d3.line().x(p => sc.x(p[0])).y(p => sc.y(p[1]))(pts));
+      const z = +zInput.value, m = ae.decode(lo + z * span);
+      zVal.textContent = z.toFixed(2);
+      marker.attr("cx", sc.x(m[0])).attr("cy", sc.y(m[1])).attr("fill", color(z));
+      readout.innerHTML = `Training step <b>${ae.step}</b> of ${STEPS}. Mean squared reconstruction error: autoencoder <b>${ae.error().toFixed(4)}</b>, PCA <b>${pcaError.toFixed(4)}</b>.`;
+    }
+    function tick() { ae.train(4); paint(); frame = ae.done ? null : requestAnimationFrame(tick); }
+    function start() {
+      if (frame) cancelAnimationFrame(frame);
+      ae = makeAutoencoder(X, { steps: STEPS, seed });
+      if (REDUCED) { ae.train(STEPS); paint(); } else { paint(); frame = requestAnimationFrame(tick); }
+    }
+    ae = makeAutoencoder(X, { steps: STEPS, seed }); paint();
+    const cancel = whenVisible(svg.node(), start);
+    zInput.oninput = paint;
+    document.getElementById("ae-retrain").onclick = () => { seed++; start(); };
+    return { height: H, stop: () => { if (frame) cancelAnimationFrame(frame); cancel(); } };
+  });
 })();
 
-// ---------- Figure 2: neural diagram ----------
+// ---------- Figure 2: one architecture, four objectives ----------
 (function() {
-  const svg = d3.select("#neural-svg");
-  const W = 680, H = 360;
-
-  // 4 rows of a schematic encoder–bottleneck–decoder, each row a different method
   const methods = [
-    { name: "Autoencoder", loss: "reconstruction (MSE)", latent: "unconstrained" },
-    { name: "VAE", loss: "reconstruction + KL to prior", latent: "smooth Gaussian" },
-    { name: "Parametric UMAP", loss: "UMAP cross-entropy on neighbor graph", latent: "neighbor-preserving" },
-    { name: "scVI", loss: "zero-inflated negative binomial likelihood", latent: "count-aware" },
+    { name: "Autoencoder", loss: "reconstruction error", decoder: true },
+    { name: "VAE", loss: "reconstruction error + KL to a prior", decoder: true },
+    { name: "Parametric UMAP", loss: "UMAP cross-entropy on the neighbor graph", decoder: false },
+    { name: "scVI", loss: "count likelihood (ZINB) + KL to a prior", decoder: true },
   ];
-
-  const rowH = H / methods.length;
-  methods.forEach((m, i) => {
-    const y = i * rowH + 8;
-    const g = svg.append("g").attr("transform", `translate(0, ${y})`);
-
-    // Method label
-    g.append("text").attr("x", 12).attr("y", 20).style("font-size", "13px")
-      .style("font-weight", 700).attr("fill", "var(--text)").text(m.name);
-
-    // Encoder / bottleneck / decoder schematic
-    const ex = 150, bx = 320, dx = 470, endx = 620;
-    const midY = rowH / 2 + 4;
-
-    // Input
-    g.append("g").selectAll("circle").data(d3.range(5)).enter().append("circle")
-      .attr("cx", ex - 20).attr("cy", (d, j) => midY + (j - 2) * 8)
-      .attr("r", 2.5).attr("fill", "var(--text-3)");
-
-    // Encoder (trapezoid)
-    g.append("path").attr("d", `M${ex},${midY - 20} L${bx - 10},${midY - 6} L${bx - 10},${midY + 6} L${ex},${midY + 20} Z`)
-      .attr("fill", "var(--accent-light)").attr("stroke", "var(--accent)").attr("stroke-width", 1.2);
-    g.append("text").attr("x", (ex + bx) / 2 - 5).attr("y", midY + 4).attr("text-anchor", "middle").style("font-size", "10px").attr("fill", "var(--accent)").text("encoder");
-
-    // Bottleneck (circles)
-    g.append("circle").attr("cx", bx).attr("cy", midY - 4).attr("r", 3.5).attr("fill", "var(--warm)");
-    g.append("circle").attr("cx", bx).attr("cy", midY + 4).attr("r", 3.5).attr("fill", "var(--warm)");
-    g.append("text").attr("x", bx).attr("y", midY + 22).attr("text-anchor", "middle").style("font-size", "10px").attr("fill", "var(--warm)").text("latent z");
-
-    // Decoder
-    g.append("path").attr("d", `M${bx + 10},${midY - 6} L${dx},${midY - 20} L${dx},${midY + 20} L${bx + 10},${midY + 6} Z`)
-      .attr("fill", "var(--accent-light)").attr("stroke", "var(--accent)").attr("stroke-width", 1.2);
-    g.append("text").attr("x", (bx + dx) / 2 + 5).attr("y", midY + 4).attr("text-anchor", "middle").style("font-size", "10px").attr("fill", "var(--accent)").text("decoder");
-
-    // Output (dots)
-    g.append("g").selectAll("circle").data(d3.range(5)).enter().append("circle")
-      .attr("cx", dx + 20).attr("cy", (d, j) => midY + (j - 2) * 8)
-      .attr("r", 2.5).attr("fill", "var(--text-3)");
-
-    // Loss annotation
-    g.append("text").attr("x", endx).attr("y", midY - 6).attr("text-anchor", "end").style("font-size", "10px")
-      .attr("fill", "var(--text-3)").text("loss:");
-    g.append("text").attr("x", endx).attr("y", midY + 8).attr("text-anchor", "end").style("font-size", "11px")
-      .attr("fill", "var(--text)").text(m.loss);
-    g.append("text").attr("x", endx).attr("y", midY + 22).attr("text-anchor", "end").style("font-size", "10px")
-      .attr("fill", "var(--text-2)").text("→ latent is " + m.latent);
-
-    // Row separator
-    if (i < methods.length - 1) {
-      svg.append("line").attr("x1", 10).attr("x2", W - 10).attr("y1", y + rowH - 4).attr("y2", y + rowH - 4)
-        .attr("stroke", "var(--border)").attr("stroke-width", 0.5);
-    }
+  figure("neural-svg", (svg, W) => {
+    const rowH = 104, x0 = Math.min(40, W * 0.08), x1 = W - x0, mid = (x0 + x1) / 2;
+    methods.forEach((m, i) => {
+      const g = svg.append("g").attr("transform", `translate(0,${i * rowH})`), y = 50;
+      if (i > 0) g.append("line").attr("x1", 0).attr("x2", W).attr("y1", 0).attr("y2", 0).attr("stroke", "var(--border)");
+      g.append("text").attr("class", "pane-title").attr("x", 0).attr("y", 20).text(m.name);
+      const dots = x => g.append("g").selectAll("circle").data(d3.range(5)).join("circle").attr("cx", x).attr("cy", j => y + (j - 2) * 7).attr("r", 2.5).attr("fill", "var(--text-3)");
+      dots(x0 - 14);
+      g.append("path").attr("d", `M${x0},${y - 18}L${mid - 14},${y - 6}L${mid - 14},${y + 6}L${x0},${y + 18}Z`).attr("fill", "var(--accent-light)").attr("stroke", "var(--accent)");
+      g.append("text").attr("x", (x0 + mid - 14) / 2).attr("y", y + 4).attr("text-anchor", "middle").attr("fill", "var(--text)").text("encoder");
+      [-4, 4].forEach(dy => g.append("circle").attr("cx", mid).attr("cy", y + dy).attr("r", 3.5).attr("fill", "var(--warm)"));
+      g.append("text").attr("x", mid).attr("y", y - 14).attr("text-anchor", "middle").attr("fill", "var(--warm)").text("latent");
+      const dec = g.append("path").attr("d", `M${mid + 14},${y - 6}L${x1},${y - 18}L${x1},${y + 18}L${mid + 14},${y + 6}Z`).attr("stroke", "var(--accent)");
+      if (m.decoder) { dec.attr("fill", "var(--accent-light)"); dots(x1 + 14); }
+      else dec.attr("fill", "none").attr("stroke-dasharray", "4 4");
+      g.append("text").attr("x", (mid + 14 + x1) / 2).attr("y", y + 4).attr("text-anchor", "middle").attr("fill", m.decoder ? "var(--text)" : "var(--text-3)").text(m.decoder ? "decoder" : "optional");
+      const t = g.append("text").attr("x", 0).attr("y", y + 40);
+      t.append("tspan").text("loss: ");
+      t.append("tspan").attr("fill", "var(--text)").text(m.loss);
+    });
+    return { height: methods.length * rowH - 6 };
   });
 })();
 </script>

@@ -4,7 +4,7 @@ import DiagramFigure, { type DiagramSpec } from './DiagramFigure'
 // A REAL DiagramFigure, not a simulation: the still pipeline that turns
 // this article's markdown into the page you are reading. This file owns
 // the semantics (ids, labels, edges); the author-owned arrangement lives
-// in content/figures/still-pipeline.json, saved from the dev-only tldraw
+// in content/figures/still-pipeline.json, saved from the dev-only diagram
 // editor. Regenerate this file freely and the author's layout survives.
 //
 // Node ids are term targets, e.g.
