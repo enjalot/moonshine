@@ -341,11 +341,35 @@ function labelSpot(pts: Pt[], w: number, boxes: Box[]): number {
     .sort((p, q) => Number(q.fit) - Number(p.fit) || q.l - p.l)
     .map((x) => x.t)
   for (const t of [...tries, 0.5, 0.35, 0.65, 0.2, 0.8]) {
-    const [x, y] = pointAlong(pts, t)
-    const r = { x: x - w / 2, y: y - 10, w, h: 20 }
-    if (!boxes.some((b) => overlaps(r, grow(b, 2)))) return t
+    if (labelPlace(pts, t, w, boxes).clear) return t
   }
   return tries[0] ?? 0.5
+}
+
+const labelRect = (x: number, y: number, w: number): Box => ({ x: x - w / 2, y: y - 10, w, h: 20 })
+
+// Where the label at fraction `t` is drawn. On a run long enough to show
+// past it, on the line. On a shorter run, beside the line, on whichever
+// side is clear of the boxes (and of the labels already placed).
+function labelPlace(pts: Pt[], t: number, w: number, boxes: Box[]): { x: number; y: number; clear: boolean } {
+  const [x, y] = pointAlong(pts, t)
+  const i = runAt(pts, t)
+  const free = (px: number, py: number) => !boxes.some((b) => overlaps(labelRect(px, py, w), grow(b, 2)))
+  const len = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1])
+  if (!w || len >= labelSpan(pts[i], pts[i + 1], w) + 2 * LABEL_SHOW) return { x, y, clear: free(x, y) }
+  const across = dir(pts[i], pts[i + 1])[0] !== 0
+  const sides: Pt[] = across
+    ? [
+        [x, y - 16],
+        [x, y + 16],
+      ]
+    : [
+        [x + w / 2 + 7, y],
+        [x - w / 2 - 7, y],
+      ]
+  const ok = sides.find(([px, py]) => free(px, py))
+  const [px, py] = ok ?? sides[0]
+  return { x: px, y: py, clear: !!ok }
 }
 
 // How much of a run a label covers: its width along a horizontal run, its
@@ -363,21 +387,12 @@ function runAt(pts: Pt[], t: number): number {
   return 0
 }
 
-function geom(pts: Pt[], labelAt: number, e: SpecEdge, labelW: number): EdgeGeom {
+function geom(pts: Pt[], labelAt: number, e: SpecEdge, labelW: number, boxes: Box[]): EdgeGeom {
   const p1 = pts[0]
   const p2 = pts[pts.length - 1]
   const q = pts[pts.length - 2]
-  let [lx, ly] = pointAlong(pts, labelAt)
-  const i = runAt(pts, labelAt)
-  const ldir = dir(pts[i], pts[i + 1])
-  if (labelW) {
-    const len = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1])
-    if (len < labelSpan(pts[i], pts[i + 1], labelW) + 2 * LABEL_SHOW) {
-      // Too short to show past the label: sit beside the line.
-      if (ldir[0] !== 0) ly -= 16
-      else lx += labelW / 2 + 7
-    }
-  }
+  const { x: lx, y: ly } = labelPlace(pts, labelAt, labelW, boxes)
+  const ldir = dir(pts[runAt(pts, labelAt)], pts[runAt(pts, labelAt) + 1])
   const arrows = e.arrows ?? 'end'
   const endHead = arrows === 'end' || arrows === 'both'
   const startHead = arrows === 'start' || arrows === 'both'
@@ -472,15 +487,19 @@ function routeAll(spec: DiagramSpec, placed: Placed, sides: BakedDiagram['edges'
   }
 
   const out = new Map<string, EdgeGeom>()
-  const nodeBoxes = [...Object.values(boxes), ...labels]
+  // Boxes, tile labels, and each link label once placed: a later label
+  // keeps off all of them.
+  const taken = [...Object.values(boxes), ...labels]
   edges.forEach((e, i) => {
     const ps = ports.get(`${i}|s`)
     const pt = ports.get(`${i}|t`)
     const r = ps || pt ? route(boxes[e.from], boxes[e.to], others(e), { ss: first[i].ss, ts: first[i].ts, s: ps, t: pt, ...tileEnds(e) }) : first[i]
     const arr = sides?.[edgeKey(e)]
     const lw = e.label ? labelWidth(e.label, e.arrows) : 0
-    const at = arr?.labelAt ?? (e.label ? labelSpot(r.pts, lw, nodeBoxes) : 0.5)
-    out.set(edgeKey(e), geom(r.pts, at, e, lw))
+    const at = arr?.labelAt ?? (e.label ? labelSpot(r.pts, lw, taken) : 0.5)
+    const g = geom(r.pts, at, e, lw, taken)
+    if (lw) taken.push(labelRect(g.lx, g.ly, lw))
+    out.set(edgeKey(e), g)
   })
   return out
 }

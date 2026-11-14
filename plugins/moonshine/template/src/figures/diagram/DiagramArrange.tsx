@@ -4,7 +4,7 @@ import { inOrder, lessThan, param, scale, translate, type Draggable, type DragSp
 import { saveContentFile } from '../../lib/EditContext'
 import DragRenderer from '../drag/Renderer'
 import { each } from '../drag/each'
-import { drawAnnot, drawEdge, drawGroup, drawNode, edgeLabelWidth, flags, ids, type DrawCtx } from './draw'
+import { drawAnnot, drawEdge, drawGroup, drawGroupName, drawNode, edgeLabelWidth, flags, ids, type DrawCtx } from './draw'
 import {
   DEFAULT_PAD,
   borderPoint,
@@ -976,8 +976,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
   // A new arrow out of box `from`. Over another box, the finished arrow;
   // over empty canvas, a box there to receive it (made on drop).
   const draftSpec = (d: DragSpecBuilder<Doc>, s: Doc, from: string, side: Side): DragSpec<Doc> => {
-    const b = s.nodes[from]
-    const [x, y] = dotPoint(b, side)
+    const [x, y] = dotOf(s, from, side, c.down)
     const start: Doc = { ...s, draft: { from, side, free: { x, y } } }
     const free = d.vary(start, [param('draft', 'free', 'x'), param('draft', 'free', 'y')])
     const overBox = s.spec.nodes
@@ -1084,7 +1083,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
             if (!b) return null
             const it: Item = { kind: 'group', id: g.id }
             const on = selected('group', g.id)
-            return drawGroup(c, { ...g, label: editing?.kind === 'group' && editing.id === g.id ? '' : g.label }, b, {
+            return drawGroup(c, g, b, {
               props: { 'data-on': flags(on && 'selected'), dragologyZIndex: -1 },
               children: (
                 <g>
@@ -1129,6 +1128,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
               labelProps: { ...clicks, ...(on ? { dragologyOnDrag: () => labelSpec(d, s, i), 'data-on': 'grabbable' } : {}) },
             })
           })}
+          {each(s.spec.groups ?? [], (g) => (groups[g.id] ? drawGroupName(c, g, groups[g.id], editing?.kind === 'group' && editing.id === g.id ? '' : g.label) : null))}
           {loose && s.reattach && (() => {
             const e = s.spec.edges[s.reattach.edge]
             const fixed = s.nodes[s.reattach.end === 'source' ? e.to : e.from]
@@ -1192,7 +1192,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
                 {g ? (
                   drawEdge(c, { from: draft.from, to: draft.to! }, s.spec.edges.length, g, { on: 'draft' })
                 ) : (
-                  <line className="mn-dg-wire" x1={dotPoint(a, draft.side)[0]} y1={dotPoint(a, draft.side)[1]} x2={ex} y2={ey} />
+                  <line className="mn-dg-wire" x1={dotOf(s, draft.from, draft.side, c.down)[0]} y1={dotOf(s, draft.from, draft.side, c.down)[1]} x2={ex} y2={ey} />
                 )}
                 <circle id={`${uid}-draft`} className="mn-dg-end" transform={translate(ex, ey)} r={handle * 0.8} />
               </g>
@@ -1217,7 +1217,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
           {dotsFor && s.nodes[dotsFor] && !s.draft && (
             <g dragologyKey="dots">
               {each(['top', 'right', 'bottom', 'left'] as Side[], (side) => {
-                const [x, y] = dotPoint(s.nodes[dotsFor], side)
+                const [x, y] = dotOf(s, dotsFor, side, c.down)
                 return (
                   <circle
                     id={`${uid}-dot-${side}`}
@@ -1752,9 +1752,17 @@ function edgeTop(doc: Doc, i: number, g: EdgeGeom): number {
 }
 
 // Where a box's connect dot sits: just outside the middle of a side.
-function dotPoint(b: Box, side: Side): [number, number] {
+// A tile's label sits where the dot on that side would, so that dot stays
+// on the tile's border instead.
+const LABEL_SIDE: Record<string, Side> = { above: 'top', below: 'bottom', left: 'left', right: 'right' }
+function dotOf(s: Doc, id: string, side: Side, down?: boolean): [number, number] {
+  const n = s.spec.nodes.find((x) => x.id === id)
+  return dotPoint(s.nodes[id], side, !!n && isTile(n) && !!n.label && LABEL_SIDE[labelSideOf(n, down)] === side)
+}
+
+function dotPoint(b: Box, side: Side, flush = false): [number, number] {
   const [x, y] = sidePoint(b, side)
-  const o = 10
+  const o = flush ? 0 : 10
   return side === 'top' ? [x, y - o] : side === 'bottom' ? [x, y + o] : side === 'left' ? [x - o, y] : [x + o, y]
 }
 

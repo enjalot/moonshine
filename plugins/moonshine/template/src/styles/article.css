@@ -987,23 +987,28 @@
   box-shadow: 0 4px 14px var(--shadow-edge);
   pointer-events: none;
 }
-.mn-dg-group {
+.mn-dg-group,
+.mn-dg-group-label {
   --dg-zone: var(--border);
   --dg-zone-ink: var(--text-2);
 }
-.mn-dg-group[data-on~='tone-flow'] {
+.mn-dg-group[data-on~='tone-flow'],
+.mn-dg-group-label[data-on~='tone-flow'] {
   --dg-zone: var(--dg-flow);
   --dg-zone-ink: var(--dg-flow);
 }
-.mn-dg-group[data-on~='tone-data'] {
+.mn-dg-group[data-on~='tone-data'],
+.mn-dg-group-label[data-on~='tone-data'] {
   --dg-zone: var(--dg-data);
   --dg-zone-ink: var(--dg-data);
 }
-.mn-dg-group[data-on~='tone-control'] {
+.mn-dg-group[data-on~='tone-control'],
+.mn-dg-group-label[data-on~='tone-control'] {
   --dg-zone: var(--dg-control);
   --dg-zone-ink: var(--dg-control);
 }
-.mn-dg-group[data-on~='tone-access'] {
+.mn-dg-group[data-on~='tone-access'],
+.mn-dg-group-label[data-on~='tone-access'] {
   --dg-zone: var(--dg-access);
   --dg-zone-ink: var(--dg-access);
 }
@@ -1039,6 +1044,13 @@
   font-size: 13px;
   font-weight: 600;
   fill: var(--dg-zone-ink);
+  /* Its own layer over the links: a halo keeps a link behind the name,
+     and clicks pass through to the group's name bar. */
+  stroke: var(--fig-bg);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  paint-order: stroke;
+  pointer-events: none;
 }
 .mn-dg-group[data-on~='active'] .mn-dg-group-box,
 .mn-dg-annot[data-on~='active'] .mn-dg-annot-box {

@@ -38,6 +38,7 @@ const clean = (s: string) => s.replace(/[^A-Za-z0-9_-]/g, '_')
 export const ids = {
   node: (c: DrawCtx, id: string) => `${c.uid}-n-${clean(id)}`,
   group: (c: DrawCtx, id: string) => `${c.uid}-g-${clean(id)}`,
+  groupName: (c: DrawCtx, id: string) => `${c.uid}-gn-${clean(id)}`,
   annot: (c: DrawCtx, id: string) => `${c.uid}-a-${clean(id)}`,
   // Edges go by position in spec.edges, which survives changing an
   // edge's ends (its key changes with them).
@@ -153,11 +154,19 @@ export function drawGroup(c: DrawCtx, g: SpecGroup, b: Box, opts: { props?: GPro
     >
       <rect className="mn-dg-group-box" width={b.w} height={b.h} rx={8} />
       <path className="mn-dg-group-corners" d={corners} />
-      <text className="mn-dg-group-label" x={12} y={22}>
-        {g.label}
-      </text>
       <g dragologyKey="extra">{opts.children}</g>
     </g>
+  )
+}
+
+// A group's name, drawn as its own layer over the links, with a halo: a
+// link that enters the group through its name band passes behind the
+// name instead of striking it out.
+export function drawGroupName(c: DrawCtx, g: SpecGroup, b: Box, label = g.label) {
+  return (
+    <text id={ids.groupName(c, g.id)} className="mn-dg-group-label" data-on={flags(g.tone && `tone-${g.tone}`)} transform={translate(b.x + 12, b.y + 22)}>
+      {label}
+    </text>
   )
 }
 
@@ -264,6 +273,7 @@ export function drawDiagram(
         const g = routes.get(edgeKey(e))
         return g ? drawEdge(c, e, i, g) : null
       })}
+      {each(spec.groups ?? [], (g) => (placed.groups[g.id] ? drawGroupName(c, g, placed.groups[g.id]) : null))}
       {each(spec.nodes, (n) => {
         const b = placed.nodes[n.id]
         return b ? drawNode(c, n, b, { props: nodeProps?.(n, b) }) : null
