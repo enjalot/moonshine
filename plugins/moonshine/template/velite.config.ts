@@ -19,7 +19,9 @@ const arrangement = {
     .record(s.string(), s.object({ x: s.number(), y: s.number(), w: s.number().optional(), h: s.number().optional() }))
     .optional(),
   groups: s.record(s.string(), box).optional(),
-  edges: s.record(s.string(), s.object({ source: side.optional(), target: side.optional() })).optional(),
+  edges: s
+    .record(s.string(), s.object({ source: side.optional(), target: side.optional(), labelAt: s.number().optional() }))
+    .optional(),
   annotations: s
     .array(
       s.object({

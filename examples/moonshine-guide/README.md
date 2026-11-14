@@ -83,7 +83,7 @@ src/
     AuthorshipHUD.tsx, CommentBox.tsx, MoonshineFooter.tsx
   figures/
     registry.ts           ← id → {component, height, wide, defaults, paramHints}
-    DiagramFigure.tsx     ← generic React Flow diagram + arrange/save
+    DiagramFigure.tsx     ← generic SVG diagram (Dragology) + arrange/save
     StillPipelineDiagram.tsx ← the guide's live, baked pipeline diagram
     sim/                   ← working simulations of still authoring features
     lib/params.ts         ← attr→number/bool/string coercers

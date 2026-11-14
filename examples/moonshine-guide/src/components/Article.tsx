@@ -14,7 +14,7 @@ import InlineViz from './InlineViz'
 import EditableBlock from './EditableBlock'
 import EditableField from './EditableField'
 import EditChrome from './EditChrome'
-import BlockReorderLayer from './BlockReorderLayer'
+import BlockReorderLayer, { reorderInFlight } from './BlockReorderLayer'
 import InsertLayer from './InsertLayer'
 import MoonshineFooter from './MoonshineFooter'
 import { EditProvider, fnv1a } from '../lib/EditContext'
@@ -103,7 +103,8 @@ function useArticleReorderTransition(
     const reordered = Boolean(
       old && keys.some((key, i) => oldIndex.has(key) && oldIndex.get(key) !== i),
     )
-    if (old && reordered) {
+    // A drag reorder already showed the move (BlockReorderLayer's overlay).
+    if (old && reordered && !reorderInFlight.current) {
       stopAnimation.current?.()
       stopAnimation.current = animateVerticalReorder(elements, old.tops)
     }

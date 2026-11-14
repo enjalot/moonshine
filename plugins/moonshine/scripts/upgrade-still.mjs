@@ -61,6 +61,7 @@ const INFRA = [
   /^src\/figures\/(DiagramFigure|AuthoredDiagram|DrawingFigure)\.tsx$/,
   /^src\/figures\/builtin\.ts$/,
   /^src\/figures\/diagram\//,
+  /^src\/figures\/drag\//,
   /^src\/figures\/lib\/params\.ts$/,
   /^(vite|velite)\.config\.ts$/,
   /^vite-plugin-[\w-]+\.ts$/,

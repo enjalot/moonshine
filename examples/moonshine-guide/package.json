@@ -14,7 +14,6 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@xyflow/react": "12.11.0",
     "d3": "7.9.0",
     "elkjs": "0.10.0",
     "katex": "0.16.47",
@@ -29,7 +28,8 @@
     "remark-parse": "11.0.0",
     "unified": "11.0.5",
     "unist-util-visit": "5.1.0",
-    "zustand": "4.5.7"
+    "zustand": "4.5.7",
+    "dragology": "0.1.7"
   },
   "devDependencies": {
     "@types/d3": "7.4.3",

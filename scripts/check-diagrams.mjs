@@ -7,8 +7,8 @@
 // install if it isn't resolvable from here, and CHROMIUM at a browser
 // binary if Playwright's own isn't installed.
 //
-// The rendered size is measured, not trusted: label font-size times the
-// scale on React Flow's viewport transform, read from the DOM.
+// The rendered size is measured, not trusted: each SVG label's font-size
+// times the scale of its transform to the screen, read from the DOM.
 
 import { existsSync, readdirSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -55,11 +55,10 @@ for (const url of urls) {
     await page.waitForTimeout(800)
     const rows = await page.evaluate(() =>
       [...document.querySelectorAll('.mn-diagram-flow')].map((flow, i) => {
-        const vp = flow.querySelector('.react-flow__viewport')
-        const scale = vp ? new DOMMatrixReadOnly(getComputedStyle(vp).transform).a : 1
-        const sizes = [...flow.querySelectorAll('.mn-flow-label')].map(
-          (l) => parseFloat(getComputedStyle(l).fontSize) * scale,
-        )
+        const sizes = [...flow.querySelectorAll('.mn-dg-label')].map((l) => {
+          const m = l.getScreenCTM()
+          return parseFloat(getComputedStyle(l).fontSize) * (m ? Math.hypot(m.a, m.b) : 1)
+        })
         const scroller = flow.closest('.mn-diagram-scroll')
         return {
           i,

@@ -1,24 +1,18 @@
+import { GROUP_PAD } from './geometry'
 import { edgeKey, type Box, type DiagramSpec } from './spec'
+import { FONTS, textWidth } from './text'
 
 // Automatic layout for a DiagramSpec (ELK "layered", the usual choice for
 // system and pipeline diagrams), merged with whatever the author has
 // already arranged. ELK is loaded on demand: readers only pay for it when
 // a diagram has nodes the author has never placed.
 
-// Measured in the node label's font (.mn-flow-node in article.css: 15px
-// heading font, 500) plus its padding, with slack so labels don't wrap.
-const NODE_FONT = "500 15px 'Source Sans 3', system-ui, sans-serif"
-const PAD = { top: 44, side: 24, bottom: 24 }
-
-let ctx: CanvasRenderingContext2D | null = null
+// Sized to the node label (.mn-dg-label: 15px heading font, 500) plus
+// its padding, with slack so labels don't wrap.
+const PAD = GROUP_PAD
 export function nodeSize(label: string): { w: number; h: number } {
-  ctx ??= document.createElement('canvas').getContext('2d')
   const lines = label.split('\n')
-  let w = 8 * Math.max(...lines.map((l) => l.length))
-  if (ctx) {
-    ctx.font = NODE_FONT
-    w = Math.max(...lines.map((l) => ctx!.measureText(l).width))
-  }
+  const w = Math.max(...lines.map((l) => textWidth(l, FONTS.node)))
   return { w: Math.max(104, Math.ceil(w + 48)), h: 52 + 22 * (lines.length - 1) }
 }
 

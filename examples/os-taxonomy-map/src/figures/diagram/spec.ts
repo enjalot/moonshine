@@ -2,16 +2,16 @@
 //
 // An agent (or a person typing) writes a DiagramSpec in a figure file:
 // node ids, labels, kinds, groups, edges. That is the machine-owned
-// SEMANTICS. Ids are stable handles: they become React Flow node ids, the
-// keys the author's arrangement is merged on, and the part ids that
+// SEMANTICS. Ids are stable handles: they are the keys the author's
+// arrangement is merged on, and the part ids that
 // `:term[word]{to=figure-id.node-id}` highlights. Rename one only when you
 // mean "this is a different thing now".
 //
-// The author arranges it in the dev-only diagram editor (React Flow):
-// positions, sizes, which side an edge attaches to, text/note annotations,
-// and the crop frame readers see. Saving writes that ARRANGEMENT to
-// content/figures/<figure-id>.json; readers get a live React Flow diagram
-// built from spec + arrangement. Never hand-edit the arrangement; it is
+// The author arranges it in the dev-only diagram editor: positions,
+// sizes, which side an edge attaches to, where its label sits,
+// text/note annotations, and the crop frame readers see. Saving writes
+// that ARRANGEMENT to content/figures/<figure-id>.json; readers get a live
+// SVG diagram built from spec + arrangement. Never hand-edit the arrangement; it is
 // the author's surface, like their prose.
 //
 // The author can change the structure too (add, rename, connect, delete
@@ -63,6 +63,11 @@ export type Pad = { top: number; right: number; bottom: number; left: number }
 
 export type Side = 'top' | 'right' | 'bottom' | 'left'
 
+// How one edge is drawn: which side of each box it attaches to (omitted =
+// the router picks), and where along it the label sits (0..1; omitted =
+// the router picks a spot clear of the boxes).
+export type EdgeArrangement = { source?: Side; target?: Side; labelAt?: number }
+
 // Author-added text on a diagram. `note` is a tinted sticky; `text` is a
 // bare label. Ids are stable term targets too.
 export type Annotation = {
@@ -81,11 +86,11 @@ export type BakedDiagram = {
   // here (added to the spec later) are placed automatically.
   nodes?: Record<string, Box>
   groups?: Record<string, Box>
-  // Per-edge attachment sides; omitted = border-to-border straight line.
-  edges?: Record<string, { source?: Side; target?: Side }>
+  // Per-edge attachment sides and label position, by edge key.
+  edges?: Record<string, EdgeArrangement>
   annotations?: Annotation[]
   // What readers see: everything drawn plus these margins (default 16
-  // each; negative crops). See frameFor in flow.tsx.
+  // each; negative crops). See frameFor in geometry.ts.
   framePad?: Pad
   // Pre-0.9.1: a fixed frame box. Still honored; the editor converts it
   // to framePad on the next save.
