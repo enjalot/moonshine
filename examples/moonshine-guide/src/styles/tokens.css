@@ -21,6 +21,11 @@
   --border: #e2e2e8;
   /* Text on an accent-filled control */
   --on-accent: #ffffff;
+  /* Diagram colour families: what a link carries, what kind a glyph is. */
+  --dg-flow: #2f5fc4;
+  --dg-data: #1f8a5b;
+  --dg-control: #b8620e;
+  --dg-access: #7a4bc0;
   --sg-ins-bg: rgba(46, 158, 91, 0.16);
   --sg-ins-line: rgba(46, 158, 91, 0.7);
   /* Table row hover + scroll-edge shadow */
@@ -45,6 +50,10 @@
     --fig-bg: #22223a;
     --border: #3a3a52;
     --on-accent: #10172a;
+    --dg-flow: #7fb0ff;
+    --dg-data: #5fcf9a;
+    --dg-control: #f0a860;
+    --dg-access: #b99cf2;
     --sg-ins-bg: rgba(90, 200, 130, 0.2);
     --sg-ins-line: rgba(90, 200, 130, 0.75);
     --row-hover: rgba(96, 165, 250, 0.06);

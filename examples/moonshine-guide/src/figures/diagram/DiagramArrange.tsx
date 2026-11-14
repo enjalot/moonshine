@@ -4,7 +4,7 @@ import { inOrder, lessThan, param, scale, translate, type Draggable, type DragSp
 import { saveContentFile } from '../../lib/EditContext'
 import DragRenderer from '../drag/Renderer'
 import { each } from '../drag/each'
-import { drawAnnot, drawEdge, drawGroup, drawNode, edgeLabelWidth, flags, ids, type DrawCtx } from './draw'
+import { drawAnnot, drawEdge, drawGroup, drawGroupName, drawNode, edgeLabelWidth, flags, ids, type DrawCtx } from './draw'
 import {
   DEFAULT_PAD,
   borderPoint,
@@ -20,6 +20,8 @@ import {
   type EdgeGeom,
 } from './geometry'
 import { elkLayout, narrowSpec, nodeSize, place, type Placement } from './layout'
+import { cacheTabler, glyph, glyphNames } from './glyphs'
+import { isTile, labelSideOf, TILE, tileLabelBox } from './tile'
 import { useFontEpoch } from './text'
 import {
   edgeKey,
@@ -34,6 +36,8 @@ import {
   type Pad,
   type Side,
   type SpecEdge,
+  type SpecGroup,
+  type SpecNode,
 } from './spec'
 
 // Dev-only full-screen diagram editor. Lazy-loaded behind
@@ -126,12 +130,25 @@ type Doc = {
 }
 
 type Variant = 'wide' | 'narrow'
-type Tool = 'select' | 'box' | 'text' | 'note'
+type Tool = 'select' | 'box' | 'group' | 'text' | 'note'
 // A selected thing: a spec node, group or annotation, or the reader frame.
 type Item = { kind: 'node' | 'group' | 'annot'; id: string } | { kind: 'frame'; id: 'frame' }
 type View = { x: number; y: number; k: number }
 type Editing = { kind: 'node' | 'group' | 'annot' | 'edge'; id: string } | null
 
+// Colour families for links and glyphs (tokens.css); null is plain.
+const TONES: (string | null)[] = [null, 'flow', 'data', 'control', 'access']
+const ARROWS: { v: NonNullable<SpecEdge['arrows']>; glyph: string; name: string }[] = [
+  { v: 'end', glyph: '→', name: 'One way' },
+  { v: 'both', glyph: '↔', name: 'Both ways' },
+  { v: 'none', glyph: '—', name: 'No direction' },
+]
+const GROUP_STYLES: { style: NonNullable<SpecGroup['style']>; name: string }[] = [
+  { style: 'box', name: 'Outline' },
+  { style: 'corners', name: 'Corner marks' },
+  { style: 'tint', name: 'Tinted area' },
+  { style: 'dashed', name: 'Dashed outline' },
+]
 const KINDS: { kind: NodeKind; name: string }[] = [
   { kind: 'process', name: 'Process' },
   { kind: 'accent', name: 'Highlight: the one the prose is about' },
@@ -147,7 +164,7 @@ const END_SNAP = 30
 // Small diagrams open at about reading size, not blown up to fill the screen.
 const FIT_MAX = 1.25
 const GAP = { RIGHT: 64, DOWN: 56 }
-const MIN = { node: { w: 64, h: 32 }, annot: { w: 40, h: 24 }, group: { w: 80, h: 60 } }
+const MIN = { node: { w: 40, h: 32 }, annot: { w: 40, h: 24 }, group: { w: 80, h: 60 } }
 
 function toDoc(spec: DiagramSpec, placement: Placement, baked: Pick<BakedDiagram, 'edges' | 'annotations' | 'framePad' | 'frame'> | null): Doc {
   const nodes: Record<string, Box> = {}
@@ -213,15 +230,19 @@ const clashes = (doc: Doc, i: number, next: SpecEdge) => doc.spec.edges.some((e,
 
 function addBoxDoc(doc: Doc, cx: number, cy: number, from?: string): { doc: Doc; id: string } {
   const id = freshId('n', (k) => doc.spec.nodes.some((n) => n.id === k))
-  const label = 'Box'
-  const { w, h } = nodeSize(label)
+  // In a diagram of tiles a new node is a tile too, with the glyph of the
+  // node it was pulled out of (or the first one in use).
+  const like = doc.spec.nodes.find((n) => n.id === from && n.icon) ?? doc.spec.nodes.find((n) => n.icon)
+  const label = like ? 'Name' : 'Box'
+  const { w, h } = like ? { w: TILE, h: TILE } : nodeSize(label)
+  const node: SpecNode = like ? { id, label, icon: like.icon, tone: like.tone, labelSide: like.labelSide } : { id, label }
   return {
     id,
     doc: {
       ...doc,
       spec: {
         ...doc.spec,
-        nodes: [...doc.spec.nodes, { id, label }],
+        nodes: [...doc.spec.nodes, node],
         edges: from ? [...doc.spec.edges, { from, to: id }] : doc.spec.edges,
       },
       nodes: { ...doc.nodes, [id]: { x: snap8(cx - w / 2), y: snap8(cy - h / 2), w, h } },
@@ -270,9 +291,9 @@ function shift(doc: Doc, items: Item[], dx: number, dy: number): Doc {
 
 function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpec, layout, onClose, onSaved }: Props) {
   const uid = `dge${useId().replace(/:/g, '')}`
-  const c: DrawCtx = { uid }
   const [variant, setVariant] = useState<Variant>('wide')
   const [doc, setDocState] = useState<Doc>(() => toDoc(specProp, placement, baked))
+  const c: DrawCtx = { uid, down: doc.spec.direction === 'DOWN' }
   const docRef = useRef(doc)
   docRef.current = doc
   // The narrow arrangement lays the spec out top to bottom.
@@ -296,6 +317,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
   const [dragging, setDragging] = useState(false)
   const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [iconOpen, setIconOpen] = useState(false)
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
   const [figWide, setFigWide] = useState(Boolean(layout?.wide))
@@ -415,6 +437,62 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
     setEditing({ kind: 'node', id: r.id })
   }
 
+  // A new group where the author clicked. Ungrouped boxes already inside
+  // it join; after that, dragging a box in or out changes its group.
+  const addGroup = (cx: number, cy: number) => {
+    const d0 = docRef.current
+    const id = freshId('g', (k) => Boolean(d0.spec.groups?.some((g) => g.id === k)))
+    const box: Box = { x: snap8(cx - 136), y: snap8(cy - 100), w: 272, h: 200 }
+    const like = d0.spec.groups?.[d0.spec.groups.length - 1]
+    const group: SpecGroup = { id, label: 'Group', ...(like?.style ? { style: like.style } : {}) }
+    const joins = (n: SpecNode) => {
+      const b = d0.nodes[n.id]
+      return !n.group && b && inside(box, b.x + b.w / 2, b.y + b.h / 2)
+    }
+    commit({
+      ...d0,
+      spec: { ...d0.spec, groups: [...(d0.spec.groups ?? []), group], nodes: d0.spec.nodes.map((n) => (joins(n) ? { ...n, group: id } : n)) },
+      groups: { ...d0.groups, [id]: box },
+    })
+    setSel([{ kind: 'group', id }])
+    setSelEdge(null)
+    setTool('select')
+    setEditing({ kind: 'group', id })
+  }
+
+  const updateGroup = (id: string, patch: Partial<Pick<SpecGroup, 'style' | 'tone'>>) => {
+    const d0 = docRef.current
+    const groups = (d0.spec.groups ?? []).map((g) => {
+      if (g.id !== id) return g
+      const next: SpecGroup = { ...g, ...patch }
+      if (!next.style || next.style === 'box') delete next.style
+      if (!next.tone) delete next.tone
+      return next
+    })
+    commit({ ...d0, spec: { ...d0.spec, groups } })
+  }
+
+  // Removing a group keeps its boxes; they are just no longer in one.
+  const deleteGroup = (id: string) => {
+    const d0 = docRef.current
+    const groups = { ...d0.groups }
+    delete groups[id]
+    commit({
+      ...d0,
+      spec: {
+        ...d0.spec,
+        groups: (d0.spec.groups ?? []).filter((g) => g.id !== id),
+        nodes: d0.spec.nodes.map((n) => {
+          if (n.group !== id) return n
+          const { group: _gone, ...rest } = n
+          return rest
+        }),
+      },
+      groups,
+    })
+    setSel([])
+  }
+
   // Tab: the next box in the flow direction, clear of everything else.
   const addAfter = (fromId: string) => {
     const b = docRef.current.nodes[fromId]
@@ -441,12 +519,31 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
     setEditing({ kind: 'annot', id })
   }
 
-  const updateNode = (id: string, patch: { label?: string; kind?: NodeKind; detail?: string }) => {
+  const updateNode = (id: string, patch: Partial<Pick<SpecNode, 'label' | 'kind' | 'detail' | 'icon' | 'labelSide' | 'tone' | 'dashed'>>) => {
     const d0 = docRef.current
-    const nodes = d0.spec.nodes.map((n) => (n.id === id ? { ...n, ...patch, detail: (patch.detail ?? n.detail) || undefined } : n))
-    // Grow the box to fit a longer label; never shrink what the author sized.
-    const fit = patch.label !== undefined ? nodeSize(patch.label) : null
+    const before = d0.spec.nodes.find((n) => n.id === id)
+    const nodes = d0.spec.nodes.map((n) => {
+      if (n.id !== id) return n
+      const next: SpecNode = { ...n, ...patch, detail: (patch.detail ?? n.detail) || undefined }
+      // Unset fields leave the saved spec.
+      for (const k of ['icon', 'labelSide', 'tone', 'dashed'] as const) if (!next[k]) delete next[k]
+      return next
+    })
+    const after = nodes.find((n) => n.id === id)
     const b = d0.nodes[id]
+    // Box ↔ tile: the node becomes a tile (or a box sized to its label)
+    // around the same centre.
+    if (b && before && after && isTile(before) !== isTile(after)) {
+      const size = isTile(after) ? { w: TILE, h: TILE } : nodeSize(after.label)
+      return {
+        ...d0,
+        spec: { ...d0.spec, nodes },
+        nodes: { ...d0.nodes, [id]: { x: snap8(b.x + b.w / 2 - size.w / 2), y: snap8(b.y + b.h / 2 - size.h / 2), ...size } },
+      }
+    }
+    // Grow the box to fit a longer label; never shrink what the author
+    // sized. A tile's label is outside it, so the tile keeps its size.
+    const fit = patch.label !== undefined && after && !isTile(after) ? nodeSize(patch.label) : null
     return {
       ...d0,
       spec: { ...d0.spec, nodes },
@@ -709,7 +806,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
       commit(shift(docRef.current, items, dx, dy))
     } else if (!e.shiftKey) {
       const k = e.key.toLowerCase()
-      const pick: Record<string, Tool> = { v: 'select', b: 'box', r: 'box', t: 'text', n: 'note' }
+      const pick: Record<string, Tool> = { v: 'select', b: 'box', r: 'box', g: 'group', t: 'text', n: 'note' }
       if (pick[k]) setTool(pick[k])
     }
   }
@@ -783,6 +880,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
     if (tool === 'select') return
     const p = toDiagram(e.clientX, e.clientY)
     if (tool === 'box') addBox(p.x, p.y)
+    else if (tool === 'group') addGroup(p.x, p.y)
     else addAnnotation(tool, p.x, p.y)
   }
 
@@ -878,8 +976,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
   // A new arrow out of box `from`. Over another box, the finished arrow;
   // over empty canvas, a box there to receive it (made on drop).
   const draftSpec = (d: DragSpecBuilder<Doc>, s: Doc, from: string, side: Side): DragSpec<Doc> => {
-    const b = s.nodes[from]
-    const [x, y] = dotPoint(b, side)
+    const [x, y] = dotOf(s, from, side, c.down)
     const start: Doc = { ...s, draft: { from, side, free: { x, y } } }
     const free = d.vary(start, [param('draft', 'free', 'x'), param('draft', 'free', 'y')])
     const overBox = s.spec.nodes
@@ -964,7 +1061,10 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
         <g transform={translate(view.x, view.y) + scale(k)}>
           {!isTracking && (
             <rect
-              dragologyKey="canvas"
+              // Under the groups (z -1), so a group's name bar takes its own
+              // clicks. A z-index needs an id.
+              id={`${uid}-canvas`}
+              dragologyZIndex={-2}
               className="mn-dg-canvas"
               x={-1e5}
               y={-1e5}
@@ -983,7 +1083,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
             if (!b) return null
             const it: Item = { kind: 'group', id: g.id }
             const on = selected('group', g.id)
-            return drawGroup(c, { ...g, label: editing?.kind === 'group' && editing.id === g.id ? '' : g.label }, b, {
+            return drawGroup(c, g, b, {
               props: { 'data-on': flags(on && 'selected'), dragologyZIndex: -1 },
               children: (
                 <g>
@@ -1028,6 +1128,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
               labelProps: { ...clicks, ...(on ? { dragologyOnDrag: () => labelSpec(d, s, i), 'data-on': 'grabbable' } : {}) },
             })
           })}
+          {each(s.spec.groups ?? [], (g) => (groups[g.id] ? drawGroupName(c, g, groups[g.id], editing?.kind === 'group' && editing.id === g.id ? '' : g.label) : null))}
           {loose && s.reattach && (() => {
             const e = s.spec.edges[s.reattach.edge]
             const fixed = s.nodes[s.reattach.end === 'source' ? e.to : e.from]
@@ -1091,7 +1192,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
                 {g ? (
                   drawEdge(c, { from: draft.from, to: draft.to! }, s.spec.edges.length, g, { on: 'draft' })
                 ) : (
-                  <line className="mn-dg-wire" x1={dotPoint(a, draft.side)[0]} y1={dotPoint(a, draft.side)[1]} x2={ex} y2={ey} />
+                  <line className="mn-dg-wire" x1={dotOf(s, draft.from, draft.side, c.down)[0]} y1={dotOf(s, draft.from, draft.side, c.down)[1]} x2={ex} y2={ey} />
                 )}
                 <circle id={`${uid}-draft`} className="mn-dg-end" transform={translate(ex, ey)} r={handle * 0.8} />
               </g>
@@ -1116,7 +1217,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
           {dotsFor && s.nodes[dotsFor] && !s.draft && (
             <g dragologyKey="dots">
               {each(['top', 'right', 'bottom', 'left'] as Side[], (side) => {
-                const [x, y] = dotPoint(s.nodes[dotsFor], side)
+                const [x, y] = dotOf(s, dotsFor, side, c.down)
                 return (
                   <circle
                     id={`${uid}-dot-${side}`}
@@ -1227,6 +1328,26 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
   if (singleSpec && single) {
     toolbar = (
       <>
+        <input
+          key={`${single.id}:${singleSpec.label}`}
+          className="mn-diagram-label-input"
+          type="text"
+          aria-label="Label"
+          placeholder="Label"
+          defaultValue={singleSpec.label.replace(/\n/g, ' ')}
+          onBlur={(e) => {
+            const v = e.target.value.trim()
+            if (v !== singleSpec.label.replace(/\n/g, ' ')) commit(updateNode(single.id, { label: v }))
+          }}
+          onKeyDown={(e) => {
+            e.stopPropagation()
+            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+            if (e.key === 'Escape') {
+              ;(e.target as HTMLInputElement).value = singleSpec.label.replace(/\n/g, ' ')
+              ;(e.target as HTMLInputElement).blur()
+            }
+          }}
+        />
         <span className="mn-diagram-kinds" role="radiogroup" aria-label="Kind">
           {KINDS.map(({ kind, name }) => (
             <button
@@ -1247,6 +1368,26 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
           ))}
         </span>
         <Sep />
+        <button type="button" aria-pressed={iconOpen} onClick={() => setIconOpen((o) => !o)} title="Draw this as an icon tile with the label outside">
+          {singleSpec.icon ? 'Icon ✓' : 'Icon'}
+        </button>
+        {singleSpec.icon && (
+          <button
+            type="button"
+            title="Where the label sits"
+            onClick={() => {
+              const order = ['below', 'right', 'above', 'left'] as const
+              const cur = order.indexOf(labelSideOf(singleSpec, c.down))
+              commit(updateNode(single.id, { labelSide: order[(cur + 1) % 4] }))
+            }}
+          >
+            Label: {labelSideOf(singleSpec, c.down)}
+          </button>
+        )}
+        <button type="button" aria-pressed={Boolean(singleSpec.dashed)} onClick={() => commit(updateNode(single.id, { dashed: !singleSpec.dashed }))} title="Dashed outline: not there yet, or proposed">
+          Dashed
+        </button>
+        <Sep />
         <button type="button" aria-pressed={detailOpen} onClick={() => setDetailOpen((o) => !o)} title="Shown to readers when they hover the box">
           {singleSpec.detail ? 'Hover text ✓' : 'Hover text'}
         </button>
@@ -1254,6 +1395,9 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
         <button type="button" className="is-danger" onClick={deleteSelection} title="Backspace">
           Delete
         </button>
+        {iconOpen && (
+          <IconPicker node={singleSpec} onPick={(icon) => commit(updateNode(single.id, { icon }))} onTone={(tone) => commit(updateNode(single.id, { tone }))} />
+        )}
         {detailOpen && (
           <textarea
             className="mn-diagram-detail"
@@ -1297,10 +1441,66 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
       </>
     )
   } else if (single?.kind === 'group') {
-    toolbar = (
-      <button type="button" onClick={() => setEditing({ kind: 'group', id: single.id })}>
-        Rename group
-      </button>
+    const g = doc.spec.groups?.find((x) => x.id === single.id)
+    toolbar = g && (
+      <>
+        <input
+          key={`${g.id}:${g.label}`}
+          className="mn-diagram-label-input"
+          type="text"
+          aria-label="Group name"
+          placeholder="Group name"
+          defaultValue={g.label}
+          onBlur={(e) => {
+            const v = e.target.value.trim()
+            if (v !== g.label) commit({ ...docRef.current, spec: { ...docRef.current.spec, groups: (docRef.current.spec.groups ?? []).map((x) => (x.id === g.id ? { ...x, label: v } : x)) } })
+          }}
+          onKeyDown={(e) => {
+            e.stopPropagation()
+            if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur()
+          }}
+        />
+        <Sep />
+        <span className="mn-diagram-kinds" role="radiogroup" aria-label="Boundary">
+          {GROUP_STYLES.map(({ style, name }) => (
+            <button
+              key={style}
+              type="button"
+              role="radio"
+              aria-checked={(g.style ?? 'box') === style}
+              title={name}
+              aria-label={name}
+              className="mn-diagram-kind"
+              onClick={() => updateGroup(g.id, { style })}
+            >
+              <svg viewBox="0 0 30 18" width="30" height="18" aria-hidden="true" className="mn-dg-group" data-kind={style}>
+                <rect className="mn-dg-group-box" x={1.5} y={1.5} width={27} height={15} rx={3} />
+                <path className="mn-dg-group-corners" d="M1.5 6.5V4.5Q1.5 1.5 4.5 1.5H7M23 1.5H25.5Q28.5 1.5 28.5 4.5V6.5M28.5 11.5V13.5Q28.5 16.5 25.5 16.5H23M7 16.5H4.5Q1.5 16.5 1.5 13.5V11.5" />
+              </svg>
+            </button>
+          ))}
+        </span>
+        <span className="mn-diagram-kinds" role="radiogroup" aria-label="Colour">
+          {TONES.map((t) => (
+            <button
+              key={t ?? 'plain'}
+              type="button"
+              role="radio"
+              aria-checked={(g.tone ?? null) === t}
+              title={t ?? 'plain'}
+              aria-label={`Colour: ${t ?? 'plain'}`}
+              className="mn-diagram-kind"
+              onClick={() => updateGroup(g.id, { tone: t ?? undefined })}
+            >
+              <span className="mn-diagram-swatch" data-tone={t ?? 'plain'} />
+            </button>
+          ))}
+        </span>
+        <Sep />
+        <button type="button" className="is-danger" onClick={() => deleteGroup(g.id)} title="Remove the group and keep its boxes">
+          Remove group
+        </button>
+      </>
     )
   } else if (single?.kind === 'frame') {
     toolbar = samePad(doc.pad, DEFAULT_PAD) ? (
@@ -1344,15 +1544,61 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
   const edgeGeomNow = selEdge !== null ? edgeEnds(doc, selEdge) : null
   const edgeToolbar = edgeSpec && selEdge !== null && edgeGeomNow && (
     <>
-      <button type="button" onClick={() => setEditing({ kind: 'edge', id: String(selEdge) })} title="Double-click the arrow, or Enter">
-        {edgeSpec.label ? 'Edit label' : 'Add label'}
-      </button>
+      <input
+        key={`${selEdge}:${edgeSpec.label ?? ''}`}
+        className="mn-diagram-label-input"
+        type="text"
+        aria-label="Link label"
+        placeholder="Label (optional)"
+        defaultValue={edgeSpec.label ?? ''}
+        onBlur={(e) => {
+          const v = e.target.value.trim()
+          if (v !== (edgeSpec.label ?? '')) updateEdge(selEdge, { label: v })
+        }}
+        onKeyDown={(e) => {
+          e.stopPropagation()
+          if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur()
+        }}
+      />
       <button type="button" aria-pressed={Boolean(edgeSpec.dashed)} onClick={() => updateEdge(selEdge, { dashed: !edgeSpec.dashed })}>
         Dashed
       </button>
       <button type="button" onClick={() => reverseEdge(selEdge)} title="Point the arrow the other way">
         Reverse
       </button>
+      <Sep />
+      <span className="mn-diagram-kinds" role="radiogroup" aria-label="Direction">
+        {ARROWS.map((a) => (
+          <button
+            key={a.v}
+            type="button"
+            role="radio"
+            aria-checked={(edgeSpec.arrows ?? 'end') === a.v}
+            title={a.name}
+            aria-label={a.name}
+            className="mn-diagram-kind"
+            onClick={() => updateEdge(selEdge, { arrows: a.v === 'end' ? undefined : a.v })}
+          >
+            {a.glyph}
+          </button>
+        ))}
+      </span>
+      <span className="mn-diagram-kinds" role="radiogroup" aria-label="Colour">
+        {TONES.map((t) => (
+          <button
+            key={t ?? 'plain'}
+            type="button"
+            role="radio"
+            aria-checked={(edgeSpec.family ?? null) === t}
+            title={t ?? 'plain'}
+            aria-label={`Colour: ${t ?? 'plain'}`}
+            className="mn-diagram-kind"
+            onClick={() => updateEdge(selEdge, { family: t ?? undefined })}
+          >
+            <span className="mn-diagram-swatch" data-tone={t ?? 'plain'} />
+          </button>
+        ))}
+      </span>
       {(doc.sides[edgeKey(edgeSpec)]?.source || doc.sides[edgeKey(edgeSpec)]?.target) && (
         <button type="button" onClick={() => autoSides(selEdge)} title="Let the arrow pick its own sides again">
           Auto sides
@@ -1377,12 +1623,16 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
         ? 'Enter to finish · Shift+Enter for a new line · Esc to cancel'
         : tool === 'box'
           ? 'Click to place a box · Esc to cancel'
+          : tool === 'group'
+            ? 'Click to place a group, then drag boxes into it · Esc to cancel'
           : tool === 'text' || tool === 'note'
             ? `Click to place a ${tool === 'text' ? 'text label' : 'note'} · Esc to cancel`
             : selEdge !== null
               ? 'Drag an end to another side or box · drag the label along the arrow · double-click to label · Backspace deletes'
               : singleSpec
-                ? 'Drag a dot to connect, or drop it on empty canvas for a new box · drag into a group to join it · Tab adds the next box · Enter renames'
+                ? 'Drag a dot to connect, or drop it on empty canvas for a new box · drag into or out of a group to join or leave it · Tab adds the next box · Enter renames'
+                : single?.kind === 'group'
+                  ? 'Drag the name bar to move the group with its boxes · drag the corner to resize · double-click the name to rename'
                 : sel.length > 1
                   ? 'Drag to move together · arrow keys nudge (Shift = 10px)'
                   : unplaced && !dirty.current
@@ -1464,6 +1714,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
         <div className="mn-diagram-tools" role="toolbar" aria-label="Tools">
           <ToolButton tool="select" cur={tool} set={setTool} label="Select (V)" d="M4 2l8 6-3.5.8L11 13l-1.8.8-2.4-4.3L4 12z" />
           <ToolButton tool="box" cur={tool} set={setTool} label="Box (B), or double-click the canvas" d="M2.5 4.5h11v7h-11z" />
+          <ToolButton tool="group" cur={tool} set={setTool} label="Group (G): a boundary to drag boxes into and out of" d="M2.5 6V3.5h2.5M11 3.5h2.5V6M13.5 10v2.5H11M5 12.5H2.5V10M6 6.5h4v3H6z" />
           <ToolButton tool="text" cur={tool} set={setTool} label="Text label (T)" d="M3 3.5h10M8 3.5V13M6 13h4" />
           <ToolButton tool="note" cur={tool} set={setTool} label="Note (N)" d="M3 3h10v6.5L9.5 13H3zM9.5 13V9.5H13" />
           <Sep />
@@ -1501,9 +1752,17 @@ function edgeTop(doc: Doc, i: number, g: EdgeGeom): number {
 }
 
 // Where a box's connect dot sits: just outside the middle of a side.
-function dotPoint(b: Box, side: Side): [number, number] {
+// A tile's label sits where the dot on that side would, so that dot stays
+// on the tile's border instead.
+const LABEL_SIDE: Record<string, Side> = { above: 'top', below: 'bottom', left: 'left', right: 'right' }
+function dotOf(s: Doc, id: string, side: Side, down?: boolean): [number, number] {
+  const n = s.spec.nodes.find((x) => x.id === id)
+  return dotPoint(s.nodes[id], side, !!n && isTile(n) && !!n.label && LABEL_SIDE[labelSideOf(n, down)] === side)
+}
+
+function dotPoint(b: Box, side: Side, flush = false): [number, number] {
   const [x, y] = sidePoint(b, side)
-  const o = 10
+  const o = flush ? 0 : 10
   return side === 'top' ? [x, y - o] : side === 'bottom' ? [x, y + o] : side === 'left' ? [x - o, y] : [x + o, y]
 }
 
@@ -1544,7 +1803,22 @@ function TextEditor({ doc, editing, view, onDone }: { doc: Doc; editing: NonNull
   let value = ''
   let cls = ''
   let multiline = true
-  if (editing.kind === 'node') {
+  const tileNode = editing.kind === 'node' ? doc.spec.nodes.find((n) => n.id === editing.id && isTile(n)) : undefined
+  if (editing.kind === 'node' && tileNode && doc.nodes[editing.id]) {
+    // A tile's label is edited where it is drawn, outside the tile.
+    const down = doc.spec.direction === 'DOWN'
+    const l = tileLabelBox({ ...tileNode, label: tileNode.label || 'Name' }, doc.nodes[editing.id], down)
+    const w = Math.max(150, (l?.w ?? 0) + 24)
+    const side = labelSideOf(tileNode, down)
+    box = l && {
+      x: side === 'left' ? l.x + l.w - w + 6 : side === 'right' ? l.x - 6 : l.x + l.w / 2 - w / 2,
+      y: l.y - 3,
+      w,
+      h: Math.max(24, l.h + 6),
+    }
+    value = tileNode.label
+    cls = `is-tile is-${side}`
+  } else if (editing.kind === 'node') {
     box = doc.nodes[editing.id] ?? null
     value = doc.spec.nodes.find((n) => n.id === editing.id)?.label ?? ''
     cls = 'is-node'
@@ -1564,7 +1838,7 @@ function TextEditor({ doc, editing, view, onDone }: { doc: Doc; editing: NonNull
     const e = doc.spec.edges[i]
     const g = e && routeEdges(doc.spec, { nodes: doc.nodes, groups: {} }, doc.sides).get(edgeKey(e))
     if (g) {
-      const w = Math.max(120, edgeLabelWidth(e.label ?? '') + 20)
+      const w = Math.max(120, edgeLabelWidth(e.label ?? '', e.arrows) + 20)
       box = { x: g.lx - w / 2, y: g.ly - 12, w, h: 24 }
     }
     value = e?.label ?? ''
@@ -1592,7 +1866,7 @@ function TextEditor({ doc, editing, view, onDone }: { doc: Doc; editing: NonNull
         height: box.h,
         transform: `scale(${view.k})`,
         // A box's label sits in the middle, as it's drawn.
-        ...(editing.kind === 'node' ? { paddingTop: Math.max(0, (box.h - draft.split('\n').length * 18.75) / 2) } : {}),
+        ...(editing.kind === 'node' && !tileNode ? { paddingTop: Math.max(0, (box.h - draft.split('\n').length * 18.75) / 2) } : {}),
       }}
       value={draft}
       aria-label="Edit text"
@@ -1610,6 +1884,106 @@ function TextEditor({ doc, editing, view, onDone }: { doc: Doc; editing: NonNull
         }
       }}
     />
+  )
+}
+
+// The icon panel under a node's toolbar: the built-in glyphs, a field that
+// takes an emoji as typed or searches the Tabler set, and the glyph's
+// colour.
+function IconPicker({ node, onPick, onTone }: { node: SpecNode; onPick: (icon: string | undefined) => void; onTone: (tone: string | undefined) => void }) {
+  const [q, setQ] = useState('')
+  const [hits, setHits] = useState<{ name: string; paths: string[] }[] | null>(null)
+  const [installed, setInstalled] = useState(true)
+  // Letters search Tabler; anything else (an emoji) is used as written.
+  const searching = /^[a-z0-9 -]{2,}$/i.test(q.trim())
+  useEffect(() => {
+    if (!searching) return setHits(null)
+    let live = true
+    const t = setTimeout(() => {
+      fetch(`/__moonshine/icons/tabler?q=${encodeURIComponent(q.trim())}`)
+        .then((r) => (r.ok ? r.json() : { icons: [] }))
+        .then((d: { installed?: boolean; icons: { name: string; paths: string[] }[] }) => {
+          if (!live) return
+          for (const h of d.icons) cacheTabler(h.name, h.paths)
+          setInstalled(d.installed !== false)
+          setHits(d.icons)
+        })
+        .catch(() => live && setHits([]))
+    }, 150)
+    return () => {
+      live = false
+      clearTimeout(t)
+    }
+  }, [q, searching])
+  const tone = node.tone ? `tone-${node.tone}` : undefined
+  const choice = (icon: string | undefined, title: string, body: ReactNode) => (
+    <button key={icon ?? 'none'} type="button" role="radio" aria-checked={node.icon === icon} title={title} aria-label={title} className="mn-diagram-kind" onClick={() => onPick(icon)}>
+      {body}
+    </button>
+  )
+  const preview = (icon: string) => (
+    <svg viewBox="-12 -12 24 24" width="22" height="22" aria-hidden="true" className="mn-dg-node" data-on={tone}>
+      <g className="mn-dg-glyph">{glyph(icon)}</g>
+    </svg>
+  )
+  const typed = q.trim()
+  return (
+    <div className="mn-diagram-icons" onKeyDown={(e) => e.stopPropagation()}>
+      <span className="mn-diagram-kinds" role="radiogroup" aria-label="Icon">
+        {choice(
+          undefined,
+          'No icon: a labelled box',
+          <svg viewBox="-12 -12 24 24" width="22" height="22" aria-hidden="true">
+            <rect className="mn-dg-shape" x={-10} y={-6} width={20} height={12} rx={2} />
+          </svg>,
+        )}
+        {glyphNames().map((name) => choice(name, name, preview(name)))}
+      </span>
+      <span className="mn-diagram-icon-search">
+        <input
+          type="text"
+          value={q}
+          placeholder="Type an emoji, or search 5,000 Tabler icons"
+          aria-label="Emoji, or search Tabler icons"
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && typed && !searching) {
+              e.preventDefault()
+              onPick(typed)
+            }
+          }}
+        />
+        {typed && !searching && (
+          <button type="button" onClick={() => onPick(typed)}>
+            Use {typed}
+          </button>
+        )}
+      </span>
+      {searching && hits && (
+        <span className="mn-diagram-kinds mn-diagram-icon-hits" role="radiogroup" aria-label="Tabler icons">
+          {hits.map((h) => choice(`tabler:${h.name}`, h.name, preview(`tabler:${h.name}`)))}
+          {hits.length === 0 && <span className="mn-diagram-toolbar-note">{installed ? 'No icon by that name.' : 'Run npm install to get the Tabler icons.'}</span>}
+        </span>
+      )}
+      {node.icon && (
+        <span className="mn-diagram-kinds" role="radiogroup" aria-label="Colour">
+          {TONES.map((t) => (
+            <button
+              key={t ?? 'plain'}
+              type="button"
+              role="radio"
+              aria-checked={(node.tone ?? null) === t}
+              title={t ?? 'plain'}
+              aria-label={`Colour: ${t ?? 'plain'}`}
+              className="mn-diagram-kind"
+              onClick={() => onTone(t ?? undefined)}
+            >
+              <span className="mn-diagram-swatch" data-tone={t ?? 'plain'} />
+            </button>
+          ))}
+        </span>
+      )}
+    </div>
   )
 }
 

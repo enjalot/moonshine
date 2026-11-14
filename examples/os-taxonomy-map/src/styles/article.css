@@ -870,6 +870,85 @@
 .mn-dg-node[data-kind='note'] .mn-dg-label {
   font-weight: 400;
 }
+/* Tiles: a node with an icon. The glyph is drawn in the node's tone over a
+   pale wash of it; the label sits outside the tile. */
+.mn-dg-node {
+  --dg-tone: var(--text);
+}
+.mn-dg-node[data-on~='tone-flow'],
+.mn-diagram-swatch[data-tone='flow'],
+.mn-dg-glyph-inline[data-tone='flow'] {
+  --dg-tone: var(--dg-flow);
+}
+.mn-dg-node[data-on~='tone-data'],
+.mn-diagram-swatch[data-tone='data'],
+.mn-dg-glyph-inline[data-tone='data'] {
+  --dg-tone: var(--dg-data);
+}
+.mn-dg-node[data-on~='tone-control'],
+.mn-diagram-swatch[data-tone='control'],
+.mn-dg-glyph-inline[data-tone='control'] {
+  --dg-tone: var(--dg-control);
+}
+.mn-dg-node[data-on~='tone-access'],
+.mn-diagram-swatch[data-tone='access'],
+.mn-dg-glyph-inline[data-tone='access'] {
+  --dg-tone: var(--dg-access);
+}
+.mn-dg-node[data-kind='tile'] .mn-dg-shape {
+  stroke: var(--border);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 1px 1.5px var(--shadow-edge));
+}
+.mn-dg-node[data-on~='dashed'] .mn-dg-shape {
+  stroke: var(--text-2);
+  stroke-dasharray: 5 3.5;
+  filter: none;
+}
+.mn-dg-glyph {
+  color: var(--dg-tone, var(--text));
+  fill: color-mix(in srgb, currentColor 14%, transparent);
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.mn-dg-glyph * {
+  vector-effect: non-scaling-stroke;
+}
+.mn-dg-glyph-line {
+  fill: none;
+}
+.mn-dg-glyph-text {
+  font-family: var(--heading-font);
+  font-size: 15px;
+  font-weight: 600;
+  fill: var(--dg-tone, var(--text));
+  stroke: none;
+}
+.mn-dg-glyph-inline {
+  --dg-tone: var(--text);
+  vertical-align: -0.18em;
+}
+.mn-dg-tile-label {
+  font-family: var(--heading-font);
+  font-size: 15px; /* same as a box label: the 13px floor is measured against it */
+  font-weight: 500;
+  fill: var(--text);
+}
+.mn-dg-node[data-on~='dashed'] .mn-dg-tile-label {
+  fill: var(--text-2);
+}
+.mn-dg-badge rect {
+  fill: var(--text);
+}
+.mn-dg-badge text {
+  font-family: var(--heading-font);
+  font-size: 13px;
+  font-weight: 700;
+  fill: var(--bg);
+}
 .mn-dg-halo {
   fill: none;
   stroke: var(--accent-light);
@@ -908,17 +987,70 @@
   box-shadow: 0 4px 14px var(--shadow-edge);
   pointer-events: none;
 }
+.mn-dg-group,
+.mn-dg-group-label {
+  --dg-zone: var(--border);
+  --dg-zone-ink: var(--text-2);
+}
+.mn-dg-group[data-on~='tone-flow'],
+.mn-dg-group-label[data-on~='tone-flow'] {
+  --dg-zone: var(--dg-flow);
+  --dg-zone-ink: var(--dg-flow);
+}
+.mn-dg-group[data-on~='tone-data'],
+.mn-dg-group-label[data-on~='tone-data'] {
+  --dg-zone: var(--dg-data);
+  --dg-zone-ink: var(--dg-data);
+}
+.mn-dg-group[data-on~='tone-control'],
+.mn-dg-group-label[data-on~='tone-control'] {
+  --dg-zone: var(--dg-control);
+  --dg-zone-ink: var(--dg-control);
+}
+.mn-dg-group[data-on~='tone-access'],
+.mn-dg-group-label[data-on~='tone-access'] {
+  --dg-zone: var(--dg-access);
+  --dg-zone-ink: var(--dg-access);
+}
 .mn-dg-group-box {
   fill: none;
-  stroke: var(--border);
+  stroke: var(--dg-zone);
   stroke-width: 1.5;
   transition: stroke 0.2s;
+}
+.mn-dg-group-corners {
+  display: none;
+  fill: none;
+  stroke: var(--dg-zone-ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.mn-dg-group[data-kind='corners'] .mn-dg-group-box {
+  stroke: none;
+}
+.mn-dg-group[data-kind='corners'] .mn-dg-group-corners {
+  display: inline;
+}
+.mn-dg-group[data-kind='tint'] .mn-dg-group-box {
+  fill: color-mix(in srgb, var(--dg-zone-ink) 9%, transparent);
+  stroke: none;
+}
+.mn-dg-group[data-kind='dashed'] .mn-dg-group-box {
+  stroke: var(--dg-zone-ink);
+  stroke-dasharray: 6 5;
 }
 .mn-dg-group-label {
   font-family: var(--heading-font);
   font-size: 13px;
   font-weight: 600;
-  fill: var(--text-2);
+  fill: var(--dg-zone-ink);
+  /* Its own layer over the links: a halo keeps a link behind the name,
+     and clicks pass through to the group's name bar. */
+  stroke: var(--fig-bg);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  paint-order: stroke;
+  pointer-events: none;
 }
 .mn-dg-group[data-on~='active'] .mn-dg-group-box,
 .mn-dg-annot[data-on~='active'] .mn-dg-annot-box {
@@ -944,13 +1076,34 @@
   fill: none;
   stroke: none;
 }
+.mn-dg-edge,
+.mn-dg-edge-label {
+  --dg-link: var(--text-2);
+}
+.mn-dg-edge[data-kind='flow'],
+.mn-dg-edge-label[data-kind='flow'] {
+  --dg-link: var(--dg-flow);
+}
+.mn-dg-edge[data-kind='data'],
+.mn-dg-edge-label[data-kind='data'] {
+  --dg-link: var(--dg-data);
+}
+.mn-dg-edge[data-kind='control'],
+.mn-dg-edge-label[data-kind='control'] {
+  --dg-link: var(--dg-control);
+}
+.mn-dg-edge[data-kind='access'],
+.mn-dg-edge-label[data-kind='access'] {
+  --dg-link: var(--dg-access);
+}
 .mn-dg-edge-line {
   fill: none;
-  stroke: var(--text-2);
-  stroke-width: 1.4;
+  stroke: var(--dg-link);
+  stroke-width: 1.6;
 }
-.mn-dg-arrow {
-  fill: var(--text-2);
+.mn-dg-arrow,
+.mn-dg-chevron {
+  fill: var(--dg-link);
 }
 .mn-dg-edge[data-on~='dashed'] .mn-dg-edge-line {
   stroke-dasharray: 5 4;
@@ -973,7 +1126,8 @@
   stroke: var(--accent);
   stroke-width: 2.2;
 }
-.mn-dg-edge[data-on~='active'] .mn-dg-arrow {
+.mn-dg-edge[data-on~='active'] .mn-dg-arrow,
+.mn-dg-edge[data-on~='active'] .mn-dg-chevron {
   fill: var(--accent);
 }
 .mn-dg-edge-label rect {
@@ -983,6 +1137,9 @@
   font-family: var(--heading-font);
   font-size: 13px;
   fill: var(--text-2);
+}
+.mn-dg-edge-label:not([data-kind='plain']) text {
+  fill: var(--dg-link);
 }
 .mn-dg-edge[data-on~='active'] .mn-dg-edge-label text {
   fill: var(--accent);
@@ -1173,6 +1330,68 @@
   background: var(--accent-light);
   box-shadow: inset 0 0 0 1.5px var(--accent);
 }
+.mn-diagram-icons {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 2px 2px;
+  border-top: 1px solid var(--border);
+  margin-top: 3px;
+}
+.mn-diagram-icons .mn-diagram-kinds {
+  flex-wrap: wrap;
+}
+.mn-diagram-label-input {
+  width: 11rem;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 4px 7px;
+  margin: 1px 4px 1px 1px;
+}
+.mn-diagram-icon-search {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 0 3px;
+}
+.mn-diagram-icon-search input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 4px 7px;
+}
+.mn-diagram-icon-hits {
+  max-height: 132px;
+  overflow-y: auto;
+}
+.mn-diagram-swatch {
+  --dg-tone: var(--text-2);
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--dg-tone);
+}
+.mn-dg-text-edit.is-tile {
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  padding: 3px 4px;
+}
+.mn-dg-text-edit.is-tile.is-right {
+  text-align: left;
+}
+.mn-dg-text-edit.is-tile.is-left {
+  text-align: right;
+}
 .mn-diagram-detail {
   flex-basis: 100%;
   box-sizing: border-box;
@@ -1226,6 +1445,7 @@
   fill: transparent;
 }
 .mn-diagram-arrange.is-tool-box .mn-dg-canvas,
+.mn-diagram-arrange.is-tool-group .mn-dg-canvas,
 .mn-diagram-arrange.is-tool-text .mn-dg-canvas,
 .mn-diagram-arrange.is-tool-note .mn-dg-canvas {
   cursor: crosshair;
