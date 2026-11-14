@@ -28,14 +28,16 @@
 //   content/figures/*.json   pre-0.9 diagram saves (`layout` + `viewport`)
 //                            become `nodes`; the viewport is dropped (its
 //                            zoom is what shrank labels).
+//   src/figures/registry.ts  gains the types newer template components
+//                            read (ParamHint, FigureEntry.paramHints).
 //   src/figures/*.tsx        figures still calling DiagramFigure with the
 //                            pre-0.9 `nodes`/`edges` props are reported.
 //                            They keep rendering (DiagramFigure accepts the
 //                            old props) until converted to a DiagramSpec.
 //
-// Article content, figures, registry and config are never touched. Run it
-// on a clean working tree; --apply refuses otherwise when the project is a
-// git repo. Afterwards: npm install, npm run build, look at the diagrams.
+// Article content, figures, registry and config are never touched. Commit
+// your work first; --apply refuses when a git project has uncommitted
+// changes to tracked files, or an untracked file it would overwrite. Afterwards: npm install, npm run build, look at the diagrams.
 
 import { execFileSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync, mkdirSync } from 'node:fs'
@@ -88,7 +90,7 @@ if (!existsSync(path.join(PROJECT, 'package.json')) || !existsSync(path.join(PRO
 const git = (...a) => execFileSync('git', ['-C', REPO, ...a], { encoding: 'utf8', maxBuffer: 64 << 20 })
 const projectIsRepo = spawnSync('git', ['-C', PROJECT, 'rev-parse', '--git-dir']).status === 0
 if (apply && projectIsRepo) {
-  const dirty = execFileSync('git', ['-C', PROJECT, 'status', '--porcelain', '--', '.'], { encoding: 'utf8' }).trim()
+  const dirty = execFileSync('git', ['-C', PROJECT, 'status', '--porcelain', '--untracked-files=no', '--', '.'], { encoding: 'utf8' }).trim()
   if (dirty) {
     console.error('The project has uncommitted changes. Commit or stash them first, so the upgrade is one reviewable diff.')
     process.exit(1)
@@ -142,6 +144,54 @@ function countLines(text) {
   return m
 }
 
+// Lists of independent lines (.gitignore entries, CSS declarations) merge
+// by line where git sees a conflict:
+//   - the project and the template each added lines at the same spot: keep
+//     the project's, then the template's that are not already there;
+//   - a run of custom properties the project re-valued (its palette) and
+//     the template added to: keep the project's values, add the template's
+//     new properties.
+// Returns null if any conflict is something else.
+const KEEP_BOTH = /(^|\/)\.gitignore$|\.css$/
+const cssProp = (l) => l.match(/^\s*(--[\w-]+)\s*:.*;\s*$/)?.[1]
+const cssNoise = (l) => !l.trim() || /^\s*\/\*.*\*\/\s*$/.test(l)
+function keepBoth(rel, file, base, theirs) {
+  const r = spawnSync('git', ['merge-file', '-p', '--diff3', file, base, theirs], { encoding: 'utf8', maxBuffer: 64 << 20 })
+  const out = []
+  let part = null // 'mine' | 'base' | 'theirs'
+  let [mine, was, add] = [[], [], []]
+  for (const line of r.stdout.split('\n')) {
+    if (part === null && line.startsWith('<<<<<<< ')) [part, mine, was, add] = ['mine', [], [], []]
+    else if (part === 'mine' && line.startsWith('||||||| ')) part = 'base'
+    else if (part === 'base' && line === '=======') part = 'theirs'
+    else if (part === 'theirs' && line.startsWith('>>>>>>> ')) {
+      part = null
+      if (!was.length) {
+        const have = new Set(mine.map((l) => l.trim()))
+        out.push(...mine, ...add.filter((l) => l.trim() && !have.has(l.trim())))
+        continue
+      }
+      const props = [...mine, ...was, ...add].every((l) => cssProp(l) || cssNoise(l))
+      if (!rel.endsWith('.css') || !props) return null
+      const have = new Set([...mine, ...was].map(cssProp).filter(Boolean))
+      out.push(...mine)
+      // A template comment travels with the new property that follows it.
+      let held = []
+      for (const l of add) {
+        if (cssNoise(l)) held.push(l)
+        else {
+          if (!have.has(cssProp(l))) out.push(...held.filter((h) => h.trim()), l)
+          held = []
+        }
+      }
+    } else if (part === 'mine') mine.push(line)
+    else if (part === 'base') was.push(line)
+    else if (part === 'theirs') add.push(line)
+    else out.push(line)
+  }
+  return part === null ? out.join('\n') : null
+}
+
 function walk(dir, base = dir) {
   const out = []
   for (const name of readdirSync(dir)) {
@@ -190,9 +240,13 @@ for (const rel of walk(TEMPLATE).filter(isInfra).sort()) {
     encoding: 'utf8',
     maxBuffer: 64 << 20,
   })
+  const both = r.status > 0 && KEEP_BOTH.test(rel) ? keepBoth(rel, file, b, t) : null
   if (r.status === 0) {
     report.merge.push(rel)
     writes.push([rel, r.stdout])
+  } else if (both) {
+    report.merge.push(`${rel} (your lines and values kept, the template's new lines added)`)
+    writes.push([rel, both])
   } else {
     report.conflict.push(`${rel} (${r.status} conflict${r.status === 1 ? '' : 's'})`)
     writes.push([`${rel}.upgrade-merge`, r.stdout])
@@ -207,6 +261,14 @@ for (const rel of deletedPaths()) {
   } else report.keep.push(`${rel} (the template deleted it, but this copy is customized)`)
 }
 rmSync(tmp, { recursive: true, force: true })
+
+// The article's own source files that import a package.
+function importers(pkg) {
+  const dir = path.join(PROJECT, 'src')
+  if (!existsSync(dir)) return []
+  const re = new RegExp(`from\\s+['"]${pkg.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}(/[^'"]*)?['"]`)
+  return walk(dir, PROJECT).filter((rel) => /\.(tsx?|jsx?)$/.test(rel) && !isInfra(rel) && re.test(readFileSync(path.join(PROJECT, rel), 'utf8')))
+}
 
 // package.json: key-level merge of dependencies, devDependencies, scripts.
 const pkgNotes = []
@@ -237,6 +299,11 @@ const pkgNotes = []
     for (const k of Object.keys(m)) {
       if (k in t) continue
       if (past.some((p) => k in (p[sec] ?? {})) && was(k)) {
+        const users = sec === 'scripts' ? [] : importers(k)
+        if (users.length) {
+          pkgNotes.push(`${sec}.${k}: kept (the template dropped it, but ${users.slice(0, 3).join(', ')} still import${users.length === 1 ? 's' : ''} it)`)
+          continue
+        }
         pkgNotes.push(`${sec}.${k}: removed (dropped from the template)`)
         delete m[k]
         changed = true
@@ -261,6 +328,24 @@ if (existsSync(figDir)) {
   }
 }
 
+// src/figures/registry.ts lists the article's figures, but its types are
+// the template's, and template components read them.
+const registryNotes = []
+{
+  const rel = 'src/figures/registry.ts'
+  const file = path.join(PROJECT, rel)
+  let text = existsSync(file) ? readFileSync(file, 'utf8') : ''
+  const at = text.indexOf('export type FigureEntry = {')
+  const end = at < 0 ? -1 : text.indexOf('\n}', at)
+  if (end > 0 && !/export type ParamHint\b/.test(text)) {
+    const hint = `// Explicit slider bounds for a numeric parameter in the knob panel.\nexport type ParamHint = {\n  min?: number\n  max?: number\n  step?: number\n}\n\n`
+    const field = /\bparamHints\?:/.test(text.slice(at, end)) ? '' : `\n  // Optional per-parameter slider bounds (the figure's exported PARAM_HINTS).\n  paramHints?: Record<string, ParamHint>`
+    text = text.slice(0, at) + hint + text.slice(at, end) + field + text.slice(end)
+    writes.push([rel, text])
+    registryNotes.push(`${rel}: added the ParamHint type and FigureEntry.paramHints (the knob panel reads them)`)
+  }
+}
+
 // Figure code on the pre-0.9 DiagramFigure API.
 const codeNotes = []
 const srcFig = path.join(PROJECT, 'src/figures')
@@ -280,6 +365,7 @@ const commit = git('rev-parse', '--short', 'HEAD').trim()
 const section = (title, items) => items.length && console.log(`\n${title}\n${items.map((i) => `  ${i}`).join('\n')}`)
 
 console.log(`${apply ? 'Upgrading' : 'Plan for'} ${PROJECT}\n  to moonshine ${version} (${commit})`)
+if (!projectIsRepo) console.log('\nThis project is not a git repository, so the upgrade cannot be undone with git. Copy the folder first.')
 section('Replace (unchanged copies of an older template):', report.update)
 section('Merge (customized; merges cleanly):', report.merge)
 section('Conflicts (written as <file>.upgrade-merge, not applied):', report.conflict)
@@ -287,6 +373,7 @@ section('Add (new in the template):', report.add)
 section('Remove (dropped from the template, unchanged here):', report.remove)
 section('Keep as is:', report.keep)
 section('package.json:', pkgNotes)
+section('Figure registry:', registryNotes)
 section('Diagram data:', dataNotes)
 section('Figure code to convert by hand:', codeNotes)
 console.log(`\n${report.current.length} template files already current.`)
@@ -294,6 +381,15 @@ console.log(`\n${report.current.length} template files already current.`)
 if (!apply) {
   console.log('\nNothing written. Re-run with --apply to make these changes.')
   process.exit(0)
+}
+if (projectIsRepo) {
+  const untracked = execFileSync('git', ['-C', PROJECT, 'ls-files', '--others', '--exclude-standard', '--', '.'], { encoding: 'utf8' })
+  const set = new Set(untracked.split('\n').filter(Boolean))
+  const hit = [...writes.map(([rel]) => rel), ...deletes].filter((rel) => set.has(rel))
+  if (hit.length) {
+    console.error(`\nThese files are not committed and would be overwritten. Commit them first:\n${hit.map((h) => `  ${h}`).join('\n')}`)
+    process.exit(1)
+  }
 }
 for (const [rel, text] of writes) {
   const file = path.join(PROJECT, rel)
