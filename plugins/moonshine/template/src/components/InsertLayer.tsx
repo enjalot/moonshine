@@ -65,43 +65,73 @@ function Layer({ containerRef }: Props) {
   modeRef.current = mode
   const busy = armed || Boolean(activeRange)
 
-  // Track the gap under the pointer (frozen while a menu/composer is open).
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      if (modeRef.current) return
-      const container = containerRef.current
-      if (!container || busy) return setGap(null)
-      const els = blockEls(container)
-      if (!els.length || els.length !== blocks.length) return setGap(null)
-      const c = container.getBoundingClientRect()
-      if (e.clientX < c.left - 48 || e.clientX > c.right + 16) return setGap(null)
-      const rects = els.map((el) => el.getBoundingClientRect())
-      // Chrome that sits in the flow after a block (suggestion cards) belongs
-      // to that block: the gap starts below it, so the "+" never lands on it.
-      const bottoms = els.map((el, i) => {
-        let bottom = rects[i].bottom
-        for (
-          let sib = el.nextElementSibling;
-          sib && sib.classList.contains('mn-sg-stack');
-          sib = sib.nextElementSibling
-        ) {
-          bottom = Math.max(bottom, sib.getBoundingClientRect().bottom)
-        }
-        return bottom
-      })
-      const ys = rects.map((r, i) => (i === 0 ? r.top - 6 : (bottoms[i - 1] + r.top) / 2))
-      ys.push(bottoms[bottoms.length - 1] + 10)
-      let best = -1
-      for (let i = 0; i < ys.length; i++) {
-        if (Math.abs(e.clientY - ys[i]) < 14 && (best < 0 || Math.abs(e.clientY - ys[i]) < Math.abs(e.clientY - ys[best]))) best = i
+  // The gap nearest a point, within `reach` px of it.
+  const gapAt = (x: number, y: number, reach: number): Gap | null => {
+    const container = containerRef.current
+    if (!container || busy) return null
+    const els = blockEls(container)
+    if (!els.length || els.length !== blocks.length) return null
+    const c = container.getBoundingClientRect()
+    if (x < c.left - 48 || x > c.right + 16) return null
+    const rects = els.map((el) => el.getBoundingClientRect())
+    // Chrome that sits in the flow after a block (suggestion cards) belongs
+    // to that block: the gap starts below it, so the "+" never lands on it.
+    const bottoms = els.map((el, i) => {
+      let bottom = rects[i].bottom
+      for (
+        let sib = el.nextElementSibling;
+        sib && sib.classList.contains('mn-sg-stack');
+        sib = sib.nextElementSibling
+      ) {
+        bottom = Math.max(bottom, sib.getBoundingClientRect().bottom)
       }
-      if (best < 0) return setGap(null)
-      const ref = rects[Math.min(best, rects.length - 1)]
-      setGap({ index: best, top: ys[best] + window.scrollY, left: ref.left + window.scrollX, width: ref.width })
+      return bottom
+    })
+    const ys = rects.map((r, i) => (i === 0 ? r.top - 6 : (bottoms[i - 1] + r.top) / 2))
+    ys.push(bottoms[bottoms.length - 1] + 10)
+    let best = -1
+    for (let i = 0; i < ys.length; i++) {
+      if (Math.abs(y - ys[i]) < reach && (best < 0 || Math.abs(y - ys[i]) < Math.abs(y - ys[best]))) best = i
+    }
+    if (best < 0) return null
+    const ref = rects[Math.min(best, rects.length - 1)]
+    return { index: best, top: ys[best] + window.scrollY, left: ref.left + window.scrollX, width: ref.width }
+  }
+  const gapAtRef = useRef(gapAt)
+  gapAtRef.current = gapAt
+
+  // Track the gap under the pointer (frozen while a menu/composer is open).
+  // A finger cannot hover: tapping between two blocks shows the "+" there,
+  // and tapping anywhere else puts it away.
+  useEffect(() => {
+    let touchedAt = 0
+    let down: { x: number; y: number } | null = null
+    const onMove = (e: MouseEvent) => {
+      // Ignore the mouse events a browser makes up after a tap.
+      if (modeRef.current || performance.now() - touchedAt < 800) return
+      setGap(gapAtRef.current(e.clientX, e.clientY, 14))
+    }
+    const onDown = (e: PointerEvent) => {
+      down = e.pointerType === 'mouse' ? null : { x: e.clientX, y: e.clientY }
+    }
+    const onUp = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse' || !down) return
+      const tapped = Math.hypot(e.clientX - down.x, e.clientY - down.y) < 10
+      down = null
+      touchedAt = performance.now()
+      if (!tapped || modeRef.current) return
+      if ((e.target as Element | null)?.closest('.mn-chrome, .mn-edit, .mn-knobs, .mn-diagram-arrange')) return
+      setGap(gapAtRef.current(e.clientX, e.clientY, 20))
     }
     window.addEventListener('mousemove', onMove)
-    return () => window.removeEventListener('mousemove', onMove)
-  }, [containerRef, blocks.length, busy])
+    window.addEventListener('pointerdown', onDown, true)
+    window.addEventListener('pointerup', onUp, true)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('pointerdown', onDown, true)
+      window.removeEventListener('pointerup', onUp, true)
+    }
+  }, [])
 
   // While composing text, push the following block down so the composer
   // doesn't cover it (margin on the next element, restored on close).

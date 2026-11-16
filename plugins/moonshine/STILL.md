@@ -636,6 +636,16 @@ page — no jumping back to the `.md` file for small wording changes.
   a `:::figure`, a `$$` math block — so editing a caption and pressing ↓
   moves the whole figure. Up/down folds in any unsaved textarea edit
   before moving.
+- **On a tablet or phone** there is no modifier key, so a touch held in
+  place stands in for it: **touch and hold a block** (about half a second,
+  until its left rule appears) and lift to open it; **keep holding and
+  drag** to reorder; **touch and hold a figure** for its knob panel; **tap
+  between two blocks** to show the "+". The editor's **×** button cancels.
+  Text in the page cannot be selected by touch during `npm run dev`,
+  because a long press is the edit gesture. In the diagram editor a finger
+  on empty canvas moves the view and two fingers pinch to zoom; rename and
+  delete from the bar above a selected box. Published articles are
+  unaffected.
 - A dismissable pill in the corner teaches the gesture; after each body
   save a transient **Undo** toast can restore the previous text (through
   the same conflict-checked save path). Title/lede and figure-layout
