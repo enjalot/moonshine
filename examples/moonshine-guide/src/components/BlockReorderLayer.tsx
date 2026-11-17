@@ -2,11 +2,13 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type 
 import { createPortal } from 'react-dom'
 import { translate, type Draggable } from 'dragology'
 import { EDIT_ENABLED, useEdit } from '../lib/EditContext'
+import { touchHold } from '../lib/touchHold'
 import DragRenderer from '../figures/drag/Renderer'
 import { each } from '../figures/drag/each'
 
 // Dev-only Cmd/Ctrl-drag reordering of top-level blocks, by declarative
-// dragging (see figures/drag/). While a modifier is held, pressing a block
+// dragging (see figures/drag/). While a modifier is held (or, with a
+// finger, after touching and holding: lib/touchHold.ts), pressing a block
 // and moving past a small threshold lifts the article into an overlay of
 // clones, each at its block's place. The grabbed block floats under the
 // pointer and the rest slide apart to show where it would land: the drag
@@ -97,7 +99,8 @@ function ReorderLayer({ containerRef }: Props) {
     }
 
     const onPointerDown = (e: PointerEvent) => {
-      if (!armedRef.current || e.button !== 0) return
+      // Armed by the held modifier, or by a touch that has been held.
+      if (!(armedRef.current || touchHold.active) || e.button !== 0) return
       if (blockCountRef.current < 2) return
       const el = blockElFor(e.target as Element | null)
       if (!el) return
@@ -267,9 +270,6 @@ function Overlay({ lift, onDone }: { lift: Lift; onDone: (to: number | null) => 
                 dragologyOnDrag={() => d.closest(state.order.map((_, j) => moveTo(b, j))).withFloating()}
               >
                 <rect className="mn-reorder-backing" width={s.w} height={s.h} />
-                <foreignObject width={s.w} height={s.h}>
-                  <Clone el={s.el} />
-                </foreignObject>
               </g>
             )
           })}
@@ -279,9 +279,51 @@ function Overlay({ lift, onDone }: { lift: Lift; onDone: (to: number | null) => 
     [slabs, uid, ox],
   )
 
+  // The copies are HTML laid over the svg, each following its block's
+  // rectangle there, not <foreignObject> children of it: Safari paints
+  // positioned HTML inside a foreignObject in the wrong place (most blocks
+  // are positioned), which left the page blank during a drag.
+  const hostRef = useRef<HTMLDivElement>(null)
+  const slots = useRef<(HTMLDivElement | null)[]>([])
+  useLayoutEffect(() => {
+    let frame = 0
+    const follow = () => {
+      const host = hostRef.current
+      if (host) {
+        const o = host.getBoundingClientRect()
+        slabs.forEach((_, b) => {
+          const g = document.getElementById(`${uid}-b-${b}`)
+          const slot = slots.current[b]
+          const rect = g?.querySelector('rect')
+          if (!g || !slot || !rect) return
+          const r = rect.getBoundingClientRect()
+          slot.style.transform = `translate(${r.left - o.left}px, ${r.top - o.top}px)`
+          slot.toggleAttribute('data-lifted', g.getAttribute('data-on') === 'lifted')
+        })
+      }
+      frame = requestAnimationFrame(follow)
+    }
+    follow()
+    return () => cancelAnimationFrame(frame)
+  }, [slabs, uid])
+
   return createPortal(
     // .article so the article's descendant rules style the clones.
-    <div className="article mn-reorder-overlay" style={{ left: ox, top: oy, width, height }}>
+    <div ref={hostRef} className="article mn-reorder-overlay" style={{ left: ox, top: oy, width, height }}>
+      <div className="mn-reorder-copies">
+        {slabs.map((s, b) => (
+          <div
+            key={b}
+            ref={(el) => {
+              slots.current[b] = el
+            }}
+            className="mn-reorder-slot"
+            style={{ width: s.w, height: s.h, transform: `translate(${s.x - ox}px, ${s.y - oy}px)` }}
+          >
+            <Clone el={s.el} />
+          </div>
+        ))}
+      </div>
       <DragRenderer
         draggable={draw}
         state={state}

@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import moonshineEditPlugin from './vite-plugin-moonshine-edit'
 import moonshineFeedbackPlugin from './vite-plugin-moonshine-feedback'
 import moonshineIconsPlugin from './vite-plugin-moonshine-icons'
+import moonshineLayoutsPlugin from './vite-plugin-moonshine-layouts'
 
 // Authorship-feedback kill switch (see plugins/moonshine/FEEDBACK.md):
 // moonshine.config.json → feedback.enabled, overridable with the env var
@@ -39,6 +40,7 @@ export default defineConfig({
     // Tabler icons for diagram tiles: only the ones the article uses are
     // bundled; the editor searches the rest in dev.
     moonshineIconsPlugin(),
+    moonshineLayoutsPlugin(),
     ...(feedbackEnabled() ? [moonshineFeedbackPlugin()] : []),
   ],
   resolve: {
