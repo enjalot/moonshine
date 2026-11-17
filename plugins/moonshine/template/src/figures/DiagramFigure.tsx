@@ -5,7 +5,9 @@ import { useFigureHighlight } from '../store'
 import { EDIT_ENABLED, saveContentFile } from '../lib/EditContext'
 import { useFigureEdit } from '../lib/FigureEditContext'
 import { getBakedFigure } from '../lib/bakedFigures'
-import { narrowSpec, place, type Placement } from './diagram/layout'
+import prebuiltLayouts from 'virtual:moonshine-layouts'
+import { collector } from './diagram/collect'
+import { narrowSpec, place, type Layout, type Placement } from './diagram/layout'
 import { frameFor } from './diagram/geometry'
 import { drawDiagram } from './diagram/draw'
 import { useFontEpoch } from './diagram/text'
@@ -63,6 +65,13 @@ type Props = {
 
 const EMPTY_SPEC: DiagramSpec = { nodes: [], edges: [] }
 
+// The layout `npm run build` made for this figure, if it was made from
+// exactly this spec (diagram/bake.ts). Empty during `npm run dev`.
+function prebuilt(figureId: string, spec: DiagramSpec, which: 'wide' | 'narrow'): Layout | null {
+  const p = prebuiltLayouts[figureId]
+  return p && p.from === specHash(spec) ? (p[which] ?? null) : null
+}
+
 export default function DiagramFigure({ figureId, spec: specProp, nodes: legacyNodes, edges: legacyEdges, authored }: Props) {
   const { activePart } = useFigureHighlight(figureId)
   const saved = getBakedFigure(figureId)
@@ -79,6 +88,8 @@ export default function DiagramFigure({ figureId, spec: specProp, nodes: legacyN
     () => (legacy ? { figure: figureId, ...saved, nodes: { ...legacy.positions, ...saved?.nodes } } : saved),
     [legacy, saved, figureId],
   )
+  // The build renders each figure once to learn what it draws.
+  if (import.meta.env.SSR) collector.current?.({ figureId, spec, baked })
   const [placement, setPlacement] = useState<Placement | null>(null)
   const [arranging, setArranging] = useState(false)
   const fig = useFigureEdit()
@@ -86,11 +97,11 @@ export default function DiagramFigure({ figureId, spec: specProp, nodes: legacyN
 
   useEffect(() => {
     let live = true
-    void place(spec, baked).then((p) => live && setPlacement(p))
+    void place(spec, baked, prebuilt(figureId, spec, 'wide')).then((p) => live && setPlacement(p))
     return () => {
       live = false
     }
-  }, [spec, baked])
+  }, [spec, baked, figureId])
 
   const unarranged = placement ? Object.values(placement.nodes).filter((n) => n.unarranged).length : 0
   const empty = spec.nodes.length === 0
@@ -100,7 +111,7 @@ export default function DiagramFigure({ figureId, spec: specProp, nodes: legacyN
       {empty ? (
         EDIT_ENABLED && <p className="mn-diagram-empty">An empty diagram. Click “edit diagram” to add boxes.</p>
       ) : placement ? (
-        <ReaderSvg spec={spec} placement={placement} baked={baked} activePart={activePart} />
+        <ReaderSvg figureId={figureId} spec={spec} placement={placement} baked={baked} activePart={activePart} />
       ) : (
         <div className="mn-diagram-loading" />
       )}
@@ -150,11 +161,13 @@ type View = { spec: DiagramSpec; placement: Placement; baked: BakedDiagram | nul
 type ReaderState = { layout: 'wide' | 'narrow' }
 
 function ReaderSvg({
+  figureId,
   spec,
   placement,
   baked,
   activePart,
 }: {
+  figureId: string
   spec: DiagramSpec
   placement: Placement
   baked: BakedDiagram | null
@@ -176,7 +189,7 @@ function ReaderSvg({
 
   const wide = useMemo<View>(() => ({ spec, placement, baked, frame: frameFor(spec, placement, baked) }), [spec, placement, baked])
   const needsNarrow = width > 0 && width / wide.frame.w < MIN_ZOOM
-  const narrow = useNarrowView(spec, baked, needsNarrow)
+  const narrow = useNarrowView(figureId, spec, baked, needsNarrow)
 
   // Full size when it fits; otherwise the largest zoom at or above the
   // floor, preferring the wide arrangement (the author's) when both fit.
@@ -258,7 +271,7 @@ function ReaderSvg({
 // An automatic layout carries no annotations (their positions belong to
 // the wide arrangement), so a diagram with annotations and no saved
 // narrow arrangement stays wide and scrolls instead.
-function useNarrowView(spec: DiagramSpec, baked: BakedDiagram | null, wanted: boolean): View | null {
+function useNarrowView(figureId: string, spec: DiagramSpec, baked: BakedDiagram | null, wanted: boolean): View | null {
   const [view, setView] = useState<View | null>(null)
   const auto = !baked?.narrow
   const blocked = auto && Boolean(baked?.annotations?.length)
@@ -267,11 +280,12 @@ function useNarrowView(spec: DiagramSpec, baked: BakedDiagram | null, wanted: bo
     let live = true
     const s = narrowSpec(spec)
     const b: BakedDiagram = { figure: baked?.figure ?? '', ...(baked?.narrow ?? {}) }
-    void place(s, b).then((p) => live && setView({ spec: s, placement: p, baked: b, frame: frameFor(s, p, b) }))
+    // The build's narrow layout was made from the spec before its turn.
+    void place(s, b, prebuilt(figureId, spec, 'narrow')).then((p) => live && setView({ spec: s, placement: p, baked: b, frame: frameFor(s, p, b) }))
     return () => {
       live = false
     }
-  }, [wanted, blocked, auto, spec, baked])
+  }, [wanted, blocked, auto, spec, baked, figureId])
   return wanted && !blocked ? view : null
 }
 

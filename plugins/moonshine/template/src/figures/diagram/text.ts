@@ -13,8 +13,16 @@ export const FONTS = {
 }
 export const LINE = { node: 18.75, annot: 18.9, tile: 18.75 }
 
+// Where there is no browser (laying diagrams out during the build), the
+// build supplies its own measure: see bake.ts.
+let measure: ((text: string, font: string) => number) | null = null
+export function setTextMeasure(fn: typeof measure) {
+  measure = fn
+}
+
 let ctx: CanvasRenderingContext2D | null | undefined
 export function textWidth(text: string, font: string): number {
+  if (measure) return measure(text, font)
   if (ctx === undefined) ctx = typeof document === 'undefined' ? null : document.createElement('canvas').getContext('2d')
   if (!ctx) return text.length * 8
   ctx.font = font
