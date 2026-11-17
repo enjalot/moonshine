@@ -147,7 +147,8 @@ function countLines(text) {
 // Lists of independent lines (.gitignore entries, CSS declarations) merge
 // by line where git sees a conflict:
 //   - the project and the template each added lines at the same spot: keep
-//     the project's, then the template's that are not already there;
+//     the project's, then the template's (for .gitignore, only those not
+//     already there);
 //   - a run of custom properties the project re-valued (its palette) and
 //     the template added to: keep the project's values, add the template's
 //     new properties.
@@ -167,8 +168,11 @@ function keepBoth(rel, file, base, theirs) {
     else if (part === 'theirs' && line.startsWith('>>>>>>> ')) {
       part = null
       if (!was.length) {
+        // Ignore entries are a set: skip the template's that are already
+        // there. Anywhere else a repeated line (a closing brace) matters,
+        // so both runs are kept whole.
         const have = new Set(mine.map((l) => l.trim()))
-        out.push(...mine, ...add.filter((l) => l.trim() && !have.has(l.trim())))
+        out.push(...mine, ...(rel.endsWith('.css') ? add : add.filter((l) => l.trim() && !have.has(l.trim()))))
         continue
       }
       const props = [...mine, ...was, ...add].every((l) => cssProp(l) || cssNoise(l))
@@ -189,7 +193,15 @@ function keepBoth(rel, file, base, theirs) {
     else if (part === 'theirs') add.push(line)
     else out.push(line)
   }
-  return part === null ? out.join('\n') : null
+  if (part !== null) return null
+  const text = out.join('\n')
+  // Two runs of rules set side by side must still nest: if the braces no
+  // longer pair up, this is a conflict for a person after all.
+  if (rel.endsWith('.css')) {
+    const bare = text.replace(/\/\*[\s\S]*?\*\//g, '')
+    if (bare.split('{').length !== bare.split('}').length) return null
+  }
+  return text
 }
 
 function walk(dir, base = dir) {
