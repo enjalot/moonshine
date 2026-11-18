@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { EDIT_ENABLED, useEdit } from '../lib/EditContext'
+import { coarsePointer } from '../lib/touchHold'
 import AuthorshipHUD from './AuthorshipHUD'
 import CommentBox from './CommentBox'
 
@@ -38,10 +39,17 @@ function EditHint() {
   if (dismissed) return null
   return (
     <div className="mn-chrome mn-hint-pill" role="note">
-      <span>
-        ✎ hold <kbd>⌘/Ctrl</kbd>: click a block to edit prose or a figure for
-        parameters, drag to reorder · <kbd>esc</kbd> unpins
-      </span>
+      {coarsePointer() ? (
+        <span>
+          ✎ touch and hold to edit · hold and drag to reorder · tap between
+          blocks to add
+        </span>
+      ) : (
+        <span>
+          ✎ hold <kbd>⌘/Ctrl</kbd>: click a block to edit prose or a figure for
+          parameters, drag to reorder · <kbd>esc</kbd> unpins
+        </span>
+      )}
       <button
         type="button"
         aria-label="Dismiss editing hint"

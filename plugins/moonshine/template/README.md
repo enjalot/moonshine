@@ -45,6 +45,9 @@ During `npm run dev` the rendered article is an editing surface:
 - **Cmd/Ctrl+drag a block** to reorder; a drop line shows the target and
   moved blocks settle into place. The open editor and the knob panel also
   carry **↑ / ↓** buttons.
+- **On a tablet or phone**, touch and hold stands in for Cmd/Ctrl: hold a
+  block and lift to edit it, keep holding and drag to reorder, hold a
+  figure for its knobs, and tap between two blocks for the "+".
 - **💬 Comment to the agent** from the editor or knob panel sends
   feedback about that exact passage into `.feedback/`; the authoring
   agent picks it up and replies in the HUD (bottom corner), which also

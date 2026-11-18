@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type 
 import { createPortal } from 'react-dom'
 import { inOrder, lessThan, param, scale, translate, type Draggable, type DragSpec, type DragSpecBuilder, type DragStatus } from 'dragology'
 import { saveContentFile } from '../../lib/EditContext'
+import { coarsePointer } from '../../lib/touchHold'
 import DragRenderer from '../drag/Renderer'
 import { each } from '../drag/each'
 import { drawAnnot, drawEdge, drawGroup, drawGroupName, drawNode, edgeLabelWidth, flags, ids, type DrawCtx } from './draw'
@@ -362,6 +363,8 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
   }
 
   // ---- view ------------------------------------------------------------
+  const pinching = useRef(false)
+  const coarse = coarsePointer()
   useLayoutEffect(() => {
     const el = canvasRef.current
     if (!el) return
@@ -413,7 +416,69 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
       else setView((v) => ({ ...v, x: v.x - e.deltaX, y: v.y - e.deltaY }))
     }
     el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
+
+    // Two fingers: pinch to zoom, and the view follows their midpoint.
+    const fingers = new Map<number, { x: number; y: number }>()
+    let pinch: { d: number; mx: number; my: number; k: number; x: number; y: number } | null = null
+    const two = () => {
+      const [a, b] = [...fingers.values()]
+      const r = el.getBoundingClientRect()
+      return { d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), mx: (a.x + b.x) / 2 - r.left, my: (a.y + b.y) / 2 - r.top }
+    }
+    const onFingerDown = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return
+      if ((e.target as HTMLElement).closest?.('.mn-diagram-toolbar, .mn-diagram-tools, .mn-diagram-zoom, textarea, input')) return
+      fingers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (fingers.size === 2) {
+        pinch = { ...two(), ...viewRef.current }
+        pinching.current = true
+      }
+    }
+    const onFingerMove = (e: PointerEvent) => {
+      if (!fingers.has(e.pointerId)) return
+      fingers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (!pinch || fingers.size !== 2) return
+      const now = two()
+      const k = Math.max(0.2, Math.min(3, (pinch.k * now.d) / pinch.d))
+      // The diagram point that was under the fingers' midpoint stays there.
+      setView({ k, x: now.mx - ((pinch.mx - pinch.x) / pinch.k) * k, y: now.my - ((pinch.my - pinch.y) / pinch.k) * k })
+    }
+    const onFingerUp = (e: PointerEvent) => {
+      if (!fingers.delete(e.pointerId)) return
+      pinch = null
+      // Stays set until the last finger lifts, so the one left behind
+      // neither pans nor counts as a tap.
+      if (fingers.size === 0) pinching.current = false
+    }
+    el.addEventListener('pointerdown', onFingerDown, true)
+    window.addEventListener('pointermove', onFingerMove)
+    window.addEventListener('pointerup', onFingerUp)
+    window.addEventListener('pointercancel', onFingerUp)
+
+    // Safari reports a trackpad pinch as its own gesture events (other
+    // browsers send a ctrl+wheel, handled above).
+    let gestureK = 1
+    const onGestureStart = (e: Event) => {
+      e.preventDefault()
+      gestureK = viewRef.current.k
+    }
+    const onGestureChange = (e: Event) => {
+      e.preventDefault()
+      const g = e as Event & { scale: number; clientX: number; clientY: number }
+      const r = el.getBoundingClientRect()
+      zoomAt(gestureK * g.scale, g.clientX - r.left, g.clientY - r.top)
+    }
+    el.addEventListener('gesturestart', onGestureStart)
+    el.addEventListener('gesturechange', onGestureChange)
+    return () => {
+      el.removeEventListener('wheel', onWheel)
+      el.removeEventListener('pointerdown', onFingerDown, true)
+      window.removeEventListener('pointermove', onFingerMove)
+      window.removeEventListener('pointerup', onFingerUp)
+      window.removeEventListener('pointercancel', onFingerUp)
+      el.removeEventListener('gesturestart', onGestureStart)
+      el.removeEventListener('gesturechange', onGestureChange)
+    }
   }, [])
 
   // ---- selection --------------------------------------------------------
@@ -825,17 +890,33 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
 
   // ---- canvas gestures (the background: select, pan, place) -------------
   const onBackgroundDown = (e: React.PointerEvent) => {
-    const panning = spaceRef.current || e.button === 1 || e.button === 2
+    // A finger on empty canvas moves the view (there is no wheel or Space
+    // key to do it); a mouse there draws a selection box.
+    const finger = e.pointerType === 'touch' && tool === 'select'
+    const panning = spaceRef.current || e.button === 1 || e.button === 2 || finger
     if (panning) {
       e.preventDefault()
+      const id = e.pointerId
       const start = { cx: e.clientX, cy: e.clientY, ...viewRef.current }
-      const move = (ev: PointerEvent) => setView((v) => ({ ...v, x: start.x + ev.clientX - start.cx, y: start.y + ev.clientY - start.cy }))
-      const up = () => {
+      let moved = false
+      const move = (ev: PointerEvent) => {
+        // Two fingers down: the pinch handler has the view.
+        if (ev.pointerId !== id || pinching.current) return
+        if (!moved && Math.hypot(ev.clientX - start.cx, ev.clientY - start.cy) < 4) return
+        moved = true
+        setView((v) => ({ ...v, x: start.x + ev.clientX - start.cx, y: start.y + ev.clientY - start.cy }))
+      }
+      const up = (ev: PointerEvent) => {
+        if (ev.pointerId !== id) return
         window.removeEventListener('pointermove', move)
         window.removeEventListener('pointerup', up)
+        window.removeEventListener('pointercancel', up)
+        // A tap on empty canvas lets go of the selection.
+        if (finger && !moved && !pinching.current) clearSelection()
       }
       window.addEventListener('pointermove', move)
       window.addEventListener('pointerup', up)
+      window.addEventListener('pointercancel', up)
       return
     }
     if (e.button !== 0 || tool !== 'select') return
@@ -1030,7 +1111,8 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
       const routes = lean ? new Map<string, EdgeGeom>() : routeEdges(s.spec, placed, s.sides)
       const frame = lean ? null : padBox(contentBounds(s.spec, placed, { edges: s.sides, annotations: s.annots }), s.pad)
       const k = view.k
-      const handle = 7 / k
+      // Handles a finger can land on.
+      const handle = (coarse ? 11 : 7) / k
       const selected = (kind: Item['kind'], id: string) => sel.some((x) => x.kind === kind && x.id === id)
 
       // Alignment guides while a box is dragged.
@@ -1615,6 +1697,19 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
   const tb = toolbar && showToolbars ? selBox() : null
   const unplaced = unarranged.size
 
+  // The same guidance without the keys and double-clicks a finger lacks.
+  const touchHint =
+    !coarse || notice || dragging
+      ? null
+      : selEdge !== null
+        ? 'Drag an end to another side or box · drag the label along the arrow · label and delete from the bar above it'
+        : singleSpec
+          ? 'Drag a dot to connect, or drop it on empty canvas for a new box · rename and delete from the bar above'
+          : sel.length > 1
+            ? 'Drag to move together'
+            : single
+              ? null
+              : 'Pick a tool, then tap the canvas to add · drag a box’s dot to connect · drag the canvas to move around · pinch to zoom'
   const hint = notice
     ? notice
     : dragging
@@ -1723,7 +1818,7 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
           </button>
         </div>
         <p className="mn-diagram-hint" aria-live="polite">
-          {hint}
+          {touchHint ?? hint}
         </p>
         <div className="mn-diagram-zoom" role="group" aria-label="Zoom">
           <button type="button" aria-label="Zoom out" onClick={() => zoomAt(view.k / 1.25, size.w / 2, size.h / 2)}>
