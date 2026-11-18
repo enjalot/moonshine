@@ -214,13 +214,34 @@ function Overlay({ lift, onDone }: { lift: Lift; onDone: (to: number | null) => 
 
   // Hand the press to Dragology: replay it on the grabbed block's clone,
   // once the renderer has its svg (it takes a second render to get it).
+  // If the pointer lets go during that wait there is no gesture left to
+  // hand over: replaying the press would start a drag nothing ends, with
+  // the block following the pointer. The lift is dropped instead.
+  const released = useRef(false)
   useEffect(() => {
+    let handed = false
+    const onRelease = (e: PointerEvent) => {
+      if (handed || e.pointerId !== lift.pointer.id) return
+      released.current = true
+      onDone(null)
+    }
+    window.addEventListener('pointerup', onRelease, true)
+    window.addEventListener('pointercancel', onRelease, true)
     let frame = requestAnimationFrame(() => {
-      frame = requestAnimationFrame(press)
+      frame = requestAnimationFrame(() => {
+        handed = true
+        press()
+      })
     })
-    return () => cancelAnimationFrame(frame)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('pointerup', onRelease, true)
+      window.removeEventListener('pointercancel', onRelease, true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid, from, lift.pointer])
   const press = () => {
+    if (released.current) return
     const target = document.getElementById(`${uid}-b-${from}`)
     if (!target) return
     target.dispatchEvent(

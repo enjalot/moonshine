@@ -446,9 +446,11 @@ function Arrange({ figureId, spec: specProp, baked, placement, authored, codeSpe
     const onFingerUp = (e: PointerEvent) => {
       if (!fingers.delete(e.pointerId)) return
       pinch = null
-      // Stays set until the last finger lifts, so the one left behind
-      // neither pans nor counts as a tap.
-      if (fingers.size === 0) pinching.current = false
+      // Stays set until the last finger has lifted and every handler of
+      // that release has run (the canvas's own release handler is added
+      // later, so it runs after this one): the finger left behind neither
+      // pans nor counts as a tap that lets go of the selection.
+      if (fingers.size === 0) window.setTimeout(() => (pinching.current = fingers.size > 0), 0)
     }
     el.addEventListener('pointerdown', onFingerDown, true)
     window.addEventListener('pointermove', onFingerMove)
