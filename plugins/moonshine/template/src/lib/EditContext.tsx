@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { installTouchHold } from './touchHold'
 import {
   topLevelBlocks,
   blockIndexAt,
@@ -237,10 +238,13 @@ export function EditProvider({ body, path, children }: ProviderProps) {
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     window.addEventListener('blur', blur)
+    // A finger has no modifier: touch and hold arms the page instead.
+    const removeTouchHold = installTouchHold(setArmed)
     return () => {
       window.removeEventListener('keydown', down)
       window.removeEventListener('keyup', up)
       window.removeEventListener('blur', blur)
+      removeTouchHold()
     }
   }, [])
 

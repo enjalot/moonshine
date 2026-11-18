@@ -150,7 +150,14 @@ project could have copied:
   merge against the closest earlier version; a conflicted merge is written
   as `<file>.upgrade-merge` and left for you. Files the template added are
   copied in; files it deleted are removed only if unchanged.
-- **`package.json`** dependencies and scripts are merged key by key.
+- **`.gitignore` and stylesheets** merge by line where git would conflict:
+  lines you and the template both added at the same spot are both kept, and
+  a palette you recoloured in `tokens.css` keeps your values and gains the
+  template's new tokens.
+- **`package.json`** dependencies and scripts are merged key by key. A
+  dependency the template dropped stays if your own figures still import it.
+- **The figure registry's types** (`ParamHint`, `FigureEntry.paramHints`)
+  are added to an older `src/figures/registry.ts`; its entries are yours.
 - **Author data that changed shape** is migrated: pre-0.9 diagram saves
   (`layout` + `viewport`) become `nodes` positions, and the viewport is
   dropped (its zoom is what shrank labels; sizes are measured from the
@@ -160,9 +167,12 @@ project could have copied:
   through a compatibility layer until someone converts it to a
   `DiagramSpec`.
 
-Article content, figures, the registry, `moonshine.config.json` and
-`public/` are never touched. Run it on a committed working tree so the
-upgrade lands as one reviewable diff, then check every diagram:
+Article content, figures, registry entries, `moonshine.config.json` and
+`public/` are never touched. Commit your work first so the upgrade lands as
+one reviewable diff: `--apply` refuses when tracked files have uncommitted
+changes, or when it would overwrite an untracked file. Other untracked
+files are fine. A project that is not a git repository gets a warning to
+copy the folder first. Then check every diagram:
 
 ```bash
 node scripts/check-diagrams.mjs http://localhost:5173/  # labels ≥ 13px at 360–1100px

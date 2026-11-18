@@ -1,0 +1,101 @@
+{
+  "figure": "training-system",
+  "nodes": {
+    "dataset": {
+      "x": 552,
+      "y": 316,
+      "w": 56,
+      "h": 56
+    },
+    "trainer": {
+      "x": 264,
+      "y": 74,
+      "w": 56,
+      "h": 56
+    },
+    "schedule": {
+      "x": 96,
+      "y": 74,
+      "w": 56,
+      "h": 56
+    },
+    "checkpoints": {
+      "x": 552,
+      "y": 56,
+      "w": 56,
+      "h": 56
+    },
+    "author": {
+      "x": 552,
+      "y": 192,
+      "w": 56,
+      "h": 56
+    }
+  },
+  "groups": {
+    "job": {
+      "x": 42,
+      "y": 16,
+      "w": 303,
+      "h": 162
+    }
+  },
+  "edges": {
+    "trainer--checkpoints": {
+      "target": "left"
+    },
+    "dataset--trainer": {
+      "labelAt": 0.65
+    },
+    "author--schedule": {
+      "labelAt": 0.27
+    }
+  },
+  "narrow": {
+    "nodes": {
+      "dataset": {
+        "x": 112,
+        "y": 64,
+        "w": 56,
+        "h": 56
+      },
+      "trainer": {
+        "x": 202,
+        "y": 333,
+        "w": 56,
+        "h": 56
+      },
+      "schedule": {
+        "x": 202,
+        "y": 211,
+        "w": 56,
+        "h": 56
+      },
+      "checkpoints": {
+        "x": 202,
+        "y": 508,
+        "w": 56,
+        "h": 56
+      },
+      "author": {
+        "x": 79,
+        "y": 508,
+        "w": 56,
+        "h": 56
+      }
+    },
+    "groups": {
+      "job": {
+        "x": 178,
+        "y": 167,
+        "w": 229,
+        "h": 246
+      }
+    },
+    "edges": {
+      "dataset--trainer": {
+        "labelAt": 0.25
+      }
+    }
+  }
+}

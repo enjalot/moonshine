@@ -209,14 +209,42 @@ export function merge(
   return { nodes, groups }
 }
 
+// Whether the author has placed every node, so no layout is needed.
+export const arranged = (spec: DiagramSpec, saved?: { nodes?: Record<string, Box> } | null) =>
+  spec.nodes.every((n) => saved?.nodes?.[n.id])
+
 // Lay out only when needed: if every node already has a saved box, ELK is
-// never loaded.
+// never loaded. Nor is it when the build already laid this spec out
+// (`prebuilt`, from virtual:moonshine-layouts), which is how a published
+// article draws a diagram nobody has arranged.
 export async function place(
   spec: DiagramSpec,
   saved?: { nodes?: Record<string, Box>; groups?: Record<string, Box> } | null,
+  prebuilt?: Layout | null,
 ): Promise<Placement> {
-  const complete = spec.nodes.every((n) => saved?.nodes?.[n.id])
-  return merge(spec, complete ? null : await elkLayout(spec), saved)
+  if (arranged(spec, saved)) return merge(spec, null, saved)
+  if (prebuilt) return merge(spec, prebuilt, saved)
+  try {
+    return merge(spec, await elkLayout(spec), saved)
+  } catch (err) {
+    // A published build leaves ELK out when it laid every diagram out
+    // itself. A spec it never saw (one built at run time) lands here.
+    console.error('moonshine: no layout for this diagram; drawing it in a plain row', err)
+    return merge(spec, rowLayout(spec), saved)
+  }
+}
+
+// Every node in one row (or column), in spec order: readable, not good.
+function rowLayout(spec: DiagramSpec): Layout {
+  const nodes: Record<string, Box> = {}
+  let at = 0
+  const down = spec.direction === 'DOWN'
+  for (const n of spec.nodes) {
+    const { w, h } = isTile(n) ? { w: TILE + 90, h: TILE + 30 } : nodeSize(n.label)
+    nodes[n.id] = down ? { x: 0, y: at, w: isTile(n) ? TILE : w, h: isTile(n) ? TILE : h } : { x: at, y: 0, w: isTile(n) ? TILE : w, h: isTile(n) ? TILE : h }
+    at += (down ? h : w) + 48
+  }
+  return { nodes, groups: {} }
 }
 
 // The spec turned a quarter: a RIGHT flow laid out top to bottom. Used

@@ -199,6 +199,8 @@ template/
       diagram/
         spec.ts              ← DiagramSpec + BakedDiagram types
         layout.ts            ← ELK auto-layout + merge with saved boxes
+        bake.ts              ← lays diagrams out during `npm run build`
+        metrics.ts           ← label widths for that (no browser to measure)
         geometry.ts          ← edge routes, groups, the reader frame
         draw.tsx             ← boxes, groups, arrows, notes as SVG
         text.ts              ← label measuring and wrapping
@@ -522,6 +524,20 @@ breaks: new nodes are laid out by ELK next to their arranged neighbours
 disappear with their edges, changed labels just render. ELK loads only
 when some node has no saved position.
 
+**Published articles do not ship ELK.** It is over a megabyte, so
+`npm run build` lays out every diagram that still needs it (the wide
+arrangement when some node was never placed, and the phone arrangement
+when the author saved none) and the article carries the positions. The
+build log says how many it laid out. Nothing is written to
+`content/figures/`: the author's saved boxes still win, and a diagram
+nobody arranged still re-flows when its spec changes, because a
+build-time layout is used only for the exact spec it was made from. ELK
+stays in the bundle, fetched only if needed, in two cases the log names:
+the layout step failed, or a figure cannot render outside a browser
+(it reads `window` or `document` while rendering, not in an effect), so
+the build cannot tell whether it holds a diagram. A spec assembled at
+run time has no build-time layout; give a diagram one fixed spec.
+
 Rules for agents:
 
 - Never edit the arrangement in `content/figures/*.json` (positions,
@@ -636,6 +652,16 @@ page — no jumping back to the `.md` file for small wording changes.
   a `:::figure`, a `$$` math block — so editing a caption and pressing ↓
   moves the whole figure. Up/down folds in any unsaved textarea edit
   before moving.
+- **On a tablet or phone** there is no modifier key, so a touch held in
+  place stands in for it: **touch and hold a block** (about half a second,
+  until its left rule appears) and lift to open it; **keep holding and
+  drag** to reorder; **touch and hold a figure** for its knob panel; **tap
+  between two blocks** to show the "+". The editor's **×** button cancels.
+  Text in the page cannot be selected by touch during `npm run dev`,
+  because a long press is the edit gesture. In the diagram editor a finger
+  on empty canvas moves the view and two fingers pinch to zoom; rename and
+  delete from the bar above a selected box. Published articles are
+  unaffected.
 - A dismissable pill in the corner teaches the gesture; after each body
   save a transient **Undo** toast can restore the previous text (through
   the same conflict-checked save path). Title/lede and figure-layout

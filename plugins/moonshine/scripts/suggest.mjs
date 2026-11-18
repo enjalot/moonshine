@@ -187,7 +187,9 @@ for (const [i, entry] of input.entries()) {
       (r.status ?? 'open') === 'open' &&
       r.path === entry.path &&
       r.find === entry.find &&
-      r.replace === entry.replace,
+      r.replace === entry.replace &&
+      // The same text in two places is two suggestions.
+      (hits.length === 1 || r.at === at),
   )
   if (dup) continue
   const rec = {

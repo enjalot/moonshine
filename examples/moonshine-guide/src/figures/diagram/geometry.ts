@@ -1,5 +1,5 @@
 import { edgeKey, type Annotation, type BakedDiagram, type Box, type DiagramSpec, type Pad, type Side, type SpecEdge } from './spec'
-import { edgeLabelWidth } from './text'
+import { edgeLabelWidth, FONTS, textWidth } from './text'
 import { isTile, nodeExtent, tileLabelBox } from './tile'
 
 // Where things go: edge routes, the reader frame, bounds. Pure functions
@@ -487,9 +487,13 @@ function routeAll(spec: DiagramSpec, placed: Placed, sides: BakedDiagram['edges'
   }
 
   const out = new Map<string, EdgeGeom>()
-  // Boxes, tile labels, and each link label once placed: a later label
-  // keeps off all of them.
-  const taken = [...Object.values(boxes), ...labels]
+  // Boxes, tile labels, group names, and each link label once placed: a
+  // later label keeps off all of them.
+  const names = (spec.groups ?? []).flatMap((g) => {
+    const b = placed.groups?.[g.id]
+    return b && g.label ? [{ x: b.x + 8, y: b.y + 6, w: textWidth(g.label, FONTS.group) + 8, h: 22 }] : []
+  })
+  const taken = [...Object.values(boxes), ...labels, ...names]
   edges.forEach((e, i) => {
     const ps = ports.get(`${i}|s`)
     const pt = ports.get(`${i}|t`)

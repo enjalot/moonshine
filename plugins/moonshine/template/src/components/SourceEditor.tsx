@@ -24,7 +24,8 @@ type Props = {
 }
 
 // Auto-sizing textarea seeded with raw markdown source. Cmd/Ctrl+Enter or
-// the floating check button commits; Esc cancels. Used for both body blocks
+// the floating check button commits; Esc or the × button cancels (a
+// touch keyboard has no Esc). Used for both body blocks
 // and frontmatter fields — the only difference is chrome and font.
 export default function SourceEditor({
   initialValue,
@@ -148,6 +149,17 @@ export default function SourceEditor({
             </button>
           </span>
         )}
+        <button
+          type="button"
+          className="mn-edit-cancel"
+          aria-label="Cancel editing"
+          title="Cancel (esc)"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onCancel}
+          disabled={saving}
+        >
+          <span aria-hidden>×</span>
+        </button>
         <span className="mn-edit-hint">
           <span>⌘↵ save</span>
           <span>esc cancel</span>
