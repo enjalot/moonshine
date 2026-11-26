@@ -9,8 +9,8 @@ those files; a *harness adapter* (Claude Code, Codex, pi, …) reads and writes 
 same files. Neither side calls the other directly. This file is the ABI: a new
 adapter is "done" when it fulfils the four verbs in [Adapter contract](#adapter-contract).
 
-> Status: design spec for the `feature/authorship-feedback` branch. No runtime
-> code depends on a specific harness; Claude Code is the first adapter.
+> Status: shipped protocol for `still` projects. No runtime code depends on a
+> specific harness; Claude Code and Antigravity ship built-in adapters.
 
 ## At a glance
 
@@ -390,11 +390,13 @@ waits for its next activity:
   copyable example prompt (e.g. `address my moonshine comments on <project>`):
   sending it both wakes the session and tells it exactly what to do.
 - Auto-address ("listen") is honored opportunistically when the session is next
-  active (the Claude Code adapter's Stop hook notices `listen` + stale heartbeat
-  and nudges the session to start its listener).
-- A guaranteed cold start of the idle listener uses a harness command (Claude
-  Code: `/moonshine:moonshine-listen` — plugin skills are namespaced, so the
-  bare `/moonshine-listen` does not resolve).
+  active (each Stop hook adapter notices `listen` + stale heartbeat and nudges
+  the session to start its listener).
+- A guaranteed cold start of the idle listener uses a harness command:
+  - **Antigravity**: invoke `/moonshine-listen` (which reschedules itself via
+    the `schedule` tool) or `/schedule`.
+  - **Claude Code**: `/loop /moonshine:moonshine-listen` (plugin skills are
+    namespaced, so bare `/moonshine-listen` does not resolve).
 
 The HUD states this plainly rather than offering a button that silently no-ops.
 
@@ -418,8 +420,23 @@ The **claude-code** adapter (the first one) is split across three files:
   comments stranded in `delivered` past the 300s staleness window, and no-ops
   entirely under `MOONSHINE_FEEDBACK=off`.
 - `skills/moonshine-listen/SKILL.md` — the `heartbeat`+`control` loop for idle
-  coverage. Lives in `skills/` (not under `adapters/`) so it is discoverable as
-  `/moonshine:moonshine-listen`; run it under `/loop` to keep ticking.
+  coverage. Lives in `skills/` (not under `adapters/`) so it is discoverable in
+  every harness: run under `/loop` in Claude Code or `schedule` / `/schedule` in
+  Antigravity.
+
+The **antigravity** adapter follows the same split without colliding with
+Claude Code's hook files:
+
+- `hooks.json` (at the plugin root, where native Antigravity plugins load
+  lifecycle hooks) — registers a named `moonshine-feedback` `Stop` hook
+  pointing at `./adapters/antigravity/hooks/moonshine-stop.sh`.
+- `adapters/antigravity/hooks/moonshine-stop.sh` — implements `manifest`
+  (`harness: "antigravity"`) and `claim` against Antigravity's camelCase Stop
+  hook contract (`continuationActive`, `terminationReason == "NO_TOOL_CALL"`,
+  `conversationId` matched against `sessionId`, returning
+  `{"decision":"continue","reason":...}`).
+- `skills/moonshine-listen/SKILL.md` — uses Antigravity's `schedule` tool
+  (`DurationSeconds: 90`) and Conversation ID routing for idle coverage.
 
 A future `adapters/<harness>/` implements the same four verbs however that
 harness allows, and touches nothing in core.

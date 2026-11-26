@@ -1,6 +1,6 @@
 ---
 name: diagram
-description: Design and build a system, relationship, or process diagram for a moonshine still article so it reads right the first time, matching the diagrams the article already has. Use when the user asks for a diagram, an architecture or flow figure, "nice icons", or to make one figure look like the diagrams in another article. Invoked as `$diagram` or `$diagram <what to draw>`.
+description: Design and build a system, relationship, or process diagram for a moonshine still article so it reads right the first time, matching the diagrams the article already has. Use when the user asks for a diagram, an architecture or flow figure, "nice icons", or to make one figure look like the diagrams in another article.
 ---
 
 # Diagram: Draw a System So It Reads the First Time

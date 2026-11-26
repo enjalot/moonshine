@@ -1,0 +1,11 @@
+{
+  "moonshine-feedback": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "bash ./adapters/antigravity/hooks/moonshine-stop.sh",
+        "timeout": 20
+      }
+    ]
+  }
+}

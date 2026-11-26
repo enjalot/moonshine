@@ -1,0 +1,29 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "moonshine",
+  "displayName": "Moonshine",
+  "version": "0.12.0",
+  "logo": "assets/logo.svg",
+  "description": "Distill complex technical concepts into interactive, Distill-style articles with pristine markdown, React figures, author-arranged diagrams, and bidirectional agent feedback.",
+  "suggestedPrompts": [
+    "Help me write an interactive explanation of a concept using moonshine still",
+    "Draw a system diagram for my moonshine article",
+    "Critique my moonshine article against the editorial and visual standards"
+  ],
+  "author": {
+    "name": "enjalot",
+    "url": "https://github.com/enjalot"
+  },
+  "homepage": "https://enjalot.github.io/moonshine/",
+  "repository": "https://github.com/enjalot/moonshine",
+  "license": "MIT",
+  "keywords": [
+    "interactive",
+    "explanations",
+    "distill",
+    "d3",
+    "visualization",
+    "writing",
+    "diagrams"
+  ]
+}
