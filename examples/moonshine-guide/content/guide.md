@@ -7,7 +7,7 @@ tags:
   - interactive explanation
 ---
 
-[Moonshine](https://github.com/enjalot/moonshine) is a skill for agents that helps turn a technical idea into an explorable article, combining prose and interactive figures in the style of [Distill](https://distill.pub). The first iteration of Moonshine focused on the `shine` command, which writes a single self-contained HTML file. That is quick to generate but very hard to de-slop. This article introduces the `still` command, which scaffolds a React project where the prose lives in plain markdown, each figure is a component, and a harness combines them and adds some helpful editing features.
+[Moonshine](https://github.com/enjalot/moonshine) is a skill for agents that helps turn a technical idea into an explorable article, combining prose and interactive figures in the style of [Distill](https://distill.pub). The first iteration of Moonshine focused on the `shine` command, which writes a single self-contained HTML file. That is quick to generate but hard to edit and strip of generic AI phrasing. This article introduces the `still` command, which scaffolds a React project where the prose lives in plain markdown, each figure is a component, and a harness combines them and adds direct editing features.
 
 This page is a `still` article about `still`. The editing features only exist while the dev server is running, so most of the figures below are working simulations of them, one per feature. The purpose of these features is to make it easy to insert your taste directly into the output, rather than having to re-prompt detailed corrections.
 
@@ -51,7 +51,7 @@ Often we want to move blocks or figures around to reorganize an article. Hold Cm
 Drag the figure block above the heading and watch the markdown: the three lines of the `:::figure` directive move together, caption included. The order you leave the blocks in is the order written back to the file.
 :::
 
-A reorder is the same kind of save as a prose edit, so it is covered by the same undo and by the same check that keeps the author and the agent from overwriting each other.
+A reorder is the same kind of save as a prose edit, so it is covered by the same undo and by the same check that keeps the author and the agent from overwriting each other. On a tablet or phone without a keyboard, touch and hold takes the place of Cmd/Ctrl: hold a block and lift to edit it, keep holding and drag to reorder, hold a figure for its knobs, and tap between blocks to insert something new.
 
 ## Linking words to figures
 
@@ -69,7 +69,9 @@ With all due respect to Mermaid, it is difficult to prompt a good looking diagra
 This figure is the real feature and the others are simulations: a live diagram of the still pipeline. The nodes and edges are declared in `StillPipelineDiagram.tsx`; the positions were dragged by hand and saved to `content/figures/still-pipeline.json` from the editor described below.
 :::
 
-In development an **edit diagram** button appears under a diagram. It opens a full-screen editor where you work on the diagram itself. Boxes drag on a grid and line up with each other's edges. Double-clicking the canvas makes a new box, dragging from the dot on a box's side connects it to another box, and double-clicking any label lets you retype it. Drag an arrow's end and it re-routes to the nearest side of any box, drop a box inside a group and it joins the group, slide a label along its arrow. You can also add text and sticky notes, and a small toolbar above the selection holds the rest.
+In development an **edit diagram** button appears under a diagram. It opens a full-screen editor where you work on the diagram itself. Nodes can be labelled boxes (for sentences or decisions) or icon tiles (a built-in glyph, any of the 5,000 Tabler icons, or an emoji, with the label outside the tile). Links take a colour family for what they carry, arrowheads at either end or both, and direction marks inside their labels; groups draw outlined, tinted, dashed, or corner-marked boundaries. The `diagram` skill holds the design rules for matching an article's existing diagrams.
+
+In the editor, boxes and tiles drag on a grid and line up with each other's edges. Double-clicking the canvas makes a new node, dragging from the dot on a node's side connects it to another, and double-clicking any label lets you retype it. Drag an arrow's end and it re-routes to the nearest side of any node, drop a node inside a group and it joins the group, slide a label along its arrow. On a touch screen, one finger pans the canvas and two fingers pinch to zoom. You can also add text and sticky notes, and a small toolbar above the selection holds the rest.
 
 The frame readers see follows the content, and dragging its edges adds room. A second tab holds a narrow arrangement for phones, and a switch sets whether the figure sits in the text column or breaks out wide. Readers get the live diagram with 15px labels that never shrink below 13px: on a narrow screen it switches to the narrow arrangement, and only scrolls sideways if that still doesn't fit.
 
@@ -103,10 +105,23 @@ While directly editing is a great way to cut the slop, sometimes you still want 
 The life of one comment. Send it with 💬, then press Address in the simulated HUD and follow the `status` line in the file: `pending` until you ask, `delivered` when the agent's session picks it up, `addressed` once the reply is written.
 :::
 
-Comments accumulate by default, so you can leave notes and requests as you read and edit. Nothing reaches the agent until you press **Address** in the HUD at the corner of the page, which writes an `address.json` file. The plugin installs a hook that runs each time the agent finishes a turn, and when it finds that file it hands your open comments to the session that wrote the article. When the agent has acted, it writes a one-line `reply` into the comment file, and the HUD shows that reply next to your comment.
+Comments accumulate by default, so you can leave notes and requests as you read and edit. Nothing reaches the agent until you press **Address** in the HUD at the corner of the page, which writes an `address.json` file. The plugin installs a Stop hook (for Antigravity or Claude Code) that runs each time the agent finishes a turn, and when it finds that file it hands your open comments to the session that wrote the article. When the agent has acted, it writes a one-line `reply` into the comment file, and the HUD shows that reply next to your comment.
+
+## Suggestions from the agent
+
+Comments run from the author to the agent; :term[suggestions]{to=suggestions} run the other way. When you ask the agent for an editing pass or a `/critique` of prose you have been editing yourself, the agent does not overwrite your words. Instead, it writes proposed changes into `.feedback/suggestions/` using `scripts/suggest.mjs`, and each open suggestion appears as a card under the passage it refers to.
+
+:::figure{id=suggestions}
+### Reviewing proposed edits and remarks in place
+Try accepting, editing, or rejecting the proposed rewrite, and watch `content/guide.md` and the suggestion's JSON file update. The second card is a remark with no replacement text: you can edit the passage yourself, dismiss it, or send it back to the agent as a comment.
+:::
+
+A suggestion with replacement text renders as a word-level diff with **Accept**, **Edit**, and **Reject**. Accepting applies the change through the same conflict-checked, auto-committing save path as any manual edit. When a finding needs your call, like an unverified number or a figure that disagrees with its caption, the agent leaves a remark with no replacement text, and **Send to agent** turns that remark into an ordinary comment in the inbox. The HUD toggle switches cards on and off, and offers **Accept all** and **Reject all**.
+
+Every verdict stays in the suggestion file, including `appliedText` when you rewrite a proposal before applying it. Before making another pass, the agent lists past verdicts so it stops re-proposing changes you rejected and matches the rewrites you kept.
 
 ## Start stillin'
 
-Invoke the `still` skill in your agent and describe what you want to explain. The skill interviews you first, then it scaffolds the project and starts the dev server, and you are in the loop: prompt for the hard structural work, click, drag and edit for the small adjustments.
+Invoke the `still` skill in Antigravity (`/still`), Claude Code (`/moonshine:still`), or Codex (`$still`) and describe what you want to explain. The skill interviews you first, then scaffolds the project and starts the dev server, and you are in the loop: prompt for the hard structural work, use the `diagram` skill for system figures and `critique` for an adversarial review, and click, drag, and edit for the small adjustments.
 
-The scaffold this page came from lives in the [moonshine repo](https://github.com/enjalot/moonshine), and there are more published examples at [enjalot.github.io/moonshine](https://enjalot.github.io/moonshine/). Point your favorite agent at the skill and start stillin!
+The scaffold this page came from lives in the [moonshine repo](https://github.com/enjalot/moonshine), and there are more published examples at [enjalot.github.io/moonshine](https://enjalot.github.io/moonshine/). Point your favorite agent at the skill and start stillin'!

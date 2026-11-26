@@ -4,9 +4,9 @@ The complete Moonshine still source for
 [the published guide](https://enjalot.github.io/moonshine/moonshine-guide/).
 The article explains the still authoring loop through working simulations of
 in-place prose editing, figure knobs, block reordering, linked terms, baked
-diagram layouts, shared git history, and routed feedback. The simulations
-that a reader drags (the wave's crest, the reorderable blocks, the diagram's
-boxes) are built with the template's declarative-dragging toolkit
+diagram layouts, shared git history, routed comments, and agent suggestions.
+The simulations that a reader drags (the wave's crest, the reorderable blocks,
+the diagram's boxes) are built with the template's declarative-dragging toolkit
 (`src/figures/drag/`).
 
 The prose lives in `content/guide.md`; article-specific simulations live under
@@ -51,10 +51,17 @@ During `npm run dev` the rendered article is an editing surface:
 - **Cmd/Ctrl+drag a block** to reorder: the block lifts and follows the
   pointer while the others slide apart to show where it will land. The
   open editor and the knob panel also carry **↑ / ↓** buttons.
+- **On a tablet or phone**, touch and hold stands in for Cmd/Ctrl: hold a
+  block and lift to edit it, keep holding and drag to reorder, hold a
+  figure for its knobs, and tap between two blocks for the "+".
 - **💬 Comment to the agent** from the editor or knob panel sends
   feedback about that exact passage into `.feedback/`; the authoring
   agent picks it up and replies in the HUD (bottom corner), which also
   shows whether a listener is running.
+- **Suggestions** the agent leaves (proposed rewrites, or remarks)
+  show under their passage with **Accept / Edit / Reject**; the HUD
+  switches them on and off and can accept or reject all. A remark can
+  be sent back to the agent as a comment.
 - Every successful save **auto-commits** (message prefix
   `moonshine-edit:`) when the project is its own git repo, so you and
   the agent share one history. Older wording lives in `git log`.
@@ -82,23 +89,25 @@ src/
   components/             ← article rendering + the dev-only edit chrome
     Article.tsx, SeriesIndex.tsx, Figure.tsx, Term.tsx, InlineViz.tsx,
     LazyIsland.tsx, FigureKnobs.tsx, EditableBlock.tsx, EditableField.tsx,
-    SourceEditor.tsx, EditChrome.tsx, BlockReorderLayer.tsx,
-    AuthorshipHUD.tsx, CommentBox.tsx, MoonshineFooter.tsx
+    SourceEditor.tsx, EditChrome.tsx, BlockReorderLayer.tsx, InsertLayer.tsx,
+    AuthorshipHUD.tsx, CommentBox.tsx, SuggestionCards.tsx, MoonshineFooter.tsx
   figures/
     registry.ts           ← id → {component, height, wide, defaults, paramHints}
     DiagramFigure.tsx     ← generic SVG diagram (Dragology) + arrange/save
     StillPipelineDiagram.tsx ← the guide's live, baked pipeline diagram
     sim/                   ← working simulations of still authoring features
     drag/                  ← declarative dragging (Dragology): DragFigure, README
-    diagram/               ← diagram spec, layout, drawing, dev-only editor
+    diagram/               ← diagram spec, glyphs, layout, drawing, dev-only editor
     lib/params.ts         ← attr→number/bool/string coercers
-  lib/                    ← editing, block geometry, reorder animation, feedback
+  lib/                    ← editing, block geometry, reorder animation, feedback, suggestions
   store.ts                ← Zustand: hover + pinned state
   styles/                 ← tokens.css (palette + type) + article.css
 
 velite.config.ts          ← frontmatter schema; emits typed JSON
 vite-plugin-moonshine-edit.ts      ← dev-only save endpoint + auto-commit
-vite-plugin-moonshine-feedback.ts  ← dev-only feedback endpoints
+vite-plugin-moonshine-feedback.ts  ← dev-only feedback & suggestions endpoints
+vite-plugin-moonshine-icons.ts     ← bundles only Tabler icons referenced in article
+vite-plugin-moonshine-layouts.ts   ← bakes diagram layouts at build time (drops ELK)
 moonshine.config.json     ← feedback kill switch
 ```
 

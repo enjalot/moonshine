@@ -85,7 +85,7 @@ while Mathematics adds a steadier 64 to 80 topics a year from age 6 to 10. The d
 why Science comes in two-year blocks.
 
 :::figure{id=age-map}
-### Figure 2. Topics opening at each age
+### Topics opening at each age
 Bright dots open at the selected age, faded dots opened earlier, and gray dots are still to come.
 At age 5 the bright dots already reach every continent, and each later year fills in around them.
 The gray lines are the prerequisites of the topics opening this year. In 98% of the taxonomy's
@@ -117,7 +117,7 @@ another, and 3 of those are hard. The explorer's side panel shows the mark and t
 for each edge of the selected topic, and the edge to Unit fractions is a soft one.
 
 :::figure{id=explorer}
-### Figure 3. Prerequisites drawn on the map
+### Prerequisites drawn on the map
 Solid lines run from the selected topic back through every ancestor, and dashed lines run forward
 to what it unlocks. For Egyptian Maths and Engineering, one line crosses the whole map to Unit
 fractions and then fans out inside Mathematics. A language model generated the cluster names, so
