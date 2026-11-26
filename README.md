@@ -1,25 +1,38 @@
 # moonshine
 
-**Claude Code and Codex support for distilling interactive technical explanations from AI generated complexity.**
+**Turn complex technical ideas and AI-generated output into interactive, Distill-style articles you can edit directly on the page.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-### 🌕 [See examples at enjalot.github.io/moonshine](https://enjalot.github.io/moonshine/)
+### [See examples at enjalot.github.io/moonshine](https://enjalot.github.io/moonshine/)
 
-Source-backed still examples:
+Source-backed `still` examples:
 [The Still: Moonshine's Harness](https://enjalot.github.io/moonshine/moonshine-guide/)
 ([source](examples/moonshine-guide/)) and
 [A Map of What Children Learn](https://enjalot.github.io/moonshine/os-taxonomy-map/)
 ([source](examples/os-taxonomy-map/)).
 
-AI tools generate complexity faster than people can consume it. Inspired by [Distill.pub](https://distill.pub), moonshine helps apply distillation to the flood of technical output, turning complex ideas into explorable, visual, interactive articles.
+AI tools generate code, architecture docs, and experiments faster than people can consume them. Inspired by [Distill.pub](https://distill.pub), moonshine applies distillation to that complexity: your coding agent interviews you about the concept, audience, and key insight before writing code, then builds an explorable article with prose that drives understanding and interactive figures that serve the argument.
 
-Moonshine starts with story discovery — concept, audience, the one insight the reader should walk away with — before it writes any code, and renders the article on one of two substrates:
+Works with **Antigravity**, **Claude Code**, and **Codex**.
 
-- **still** (`/moonshine:still`) — a Vite + React + Velite project where prose lives in pristine markdown and figures are React components. This is the substrate with the authoring loop (below) and the default for anything that will keep being edited.
-- **shine** (`/moonshine:shine`) — a single self-contained HTML file with vanilla JS and D3. No build tools; one file you can email or host anywhere.
+## What you can build
+
+- **Algorithm and math explainers** with live simulations, step-by-step progressions, and draggable figures where pulling an output drives the inputs ([Smoothed Particle Hydrodynamics](https://enjalot.github.io/moonshine/sph/), [Approximate Nearest Neighbors](https://enjalot.github.io/moonshine/ann/)).
+- **Dataset and embedding essays** with scrollytelling tours, linked views, and WebGL canvases over tens of thousands of points ([A Map of What Children Learn](https://enjalot.github.io/moonshine/os-taxonomy-map/), [Moments on a manifold](https://enjalot.github.io/moonshine/moments/), [Latent Verse](https://enjalot.github.io/moonshine/latent-verse/)).
+- **System and architecture explainers** with icon-tile diagrams (built-in glyphs, 5,000 Tabler icons, or emoji), colour-coded link families, and a direct-manipulation editor so you never fight Mermaid layouts.
+- **Multi-part field guides** with typed frontmatter, automatic series index cards, and consistent visual conventions across chapters ([What Dimensionality Reduction Preserves](https://enjalot.github.io/moonshine/dim-reduction/)).
+- **Co-authored living articles** where human edits in the browser and agent edits in files share one git history, targeted comments, and word-diff review suggestions ([The Still: Moonshine's Harness](https://enjalot.github.io/moonshine/moonshine-guide/)).
+
+## Two substrates: `still` and `shine`
+
+- **`still`** (default) — a Vite + React + Velite project where prose lives in pristine markdown and figures are React components. This is where the direct-manipulation authoring loop lives, and the right choice for any article that will keep being edited.
+- **`shine`** — a single self-contained HTML file with vanilla JS and D3 from CDN. No build step; one file you can email or host anywhere.
 
 ```shell
+# Antigravity
+/still how gradient descent finds minima
+
 # Claude Code
 /moonshine:still how gradient descent finds minima
 
@@ -27,34 +40,68 @@ Moonshine starts with story discovery — concept, audience, the one insight the
 $still how gradient descent finds minima
 ```
 
-## The authoring loop (still)
+## The authoring loop (`still`)
 
-While `npm run dev` runs, the rendered article is itself the editing surface, for both the author and the agent:
+During `npm run dev`, the rendered article is itself the editing surface for both the author and the agent. Everything below is dev-only: `vite build` emits a plain, read-only static site with none of the editing machinery in the bundle.
 
-- **Edit prose in place.** Cmd/Ctrl+click any block to edit its raw markdown in the page; saves splice back into the `.md` by source offset.
-- **Tune figures with knobs.** Cmd/Ctrl+click a figure to open a panel generated from its `DEFAULTS`; "Save to markdown" writes the tweaked values into the directive's attributes.
-- **Reorder sections.** Cmd/Ctrl+drag any block (or use ↑/↓ in the editor) to move it: the block lifts and the others slide apart to show where it lands, and the markdown is rewritten.
-- **Edit on a tablet.** Without a keyboard, touch and hold a block to edit it, keep holding and drag to reorder, and tap between blocks to add one. The diagram editor pans with one finger and zooms with a pinch.
-- **Arrange diagrams.** The agent declares a diagram as a small spec (nodes, edges, groups); the author arranges it, and can change its boxes and arrows, in a dev-only direct-manipulation editor (labels edited in place, drag-to-connect, draggable arrow ends, alignment guides, auto-layout, notes, a reader frame, a separate narrow arrangement for phones), and readers get a live SVG diagram whose node labels never render below 13px. A node can be a labelled box or an icon tile (a built-in glyph, any Tabler icon, or an emoji) with its name beside it; links take a colour family and arrowheads at either end or both, and their labels carry direction marks; groups can be outlined, tinted, dashed or marked at the corners. `/moonshine:diagram` holds the design rules, and the template's Diagrams page shows the range. The editor's gestures are declarative drags: an arrow's end re-routes live to the nearest side of any box, boxes join a group by being dropped in it, labels slide along their arrows, and undo animates. Regenerating the spec never clobbers the arrangement.
-- **Draggable figures.** Figures that readers drag are built with [declarative dragging](https://declarative-dragging.github.io) (Dragology): a figure says which states dragging an element can reach, and the library works out the motion. Readers can drag outputs (a point on a computed path) and watch the inputs follow; the example article shows how.
-- **Add content with "+".** Hover between blocks to insert text, a diagram (built in the same editor), or an uploaded image straight into the markdown; 💬 on it asks the agent to adjust it.
-- **Git as shared memory.** Every browser save auto-commits with a `moonshine-edit:` prefix, so the agent can see exactly what the author changed and build around their words.
-- **Suggestions from the agent.** The agent (an editing pass, `/moonshine:critique`) can leave proposed changes on the article instead of making them. Each shows under its passage as a word-level diff with **Accept**, **Edit** and **Reject**; a remark with no replacement can be sent back to the agent as a comment. The HUD toggles them and can accept or reject all.
-- **Comments back to the agent.** The 💬 affordance sends feedback ("this is too hand-wavy") into `.feedback/` files that the agent picks up at turn boundaries (Stop hook) or via the idle listener (`/moonshine:moonshine-listen`).
+### Prose and structure
+- **Edit prose in place.** Cmd/Ctrl+click any block (paragraph, heading, list, caption, title/lede) to edit its raw markdown right where it renders. Saves splice back into the `.md` by source offset, leaving directives untouched.
+- **Reorder blocks.** Cmd/Ctrl+drag any block (or use ↑/↓ in the editor) to move it: the block lifts and the others slide apart to show where it lands, and the markdown is rewritten.
+- **Insert content with "+".** Hover between blocks to add a paragraph, a new diagram, or an uploaded image straight into the markdown.
+- **Edit on a tablet or phone.** Without a keyboard, touch and hold a block to edit it, keep holding and drag to reorder, and tap between blocks for "+". The diagram editor pans with one finger and zooms with a pinch.
 
-All of it is dev-only: `vite build` produces a plain, read-only static page with none of the editing machinery in the bundle.
+### Figures and diagrams
+- **Tune figures with knobs.** Cmd/Ctrl+click a figure to open a control panel generated from its exported `DEFAULTS`; **Save to markdown** writes tweaked values into the directive's attributes.
+- **Arrange diagrams by hand.** The agent declares a small `DiagramSpec` (nodes, links, groups) using labelled boxes or icon tiles (built-in glyphs, Tabler icons, or emoji). You arrange and restyle it in a dev-only editor with alignment guides, live arrow re-routing, group drop zones, a reader frame, and a separate narrow layout for phones. Regenerating the spec never clobbers your arrangement, and readers get live SVG with labels at ≥13px and no layout engine in the production bundle.
+- **Build draggable figures declaratively.** Interactive drags use [Dragology](https://declarative-dragging.github.io): a figure declares which states dragging an element can reach, so readers can drag an output (a point on a computed path) and watch the inputs follow.
+
+### Co-authoring with the agent
+- **Git as shared memory.** Every browser save auto-commits with a `moonshine-edit:` prefix, so the agent reads what you changed and builds around your words instead of overwriting them.
+- **Comments to the agent.** The 💬 button on any passage or figure writes a targeted note to `.feedback/`. Comments accumulate until you press **Address** in the HUD, which routes them back to the authoring session via a Stop hook or idle listener.
+- **Suggestions from the agent.** After an editing pass or critique, the agent can leave word-diff suggestion cards under passages instead of editing your words directly. You **Accept**, **Edit**, or **Reject** each one in the page, or send a remark back as a comment.
+
+## Skills at a glance
+
+| Skill | What it does | Antigravity | Claude Code | Codex |
+|---|---|---|---|---|
+| **still** | Interview, scaffold, and iterate on a Vite + React + Velite article | `/still` | `/moonshine:still` | `$still` |
+| **shine** | Interview and build a single self-contained HTML + D3 article | `/shine` | `/moonshine:shine` | `$shine` |
+| **diagram** | Design and build a system, relationship, or process diagram for a `still` article | `/diagram` | `/moonshine:diagram` | `$diagram` |
+| **critique** | Adversarially grade an article (S–F) against editorial, visual, and pedagogy rules | `/critique` | `/moonshine:critique` | `$critique` |
+| **moonshine-listen** | Idle-time feedback listener that heartbeats and drains comments from the HUD | `/moonshine-listen` | `/loop /moonshine:moonshine-listen` | `$moonshine-listen` |
+
+Moonshine starts every article with story discovery (concept, audience, key insight, progression) before scaffolding, then builds one section at a time with checkpoints. Editorial craft (`EDITORIAL.md`), anti-slop, and Honest Figures rules live in the skill and apply to everything it writes.
 
 ## Install
 
-**Marketplace (Claude Code, and Codex via the same marketplace):**
+### Antigravity
+
+Install directly from GitHub (registers all 6 skills and the native Antigravity Stop hook):
+
+```bash
+agy plugin install https://github.com/enjalot/moonshine/tree/main/plugins/moonshine
+```
+
+Or from a local checkout:
+
+```bash
+agy plugin install ./plugins/moonshine
+```
+
+Verify with `agy plugin list`. In Antigravity chat, invoke `/still`, `/shine`, `/diagram`, `/critique`, or `/moonshine-listen`, or simply describe the interactive explanation you want.
+
+### Claude Code and Codex
+
+**Marketplace (recommended — includes the Stop hook):**
+
 ```shell
 /plugin marketplace add enjalot/moonshine
 /plugin install moonshine@moonshine-marketplace
 ```
 
-Restart the session. Claude Code invokes with `/moonshine:still` and `/moonshine:shine`; Codex with `$still` and `$shine` (or just describe the article you want).
+Restart the session. Claude Code invokes with `/moonshine:still` and `/moonshine:shine`; Codex invokes with `$still` and `$shine` (or describe the article you want).
 
-**Manual install (degraded — read the caveat):**
+**Manual install (degraded — skills only, no Stop hook):**
 
 ```bash
 # Claude Code
@@ -73,34 +120,21 @@ ln -s /tmp/moonshine/plugins/moonshine/skills/diagram          ~/.codex/skills/d
 # (use `cp -rL` instead of `ln -s` if you don't want to keep the clone around)
 ```
 
-> **Caveat:** a skills-directory install registers the skills but **not the plugin's Stop hook**, so feedback comments are only picked up when the listener skill runs — the automatic turn-boundary delivery needs the marketplace install. Everything else works.
+> **Caveat:** a skills-directory install registers the skills but **not the plugin's Stop hook**, so feedback comments are only picked up when the listener skill runs or when you ask the agent directly. Everything else works.
 
 > **Windows note:** this repo uses git symlinks for shared skill assets. Run `git config --global core.symlinks true` before cloning.
 
-To develop against your checkout instead, see [DEVELOPING.md](DEVELOPING.md) (symlink install, dev harness, repo map).
-
-## Usage
-
-```
-/moonshine:still                    # start from scratch (structured project)
-/moonshine:still fourier transforms # start with a topic
-/moonshine:shine fourier transforms # single-file flavor
-/moonshine:critique                 # adversarially review an article (still or shine)
-/moonshine:diagram                  # design a system or process diagram for a still article
-/moonshine:moonshine-listen         # feedback listener (best under /loop)
-```
-
-Moonshine asks about the concept, audience, and key insight before scaffolding, then builds one section at a time with checkpoints. The editorial rules (anti-slop, the editing pass) live in the skill and apply to everything it writes.
+To develop against your checkout instead, see [DEVELOPING.md](DEVELOPING.md) (local install, dev harness, repo map).
 
 ## Output
 
-Projects live in `~/.agent/moonshine/<project-name>/`. A still project is a complete Vite app (markdown in `content/`, figures in `src/figures/`) whose `npm run build` emits a static site; a shine article is a self-contained `index.html` plus an optional `data/` directory. Publishing recipes — domain root, subpath, or this repo's Pages site — are in `STILL.md` § Publishing and `DEVELOPING.md`.
+Projects live in `~/.agent/moonshine/<project-name>/`. A `still` project is a complete Vite app (markdown in `content/`, figures in `src/figures/`) whose `npm run build` emits a static site; a `shine` article is a self-contained `index.html` plus an optional `data/` directory. Publishing recipes (domain root, subpath, or this repo's Pages site) are in [STILL.md](plugins/moonshine/STILL.md) and [DEVELOPING.md](DEVELOPING.md).
 
-[`directory/`](directory/) is an optional LAN dashboard for the machine hosting the articles: it indexes everything under `~/.agent/moonshine` (each article's `moonshine.meta.json` — title, intent, authoring session), lists every other running web server with its Claude session, and can start a stopped article's dev server from the browser. One stdlib-Python process, Linux + macOS — see its README.
+[`directory/`](directory/) is an optional LAN dashboard for the machine hosting your articles: it indexes everything under `~/.agent/moonshine` (each article's `moonshine.meta.json`), lists running web servers with their authoring session, and can start a stopped article's dev server from the browser. One stdlib-Python process, Linux + macOS — see [directory/README.md](directory/README.md).
 
 ## Developing
 
-To work on the skill itself — run the `still` template in-repo as a live dev harness, install from your checkout, extend figures/directives/the edit pipeline, publish examples, or cut a release — see [DEVELOPING.md](DEVELOPING.md), which also carries the current repo map.
+To work on the skill itself — run the `still` template in-repo as a live dev harness, validate plugins, extend figures/directives/the edit pipeline, publish examples, or cut a release — see [DEVELOPING.md](DEVELOPING.md).
 
 ## Inspirations
 
