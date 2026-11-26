@@ -7,17 +7,22 @@ contributors and coding agents working on this repo.
 ## Install the skill from your checkout
 
 The plugin marketplace install gives you a snapshot; for development you want
-the live skill to track your working tree. Symlink it:
+the live skill to track your working tree:
 
 ```bash
-# Claude Code
+# Claude Code (symlink tracks edits immediately)
 rm -rf ~/.claude/skills/moonshine
 ln -s "$(pwd)/plugins/moonshine" ~/.claude/skills/moonshine
+
+# Antigravity (validate, then install from checkout; re-run install after edits)
+agy plugin validate ./plugins/moonshine
+agy plugin install ./plugins/moonshine
 ```
 
-Restart your session and `/moonshine:shine`, `/moonshine:still` pick up edits
-to `SKILL.md`, `STILL.md`, the commands, and the template immediately — no
-reinstall step.
+Opening this repository itself in Antigravity also auto-discovers
+`plugins/moonshine` via `.agents/plugins.json`. Restart your session so
+`/still`, `/shine` (Antigravity) or `/moonshine:still`, `/moonshine:shine`
+(Claude Code) pick up changes.
 
 ## The dev harness: run the template in place
 
@@ -108,17 +113,18 @@ published article and its source from the example card.
 
 ## Releasing
 
-The version lives in four files — keep them in lockstep:
+The version lives in five files — keep them in lockstep:
 
 - `package.json`
+- `plugins/moonshine/.antigravity-plugin/plugin.json`
 - `plugins/moonshine/.claude-plugin/plugin.json`
 - `plugins/moonshine/.codex-plugin/plugin.json`
 - `.claude-plugin/marketplace.json` (the plugin entry's `version`)
 
-Bump all four in the release commit, then tag it:
+Bump all five in the release commit, validate with `agy plugin validate plugins/moonshine`, then tag it:
 
 ```bash
-git tag v0.7.0 && git push origin v0.7.0
+git tag v0.13.0 && git push origin v0.13.0
 ```
 
 Marketplace installs pull from `main`, so the tag is for traceability, not
@@ -185,22 +191,28 @@ it isn't resolvable) and a Chromium from `~/.cache/ms-playwright`.
 
 ```
 plugins/moonshine/
-  SKILL.md          editorial process, story discovery, anti-slop rules
-  ARTICLE.md        single-file HTML scaffold (the `shine` substrate)
-  VISUALS.md        D3 patterns, interaction, rendering decisions
-  STILL.md          the structured project: directives, registry, editing
-  FEEDBACK.md       authorship-feedback protocol (web ⇄ harness ABI)
-  commands/         Claude Code slash commands (thin wrappers)
-  skills/           moonshine/ (symlinks to canonical docs) + shine/ still/
-                    (thin wrappers) + moonshine-listen/ (the feedback listener)
-                    + critique/ (adversarial article reviewer)
-  hooks/            plugin hooks.json (registers the Claude Code Stop hook)
-  adapters/         per-harness feedback adapters (claude-code/ first)
-  template/         the runnable still project (see below)
-  scripts/          upgrade-still.mjs (bring a project up to the template)
-docs/               published example articles (GitHub Pages)
-examples/           source-backed example projects
-scripts/            publish-example.sh, check-diagrams.mjs
+  .antigravity-plugin/  Antigravity plugin manifest
+  .claude-plugin/       Claude Code plugin manifest
+  .codex-plugin/        Codex plugin manifest
+  assets/               plugin logo (logo.svg)
+  SKILL.md              editorial process, story discovery, anti-slop, pedagogy
+  EDITORIAL.md          editorial tone, 9-step Editing Pass, banned shapes, slop repair
+  ARTICLE.md            single-file HTML scaffold (the `shine` substrate)
+  VISUALS.md            D3 patterns, interaction, rendering decisions
+  STILL.md              the structured project: directives, registry, diagrams, editing
+  FEEDBACK.md           authorship-feedback protocol (web ⇄ harness ABI)
+  skills/               moonshine/ (symlinks to canonical docs & scripts) +
+                        still/, shine/, diagram/, critique/, moonshine-listen/
+  hooks.json            Antigravity root lifecycle hooks (Stop hook)
+  hooks/hooks.json      Claude Code plugin hooks (Stop hook)
+  adapters/             per-harness feedback adapters (antigravity/, claude-code/)
+  template/             the runnable still project (see below)
+  scripts/              suggest.mjs (leave in-page suggestions),
+                        upgrade-still.mjs (bring a project up to the template)
+.agents/plugins.json    Antigravity workspace plugin discovery for this repo
+docs/                   published example articles (GitHub Pages)
+examples/               source-backed example projects (moonshine-guide, os-taxonomy-map)
+scripts/                publish-example.sh, check-diagrams.mjs
 ```
 
 Skill behavior lives in the markdown files; runtime behavior lives in the
@@ -236,9 +248,11 @@ state), and `src/components/AuthorshipHUD.tsx` / `CommentBox.tsx` (UI, mounted
 from `EditChrome`). Suggestions (agent → author) share the plugin and the
 directory: `scripts/suggest.mjs` writes `.feedback/suggestions/*.json`,
 `src/lib/suggestions.ts` + `src/components/SuggestionCards.tsx` show them under
-their block, and the HUD carries the on/off switch. Harness side (Claude Code adapter): `hooks/hooks.json`,
-`adapters/claude-code/hooks/moonshine-stop.sh` (turn-boundary claim), and
-`skills/moonshine-listen/` (idle heartbeat/control loop). The invariant:
+their block, and the HUD carries the on/off switch. Harness side: Claude Code
+uses `hooks/hooks.json` + `adapters/claude-code/hooks/moonshine-stop.sh`,
+Antigravity uses root `hooks.json` + `adapters/antigravity/hooks/moonshine-stop.sh`,
+and both share `skills/moonshine-listen/` for the idle heartbeat/control loop.
+The invariant:
 **the two sides never call each other** — they share a directory of JSON files
 under `<project>/.feedback/`. A new harness adapter implements the four verbs in
 `FEEDBACK.md` and touches nothing in `src/`. Like the edit endpoint, the whole
@@ -251,8 +265,10 @@ rather than hardcoding colors.
 
 ## Working on the skill documents
 
-`SKILL.md` is the canonical editorial process. `STILL.md` is canonical for the
-structured project. The command files in `commands/` and the Codex skills in
-`skills/` are thin wrappers — when workflow details change, change the
-canonical file, not the wrappers. If a doc claims behavior, the template must
-actually behave that way; doc/code drift is treated as a bug.
+`SKILL.md` is the canonical editorial process (with prose-craft details in
+`EDITORIAL.md`). `STILL.md` is canonical for the structured project. The thin
+entry wrappers in `skills/still/` and `skills/shine/` point at those canonical
+files — when workflow details change, update the canonical doc, not the
+wrappers. If a doc claims behavior, the template must actually behave that way;
+doc/code drift is treated as a bug. Keep `SKILL.md` under 24 KB so Antigravity
+loads it without truncation (checked by `agy plugin validate`).

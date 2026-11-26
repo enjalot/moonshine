@@ -22,7 +22,19 @@ Use `shine` when:
 - The article is one-shot and won't keep being edited.
 
 The two share the editorial principles, anti-slop rules, type stack, and
-palette from `SKILL.md`. Only the rendering substrate differs.
+palette from `SKILL.md` and `EDITORIAL.md`. Only the rendering substrate differs.
+
+## Quick Navigation
+
+| Need | Jump to |
+|---|---|
+| Markdown grammar & term links | [The Three Directives](#the-three-directives), [Interaction Model](#interaction-model-hover-and-click) |
+| Template directory map | [File Layout](#file-layout) |
+| Adding figures, `DEFAULTS`, knob panel | [How a Figure Gets Added](#how-a-figure-gets-added), [Recommended Visualization Libraries](#recommended-visualization-libraries) |
+| System & process diagrams | [Diagrams](#diagrams) (plus `../diagram/SKILL.md`) |
+| Author-inserted blocks & in-page editing | [Author-Added Content](#author-added-content-the--between-blocks-dev-only), [In-Place Prose Editing](#in-place-prose-editing-dev-only) |
+| Shared git memory, comments & suggestions | [Git: the Shared Memory](#git-the-shared-memory-between-author-and-agent), [Authorship Feedback](#authorship-feedback-comments-from-the-rendered-page-dev-only), [Suggestions](#suggestions-changes-the-author-decides-on-dev-only) |
+| Step-by-step project bootstrap & publishing | [Workflow When Building an Article](#workflow-when-building-an-article-with-this-skill), [Publishing](#publishing) |
 
 ## Core Principle: The Markdown Stays Pristine
 
@@ -145,6 +157,7 @@ One constraint: figure ids must not contain `.` — the first dot in a
 template/
   content/                   ← writers edit only here
     example.md
+    diagrams.md              ← gallery of built-in diagram features
     figures/
       flow-diagram.json      ← author's diagram arrangement (see Diagrams)
       diagram-1.json         ← a browser-added diagram: spec + arrangement
@@ -172,6 +185,7 @@ template/
       InsertLayer.tsx        ← the "+" between blocks: text, diagram, image (dev only)
       AuthorshipHUD.tsx      ← feedback status + listener controls (dev only)
       CommentBox.tsx         ← 💬 comment composer (dev only)
+      SuggestionCards.tsx    ← dev-only word-diff suggestion cards under blocks
       MoonshineFooter.tsx
     lib/
       directive-handler.ts   ← remark plugin: maps directives to tags
@@ -179,7 +193,8 @@ template/
       blocks.ts              ← top-level block geometry for reordering
       bakedFigures.ts        ← loads content/figures/*.json bakes
       feedback.ts            ← typed client for the feedback endpoints
-      FeedbackContext.tsx    ← feedback state (capabilities, comments)
+      FeedbackContext.tsx    ← feedback state (capabilities, comments, suggestions)
+      suggestions.ts         ← suggestion locate + word-diff helpers
       types.ts
     figures/
       registry.ts            ← id → {component, height, wide, defaults, paramHints}
@@ -189,6 +204,8 @@ template/
       StepSize.tsx           ← draggable figure: a slider with detents
       DiagramFigure.tsx      ← spec + arrangement → live SVG diagram
       FlowDiagram.tsx        ← example DiagramSpec on DiagramFigure
+      TrainingSystem.tsx     ← example icon-tile DiagramSpec
+      DiagramGallery.tsx     ← specs backing content/diagrams.md
       AuthoredDiagram.tsx    ← built-in kind=diagram: spec saved in its JSON
       builtin.ts             ← built-in figure kinds (no registry entry)
       drag/
@@ -198,6 +215,7 @@ template/
         each.ts              ← lists inside a drawing
       diagram/
         spec.ts              ← DiagramSpec + BakedDiagram types
+        glyphs.tsx           ← built-in 24-unit icon glyphs + registerGlyphs
         layout.ts            ← ELK auto-layout + merge with saved boxes
         bake.ts              ← lays diagrams out during `npm run build`
         metrics.ts           ← label widths for that (no browser to measure)
@@ -216,8 +234,12 @@ template/
   velite.config.ts           ← schema for frontmatter; emits typed JSON
   vite.config.ts
   vite-plugin-moonshine-edit.ts      ← dev-only save endpoint + auto-commit
-  vite-plugin-moonshine-feedback.ts  ← dev-only feedback endpoints
+  vite-plugin-moonshine-feedback.ts  ← dev-only feedback & suggestions endpoints
+  vite-plugin-moonshine-icons.ts     ← bundles only Tabler icons referenced in article
+  vite-plugin-moonshine-layouts.ts   ← bakes diagram layouts at build time (drops ELK)
   moonshine.config.json      ← feedback.enabled kill switch (see below)
+  tsconfig.json
+  tsconfig.node.json
   index.html
   package.json
 ```
@@ -331,7 +353,8 @@ The figure layer is open. But there are real choices to make per figure:
   diagram. Choose it whenever you'd reach for Mermaid. Nodes are labelled
   boxes, or icon tiles with the label outside (`icon`); links can be
   coloured by what they carry (`family`) and one-way, two-way or
-  undirected (`arrows`). `skills/diagram/SKILL.md` covers what a diagram
+  undirected (`arrows`). `../diagram/SKILL.md` (at `skills/diagram/SKILL.md`
+  from the plugin root) covers what a diagram
   should contain and how to match the ones an article already has. Authors can add
   their own diagrams with the **+** between blocks, built in the same
   editor.
@@ -362,6 +385,12 @@ The figure layer is open. But there are real choices to make per figure:
   `<LazyIsland>` so they only boot when scrolled to.
 
 - **Canvas / WebGL** when SVG element counts get past ~2,000.
+
+- **Scroll-driven tours** when the explanation walks a reader across one
+  rich visualization step by step: see `examples/os-taxonomy-map` in the
+  moonshine repo for a clean `::::scrolly-tour` / `:::step` container
+  directive pattern where card prose stays in markdown and camera choreography
+  lives in a React component.
 
 - **Avoid Mermaid.** It's tempting because of the declarative syntax,
   but its output can't be arranged by the author or targeted by terms.
@@ -741,16 +770,17 @@ about that exact passage — "this is too hand-wavy," "make this figure start
 zoomed out." Each comment is written as a file under `<project>/.feedback/`.
 
 Comments **accumulate by default** — nothing is delivered until the author
-asks. When they press **Address** in the HUD (or turn on auto-address), the
-Claude Code **Stop hook** (registered by the plugin's own
-`hooks/hooks.json`; a project needs no hook configuration) injects the pending comments at a turn boundary and
-blocks the stop until you handle them. Delivery requests carry the article's
-authoring `sessionId`, so another active session leaves them untouched. The
-author may also just ask you
+asks. When they press **Address** in the HUD (or turn on auto-address), your
+harness's **Stop hook** (Claude Code via `hooks/hooks.json`; Antigravity via
+root `hooks.json`; a project needs no hook configuration) injects the pending
+comments at a turn boundary and keeps the turn going until you handle them.
+Delivery requests carry the article's authoring `sessionId`, so another active
+session leaves them untouched. The author may also just ask you
 directly (e.g. "address my moonshine comments on <project>") — in that case
 drain the `.feedback/` inbox yourself following the same steps, but only if an
-`address.json` sessionId is absent or matches `$CLAUDE_CODE_SESSION_ID`; delete
-the matching request file when you're done. For each comment:
+`address.json` sessionId is absent or matches your session ID
+(`$CLAUDE_CODE_SESSION_ID` in Claude Code, or your Conversation ID in
+Antigravity); delete the matching request file when you're done. For each comment:
 
 1. Edit the referenced source file (`<project>/content/<target.path>`) — or the
    figure component / registry for a `figure` comment — to address the note.
@@ -763,7 +793,8 @@ the matching request file when you're done. For each comment:
 
 If the author enables continuous auto-address, requests left while you're
 parked at the prompt are covered by the idle listener — run
-`/moonshine:moonshine-listen` (best under `/loop`) to keep ticking; it also
+`/moonshine-listen` (uses `schedule` in Antigravity) or
+`/loop /moonshine:moonshine-listen` (Claude Code) to keep ticking; it also
 powers the HUD's live "listening / paused" status.
 
 **Contract boundaries.** Only the per-comment `<id>.json` files are your shared
@@ -810,6 +841,7 @@ verifies each `find` against the file:
 ```bash
 node <skill>/scripts/suggest.mjs <project> /path/to/suggestions.json --source "editing pass"
 ```
+(From `skills/moonshine/`, the script is at `scripts/suggest.mjs`; from sibling skills like `critique`, use `../moonshine/scripts/suggest.mjs`.)
 
 ```json
 [
@@ -846,8 +878,9 @@ endpoints are in `FEEDBACK.md`.
 
 ## Workflow When Building an Article With This Skill
 
-This section is canonical — the `$still` skill (surfaced as
-`/moonshine:still` in Claude Code) is a thin wrapper that points here.
+This section is canonical — the `still` skill (`/still` in Antigravity,
+`/moonshine:still` in Claude Code, `$still` in Codex) is a thin wrapper that
+points here.
 Follow the moonshine process from `SKILL.md` — story discovery first, no
 skipping to code.
 Once the outline is agreed:
@@ -885,13 +918,14 @@ Once the outline is agreed:
      {
        "title": "<the article's working title>",
        "summary": "<1–2 sentences: the intent behind the article, from story discovery — why it exists, not just what it covers>",
-       "sessionId": "<value of $CLAUDE_CODE_SESSION_ID>",
+       "sessionId": "<your session or conversation id>",
        "created": "<today, YYYY-MM-DD>"
      }
      ```
 
-     Read the session id from the environment (`echo $CLAUDE_CODE_SESSION_ID`);
-     leave the field out if it's unset. Update `title`/`summary` later if
+     In Claude Code, read `$CLAUDE_CODE_SESSION_ID`; in Antigravity, use your
+     Conversation ID (from `<user_information>`). Leave `sessionId` out if
+     neither is available. Update `title`/`summary` later if
      the article's focus shifts. The directory server adds a `port` field
      when it first starts the dev server — leave that alone.
    - Run `npm install` in the background — it takes about a minute and

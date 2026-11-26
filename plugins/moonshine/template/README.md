@@ -42,9 +42,9 @@ During `npm run dev` the rendered article is an editing surface:
   values into the directive's attributes (only the ones that differ
   from the defaults). Figures without registered defaults explain how
   to opt in.
-- **Cmd/Ctrl+drag a block** to reorder; a drop line shows the target and
-  moved blocks settle into place. The open editor and the knob panel also
-  carry **↑ / ↓** buttons.
+- **Cmd/Ctrl+drag a block** to reorder: the block lifts and follows the
+  pointer while the others slide apart to show where it lands. The open editor
+  and the knob panel also carry **↑ / ↓** buttons.
 - **On a tablet or phone**, touch and hold stands in for Cmd/Ctrl: hold a
   block and lift to edit it, keep holding and drag to reorder, hold a
   figure for its knobs, and tap between two blocks for the "+".
@@ -76,6 +76,7 @@ no write endpoints.
 ```
 content/                  ← writers edit only here
   example.md
+  diagrams.md             ← gallery of built-in diagram features
   figures/                ← author-saved diagram arrangements (+ specs the author edited or added)
   series/
     index.md
@@ -85,8 +86,8 @@ src/
   components/             ← article rendering + the dev-only edit chrome
     Article.tsx, SeriesIndex.tsx, Figure.tsx, Term.tsx, InlineViz.tsx,
     LazyIsland.tsx, FigureKnobs.tsx, EditableBlock.tsx, EditableField.tsx,
-    SourceEditor.tsx, EditChrome.tsx, BlockReorderLayer.tsx,
-    AuthorshipHUD.tsx, CommentBox.tsx, MoonshineFooter.tsx
+    SourceEditor.tsx, EditChrome.tsx, BlockReorderLayer.tsx, InsertLayer.tsx,
+    AuthorshipHUD.tsx, CommentBox.tsx, SuggestionCards.tsx, MoonshineFooter.tsx
   figures/
     registry.ts           ← id → {component, height, wide, defaults, paramHints}
     Sparkline.tsx         ← D3 example (registered knobs)
@@ -96,17 +97,21 @@ src/
     drag/                 ← declarative dragging (Dragology): README, DragFigure
     DiagramFigure.tsx     ← DiagramSpec + saved arrangement → live SVG diagram
     FlowDiagram.tsx       ← example DiagramSpec
+    TrainingSystem.tsx    ← example icon-tile DiagramSpec
+    DiagramGallery.tsx    ← specs backing content/diagrams.md
     AuthoredDiagram.tsx   ← built-in kind=diagram (spec saved with its arrangement)
-    diagram/              ← spec types, ELK layout, routing, SVG drawing, the editor
+    diagram/              ← spec types, glyphs, ELK layout, routing, SVG drawing, the editor
     lib/params.ts         ← attr→number/bool/string coercers
     inline/MiniSpark.tsx  ← inline visual example
-  lib/                    ← editing, block geometry, reorder animation, feedback
+  lib/                    ← editing, block geometry, reorder animation, feedback, suggestions
   store.ts                ← Zustand: hover + pinned state
   styles/                 ← tokens.css (palette + type) + article.css
 
 velite.config.ts          ← frontmatter schema; emits typed JSON
 vite-plugin-moonshine-edit.ts      ← dev-only save endpoint + auto-commit
-vite-plugin-moonshine-feedback.ts  ← dev-only feedback endpoints
+vite-plugin-moonshine-feedback.ts  ← dev-only feedback & suggestions endpoints
+vite-plugin-moonshine-icons.ts     ← bundles only Tabler icons referenced in article
+vite-plugin-moonshine-layouts.ts   ← bakes diagram layouts at build time (drops ELK)
 moonshine.config.json     ← feedback kill switch
 ```
 
