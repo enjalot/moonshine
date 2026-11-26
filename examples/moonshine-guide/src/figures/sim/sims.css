@@ -668,3 +668,59 @@
   touch-action: none;
   cursor: grab;
 }
+
+/* SuggestionsSim: simulated suggestion cards and their JSON records. */
+.mn-sg-sim-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+.mn-sg-sim-bar .mn-sim-pane-name {
+  margin: 0;
+}
+.mn-sg-sim-toggle,
+.mn-sg-sim-reset,
+.mn-sg-sim-chip {
+  font-family: var(--heading-font);
+  font-size: 0.8125rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+}
+.mn-sg-sim-chip[data-on~='active'] {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.mn-sg-sim-passage {
+  padding: 0.6rem 0.75rem;
+  background: var(--fig-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--body-font);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.mn-sg-sim .mn-sg {
+  font-size: 0.875rem;
+}
+.mn-sg-sim .mn-sg-head,
+.mn-sg-sim .mn-sg-note,
+.mn-sg-sim .mn-sg-actions button {
+  font-size: 0.8125rem;
+}
+.mn-sg-sim-resolved {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+.mn-sg-sim-file-label {
+  margin-top: 0.65rem;
+}

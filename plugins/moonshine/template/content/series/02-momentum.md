@@ -12,10 +12,10 @@ a fraction of the previous update, like a ball rolling down the
 surface.
 
 :::figure{id=loss-landscape}
-The same surface, now with a starting point you can click to set. The
+The same surface, now with a starting point you can drag to move. The
 descent path bends naturally toward the nearest minimum.
 :::
 
-The intuition: gradient descent is pure local response. Momentum adds
-memory — useful for crossing flat regions and damping oscillations
+Gradient descent responds only to the local slope. Momentum adds
+memory, which helps cross flat regions and damp oscillations
 across narrow valleys.

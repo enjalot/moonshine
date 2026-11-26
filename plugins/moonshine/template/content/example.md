@@ -55,14 +55,14 @@ Each step is a small loop of computation:
 :::figure{id=flow-diagram}
 One iteration of gradient descent as a small data flow: parameters in,
 loss and gradient computed, parameters updated. Repeat. The figure file
-declares only the nodes and edges; during `npm run dev`, click arrange to
+declares only the nodes and edges; during `npm run dev`, click **edit diagram** to
 position them, pick edge sides, add notes, and crop the frame. Readers get
 the live diagram with that arrangement.
 :::
 
 The whole algorithm is this loop, run for thousands of iterations
-with a step size that shrinks as the loss flattens. How much the step
-size matters shows up in a plain table, with no figure needed:
+with a step size that shrinks as the loss flattens. For illustration,
+a plain table shows the pattern with no figure needed:
 
 | Step size η | Steps to converge | Final loss | Outcome |
 | --- | --- | --- | --- |
@@ -72,9 +72,9 @@ size matters shows up in a plain table, with no figure needed:
 | 0.90 | — | 7.3 × 10³ | diverges |
 
 Number columns are detected and right-aligned with tabular figures, so
-the decimal places line up without any per-table CSS. A table with six
-or more columns breaks out of the text column the way a wide figure does,
-and scrolls sideways on a phone:
+the decimal places line up without any per-table CSS. An illustrative
+table with six or more columns breaks out of the text column the way a
+wide figure does, and scrolls sideways on a phone:
 
 | Optimizer | η | β₁ | β₂ | Steps | Wall time | Final loss |
 | --- | --- | --- | --- | --- | --- | --- |

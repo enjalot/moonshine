@@ -9,6 +9,7 @@ import TermsSim from './sim/TermsSim'
 import BakedDiagramSim from './sim/BakedDiagramSim'
 import DualSurfaceSim from './sim/DualSurfaceSim'
 import FeedbackSim from './sim/FeedbackSim'
+import SuggestionsSim from './sim/SuggestionsSim'
 import StillPipelineDiagram from './StillPipelineDiagram'
 
 // The registry is the seam between writers and developers. Authors
@@ -78,6 +79,7 @@ export const figures: Record<string, FigureEntry> = {
   'baked-diagram': { component: BakedDiagramSim, height: 640, wide: true },
   'dual-surface': { component: DualSurfaceSim, height: 330, wide: true },
   feedback: { component: FeedbackSim, height: 420, wide: true },
+  suggestions: { component: SuggestionsSim, height: 460, wide: true },
 }
 
 export const inlineFigures: Record<string, ComponentType<Record<string, unknown>>> = {}
