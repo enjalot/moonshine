@@ -1,11 +1,11 @@
 ---
 name: still
-description: Scaffold an opinionated Vite + React + Velite project for a moonshine article — markdown prose with custom React figures, hot-reloading, single-article or series mode. Use when the user wants a structured multi-file interactive explanation rather than a single self-contained HTML file. Invoked as `$still` or `$still <topic>`.
+description: Scaffold an opinionated Vite + React + Velite project for a moonshine interactive article — pristine markdown prose with custom React figures, in-page editing, arranged diagrams, hot-reloading, and single-article or series mode. Use when the user wants a structured multi-file interactive explanation rather than a single self-contained HTML file.
 ---
 
 # Still — Scaffold a Structured Moonshine Article Project
 
-Use this skill to bootstrap a structured moonshine project. The user invokes it as `$still` or `$still <topic>`; Claude Code surfaces it as `/moonshine:still`. This is the single still entry point in every harness.
+Use this skill to bootstrap a structured moonshine project. Users invoke it as `/still` (Antigravity), `/moonshine:still` (Claude Code), `$still` (Codex), or by describing the interactive article they want. This is the single still entry point in every harness.
 
 ## Workflow
 

@@ -1,6 +1,6 @@
 ---
 name: critique
-description: Adversarial critique of a moonshine article (still or shine) against the skill's editorial, visual, and pedagogy standards. Use when the user wants a moonshine article reviewed, graded, or checked for slop before publishing. Invoked as `$critique` or `$critique <path>`.
+description: Adversarial critique of a moonshine article (still or shine) against the skill's editorial, visual, and pedagogy standards. Use when the user wants a moonshine article reviewed, graded, or checked for slop before publishing.
 ---
 
 # Critique — Adversarially Review a Moonshine Article
@@ -14,11 +14,11 @@ Load the moonshine skill's reference standards, then perform an adversarial crit
    - **shine** — a single `index.html` with inline JS and D3 from a CDN, or a series: an `index.html` plus numbered chapter files, each self-contained.
 
 2. **Load the standards for that substrate.** These are the bar you grade against; don't grade a substrate against rules you haven't read.
-   - Always: `../moonshine/SKILL.md` (editorial process, anti-slop, editing pass) and `../moonshine/VISUALS.md` (visualization patterns; its "In a still project" preamble covers the substrate differences).
+   - Always: `../moonshine/SKILL.md` (editorial process, anti-slop, pedagogy), `../moonshine/EDITORIAL.md` (editing pass, sentence discipline, banned shapes, dead compliance), and `../moonshine/VISUALS.md` (visualization patterns; its "In a still project" preamble covers the substrate differences).
    - **still** also: `../moonshine/STILL.md` (project structure, the three directives, figure registry, DEFAULTS/knobs, diagrams, series, publishing). Read `../moonshine/FEEDBACK.md` too if the article carries a `.feedback/` directory or the authorship loop is in scope.
    - **shine** also: `../moonshine/ARTICLE.md` (single-file HTML scaffold, CSS foundation, layout, series). Do **not** grade a shine article against `STILL.md`, or a still project against `ARTICLE.md`'s scaffold — they describe different substrates.
 
-3. **Find the article.** Anything after `$critique` is the path to critique. If no path is given, look under `~/.agent/moonshine/` for the most recently modified article — a still project (a directory with `package.json`) or a shine `index.html`. When it's ambiguous, ask which one.
+3. **Find the article.** Anything after the skill invocation (`/critique`, `/moonshine:critique`, `$critique`) is the path to critique. If no path is given, look under `~/.agent/moonshine/` for the most recently modified article — a still project (a directory with `package.json`) or a shine `index.html`. When it's ambiguous, ask which one.
 
 You are a critic, not a fixer. Do not rewrite the article. Do not generate code. Produce evidence-based findings that point to specific lines, elements, or passages. Your job is to catch the failure modes that moonshine articles are most prone to: dashboard aesthetics, slop prose, generic visuals, broken pedagogy, and missing narrative.
 
@@ -92,7 +92,7 @@ suggestion per quoted sentence in the Prose Audit, with the repaired sentence
 as `replace` and the machinery you named as `note`; and a remark (no
 `replace`) for each finding that needs the author's decision, such as a number
 you could not verify or a figure that contradicts its caption. Use
-`scripts/suggest.mjs` with `--source critique`, as described in `STILL.md`
+`../moonshine/scripts/suggest.mjs` (or `scripts/suggest.mjs` from the plugin root) with `--source critique`, as described in `STILL.md`
 under "Suggestions". The author accepts, edits or rejects each one in the
 page. Never apply them yourself.
 

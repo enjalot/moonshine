@@ -1,11 +1,11 @@
 ---
 name: shine
-description: Create a self-contained interactive technical explanation (single HTML file with D3 v7, no build tools) inspired by Distill.pub. Use when the user wants to author, draft, or scaffold an explainer, interactive article, or visual essay about a technical concept. Invoked as `$shine` or `$shine <topic>`.
+description: Create a self-contained interactive technical explanation (single HTML file with D3 v7, no build tools) inspired by Distill.pub. Use when the user wants a quick one-file explainer, visual essay, or interactive article they can email or open directly without a build step.
 ---
 
 # Shine — Create an Interactive Explanation
 
-Use this skill to start a new moonshine explanation. The user invokes it as `$shine` or `$shine <topic>` (anything after `$shine` is the starting topic; treat an empty topic as "start from scratch").
+Use this skill to start a new single-file moonshine explanation. Users invoke it as `/shine` (Antigravity), `/moonshine:shine` (Claude Code), `$shine` (Codex), or by asking for a single-file interactive article (treat an empty topic as "start from scratch").
 
 ## Workflow
 
@@ -19,9 +19,9 @@ Use this skill to start a new moonshine explanation. The user invokes it as `$sh
 
 ## Notes
 
-- This skill is the single shine entry point in every harness; Claude Code
-  surfaces it as `/moonshine:shine`.
+- This skill is the single shine entry point in every harness (`/shine` in
+  Antigravity, `/moonshine:shine` in Claude Code, `$shine` in Codex).
 - For the structured **Vite + React + Velite** project flavor (multi-file
   content, markdown directives, React figures, in-place editing, authorship
-  feedback), use `$still` instead. When the user hasn't picked a substrate,
+  feedback), use the `still` skill instead. When the user hasn't picked a substrate,
   `SKILL.md` § "Two Substrates" makes still the default.
